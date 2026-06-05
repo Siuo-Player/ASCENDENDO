@@ -1,0 +1,61 @@
+# =============================================================
+#  .gitignore — Vertical Precision Platformer
+# =============================================================
+
+# ── Artefactos de Build ───────────────────────────────────────
+build/
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.lib
+
+# ── Editores ──────────────────────────────────────────────────
+# VS Code
+.vscode/
+!.vscode/extensions.json    # este ficheiro é útil partilhar
+
+# CLion / JetBrains
+.idea/
+cmake-build-*/
+
+# Vim / Neovim
+*.swp
+*.swo
+*~
+.netrwhist
+
+# ── Sistema Operativo ─────────────────────────────────────────
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# ── Vulkan (artefactos gerados) ───────────────────────────────
+*.spv
+
+# ── Python ────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# ── Logs e temporários ────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+
+# dev_log.txt NÃO está aqui — é rastreado pelo git (append-only, imutável)

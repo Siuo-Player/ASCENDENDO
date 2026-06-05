@@ -1,0 +1,41 @@
+# dev_log.txt — Diário de Desenvolvimento
+# FICHEIRO APPEND-ONLY: nunca editar entradas anteriores.
+# Formato obrigatório:
+#   [YYYY-MM-DD HH:MM:SS]
+#   Ideia: [O que vamos implementar e o comportamento esperado]
+#   Implementado: [Se funcionou, como foi feito, problemas e soluções]
+# ════════════════════════════════════════════════════════════════════════
+
+[2026-06-05 00:00:00]
+Ideia: Fase 1 — Configuração inicial do ambiente de desenvolvimento.
+  Objetivos:
+    1. Criar estrutura de pastas definitiva do projeto conforme arquitetura do README.
+    2. Implementar Makefile cross-platform (Windows Git Bash/MSYS2 + Linux) com Clang++/C++20.
+       Suporte a: compilação do jogo (release), bateria de testes (debug + sanitizers em Linux),
+       limpeza de artefactos. Vulkan comentado — ativado na Fase 2.
+    3. Criar deps.py: verificador de dependências com pedido explícito de permissão antes de
+       qualquer download/instalação. Regista resultado no dev_log.txt.
+    4. Integrar doctest como framework de testes.
+       Justificação da dependência (conforme Regra 3 do README):
+         - Header-only (zero instalação, copiado para external/doctest/doctest.h)
+         - Compilação ultrarrápida (não inclui implementação pesada nos TUs)
+         - Interface familiar (TEST_CASE, CHECK, REQUIRE)
+         - Licença MIT — sem restrições
+         - Suporte nativo a subcasos (SUBCASE) e suites (TEST_SUITE)
+    5. Criar hook de pre-commit que bloqueia commits com testes a falhar.
+    6. Criar .gitignore adequado para C++/Clang/Vulkan.
+    7. Criar testes de sanidade (Infra): framework operacional + tamanhos de tipos de dados.
+       O segundo teste é crítico para garantir determinismo da física e integridade de save states.
+Implementado: Setup validado com sucesso (clang++ 18, doctest 2.5.0).
+  Ficheiros criados:
+    - Makefile                         (cross-platform Windows+Linux, Clang++, C++20)
+    - deps.py                          (verificador de dependências com permissão explícita)
+    - Tests/test_runner.cpp            (define main via DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN)
+    - Tests/Unit/test_placeholder.cpp  (2 test cases, 9 assertions)
+    - external/doctest/doctest.h       (v2.5.0, header-only)
+    - scripts/pre-commit.sh            (bloqueia commits com testes a falhar)
+    - .gitignore
+  Problema encontrado: tipos uintX_t requerem #include <cstdint> explícito com Clang/C++20.
+  Solução: adicionado ao test_placeholder.cpp.
+  Resultado: make tests → 2/2 passed | 9/9 assertions | Status: SUCCESS
+[2026-06-05 23:43:16] [deps.py/WARN] Verificação de dependências: FALHOU — dependências obrigatórias em falta

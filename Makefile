@@ -1,0 +1,157 @@
+# ==============================================================================
+#  Vertical Precision Platformer — Makefile
+#  Compiler : clang++ (LLVM)  |  Standard : C++20
+#  Platforms: Windows (Git Bash / MSYS2) + Linux
+#
+#  Targets:
+#    make tests   — compila e executa toda a bateria de testes  ← uso principal
+#    make game    — compila o binário do jogo (release)
+#    make clean   — remove artefactos de build
+#    make help    — mostra esta ajuda
+# ==============================================================================
+
+# ── Deteção de Plataforma ──────────────────────────────────────────────────────
+ifeq ($(OS),Windows_NT)
+    PLATFORM := windows
+    EXE_EXT  := .exe
+else
+    PLATFORM := linux
+    EXE_EXT  :=
+endif
+
+# ── Toolchain ─────────────────────────────────────────────────────────────────
+CXX := clang++
+
+# ar compatível com objetos Clang:
+#   Linux  → ar do sistema
+#   Windows → llvm-ar (incluído com LLVM; se não estiver em PATH, usa ar)
+ifeq ($(PLATFORM),windows)
+    AR := $(shell command -v llvm-ar 2>/dev/null || echo ar)
+else
+    AR := ar
+endif
+
+# ── Flags de Compilação ───────────────────────────────────────────────────────
+CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter
+
+# Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
+ifeq ($(PLATFORM),linux)
+    CXXFLAGS_DBG := -g -O0 -DDEBUG -fsanitize=address,undefined -fno-omit-frame-pointer
+    LDFLAGS_DBG  := -fsanitize=address,undefined
+else
+    CXXFLAGS_DBG := -g -O0 -DDEBUG
+    LDFLAGS_DBG  :=
+endif
+
+CXXFLAGS_REL := -O2 -DNDEBUG
+
+# ── Diretórios ────────────────────────────────────────────────────────────────
+GAME_DIR  := Game
+TEST_DIR  := Tests
+EXT_DIR   := external
+BUILD_DIR := build
+
+# ── Includes ──────────────────────────────────────────────────────────────────
+INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
+
+# ── Vulkan (Fase 2 — descomentar quando necessário) ───────────────────────────
+# ifeq ($(PLATFORM),windows)
+#     VULKAN_SDK  ?= C:/VulkanSDK/$(shell ls 'C:/VulkanSDK' 2>/dev/null | sort -V | tail -1)
+#     INCLUDES    += -I"$(VULKAN_SDK)/Include"
+#     LDFLAGS_REL += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
+#     LDFLAGS_DBG += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
+# else
+#     CXXFLAGS_BASE += $(shell pkg-config --cflags vulkan 2>/dev/null)
+#     LDFLAGS_REL   += $(shell pkg-config --libs vulkan 2>/dev/null)
+#     LDFLAGS_DBG   += $(shell pkg-config --libs vulkan 2>/dev/null)
+# endif
+
+# ── Fontes ────────────────────────────────────────────────────────────────────
+# Game: todos os .cpp em Game/ e subpastas (exceto main — adicionado à mão)
+GAME_SRCS := $(wildcard $(GAME_DIR)/*.cpp)          \
+             $(wildcard $(GAME_DIR)/Graphics/*.cpp) \
+             $(wildcard $(GAME_DIR)/Logic/*.cpp)
+
+# Tests: test_runner.cpp (define main via doctest) + todos os .cpp em subpastas
+TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)            \
+             $(wildcard $(TEST_DIR)/Unit/*.cpp)        \
+             $(wildcard $(TEST_DIR)/Integration/*.cpp) \
+             $(wildcard $(TEST_DIR)/System/*.cpp)      \
+             $(wildcard $(TEST_DIR)/Regression/*.cpp)  \
+             $(wildcard $(TEST_DIR)/Acceptance/*.cpp)
+
+# ── Objects ───────────────────────────────────────────────────────────────────
+GAME_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_SRCS))
+TEST_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS))
+
+# ── Binários ──────────────────────────────────────────────────────────────────
+GAME_LIB  := $(BUILD_DIR)/libgame.a
+GAME_BIN  := $(BUILD_DIR)/game$(EXE_EXT)
+TEST_BIN  := $(BUILD_DIR)/tests$(EXE_EXT)
+
+# Quando há código de jogo compilado, os testes linkam também a game library.
+# Em Fase 1 (sem código de jogo), TEST_LINK_DEPS fica vazio.
+ifneq ($(strip $(GAME_OBJS)),)
+    TEST_LINK_DEPS := $(GAME_LIB)
+endif
+
+# ── Targets Principais ────────────────────────────────────────────────────────
+.PHONY: all game tests clean help
+
+all: help
+
+## help  — mostra os targets disponíveis
+help:
+	@echo ""
+	@echo "  Vertical Precision Platformer — sistema de build"
+	@echo "  ─────────────────────────────────────────────────"
+	@echo "  make tests   compila e executa toda a bateria de testes"
+	@echo "  make game    compila o binário do jogo (release)"
+	@echo "  make clean   remove a pasta build/"
+	@echo "  make help    mostra esta mensagem"
+	@echo ""
+
+## tests — compila e corre todos os testes; falha o make se algum teste falhar
+tests: $(TEST_BIN)
+	@echo ""
+	@echo "  ==========================================="
+	@echo "  A executar testes..."
+	@echo "  ==========================================="
+	@$(TEST_BIN) --no-intro -v
+	@echo ""
+
+## game — compila o binário do jogo em modo release
+game: $(GAME_BIN)
+	@echo "[OK ] Jogo compilado: $(GAME_BIN)"
+
+# ── Regras de Linkagem ────────────────────────────────────────────────────────
+
+$(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
+	@echo "[LNK] $(notdir $@)"
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) \
+	        -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
+
+$(GAME_BIN): $(GAME_LIB) | $(BUILD_DIR)
+	@echo "[LNK] $(notdir $@)"
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) \
+	        -o $@ $^ $(LDFLAGS_REL)
+
+$(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
+	@echo "[LIB] $(notdir $@)"
+	@$(AR) rcs $@ $^
+
+# ── Regra de Compilação Genérica .cpp → .o ────────────────────────────────────
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	@echo "[CC ] $<"
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -c $< -o $@
+
+# ── Utilitários ───────────────────────────────────────────────────────────────
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+
+## clean — remove todos os artefactos de compilação
+clean:
+	@echo "[CLN] A remover $(BUILD_DIR)/..."
+	@rm -rf $(BUILD_DIR)
+	@echo "[CLN] Concluído."
