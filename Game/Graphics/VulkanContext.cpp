@@ -2,7 +2,7 @@
 //  Game/Graphics/VulkanContext.cpp
 // =============================================================================
 
-#include "Graphics/VulkanContext.h"
+#include "VulkanContext.h"
 #include <vector>
 #include <cstring>
 
@@ -149,11 +149,11 @@ bool VulkanContext::createLogicalDevice(bool enableValidation) {
     std::vector<const char*> layers;
     if (enableValidation) layers.push_back(VALIDATION_LAYER);
 
-    // Fase 2.3: adicionar VK_KHR_swapchain quando tivermos surface
-    std::vector<const char*> deviceExtensions;
-    if (m_surface != VK_NULL_HANDLE) {
-        deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    }
+    // Fase 2.4: O Swapchain é obrigatório para o motor conseguir desenhar na janela.
+    // Requeremos esta extensão diretamente ao criar o Logical Device.
+    std::vector<const char*> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
 
     VkDeviceCreateInfo ci{};
     ci.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

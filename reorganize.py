@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 reorganize.py — Reorganiza os ficheiros da raiz para a estrutura correta do projeto.
-Executar UMA VEZ na raiz do projeto (onde está o Makefile).
+Executar UMA VEZ na raiz do projeto sempre que novos ficheiros forem descarregados.
 """
 
 import shutil
@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).parent.resolve()
 
 # ── Ficheiros a mover: (nome na raiz, destino relativo correto) ───────────────
+# O script sabe exatamente onde cada ficheiro do motor deve morar.
 MOVES = [
     # Infraestrutura
     ("doctest.h",               "external/doctest/doctest.h"),
@@ -24,12 +25,15 @@ MOVES = [
     # Testes de Integracao
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
     ("test_window.cpp",         "Tests/Integration/test_window.cpp"),
+    ("test_swapchain.cpp",      "Tests/Integration/test_swapchain.cpp"), # Fase 2.4
 
     # Game/Graphics
     ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
     ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
     ("Window.h",                "Game/Graphics/Window.h"),
     ("Window.cpp",              "Game/Graphics/Window.cpp"),
+    ("Swapchain.h",             "Game/Graphics/Swapchain.h"),            # Fase 2.4
+    ("Swapchain.cpp",           "Game/Graphics/Swapchain.cpp"),          # Fase 2.4
 ]
 
 # ── Pastas que devem existir (com .gitkeep para o git as rastrear) ────────────
@@ -80,12 +84,11 @@ def main() -> None:
     print()
 
     # 2. Mover e Substituir Ficheiros
-    print(col("  [2/2] Processar ficheiros na raiz", "1"))
+    print(col("  [2/2] Processar ficheiros do projeto", "1"))
     for src_name, dst_rel in MOVES:
         src = ROOT / src_name
         dst = ROOT / dst_rel
 
-        # Garante que a pasta de destino do ficheiro existe (segurança extra)
         dst.parent.mkdir(parents=True, exist_ok=True)
 
         if dst.exists() and not src.exists():
@@ -96,7 +99,6 @@ def main() -> None:
             print(f"  {MOVE} {src_name}  →  {dst_rel}")
 
         elif src.exists() and dst.exists():
-            # Segurança: evitar conflito se a origem e o destino forem o mesmo caminho
             if src.resolve() != dst.resolve():
                 shutil.copy2(str(src), str(dst))
                 src.unlink()
@@ -111,12 +113,12 @@ def main() -> None:
     print("  " + "─" * 55)
 
     if errors:
-        print(f"  {ERR} Concluído com {len(errors)} aviso(s):")
+        print(f"  {ERR} Concluído com {len(errors)} ficheiro(s) em falta:")
         for e in errors:
             print(f"       • {e}")
-        print()
+        print(col("\n  -> Cria estes ficheiros na raiz ou descarrega-os antes de compilar.", "33"))
     else:
-        print(f"  {OK} Tudo reorganizado sem erros!")
+        print(f"  {OK} Tudo reorganizado sem erros! Todos os ficheiros mapeados existem.")
     print()
 
 if __name__ == "__main__":
