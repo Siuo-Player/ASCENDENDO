@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-reorganize.py — Reorganiza os ficheiros da raiz para a estrutura correta do projeto.
-Executar UMA VEZ na raiz do projeto sempre que novos ficheiros forem descarregados.
+reorganize.py — Motor de Reorganização do ASCENDENDO
+Garante que a arquitetura do projeto se mantém imaculada.
+Executar na raiz sempre que novos ficheiros forem descarregados ou criados.
 """
 
 import shutil
@@ -9,40 +10,47 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.resolve()
 
-# ── Ficheiros a mover: (nome na raiz, destino relativo correto) ───────────────
-# O script sabe exatamente onde cada ficheiro do motor deve morar.
+# ── Mapeamento de Ficheiros (Origem na Raiz -> Destino Final) ───────────────
 MOVES = [
+    # Configurações de Editor
+    ("c_cpp_properties.json",   ".vscode/c_cpp_properties.json"),
+
     # Infraestrutura
     ("doctest.h",               "external/doctest/doctest.h"),
     ("test_runner.cpp",         "Tests/test_runner.cpp"),
     ("pre-commit.sh",           "scripts/pre-commit.sh"),
     ("dev_log.txt",             "Development/dev_log.txt"),
 
-    # Testes Unitarios
+    # Testes Unitários
     ("test_placeholder.cpp",    "Tests/Unit/test_placeholder.cpp"),
     ("test_vulkan_context.cpp", "Tests/Unit/test_vulkan_context.cpp"),
 
-    # Testes de Integracao
+    # Testes de Integração
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
     ("test_window.cpp",         "Tests/Integration/test_window.cpp"),
     ("test_swapchain.cpp",      "Tests/Integration/test_swapchain.cpp"), # Fase 2.4
+    ("test_render_pass.cpp",    "Tests/Integration/test_render_pass.cpp"), # Fase 2.5
 
-    # Game/Graphics
+    # Game/Graphics (O Motor)
     ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
     ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
     ("Window.h",                "Game/Graphics/Window.h"),
     ("Window.cpp",              "Game/Graphics/Window.cpp"),
     ("Swapchain.h",             "Game/Graphics/Swapchain.h"),            # Fase 2.4
     ("Swapchain.cpp",           "Game/Graphics/Swapchain.cpp"),          # Fase 2.4
+    ("RenderPass.h",            "Game/Graphics/RenderPass.h"),           # Fase 2.5
+    ("RenderPass.cpp",          "Game/Graphics/RenderPass.cpp"),         # Fase 2.5
 ]
 
-# ── Pastas que devem existir (com .gitkeep para o git as rastrear) ────────────
+# ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────
 DIRS_WITH_GITKEEP = [
+    ".vscode",
     "Game/Graphics",
     "Game/Assets",
     "Game/Logic",
     "Development/LevelEditor",
     "Development/AI_Validation",
+    "Tests/Unit",
     "Tests/Integration",
     "Tests/System",
     "Tests/Regression",
@@ -51,75 +59,67 @@ DIRS_WITH_GITKEEP = [
     "scripts",
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
-
+# ── Utilitários de Terminal ──────────────────────────────────────────────────
 def col(text: str, code: str) -> str:
-    """ANSI color — funciona no Windows Terminal, Git Bash e Linux."""
+    """Aplica cores ANSI ao terminal."""
     return f"\033[{code}m{text}\033[0m"
 
 OK   = col("✅", "32")
 MOVE = col("📦", "36")
-ERR  = col("❌", "31")
+WARN = col("⚠️ ", "33")
 DIR  = col("📁", "34")
 
 def main() -> None:
-    print()
-    print(col("  Reorganizador de Estrutura — Vertical Precision Platformer", "1"))
-    print("  " + "─" * 55)
-    print()
+    print(f"\n{col('  Motor de Reorganização — ASCENDENDO', '1;36')}")
+    print("  " + "═" * 55 + "\n")
 
-    errors: list[str] = []
+    errors = []
+    moved_count = 0
 
-    # 1. Garantir Pastas e .gitkeep
-    print(col("  [1/2] Verificar pastas e ficheiros .gitkeep", "1"))
+    # 1. Validação de Estrutura de Pastas (Modo Silencioso)
     for d in DIRS_WITH_GITKEEP:
         target = ROOT / d
         target.mkdir(parents=True, exist_ok=True)
         gitkeep = target / ".gitkeep"
         if not gitkeep.exists():
             gitkeep.touch()
-            print(f"  {DIR} {d}/.gitkeep  (criado)")
-        else:
-            print(f"  {OK} {d}/  (verificado)")
-    print()
+            print(f"  {DIR} {d}/.gitkeep (Criado)")
 
-    # 2. Mover e Substituir Ficheiros
-    print(col("  [2/2] Processar ficheiros do projeto", "1"))
+    # 2. Processamento de Ficheiros
     for src_name, dst_rel in MOVES:
         src = ROOT / src_name
         dst = ROOT / dst_rel
 
         dst.parent.mkdir(parents=True, exist_ok=True)
 
-        if dst.exists() and not src.exists():
-            print(f"  {OK} {dst_rel}  (já no lugar)")
-
-        elif src.exists() and not dst.exists():
-            shutil.move(str(src), str(dst))
-            print(f"  {MOVE} {src_name}  →  {dst_rel}")
-
-        elif src.exists() and dst.exists():
-            if src.resolve() != dst.resolve():
+        if src.exists():
+            # Substituir ficheiro já existente
+            if dst.exists() and src.resolve() != dst.resolve():
                 shutil.copy2(str(src), str(dst))
                 src.unlink()
-                print(f"  {MOVE} {src_name}  →  {dst_rel} (SUBSTITUÍDO)")
+                print(f"  {MOVE} Atualizado: {dst_rel} (Substituído a partir da raiz)")
+                moved_count += 1
+            # Mover ficheiro novo
+            elif not dst.exists():
+                shutil.move(str(src), str(dst))
+                print(f"  {MOVE} Movido:     {dst_rel}")
+                moved_count += 1
+        elif not dst.exists():
+            errors.append(dst_rel)
 
-        else:
-            msg = f"'{src_name}' não encontrado (nem na raiz nem em '{dst_rel}')"
-            print(f"  {ERR} {msg}")
-            errors.append(msg)
-
-    print()
-    print("  " + "─" * 55)
-
+    # 3. Resumo Final
+    if moved_count == 0:
+        print(f"  {OK} O projeto está perfeitamente organizado!")
+    else:
+        print(f"\n  {OK} Concluído: {moved_count} ficheiro(s) processado(s).")
+        
     if errors:
-        print(f"  {ERR} Concluído com {len(errors)} ficheiro(s) em falta:")
+        print(f"\n  {WARN} {len(errors)} ficheiro(s) em falta:")
         for e in errors:
             print(f"       • {e}")
-        print(col("\n  -> Cria estes ficheiros na raiz ou descarrega-os antes de compilar.", "33"))
-    else:
-        print(f"  {OK} Tudo reorganizado sem erros! Todos os ficheiros mapeados existem.")
-    print()
+        print(col("  (Nota: Podes ignorar os ficheiros de Fases que ainda não começaste).", "90"))
+    
+    print("\n  " + "═" * 55 + "\n")
 
 if __name__ == "__main__":
     main()
