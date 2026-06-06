@@ -4,10 +4,11 @@
 #  Platforms: Windows (Git Bash / MSYS2) + Linux
 #
 #  Targets:
-#    make tests   — compila e executa toda a bateria de testes  ← uso principal
-#    make game    — compila o binário do jogo (release)
-#    make clean   — remove artefactos de build
-#    make help    — mostra esta ajuda
+#    make tests         — compila e executa testes (silencioso, mostra resumo)
+#    make tests-verbose — compila e executa testes (mostra todos os que passam)
+#    make game          — compila o binário do jogo (release)
+#    make clean         — remove artefactos de build
+#    make help          — mostra esta ajuda
 # ==============================================================================
 
 # ── Deteção de Plataforma ──────────────────────────────────────────────────────
@@ -74,9 +75,9 @@ ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
     CXXFLAGS_BASE += -DGLFW_AVAILABLE
     INCLUDES      += -I$(GLFW_DIR)/include
     ifeq ($(PLATFORM),windows)
-        # Ajustado de lib-vc2022 para lib-mingw-w64 (compatível com Clang/MinGW)
-        LDFLAGS_REL += -L$(GLFW_DIR)/lib-mingw-w64 -lglfw3 -lgdi32 -luser32 -lshell32
-        LDFLAGS_DBG += -L$(GLFW_DIR)/lib-mingw-w64 -lglfw3 -lgdi32 -luser32 -lshell32
+        # O Clang no Windows usa o lld-link (MSVC ABI), logo usamos a lib-vc2022
+        LDFLAGS_REL += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32 -lshell32
+        LDFLAGS_DBG += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32 -lshell32
     else
         LDFLAGS_REL += $(shell pkg-config --libs glfw3 2>/dev/null)
         LDFLAGS_DBG += $(shell pkg-config --libs glfw3 2>/dev/null)
@@ -113,7 +114,7 @@ ifneq ($(strip $(GAME_OBJS)),)
 endif
 
 # ── Targets Principais ────────────────────────────────────────────────────────
-.PHONY: all game tests clean help
+.PHONY: all game tests tests-verbose clean help
 
 all: help
 
@@ -122,17 +123,27 @@ help:
 	@echo ""
 	@echo "  Vertical Precision Platformer — sistema de build"
 	@echo "  ─────────────────────────────────────────────────"
-	@echo "  make tests   compila e executa toda a bateria de testes"
-	@echo "  make game    compila o binário do jogo (release)"
-	@echo "  make clean   remove a pasta build/"
-	@echo "  make help    mostra esta mensagem"
+	@echo "  make tests         compila e executa testes (silencioso)"
+	@echo "  make tests-verbose compila e executa testes (detalhado)"
+	@echo "  make game          compila o binário do jogo (release)"
+	@echo "  make clean         remove a pasta build/"
+	@echo "  make help          mostra esta mensagem"
 	@echo ""
 
-## tests — compila e corre todos os testes; falha o make se algum teste falhar
+## tests — compila e corre todos os testes de forma silenciosa (ideal para commits)
 tests: $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
+	@echo "  ==========================================="
+	@./$(TEST_BIN)
+	@echo ""
+
+## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
+tests-verbose: $(TEST_BIN)
+	@echo ""
+	@echo "  ==========================================="
+	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
 	@./$(TEST_BIN) --success
 	@echo ""
