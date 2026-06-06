@@ -12,12 +12,13 @@ namespace gfx {
 //  Ciclo de Vida
 // =============================================================================
 
-bool VulkanContext::init(bool enableValidationLayers) {
-    if (m_initialized) return true;  // idempotente
+bool VulkanContext::init(bool enableValidationLayers,
+                          const std::vector<const char*>& instanceExtensions) {
+    if (m_initialized) return true;
 
-    if (!createInstance(enableValidationLayers))     return false;
-    if (!selectPhysicalDevice())                     return false;
-    if (!createLogicalDevice(enableValidationLayers)) return false;
+    if (!createInstance(enableValidationLayers, instanceExtensions)) return false;
+    if (!selectPhysicalDevice())                                      return false;
+    if (!createLogicalDevice(enableValidationLayers))                 return false;
 
     m_initialized = true;
     return true;
@@ -26,12 +27,13 @@ bool VulkanContext::init(bool enableValidationLayers) {
 void VulkanContext::shutdown() {
     if (!m_initialized) return;
 
-    // Ordem de destruicao: inversa da criacao
+    destroySurface();  // surface ANTES do device e instance
+
     if (m_device != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(m_device);       // esperar que a GPU termine
+        vkDeviceWaitIdle(m_device);
         vkDestroyDevice(m_device, nullptr);
-        m_device       = VK_NULL_HANDLE;
-        m_graphicsQueue = VK_NULL_HANDLE; // a fila e destruida com o device
+        m_device        = VK_NULL_HANDLE;
+        m_graphicsQueue = VK_NULL_HANDLE;
     }
 
     if (m_instance != VK_NULL_HANDLE) {
@@ -46,11 +48,29 @@ void VulkanContext::shutdown() {
 }
 
 // =============================================================================
+//  Surface (Fase 2.3)
+// =============================================================================
+
+bool VulkanContext::createSurface(VkSurfaceKHR surface) {
+    if (surface == VK_NULL_HANDLE) return false;
+    destroySurface();   // substituir se ja existia uma
+    m_surface = surface;
+    return true;
+}
+
+void VulkanContext::destroySurface() {
+    if (m_surface != VK_NULL_HANDLE && m_instance != VK_NULL_HANDLE) {
+        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        m_surface = VK_NULL_HANDLE;
+    }
+}
+
+// =============================================================================
 //  Criacao da Instance
 // =============================================================================
 
-bool VulkanContext::createInstance(bool enableValidation) {
-    // Verificar layers antes de tentar criar a instance
+bool VulkanContext::createInstance(bool enableValidation,
+                                    const std::vector<const char*>& extensions) {
     std::vector<const char*> layers;
     if (enableValidation) {
         if (!checkValidationLayerSupport()) return false;
@@ -66,11 +86,12 @@ bool VulkanContext::createInstance(bool enableValidation) {
     app.apiVersion         = TARGET_API_VERSION;
 
     VkInstanceCreateInfo ci{};
-    ci.sType                 = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    ci.pApplicationInfo      = &app;
-    ci.enabledLayerCount     = static_cast<uint32_t>(layers.size());
-    ci.ppEnabledLayerNames   = layers.empty() ? nullptr : layers.data();
-    ci.enabledExtensionCount = 0;  // Fase 3: adicionar VK_KHR_surface aqui
+    ci.sType                   = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    ci.pApplicationInfo        = &app;
+    ci.enabledLayerCount       = static_cast<uint32_t>(layers.size());
+    ci.ppEnabledLayerNames     = layers.empty() ? nullptr : layers.data();
+    ci.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
+    ci.ppEnabledExtensionNames = extensions.empty() ? nullptr : extensions.data();
 
     return vkCreateInstance(&ci, nullptr, &m_instance) == VK_SUCCESS;
 }
@@ -87,7 +108,6 @@ bool VulkanContext::selectPhysicalDevice() {
     std::vector<VkPhysicalDevice> devices(count);
     vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
 
-    // Estrategia: preferir GPU discreta, aceitar integrada como fallback
     VkPhysicalDevice fallback = VK_NULL_HANDLE;
 
     for (const auto& dev : devices) {
@@ -98,20 +118,16 @@ bool VulkanContext::selectPhysicalDevice() {
 
         if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
             m_physicalDevice = dev;
-            break;  // Melhor opcao encontrada
+            break;
         }
-        if (fallback == VK_NULL_HANDLE) {
-            fallback = dev;  // Guardar primeira opcao adequada como backup
-        }
+        if (fallback == VK_NULL_HANDLE) fallback = dev;
     }
 
     if (m_physicalDevice == VK_NULL_HANDLE) m_physicalDevice = fallback;
     if (m_physicalDevice == VK_NULL_HANDLE) return false;
 
-    // Guardar propriedades e indices de filas da GPU escolhida
     vkGetPhysicalDeviceProperties(m_physicalDevice, &m_deviceProps);
     m_families = findQueueFamilies(m_physicalDevice);
-
     return true;
 }
 
@@ -129,10 +145,15 @@ bool VulkanContext::createLogicalDevice(bool enableValidation) {
     queueCI.pQueuePriorities = &priority;
 
     VkPhysicalDeviceFeatures features{};
-    // Fase 3: ativar features aqui (geometryShader, samplerAnisotropy, etc.)
 
     std::vector<const char*> layers;
     if (enableValidation) layers.push_back(VALIDATION_LAYER);
+
+    // Fase 2.3: adicionar VK_KHR_swapchain quando tivermos surface
+    std::vector<const char*> deviceExtensions;
+    if (m_surface != VK_NULL_HANDLE) {
+        deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    }
 
     VkDeviceCreateInfo ci{};
     ci.sType                   = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -141,13 +162,13 @@ bool VulkanContext::createLogicalDevice(bool enableValidation) {
     ci.pEnabledFeatures        = &features;
     ci.enabledLayerCount       = static_cast<uint32_t>(layers.size());
     ci.ppEnabledLayerNames     = layers.empty() ? nullptr : layers.data();
-    ci.enabledExtensionCount   = 0;  // Fase 3: adicionar VK_KHR_swapchain aqui
+    ci.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
+    ci.ppEnabledExtensionNames = deviceExtensions.empty() ? nullptr : deviceExtensions.data();
 
     if (vkCreateDevice(m_physicalDevice, &ci, nullptr, &m_device) != VK_SUCCESS) {
         return false;
     }
 
-    // Obter handle da fila grafica (indice 0 dentro da familia)
     vkGetDeviceQueue(m_device, m_families.graphics, 0, &m_graphicsQueue);
     return true;
 }
@@ -158,7 +179,6 @@ bool VulkanContext::createLogicalDevice(bool enableValidation) {
 
 QueueFamilyIndices VulkanContext::findQueueFamilies(VkPhysicalDevice dev) const {
     QueueFamilyIndices indices{};
-
     uint32_t count = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
     std::vector<VkQueueFamilyProperties> families(count);
@@ -174,10 +194,8 @@ QueueFamilyIndices VulkanContext::findQueueFamilies(VkPhysicalDevice dev) const 
 }
 
 bool VulkanContext::isDeviceSuitable(VkPhysicalDevice dev) const {
-    // Criterio 1: tem fila grafica
     if (!findQueueFamilies(dev).isComplete()) return false;
 
-    // Criterio 2: suporta Vulkan >= 1.3
     VkPhysicalDeviceProperties props{};
     vkGetPhysicalDeviceProperties(dev, &props);
     if (VK_API_VERSION_MINOR(props.apiVersion) < 3) return false;

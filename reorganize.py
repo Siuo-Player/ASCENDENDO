@@ -32,6 +32,12 @@ MOVES = [
     # ── Game/Graphics (Fase 2+) ───────────────────────────────────────────────
     ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
     ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
+    ("Window.h",                "Game/Graphics/Window.h"),
+    ("Window.cpp",              "Game/Graphics/Window.cpp"),
+
+    # ── Testes de Integracao ──────────────────────────────────────────────────
+    # (test_vulkan_init.cpp ja esta na lista acima)
+    ("test_window.cpp",         "Tests/Integration/test_window.cpp"),
 ]
 
 # ── Pastas que devem existir (com .gitkeep para o git as rastrear) ────────────
@@ -101,9 +107,10 @@ def main() -> None:
             print(f"  {MOVE} {src_name}  →  {dst_rel}")
 
         elif src.exists() and dst.exists():
-            # Conflito: existe nos dois lados — manter o destino, alertar
-            print(f"  {MISS} CONFLITO: '{src_name}' existe na raiz E em '{dst_rel}'.")
-            print(f"       A manter '{dst_rel}'. Remove '{src_name}' da raiz manualmente se for duplicado.")
+            # Ficheiro existe na raiz e no destino — Forçar Substituição
+            shutil.copy2(str(src), str(dst))
+            src.unlink()
+            print(f"  {MOVE} {src_name}  →  {dst_rel} (SUBSTITUÍDO)")
 
         else:
             # Ficheiro não encontrado em lado nenhum
@@ -139,7 +146,9 @@ def main() -> None:
   ├── Game/
   │   ├── Graphics/
   │   │   ├── VulkanContext.h
-  │   │   └── VulkanContext.cpp
+  │   │   ├── VulkanContext.cpp
+  │   │   ├── Window.h
+  │   │   └── Window.cpp
   │   ├── Assets/
   │   └── Logic/
   ├── Tests/
@@ -148,7 +157,8 @@ def main() -> None:
   │   │   ├── test_placeholder.cpp
   │   │   └── test_vulkan_context.cpp
   │   ├── Integration/
-  │   │   └── test_vulkan_init.cpp
+  │   │   ├── test_vulkan_init.cpp
+  │   │   └── test_window.cpp  (ativo apos instalar GLFW)
   │   ├── System/
   │   ├── Regression/
   │   └── Acceptance/
@@ -158,8 +168,9 @@ def main() -> None:
   └── scripts/
       └── pre-commit.sh
 """)
-    print("  Próximo passo: instala clang++ e make (ver instruções).")
-    print("  Depois abre um Git Bash e corre:  make tests")
+    print("  Proximos passos:")
+    print("    1. Instalar GLFW em external/glfw/ (ver README.md, Seccao 8.1)")
+    print("    2. git add . && git commit -m 'mensagem'  (hook valida testes)")
     print()
 
 

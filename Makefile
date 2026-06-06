@@ -55,9 +55,6 @@ BUILD_DIR := build
 INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
 
 # ── Vulkan ────────────────────────────────────────────────────────────────────
-# Windows: usa a variavel de ambiente VULKAN_SDK definida pelo installer do SDK.
-#   Clang no Windows aceita paths com \ ou / indiferentemente.
-# Linux: usa pkg-config (requer vulkan-headers + libvulkan-dev instalados).
 ifeq ($(PLATFORM),windows)
     INCLUDES    += -I"$(VULKAN_SDK)/Include"
     LDFLAGS_REL += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
@@ -66,6 +63,23 @@ else
     CXXFLAGS_BASE += $(shell pkg-config --cflags vulkan 2>/dev/null)
     LDFLAGS_REL   += $(shell pkg-config --libs   vulkan 2>/dev/null)
     LDFLAGS_DBG   += $(shell pkg-config --libs   vulkan 2>/dev/null)
+endif
+
+# ── GLFW (Fase 2.3) ───────────────────────────────────────────────────────────
+# Detetado automaticamente: se external/glfw/include/GLFW/glfw3.h existir,
+# GLFW_AVAILABLE e definido e os testes de janela sao ativados.
+# Instalacao: https://www.glfw.org/download.html → extrair para external/glfw/
+GLFW_DIR := external/glfw
+ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
+    CXXFLAGS_BASE += -DGLFW_AVAILABLE
+    INCLUDES      += -I$(GLFW_DIR)/include
+    ifeq ($(PLATFORM),windows)
+        LDFLAGS_REL += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32
+        LDFLAGS_DBG += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32
+    else
+        LDFLAGS_REL += $(shell pkg-config --libs glfw3 2>/dev/null)
+        LDFLAGS_DBG += $(shell pkg-config --libs glfw3 2>/dev/null)
+    endif
 endif
 
 # ── Fontes ────────────────────────────────────────────────────────────────────

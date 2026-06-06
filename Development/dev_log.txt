@@ -79,3 +79,20 @@ Ideia: Fase 2.2 - Criar VulkanContext: primeira abstraccao da camada grafica.
     - contexto nao inicializado devolve VK_NULL_HANDLE em todos os campos
   namespace gfx:: para toda a camada grafica.
 Implementado: [A preencher]
+
+[2026-06-06 02:00:00]
+Ideia: Fase 2.3 - Janela GLFW + Superficie Vulkan.
+  Dependencia nova: GLFW (windowing cross-platform para Vulkan).
+  Justificacao: biblioteca mais leve e direta para criar janelas Vulkan;
+  SDL2 fica para audio/input avancado (Fase 3+). Licenca zlib/libpng (permissiva).
+  Instalacao manual: descarregar glfw-3.x.bin.WIN64.zip de https://www.glfw.org/download.html
+  e extrair include/ e lib-vc2022/ para external/glfw/.
+  Ficheiros novos: Game/Graphics/Window.h/.cpp, Tests/Integration/test_window.cpp.
+  Estrategia de compilacao condicional:
+    - Makefile deteta automaticamente se external/glfw/include/GLFW/glfw3.h existe.
+    - Se sim: define GLFW_AVAILABLE, ativa Window real + testes de janela.
+    - Se nao: Window compila com stubs (create=false), testes de janela ficam inativos.
+    - Resultado: 'make tests' NUNCA falha por falta de GLFW.
+  VulkanContext atualizado: init() aceita extensoes de instancia extra (necessarias para surface).
+  Surface nao e criada pelo VulkanContext; e criada pelo Window e passada via createSurface().
+Implementado: [A preencher]
