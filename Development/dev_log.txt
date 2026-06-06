@@ -66,3 +66,16 @@ Ideia: Fase 2 - Motor Grafico Base (Vulkan Headless).
   Proximo passo apos testes passarem: criar Game/Graphics/VulkanContext (.h/.cpp)
   que encapsula VkInstance, VkPhysicalDevice e VkDevice.
 Implementado: [A preencher]
+
+[2026-06-06 01:00:00]
+Ideia: Fase 2.2 - Criar VulkanContext: primeira abstraccao da camada grafica.
+  VulkanContext encapsula VkInstance + VkPhysicalDevice + VkDevice + fila grafica.
+  Interface init()/shutdown() para ser testavel (retorna bool em vez de lancar excecoes).
+  Selecao automatica de GPU: prefere discreta, aceita integrada como fallback.
+  Testes unitarios em Tests/Unit/test_vulkan_context.cpp:
+    - init() devolve handles validos
+    - GPU selecionada tem nome nao vazio
+    - shutdown() e idempotente (seguro chamar 2x)
+    - contexto nao inicializado devolve VK_NULL_HANDLE em todos os campos
+  namespace gfx:: para toda a camada grafica.
+Implementado: [A preencher]

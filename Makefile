@@ -26,7 +26,7 @@ CXX := clang++
 #   Linux  → ar do sistema
 #   Windows → llvm-ar (incluído com LLVM; se não estiver em PATH, usa ar)
 ifeq ($(PLATFORM),windows)
-    AR := $(shell command -v llvm-ar 2>/dev/null || echo ar)
+    AR := $(shell command -v llvm-ar > /dev/null 2>&1 && echo llvm-ar || echo ar)
 else
     AR := ar
 endif

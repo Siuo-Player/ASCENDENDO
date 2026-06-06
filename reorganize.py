@@ -14,12 +14,24 @@ from pathlib import Path
 ROOT = Path(__file__).parent.resolve()
 
 # ── Ficheiros a mover: (nome na raiz, destino relativo correto) ───────────────
+# Atualizar esta lista sempre que novos ficheiros forem adicionados ao projeto.
 MOVES = [
-    ("doctest.h",            "external/doctest/doctest.h"),
-    ("test_runner.cpp",      "Tests/test_runner.cpp"),
-    ("test_placeholder.cpp", "Tests/Unit/test_placeholder.cpp"),
-    ("pre-commit.sh",        "scripts/pre-commit.sh"),
-    ("dev_log.txt",          "Development/dev_log.txt"),
+    # ── Infraestrutura (Fase 1) ───────────────────────────────────────────────
+    ("doctest.h",               "external/doctest/doctest.h"),
+    ("test_runner.cpp",         "Tests/test_runner.cpp"),
+    ("pre-commit.sh",           "scripts/pre-commit.sh"),
+    ("dev_log.txt",             "Development/dev_log.txt"),
+
+    # ── Testes Unitarios ──────────────────────────────────────────────────────
+    ("test_placeholder.cpp",    "Tests/Unit/test_placeholder.cpp"),
+    ("test_vulkan_context.cpp", "Tests/Unit/test_vulkan_context.cpp"),
+
+    # ── Testes de Integracao ──────────────────────────────────────────────────
+    ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
+
+    # ── Game/Graphics (Fase 2+) ───────────────────────────────────────────────
+    ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
+    ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
 ]
 
 # ── Pastas que devem existir (com .gitkeep para o git as rastrear) ────────────
@@ -119,19 +131,24 @@ def main() -> None:
   ├── Makefile
   ├── deps.py
   ├── README.md
+  ├── reorganize.py
   ├── Development/
   │   ├── dev_log.txt
   │   ├── LevelEditor/
   │   └── AI_Validation/
   ├── Game/
   │   ├── Graphics/
+  │   │   ├── VulkanContext.h
+  │   │   └── VulkanContext.cpp
   │   ├── Assets/
   │   └── Logic/
   ├── Tests/
   │   ├── test_runner.cpp
   │   ├── Unit/
-  │   │   └── test_placeholder.cpp
+  │   │   ├── test_placeholder.cpp
+  │   │   └── test_vulkan_context.cpp
   │   ├── Integration/
+  │   │   └── test_vulkan_init.cpp
   │   ├── System/
   │   ├── Regression/
   │   └── Acceptance/
