@@ -23,7 +23,7 @@ endif
 CXX := clang++
 
 # ar compatível com objetos Clang:
-#   Linux  → ar do sistema
+#   Linux   → ar do sistema
 #   Windows → llvm-ar (incluído com LLVM; se não estiver em PATH, usa ar)
 ifeq ($(PLATFORM),windows)
     AR := $(shell command -v llvm-ar > /dev/null 2>&1 && echo llvm-ar || echo ar)
@@ -74,8 +74,9 @@ ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
     CXXFLAGS_BASE += -DGLFW_AVAILABLE
     INCLUDES      += -I$(GLFW_DIR)/include
     ifeq ($(PLATFORM),windows)
-        LDFLAGS_REL += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32
-        LDFLAGS_DBG += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32
+        # Ajustado de lib-vc2022 para lib-mingw-w64 (compatível com Clang/MinGW)
+        LDFLAGS_REL += -L$(GLFW_DIR)/lib-mingw-w64 -lglfw3 -lgdi32 -luser32 -lshell32
+        LDFLAGS_DBG += -L$(GLFW_DIR)/lib-mingw-w64 -lglfw3 -lgdi32 -luser32 -lshell32
     else
         LDFLAGS_REL += $(shell pkg-config --libs glfw3 2>/dev/null)
         LDFLAGS_DBG += $(shell pkg-config --libs glfw3 2>/dev/null)
@@ -133,7 +134,7 @@ tests: $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@$(TEST_BIN) --no-intro -v
+	@./$(TEST_BIN) --success
 	@echo ""
 
 ## game — compila o binário do jogo em modo release
@@ -145,12 +146,12 @@ game: $(GAME_BIN)
 $(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) \
-	        -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
+            -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
 
 $(GAME_BIN): $(GAME_LIB) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) \
-	        -o $@ $^ $(LDFLAGS_REL)
+            -o $@ $^ $(LDFLAGS_REL)
 
 $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 	@echo "[LIB] $(notdir $@)"
