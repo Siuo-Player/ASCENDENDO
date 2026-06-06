@@ -54,17 +54,19 @@ BUILD_DIR := build
 # ── Includes ──────────────────────────────────────────────────────────────────
 INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
 
-# ── Vulkan (Fase 2 — descomentar quando necessário) ───────────────────────────
-# ifeq ($(PLATFORM),windows)
-#     VULKAN_SDK  ?= C:/VulkanSDK/$(shell ls 'C:/VulkanSDK' 2>/dev/null | sort -V | tail -1)
-#     INCLUDES    += -I"$(VULKAN_SDK)/Include"
-#     LDFLAGS_REL += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
-#     LDFLAGS_DBG += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
-# else
-#     CXXFLAGS_BASE += $(shell pkg-config --cflags vulkan 2>/dev/null)
-#     LDFLAGS_REL   += $(shell pkg-config --libs vulkan 2>/dev/null)
-#     LDFLAGS_DBG   += $(shell pkg-config --libs vulkan 2>/dev/null)
-# endif
+# ── Vulkan ────────────────────────────────────────────────────────────────────
+# Windows: usa a variavel de ambiente VULKAN_SDK definida pelo installer do SDK.
+#   Clang no Windows aceita paths com \ ou / indiferentemente.
+# Linux: usa pkg-config (requer vulkan-headers + libvulkan-dev instalados).
+ifeq ($(PLATFORM),windows)
+    INCLUDES    += -I"$(VULKAN_SDK)/Include"
+    LDFLAGS_REL += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
+    LDFLAGS_DBG += -L"$(VULKAN_SDK)/Lib" -lvulkan-1
+else
+    CXXFLAGS_BASE += $(shell pkg-config --cflags vulkan 2>/dev/null)
+    LDFLAGS_REL   += $(shell pkg-config --libs   vulkan 2>/dev/null)
+    LDFLAGS_DBG   += $(shell pkg-config --libs   vulkan 2>/dev/null)
+endif
 
 # ── Fontes ────────────────────────────────────────────────────────────────────
 # Game: todos os .cpp em Game/ e subpastas (exceto main — adicionado à mão)
