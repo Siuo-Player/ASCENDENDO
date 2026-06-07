@@ -2,6 +2,7 @@
 
 **Motor de jogo 2D customizado + Vertical Precision Platformer**
 **Autor:** Rafael Gomes Bernardo | **Auxiliado por:** Claude (Anthropic)
+**Repositório:** https://github.com/Siuo-Player/ASCENDENDO
 
 ---
 
@@ -15,30 +16,39 @@ Motor 2D com renderização Vulkan explícita e física determinística em Fixed
 
 ```
 ASCENDENDO/
+├── .vscode/
+│   └── c_cpp_properties.json      ← IntelliSense (paths Vulkan, GLFW, doctest)
 ├── Game/
-│   ├── Graphics/          ← motor gráfico (Vulkan, janela, swapchain)
-│   │   ├── VulkanContext.h/.cpp   ← Instance + Device + Queues
+│   ├── Graphics/                  ← motor gráfico Vulkan
+│   │   ├── VulkanContext.h/.cpp   ← Instance + Device + Queues + Surface
 │   │   ├── Window.h/.cpp          ← janela GLFW (stub sem GLFW)
-│   │   └── (Swapchain, Pipeline — Fase 2.4+)
-│   ├── Logic/             ← física, input, Fixed Timestep, save states
-│   └── Assets/            ← texturas, mapas, matrizes de colisão
+│   │   ├── Swapchain.h/.cpp       ← double buffering + V-Sync
+│   │   ├── RenderPass.h/.cpp      ← define clear + store por frame
+│   │   └── Renderer.h/.cpp         ← Framebuffers + drawFrame(r,g,b)
+│   ├── Logic/                     ← física, input, Fixed Timestep (Fase 3+)
+│   └── Assets/                    ← texturas, mapas, matrizes de colisão
 ├── Development/
-│   ├── dev_log.txt        ← diário append-only (rastreado pelo git)
+│   ├── dev_log.txt                ← diário append-only (rastreado pelo git)
 │   ├── LevelEditor/
 │   └── AI_Validation/
 ├── Tests/
-│   ├── test_runner.cpp    ← define main via doctest
+│   ├── test_runner.cpp            ← define main via doctest
 │   ├── Unit/
-│   │   ├── test_placeholder.cpp
+│   │   ├── test_placeholder.cpp   ← infra + sizeof de tipos
 │   │   └── test_vulkan_context.cpp
 │   └── Integration/
-│       ├── test_vulkan_init.cpp
-│       └── test_window.cpp        ← ativo após instalar GLFW
+│       ├── test_vulkan_init.cpp   ← instance, versão driver, GPUs
+│       ├── test_window.cpp        ← janela GLFW + surface
+│       ├── test_swapchain.cpp     ← swapchain 800×600
+│       ├── test_render_pass.cpp   ← pipeline completa até RenderPass
+│       └── test_renderer.cpp      ← 500 frames coloridos (visual, ~8s)
 ├── external/
-│   ├── doctest/           ← framework de testes (header-only)
-│   └── glfw/              ← instalar manualmente (ver Secção 8.1)
+│   ├── doctest/doctest.h          ← framework de testes (header-only)
+│   └── glfw/                      ← instalado manualmente (ver 8.1)
+│       ├── include/GLFW/
+│       └── lib-vc2022/
 ├── scripts/
-│   └── pre-commit.sh      ← bloqueia commits com testes a falhar
+│   └── pre-commit.sh              ← bloqueia commits com testes a falhar
 ├── Makefile
 ├── deps.py
 └── reorganize.py
@@ -53,7 +63,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 | Biblioteca | Versão | Localização | Justificação |
 |---|---|---|---|
 | [doctest](https://github.com/doctest/doctest) | 2.5.0 | `external/doctest/` | Header-only, zero overhead, MIT |
-| [GLFW](https://www.glfw.org/) | 3.4 | `external/glfw/` | Windowing Vulkan cross-platform, zlib license |
+| [GLFW](https://www.glfw.org/) | 3.4 | `external/glfw/` | Windowing Vulkan cross-platform, zlib |
 | Vulkan SDK | 1.4.341.1 | sistema (`VULKAN_SDK`) | API gráfica principal |
 
 ---
@@ -63,6 +73,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
+- **Testes atuais**: **18 a passar** (2 Unit + 3 Init + 4 Window + 1 Swapchain + 1 RenderPass + 2 Renderer + 5 VulkanContext).
 
 ---
 
@@ -81,29 +92,27 @@ Implementado: [como correu, problemas e soluções]
 ## 6. Planeamento de Desenvolvimento
 
 **Fase 1: Ambiente e Infraestrutura** ✅ CONCLUÍDA
-- Makefile cross-platform (Windows Git Bash + Linux, Clang++/C++20)
-- doctest integrado, hook de pre-commit ativo
-- deps.py com permissão explícita antes de qualquer download
+- Makefile cross-platform, doctest, hook de pre-commit, deps.py
 
 **Fase 2: Motor Gráfico Base (Vulkan)**
-- 2.1 ✅ Integração do SDK Vulkan (testes headless: instance, versão, GPU)
+- 2.1 ✅ SDK Vulkan integrado (instance, driver, GPUs — headless)
 - 2.2 ✅ `VulkanContext` (Instance + PhysicalDevice + Device + Queues)
-- 2.3 ← **AQUI** — `Window` (GLFW) + Surface Vulkan
-- 2.4 → Swapchain
-- 2.5 → Render pass + framebuffers
-- 2.6 → Primeiro ecrã visível (clear to color)
+- 2.3 ✅ `Window` (GLFW) + Surface Vulkan
+- 2.4 ✅ `Swapchain` (double buffering, V-Sync, 800×600)
+- 2.5 ✅ `RenderPass` (clear + store, layout para apresentação)
+- **2.6 ← AQUI** — `Renderer` (Framebuffers + Command Buffers + Sync → **primeira janela colorida**)
 
 **Fase 3: Física e Input**
-- Fixed Timestep, colisões AABB, input WASD/setas
+- Fixed Timestep, colisões AABB, input WASD/setas, gravação de inputs
 
 **Fase 4: Level Streaming e Câmera**
-- Mapas interligados, câmera ortográfica, object pooling
+- Mapas interligados, câmera ortográfica, object pooling Vulkan
 
 **Fase 5: Ferramentas (Level Editor)**
 
 **Fase 6: Jogo + IA de Validação**
-- Salto por carga (barra UI + força numérica)
-- Validador algorítmico de dificuldade de mapas
+- Salto por carga (barra UI + valor numérico da força)
+- Validador algorítmico de dificuldade (grafos + parábolas)
 
 **Fase 7: V2 / New Game+**
 - Física deslizante, novas mecânicas
@@ -114,58 +123,77 @@ Implementado: [como correu, problemas e soluções]
 
 | Componente | Escolha | Notas |
 |---|---|---|
-| Linguagem | C++20 | `concepts`, `std::span`, controlo total de memória |
+| Linguagem | C++20 | controlo de memória, `concepts`, compatibilidade Vulkan |
 | Compilador | Clang++ 22 (LLVM) | `Target: x86_64-pc-windows-msvc` |
 | Build | GNU Make (manual) | portável via Git Bash / MSYS2 |
 | API Gráfica | Vulkan 1.3 | explícita, determinística, cross-platform |
 | Windowing | GLFW 3.4 | propositado para Vulkan, zlib license |
 | Testes | doctest 2.5.0 | header-only, zero instalação |
-| Audio/Input avançado | SDL2 (Fase 3+) | a decidir |
-| Shaders | GLSL → SPIR-V | compilado com `glslc` (Vulkan SDK) |
+| Shaders | GLSL → SPIR-V | compilado com `glslc` (incluído no Vulkan SDK) |
 
 ---
 
 ## 8. Setup do Ambiente
 
-### 8.1 Requisitos e Instalação
+### 8.1 Requisitos
 
 | Ferramenta | Estado | Instalação |
 |---|---|---|
-| Clang++ ≥ 14 | ✅ instalado | `winget install LLVM.LLVM` |
-| GNU Make | ✅ instalado | Git Bash ou `choco install make` |
-| Git | ✅ instalado | https://git-scm.com/ |
-| Python ≥ 3.9 | ✅ instalado | `winget install Python.Python.3` |
-| Vulkan SDK | ✅ instalado | https://vulkan.lunarg.com/sdk/home |
-| **GLFW 3.4** | ⬅ **instalar agora** | ver abaixo |
+| Clang++ ≥ 14 | ✅ | `winget install LLVM.LLVM` + adicionar ao PATH |
+| GNU Make | ✅ | Git Bash (incluído) ou `choco install make` |
+| Git | ✅ | https://git-scm.com/ |
+| Python ≥ 3.9 | ✅ | `winget install Python.Python.3` |
+| Vulkan SDK | ✅ | https://vulkan.lunarg.com/sdk/home |
+| GLFW 3.4 | ✅ | https://www.glfw.org/download.html → `glfw-3.4.bin.WIN64.zip` |
 
-**Instalar GLFW (Fase 2.3):**
-1. Descarregar `glfw-3.4.bin.WIN64.zip` de https://www.glfw.org/download.html
-2. Extrair e copiar para `external/glfw/`:
-   ```
-   external/glfw/
-   ├── include/GLFW/glfw3.h
-   ├── include/GLFW/glfw3native.h
-   └── lib-vc2022/glfw3.lib  (+ glfw3dll.lib, glfw3.dll)
-   ```
-3. Correr `make clean && make tests` — o Makefile deteta GLFW automaticamente
+**Instalar GLFW:**
+1. Descarregar `glfw-3.4.bin.WIN64.zip`
+2. Extrair `include/` e `lib-vc2022/` para `external/glfw/`
+3. `make clean && make tests` — o Makefile deteta automaticamente
 
 ### 8.2 Primeiros Passos
 
 ```bash
 git clone https://github.com/Siuo-Player/ASCENDENDO && cd ASCENDENDO
-python deps.py                      # verificar dependências
-python reorganize.py                # organizar ficheiros (após descarregar pacote)
+python deps.py                       # verificar dependências
+python reorganize.py                 # organizar ficheiros descarregados
 cp scripts/pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
-make tests                          # validar setup
+make tests                           # silencioso — mostra só resumo
+make tests-verbose                   # detalhado — mostra cada assertion
 ```
 
 ### 8.3 Ciclo de Desenvolvimento (TDD)
 
 ```bash
-# 1. Escrever teste (Tests/Unit/ ou Tests/Integration/)
-# 2. Iterar até passar:
+# 1. Escrever o teste primeiro
+# 2. Implementar até passar:
 make tests
-# 3. Commit (hook bloqueia se falhar):
+# 3. Commit automático protegido pelo hook:
 git add . && git commit -m "feat: descrição"
 ```
+
+---
+
+## 9. Esquema de Versão dos Ficheiros
+
+Cada ficheiro tem `@version` no seu cabeçalho a indicar quando foi modificado pela última vez.
+
+```
+vX.Y[Z...]  onde:
+  X    = Fase principal (1–8, conforme README)
+  .Y   = Sub-passo da fase  (ex: 2.3 = Fase 2, Passo 3)
+  .YZ  = Pequena atualização dentro do sub-passo (ex: 2.40 = 1ª fix em 2.4)
+  .YZW = Atualização ainda mais granular (ex: 2.401, 2.410...)
+```
+
+**Versão atual do projeto: 2.6**
+
+| Ficheiro | Versão |
+|---|---|
+| VulkanContext.h | v2.3 |
+| VulkanContext.cpp | v2.4 |
+| Window.h/.cpp | v2.3 |
+| Swapchain.h/.cpp | v2.40 |
+| RenderPass.h/.cpp | v2.5 |
+| Renderer.h/.cpp | v2.6 |

@@ -40,6 +40,11 @@ MOVES = [
     ("Swapchain.cpp",           "Game/Graphics/Swapchain.cpp"),          # Fase 2.4
     ("RenderPass.h",            "Game/Graphics/RenderPass.h"),           # Fase 2.5
     ("RenderPass.cpp",          "Game/Graphics/RenderPass.cpp"),         # Fase 2.5
+    ("Renderer.h",              "Game/Graphics/Renderer.h"),             # Fase 2.6
+    ("Renderer.cpp",            "Game/Graphics/Renderer.cpp"),           # Fase 2.6
+
+    # ── Testes de Integracao (continuacao) ────────────────────────────────────
+    ("test_renderer.cpp",       "Tests/Integration/test_renderer.cpp"),  # Fase 2.6
 ]
 
 # ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────

@@ -1,98 +1,140 @@
 # dev_log.txt — Diário de Desenvolvimento
 # FICHEIRO APPEND-ONLY: nunca editar entradas anteriores.
-# Formato obrigatório:
+#
+# ESQUEMA DE VERSÃO DO PROJETO
+# ─────────────────────────────────────────────────────────────────────────────
+# Formato: vX.Y[Z...]
+#   X    = Fase principal (1–8, conforme README)
+#   .Y   = Sub-passo da fase  (ex: 2.3 = Fase 2, Passo 3)
+#   .YZ  = Pequena atualização dentro de um sub-passo (ex: 2.31 = 1ª fix em 2.3)
+#   .YZW = Atualização ainda mais granular (ex: 2.310, 2.311...)
+# Regra: cada ficheiro tem @version no seu cabeçalho a refletir quando foi
+#        modificado pela última vez. Incrementar sempre que houver mudança.
+# ─────────────────────────────────────────────────────────────────────────────
+# Versão atual do projeto: 2.5
+# ─────────────────────────────────────────────────────────────────────────────
+# Formato de entrada:
 #   [YYYY-MM-DD HH:MM:SS]
 #   Ideia: [O que vamos implementar e o comportamento esperado]
 #   Implementado: [Se funcionou, como foi feito, problemas e soluções]
 # ════════════════════════════════════════════════════════════════════════
 
 [2026-06-05 00:00:00]
-Ideia: Fase 1 — Configuração inicial do ambiente de desenvolvimento.
-  Objetivos:
-    1. Criar estrutura de pastas definitiva do projeto conforme arquitetura do README.
-    2. Implementar Makefile cross-platform (Windows Git Bash/MSYS2 + Linux) com Clang++/C++20.
-       Suporte a: compilação do jogo (release), bateria de testes (debug + sanitizers em Linux),
-       limpeza de artefactos. Vulkan comentado — ativado na Fase 2.
-    3. Criar deps.py: verificador de dependências com pedido explícito de permissão antes de
-       qualquer download/instalação. Regista resultado no dev_log.txt.
-    4. Integrar doctest como framework de testes.
-       Justificação da dependência (conforme Regra 3 do README):
-         - Header-only (zero instalação, copiado para external/doctest/doctest.h)
-         - Compilação ultrarrápida (não inclui implementação pesada nos TUs)
-         - Interface familiar (TEST_CASE, CHECK, REQUIRE)
-         - Licença MIT — sem restrições
-         - Suporte nativo a subcasos (SUBCASE) e suites (TEST_SUITE)
-    5. Criar hook de pre-commit que bloqueia commits com testes a falhar.
-    6. Criar .gitignore adequado para C++/Clang/Vulkan.
-    7. Criar testes de sanidade (Infra): framework operacional + tamanhos de tipos de dados.
-       O segundo teste é crítico para garantir determinismo da física e integridade de save states.
-Implementado: Setup validado com sucesso (clang++ 18, doctest 2.5.0).
-  Ficheiros criados:
-    - Makefile                         (cross-platform Windows+Linux, Clang++, C++20)
-    - deps.py                          (verificador de dependências com permissão explícita)
-    - Tests/test_runner.cpp            (define main via DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN)
-    - Tests/Unit/test_placeholder.cpp  (2 test cases, 9 assertions)
-    - external/doctest/doctest.h       (v2.5.0, header-only)
-    - scripts/pre-commit.sh            (bloqueia commits com testes a falhar)
-    - .gitignore
-  Problema encontrado: tipos uintX_t requerem #include <cstdint> explícito com Clang/C++20.
-  Solução: adicionado ao test_placeholder.cpp.
-  Resultado: make tests → 2/2 passed | 9/9 assertions | Status: SUCCESS
+Ideia: v1.0 — Fase 1: Configuracao inicial do ambiente de desenvolvimento.
+  1. Estrutura de pastas definitiva conforme arquitetura do README.
+  2. Makefile cross-platform (Windows Git Bash/MSYS2 + Linux) com Clang++/C++20.
+  3. deps.py: verificador de dependencias com pedido explícito de permissao antes
+     de qualquer download/instalacao.
+  4. doctest (header-only, MIT, zero instalacao) como framework de testes.
+     Justificacao: compilacao ultrarrápida, interface familiar, SUBCASE nativo.
+  5. Hook pre-commit que bloqueia commits com testes a falhar.
+  6. .gitignore adequado para C++/Clang/Vulkan.
+  7. Testes de sanidade: framework operacional + sizeof de tipos fundamentais.
+     (critico para determinismo de fisica e integridade de save states).
+Implementado: Setup validado (clang++ 18, doctest 2.5.0).
+  Makefile, deps.py, test_runner.cpp, test_placeholder.cpp, doctest.h,
+  pre-commit.sh, .gitignore criados. Resultado:
+  make tests -> 2/2 passed | 9/9 assertions | Status: SUCCESS
 
 [2026-06-05 23:50:00]
-Ideia: Corrigir PATH do sistema para clang++ e validar setup final da Fase 1.
-Implementado: LLVM estava instalado em C:\Program Files\LLVM\bin mas a pasta nao estava
-  no PATH do sistema. Fix aplicado via PowerShell Admin:
-  [Environment]::SetEnvironmentVariable("PATH", "$p;C:\Program Files\LLVM\bin", "Machine")
-  Resultado final verificado com ./build/tests.exe --success:
-    [doctest] test cases: 2 | 2 passed | 0 failed | 0 skipped
-    [doctest] assertions: 9 | 9 passed | 0 failed
-    [doctest] Status: SUCCESS!
+Ideia: v1.0 — Fix: PATH do sistema para clang++.
+Implementado: LLVM instalado em C:\Program Files\LLVM\bin mas sem PATH.
+  Fix via PowerShell Admin:
+    [Environment]::SetEnvironmentVariable("PATH", "$p;C:\Program Files\LLVM\bin", "Machine")
+  Resultado: clang++ 22.1.6 detetado. make tests -> SUCCESS.
   FASE 1 OFICIALMENTE CONCLUIDA.
-  Nota: caracteres acentuados em strings de testes mostram como lixo no Git Bash Windows
-  (UTF-8 encoding). Sem impacto funcional. Corrigido na proxima iteracao.
 
 [2026-06-06 00:00:00]
-Ideia: Fase 2 - Motor Grafico Base (Vulkan Headless).
-  Abordagem escolhida: Headless purista (TDD).
-  Objetivo desta iteracao: provar que o Vulkan SDK esta corretamente integrado
-  no sistema de build e que a GPU do sistema responde a pedidos Vulkan basicos,
-  sem qualquer janela ou swapchain.
-  Testes a escrever (Tests/Integration/test_vulkan_init.cpp):
-    1. VkInstance: criacao e destruicao limpas (sem memory leaks)
-    2. Versao Vulkan: sistema suporta >= 1.3
-    3. GPU: pelo menos uma placa grafica Vulkan detectada
-  Makefile: ativar a secao do Vulkan SDK (INCLUDES + LDFLAGS para vulkan-1).
-  Proximo passo apos testes passarem: criar Game/Graphics/VulkanContext (.h/.cpp)
-  que encapsula VkInstance, VkPhysicalDevice e VkDevice.
-Implementado: [A preencher]
+Ideia: v2.1 — Fase 2.1: Integracao do Vulkan SDK (headless, TDD puro).
+  Objetivo: provar que o SDK esta corretamente ligado e que a GPU responde a
+  pedidos Vulkan basicos sem qualquer janela ou swapchain.
+  Testes (Tests/Integration/test_vulkan_init.cpp):
+    1. VkInstance: criacao e destruicao sem erros
+    2. Driver suporta Vulkan >= 1.3
+    3. Pelo menos 1 GPU Vulkan detetada (lista nome e tipo)
+  Makefile: ativar secao VULKAN_SDK (INCLUDES + LDFLAGS para vulkan-1).
+Implementado: Makefile atualizado com secao Vulkan descomentada.
+  test_vulkan_init.cpp criado com helper createTestInstance() reutilizavel.
+  Problema: AR (llvm-ar) com espacos no path "Program Files" partia o comando.
+  Solucao: AR := $(shell command -v llvm-ar > /dev/null 2>&1 && echo llvm-ar || echo ar)
+  (retorna o NOME, nao o caminho completo).
+  Resultado: 3/3 testes Vulkan a passar. GPU detetada: NVIDIA (discreta).
 
 [2026-06-06 01:00:00]
-Ideia: Fase 2.2 - Criar VulkanContext: primeira abstraccao da camada grafica.
-  VulkanContext encapsula VkInstance + VkPhysicalDevice + VkDevice + fila grafica.
-  Interface init()/shutdown() para ser testavel (retorna bool em vez de lancar excecoes).
-  Selecao automatica de GPU: prefere discreta, aceita integrada como fallback.
-  Testes unitarios em Tests/Unit/test_vulkan_context.cpp:
+Ideia: v2.2 — Fase 2.2: VulkanContext — primeira abstracao da camada grafica.
+  Encapsula VkInstance + VkPhysicalDevice + VkDevice + fila grafica.
+  Interface init(bool)/shutdown() testavel (retorna bool, sem excecoes).
+  Selecao de GPU: prefere discreta, fallback para integrada.
+  namespace gfx:: para toda a camada grafica.
+  Testes (Tests/Unit/test_vulkan_context.cpp):
     - init() devolve handles validos
     - GPU selecionada tem nome nao vazio
-    - shutdown() e idempotente (seguro chamar 2x)
-    - contexto nao inicializado devolve VK_NULL_HANDLE em todos os campos
-  namespace gfx:: para toda a camada grafica.
-Implementado: [A preencher]
+    - shutdown() e idempotente (2x sem crash)
+    - contexto nao inicializado -> VK_NULL_HANDLE
+    - init() e idempotente (2x sem recriar)
+Implementado: VulkanContext.h/.cpp criados (v2.2). 5 testes a passar.
+  Total acumulado: 2 + 3 + 5 = 10 testes.
 
 [2026-06-06 02:00:00]
-Ideia: Fase 2.3 - Janela GLFW + Superficie Vulkan.
-  Dependencia nova: GLFW (windowing cross-platform para Vulkan).
-  Justificacao: biblioteca mais leve e direta para criar janelas Vulkan;
-  SDL2 fica para audio/input avancado (Fase 3+). Licenca zlib/libpng (permissiva).
-  Instalacao manual: descarregar glfw-3.x.bin.WIN64.zip de https://www.glfw.org/download.html
-  e extrair include/ e lib-vc2022/ para external/glfw/.
-  Ficheiros novos: Game/Graphics/Window.h/.cpp, Tests/Integration/test_window.cpp.
-  Estrategia de compilacao condicional:
-    - Makefile deteta automaticamente se external/glfw/include/GLFW/glfw3.h existe.
-    - Se sim: define GLFW_AVAILABLE, ativa Window real + testes de janela.
-    - Se nao: Window compila com stubs (create=false), testes de janela ficam inativos.
-    - Resultado: 'make tests' NUNCA falha por falta de GLFW.
-  VulkanContext atualizado: init() aceita extensoes de instancia extra (necessarias para surface).
-  Surface nao e criada pelo VulkanContext; e criada pelo Window e passada via createSurface().
-Implementado: [A preencher]
+Ideia: v2.3 — Fase 2.3: Window (GLFW) + Surface Vulkan.
+  Dependencia nova: GLFW 3.4 (windowing cross-platform para Vulkan).
+  Justificacao: mais leve e direta que SDL2 para apenas windowing;
+  SDL2 fica para audio/input avancado (Fase 3+). Licenca zlib/libpng.
+  Instalacao: glfw-3.4.bin.WIN64.zip -> external/glfw/ (include/ + lib-vc2022/).
+  Estrategia compilacao condicional:
+    GLFW_AVAILABLE = auto-detetado pelo Makefile via $(wildcard).
+    Sem GLFW: Window compila como stub (create=false). Testes inativos.
+    Com GLFW: Window real + 4 testes de integracao ativos.
+  VulkanContext: init() agora aceita instanceExtensions (necessario para surface).
+  Surface criada pelo Window e passada via VulkanContext::createSurface().
+  c_cpp_properties.json criado para eliminar erros falsos do IntelliSense.
+Implementado: Window.h/.cpp (v2.3), VulkanContext.h/.cpp atualizados (v2.3).
+  -lshell32 adicionado (necessario para GLFW 3.4 no Windows).
+  4 testes Window + Surface a passar. Total: 14 testes.
+
+[2026-06-06 03:00:00]
+Ideia: v2.4 — Fase 2.4: Swapchain (double buffering + V-Sync).
+  Swapchain.h/.cpp: encapsula VkSwapchainKHR, formato e extent.
+  Formato: VK_FORMAT_B8G8R8A8_SRGB (universalmente suportado em desktop).
+  Apresentacao: VK_PRESENT_MODE_FIFO_KHR (V-Sync garantido, sem tearing).
+  VulkanContext.cpp: VK_KHR_SWAPCHAIN_EXTENSION_NAME sempre ativo no device.
+  Teste: cria cadeia Window -> Vulkan -> Surface -> Swapchain, verifica extent.
+  Nota futura (v2.40): validar com vkGetPhysicalDeviceSurfaceCapabilitiesKHR
+  para escolher formato e preTransform dinamicamente.
+Implementado: Swapchain.h/.cpp (v2.4), test_swapchain.cpp criado.
+  Swapchain 800x600 criado e destruido sem erros. Total: 15 testes.
+
+[2026-06-06 04:00:00]
+Ideia: v2.5 — Fase 2.5: RenderPass (define clear + store por frame).
+  RenderPass.h/.cpp: 1 color attachment, 1 subpass grafico.
+  loadOp  = CLEAR  (limpa o ecra a cada frame — cor definida no render loop).
+  storeOp = STORE  (guarda resultado para apresentacao no monitor).
+  finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR (pronto para o ecra).
+  Dependency de sincronizacao: garante que o RenderPass espera pelo color output.
+  Teste: cria cadeia completa Window->Vulkan->Surface->Swapchain->RenderPass.
+  reorganize.py refatorizado: modo silencioso, substituicao inteligente.
+  Makefile: target tests-verbose adicionado (make tests-verbose para debug).
+Implementado: RenderPass.h/.cpp (v2.5), test_render_pass.cpp criado.
+  Pipeline de inicializacao validada ate Fase 2.5. Total: 16 testes a 100%.
+  VERSAO DO PROJETO: 2.5
+
+[2026-06-06 05:00:00]
+Ideia: v2.6 — Fase 2.6: Renderer — Framebuffers + CommandBuffers + Sync + drawFrame.
+  Objetivo: primeiro ecrã visível (janela colorida). Fim da Fase 2 do motor.
+  Swapchain atualizado (v2.40): adicionar image views (necessario para Framebuffers).
+  Renderer.h/.cpp: Framebuffers (1 por imagem do swapchain), Command Pool,
+    Command Buffers, Semáforos (imageAvailable, renderFinished) e Fence (inFlight).
+  drawFrame(r,g,b): acquire → gravar clear → submit → present.
+  Fence criada sinalizada (VK_FENCE_CREATE_SIGNALED_BIT) — evita espera infinita no 1o frame.
+  test_renderer.cpp: mini render loop de 500 frames (~8s) a azul escuro.
+    CHECK(successFrames == 500) verifica que todos os frames foram produzidos.
+  Versao do projeto apos esta fase: 2.6
+Implementado: [A preencher apos make tests-verbose]
+
+[2026-06-06 06:00:00]
+Ideia: v2.60 — Fix: test_renderer.cpp — janela fecha automaticamente.
+Implementado: Utilizador fechou a janela manualmente ao ver o titulo "Primeiro Frame!",
+  causando shouldClose()=true no frame 350 e CHECK(350 == 500) a falhar.
+  Fix: remover '&& !win.shouldClose()' do loop do teste.
+  O teste abre a janela, renderiza 500 frames (~8s) e fecha automaticamente.
+  Titulo da janela atualizado: "ASCENDENDO v2.6 | NAO FECHAR — fecha automaticamente".
