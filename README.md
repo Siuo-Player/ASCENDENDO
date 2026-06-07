@@ -73,7 +73,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes atuais**: **18 a passar** (2 Unit + 3 Init + 4 Window + 1 Swapchain + 1 RenderPass + 2 Renderer + 5 VulkanContext).
+- **Testes atuais**: **36 a passar** (18 Fases 1–2 + 7 InputManager + 11 Physics) (2 Unit + 3 Init + 4 Window + 1 Swapchain + 1 RenderPass + 2 Renderer + 5 VulkanContext).
 
 ---
 
@@ -103,7 +103,9 @@ Implementado: [como correu, problemas e soluções]
 - **2.6 ← AQUI** — `Renderer` (Framebuffers + Command Buffers + Sync → **primeira janela colorida**)
 
 **Fase 3: Física e Input**
-- Fixed Timestep, colisões AABB, input WASD/setas, gravação de inputs
+- **3.1 ← AQUI** — `InputManager` (key states, GLFW callback) + `Physics` (Vec2, AABB, Fixed Timestep, gravidade)
+- 3.2 → Movimento horizontal do personagem
+- 3.3 → Save States + gravação de replays de inputs
 
 **Fase 4: Level Streaming e Câmera**
 - Mapas interligados, câmera ortográfica, object pooling Vulkan
@@ -187,7 +189,7 @@ vX.Y[Z...]  onde:
   .YZW = Atualização ainda mais granular (ex: 2.401, 2.410...)
 ```
 
-**Versão atual do projeto: 2.6**
+**Versão atual do projeto: 3.1**
 
 | Ficheiro | Versão |
 |---|---|
@@ -197,3 +199,5 @@ vX.Y[Z...]  onde:
 | Swapchain.h/.cpp | v2.40 |
 | RenderPass.h/.cpp | v2.5 |
 | Renderer.h/.cpp | v2.6 |
+| InputManager.h/.cpp | v3.1 |
+| Physics.h/.cpp | v3.1 |

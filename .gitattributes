@@ -1,0 +1,10 @@
+# =============================================================================
+# .gitattributes — Normalização automática de line endings
+# Git decide LF/CRLF automaticamente por plataforma e tipo de ficheiro.
+# =============================================================================
+
+# Deteção e normalização automática (LF no repo, CRLF no checkout Windows)
+* text=auto
+
+# Shell scripts precisam sempre de LF (correm em bash/Unix, mesmo no Windows)
+*.sh text eol=lf

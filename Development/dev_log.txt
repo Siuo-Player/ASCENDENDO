@@ -138,3 +138,31 @@ Implementado: Utilizador fechou a janela manualmente ao ver o titulo "Primeiro F
   Fix: remover '&& !win.shouldClose()' do loop do teste.
   O teste abre a janela, renderiza 500 frames (~8s) e fecha automaticamente.
   Titulo da janela atualizado: "ASCENDENDO v2.6 | NAO FECHAR — fecha automaticamente".
+
+[2026-06-06 07:00:00]
+Ideia: v2.6 — Concluido. Resultado: 18/18 testes a passar.
+  Motor grafico base operacional: janela azul escuro renderizada durante 500 frames.
+  Fix v2.60: test_renderer.cpp — remover shouldClose() do loop (utilizador fechou
+  a janela manualmente, loop saiu no frame 350, CHECK falhou).
+  FASE 2 OFICIALMENTE CONCLUIDA.
+Implementado: Confirmado com make tests-verbose. Commit e push feitos.
+
+[2026-06-06 08:00:00]
+Ideia: v3.1 — Fase 3: Input + Fisica Deterministica.
+  .gitattributes criado: text=auto para elimininar avisos LF/CRLF no Windows.
+  InputManager.h/.cpp (Game/Logic/):
+    - onKeyEvent(key, action): injecao de eventos (testavel sem GLFW)
+    - beginFrame(): limpa justDown/justUp no inicio de cada frame
+    - isKeyDown, isKeyJustPressed, isKeyJustReleased
+    - isLeft(), isRight(), isJump() (A/LEFT, D/RIGHT, SPACE)
+    - registerWithWindow(): liga ao callback GLFW em producao
+  Physics.h/.cpp (Game/Logic/):
+    - Vec2: soma, subtracao, escalar, operador+=
+    - AABB: overlaps() (Separating Axis Theorem simplificado)
+    - PhysicsBody: posicao, velocidade, bounds() -> AABB
+    - PhysicsWorld: step() (gravidade + Euler + colisao chao),
+      jump() (so se isGrounded), collides(), advance() (Fixed Timestep)
+    - Constantes: GRAVITY=-980 px/s², FIXED_STEP=1/60s, GROUND_Y=0
+  test_input.cpp: 7 testes unitarios (sem GLFW — injecao de eventos)
+  test_physics.cpp: 11 testes unitarios (Vec2, AABB, step, jump, Fixed Timestep)
+Implementado: [A preencher apos make tests-verbose]

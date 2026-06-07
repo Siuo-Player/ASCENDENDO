@@ -45,6 +45,16 @@ MOVES = [
 
     # ── Testes de Integracao (continuacao) ────────────────────────────────────
     ("test_renderer.cpp",       "Tests/Integration/test_renderer.cpp"),  # Fase 2.6
+
+    # ── Game/Logic (Fase 3+) ──────────────────────────────────────────────────
+    ("InputManager.h",          "Game/Logic/InputManager.h"),            # Fase 3.1
+    ("InputManager.cpp",        "Game/Logic/InputManager.cpp"),          # Fase 3.1
+    ("Physics.h",               "Game/Logic/Physics.h"),                 # Fase 3.1
+    ("Physics.cpp",             "Game/Logic/Physics.cpp"),               # Fase 3.1
+
+    # ── Testes Unit (continuacao) ─────────────────────────────────────────────
+    ("test_input.cpp",          "Tests/Unit/test_input.cpp"),            # Fase 3.1
+    ("test_physics.cpp",        "Tests/Unit/test_physics.cpp"),          # Fase 3.1
 ]
 
 # ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────
