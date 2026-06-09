@@ -11,7 +11,7 @@
 # Regra: cada ficheiro tem @version no seu cabeçalho a refletir quando foi
 #        modificado pela última vez. Incrementar sempre que houver mudança.
 # ─────────────────────────────────────────────────────────────────────────────
-# Versão atual do projeto: 2.5
+# Versão atual do projeto: 6.1
 # ─────────────────────────────────────────────────────────────────────────────
 # Formato de entrada:
 #   [YYYY-MM-DD HH:MM:SS]
