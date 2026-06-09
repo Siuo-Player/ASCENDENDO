@@ -58,6 +58,11 @@ MOVES = [
     ("Player.h",                "Game/Logic/Player.h"),                  # Fase 3.2
     ("Player.cpp",              "Game/Logic/Player.cpp"),                # Fase 3.2
     ("test_player.cpp",         "Tests/Unit/test_player.cpp"),           # Fase 3.2
+    
+    # ── Replay e Save States (Fase 3.3) ───────────────────────────────────────
+    ("ReplayManager.h",         "Game/Logic/ReplayManager.h"),           # Fase 3.3
+    ("ReplayManager.cpp",       "Game/Logic/ReplayManager.cpp"),         # Fase 3.3
+    ("test_replay.cpp",         "Tests/Unit/test_replay.cpp"),           # Fase 3.3
 ]
 
 # ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────

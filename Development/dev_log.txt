@@ -183,3 +183,25 @@ Ideia: v3.2 — Fase 3.2: Player — integracao Input + Physics.
   Testes de movimento: D, A, A+D, sem teclas.
   Testes de salto: toque rapido, carga total, salto no ar, limite 1.0, 2 saltos comparados.
 Implementado: [A preencher apos make tests]
+
+[2026-06-09 16:21:00]
+Ideia: v3.3 — Fase 3.3: Save States e Replay System.
+  Objetivo: Gravar o estado da simulacao e inputs por frame para permitir rewind/replay deterministico.
+  Estruturas (Game/Logic/ReplayManager.h):
+    - FrameInput: abstrai o estado das teclas logicas (left, right, jump).
+    - GameState: encapsula copia do Player e PhysicsWorld::m_accumulator.
+    - ReplayManager: guarda historico e gerencia record(), rollback() e playFrame().
+  PhysicsWorld.h atualizado: m_accumulator e setAccumulator() expostos para o GameState.
+  Testes (Tests/Unit/test_replay.cpp):
+    - Gravar e restaurar estado exato do Player (posicao, velocidade, carga).
+    - Gravar e reproduzir sequencia de inputs.
+    - Garantir determinismo: restaurar state + re-simular gera o mesmo resultado.
+Implementado: [A preencher apos make tests]
+
+# NOTA PARA A FASE 4 (Level Streaming e Viewport):
+# A resolucao logica interna do jogo (pixel-art) sera 360x640 (aspect ratio 9:16).
+# O Vulkan vai renderizar tudo para um Offscreen Framebuffer de 360x640.
+# A classe Window (GLFW) pode ser redimensionada livremente pelo utilizador.
+# A classe Renderer ficara encarregue de fazer o "Integer Upscaling" do framebuffer
+# interno para o Swapchain, preenchendo o espaco restante com letterbox (barras pretas)
+# para manter os pixeis perfeitos e o determinismo da fisica intacto.
