@@ -8,6 +8,7 @@
 #include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
 #include "Graphics/Pipeline.h"
+#include "Logic/Player.h"
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
@@ -53,7 +54,7 @@ void Renderer::cleanup() {
     m_initialized = false;
 }
 
-bool Renderer::drawFrame(float r, float g, float b) {
+bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera) {
     VkDevice device = m_ctx->device();
     vkWaitForFences(device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -66,7 +67,8 @@ bool Renderer::drawFrame(float r, float g, float b) {
     vkResetFences(device, 1, &m_inFlightFence);
     vkResetCommandBuffer(m_commandBuffers[imageIndex], 0);
 
-    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex, r, g, b)) return false;
+    // Passar o player e a camera para a gravação
+    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex, player, camera)) return false;
 
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo{};
@@ -140,13 +142,13 @@ bool Renderer::createSyncObjects() {
         && vkCreateFence(dev, &fenceCI, nullptr, &m_inFlightFence)             == VK_SUCCESS;
 }
 
-bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, float r, float g, float b) {
+bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, const logic::Player& player, const gfx::Camera& camera) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
 
     VkClearValue clearColor{};
-    clearColor.color = {{r, g, b, 1.0f}};
+    clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}}; // Voltei ao Fundo Azul Noturno Escuro
 
     VkRenderPassBeginInfo rpBI{};
     rpBI.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -164,7 +166,6 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, flo
     int32_t winH = m_swapchain->extent().height;
     float winAR  = (float)winW / (float)winH;
 
-    // Viewport adaptável sem números hardcoded
     int32_t viewW = winW, viewH = winH;
     if (winAR > config::TARGET_ASPECT) viewW = (int32_t)(winH * config::TARGET_ASPECT);
     else                               viewH = (int32_t)(winW / config::TARGET_ASPECT);
@@ -183,23 +184,28 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, flo
     scissor.extent = {(uint32_t)viewW, (uint32_t)viewH};
     vkCmdSetScissor(cmd, 0, 1, &scissor);
 
+    // PREPARAR DADOS PARA A GPU
     PushConstants push{};
-    push.color[0] = 0.9f; push.color[1] = 0.2f; push.color[2] = 0.2f; push.color[3] = 1.0f;
-    push.camPos[0] = 0.0f; push.camPos[1] = 0.0f;
-    push.objSize[0] = 60.0f; push.objSize[1] = 60.0f;
     
-    // Injetar resolução global na placa gráfica
+    // Cor do jogador
+    push.color[0] = 0.9f; push.color[1] = 0.2f; push.color[2] = 0.2f; push.color[3] = 1.0f;
+    
+    // LER DA NOSSA CÂMARA REAL
+    push.camPos[0] = camera.position.x; 
+    push.camPos[1] = camera.position.y;
+    
+    // LER DO NOSSO JOGADOR REAL
+    push.objPos[0] = player.position().x; 
+    push.objPos[1] = player.position().y;
+    push.objSize[0] = player.body.width;  
+    push.objSize[1] = player.body.height;
+    
     push.logicalRes[0] = config::LOGICAL_WIDTH;
     push.logicalRes[1] = config::LOGICAL_HEIGHT;
-
-    // Centrar o quadrado perfeitamente, independentemente do que estiver no Config.h
-    push.objPos[0] = (config::LOGICAL_WIDTH / 2.0f) - (push.objSize[0] / 2.0f);
-    push.objPos[1] = (config::LOGICAL_HEIGHT / 2.0f) - (push.objSize[1] / 2.0f);
 
     vkCmdPushConstants(cmd, m_pipeline->layout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &push);
     vkCmdDraw(cmd, 6, 1, 0, 0);
     vkCmdEndRenderPass(cmd);
 
     return vkEndCommandBuffer(cmd) == VK_SUCCESS;
-}
-} // namespace gfx
+}} // namespace gfx

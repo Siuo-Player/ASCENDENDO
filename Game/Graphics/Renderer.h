@@ -2,10 +2,14 @@
 // =============================================================================
 //  Game/Graphics/Renderer.h
 //
-//  @version 5.2
+//  @version 5.3
 // =============================================================================
 #include <vulkan/vulkan.h>
 #include <vector>
+
+// Forward declarations para não termos de incluir os .h gigantes aqui
+namespace logic { class Player; }
+namespace gfx { class Camera; }
 
 namespace gfx {
 
@@ -24,7 +28,10 @@ public:
 
     bool init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
-    bool drawFrame(float r, float g, float b);
+    
+    // MUDANÇA AQUI: Recebe o jogador e a câmara!
+    bool drawFrame(const logic::Player& player, const gfx::Camera& camera);
+    
     bool isInitialized() const { return m_initialized; }
 
 private:
@@ -32,7 +39,9 @@ private:
     bool createCommandPool();
     bool allocateCommandBuffers();
     bool createSyncObjects();
-    bool recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, float r, float g, float b);
+    
+    // MUDANÇA AQUI: Assinatura atualizada
+    bool recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, const logic::Player& player, const gfx::Camera& camera);
 
     VulkanContext* m_ctx        = nullptr;
     Swapchain* m_swapchain  = nullptr;
