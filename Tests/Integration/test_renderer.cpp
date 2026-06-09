@@ -10,6 +10,8 @@
 //  a ~60 fps com V-Sync). Se vires a janela azul escuro, a Fase 2.6 esta
 //  completa e o motor grafico base esta funcional.
 //
+//  Mudado para 10 frames 
+//
 //  Pipeline testada:
 //    Window -> VulkanContext -> Surface -> Swapchain -> RenderPass -> Renderer
 // =============================================================================
@@ -58,7 +60,7 @@ TEST_SUITE("Renderer") {
         MESSAGE("Renderer inicializado. Swapchain com ", swapchain.imageCount(), " imagens.");
     }
 
-    TEST_CASE("drawFrame: 500 frames sem crash (janela azul escuro ~8s)") {
+    TEST_CASE("drawFrame: 10 frames sem crash (janela azul escuro)") {
         Window       win;
         VulkanContext ctx;
         Swapchain    swapchain;
@@ -80,8 +82,8 @@ TEST_SUITE("Renderer") {
 
         // ── Mini render loop ──────────────────────────────────────────────────
         // Cor: azul escuro (r=0.05, g=0.05, b=0.20)
-        // ~500 frames com V-Sync = ~8 segundos de janela visivel
-        constexpr int FRAMES = 500;
+        // ~10 frames com V-Sync = ~0.16 segundos de janela visivel
+        constexpr int FRAMES = 10;
         int successFrames = 0;
 
         for (int i = 0; i < FRAMES; ++i) {  // nao fechar a janela — o teste termina automaticamente

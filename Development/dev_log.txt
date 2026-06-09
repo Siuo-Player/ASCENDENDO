@@ -205,3 +205,15 @@ Implementado: [A preencher apos make tests]
 # A classe Renderer ficara encarregue de fazer o "Integer Upscaling" do framebuffer
 # interno para o Swapchain, preenchendo o espaco restante com letterbox (barras pretas)
 # para manter os pixeis perfeitos e o determinismo da fisica intacto.
+
+[2026-06-09 18:25:00]
+Ideia: v4.1 — Fase 4.1: Camara 2D e Sistema de Coordenadas.
+  Objetivo: Separar o espaco de simulacao (logico) da resolucao do ecra.
+  Resolucao logica alvo: 360x640 (aspect ratio 9:16).
+  Estruturas (Game/Graphics/Camera.h):
+    - Camera: define posicao (world space) e limites logicos.
+    - Converte posicoes do Mundo para Normalized Device Coordinates (NDC) do Vulkan.
+  Testes (Tests/Unit/test_camera.cpp):
+    - Validar projecao de world space para NDC (Y invertido para Vulkan).
+    - Mapeamento correto das bordas do viewport.
+Implementado: [A preencher apos make tests]

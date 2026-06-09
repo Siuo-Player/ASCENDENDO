@@ -63,6 +63,11 @@ MOVES = [
     ("ReplayManager.h",         "Game/Logic/ReplayManager.h"),           # Fase 3.3
     ("ReplayManager.cpp",       "Game/Logic/ReplayManager.cpp"),         # Fase 3.3
     ("test_replay.cpp",         "Tests/Unit/test_replay.cpp"),           # Fase 3.3
+
+    # ── Camera e Viewport (Fase 4.1) ──────────────────────────────────────────
+    ("Camera.h",                "Game/Graphics/Camera.h"),               # Fase 4.1
+    ("Camera.cpp",              "Game/Graphics/Camera.cpp"),             # Fase 4.1
+    ("test_camera.cpp",         "Tests/Unit/test_camera.cpp"),           # Fase 4.1
 ]
 
 # ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────

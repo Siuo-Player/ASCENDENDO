@@ -17,8 +17,8 @@ echo ""
 echo "  [hook] A verificar testes antes do commit..."
 echo ""
 
-# Correr a bateria de testes
-if ! make tests; then
+# Correr a bateria de testes com compilação paralela (muito mais rápido)
+if ! make tests -j8; then
     echo ""
     echo "  ╔══════════════════════════════════════════════════════════╗"
     echo "  ║  ❌ COMMIT BLOQUEADO                                    ║"

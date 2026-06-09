@@ -139,6 +139,15 @@ tests: $(TEST_BIN)
 	@./$(TEST_BIN)
 	@echo ""
 
+## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
+tests-fast: $(TEST_BIN)
+	@echo ""
+	@echo "  ==========================================="
+	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
+	@echo "  ==========================================="
+	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*"
+	@echo ""
+
 ## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
 tests-verbose: $(TEST_BIN)
 	@echo ""
