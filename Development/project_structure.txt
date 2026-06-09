@@ -1,0 +1,19 @@
+ASCENDENDO/
+├── .vscode/                 # Configurações do editor (ex: c_cpp_properties.json)
+├── build/                   # Ficheiros gerados (.o, .spv, .exe) [IGNORADO NO GIT]
+├── Development/
+│   ├── dev_log.txt          # Diário de bordo da arquitetura
+│   └── project_structure.txt# Este mapa
+├── external/                # Bibliotecas de terceiros (doctest, glfw)
+├── Game/
+│   ├── Assets/Shaders/      # Código GLSL (base.vert, base.frag)
+│   ├── Core/                # Definições globais do motor (Config.h)
+│   ├── Graphics/            # Wrappers do Vulkan (Context, Renderer, Pipeline, Camera, etc)
+│   └── Logic/               # Física, Inputs, Player e ReplayManager
+├── scripts/                 # Ferramentas (pre-commit.sh)
+├── Tests/
+│   ├── Integration/         # Testes de Motor e Sistemas combinados
+│   ├── Unit/                # Testes de Matemática e Lógica isolada
+│   └── test_runner.cpp      # Ponto de entrada (main) do Doctest
+├── Makefile                 # Sistema de Build
+└── reorganize.py            # Gestor de ficheiros

@@ -1,24 +1,28 @@
 // =============================================================================
 //  Game/Graphics/Renderer.cpp
 //
-//  @version 4.2
+//  @version 5.2
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
 #include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
+#include "Graphics/Pipeline.h"
 #include "Graphics/Camera.h"
+#include "Core/Config.h"
 
 namespace gfx {
 
-bool Renderer::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass) {
+
+bool Renderer::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass, Pipeline* pipeline) {
     if (m_initialized) return true;
-    if (!ctx || !swapchain || !renderPass) return false;
-    if (!ctx->isInitialized() || !swapchain->isInitialized() || !renderPass->isInitialized()) return false;
+    if (!ctx || !swapchain || !renderPass || !pipeline) return false;
+    if (!ctx->isInitialized() || !swapchain->isInitialized() || !renderPass->isInitialized() || !pipeline->isInitialized()) return false;
 
     m_ctx        = ctx;
     m_swapchain  = swapchain;
     m_renderPass = renderPass;
+    m_pipeline   = pipeline;
 
     if (!createFramebuffers())     return false;
     if (!createCommandPool())      return false;
@@ -34,22 +38,18 @@ void Renderer::cleanup() {
     VkDevice device = m_ctx->device();
     vkDeviceWaitIdle(device);
 
-    for (auto fb : m_framebuffers) {
-        vkDestroyFramebuffer(device, fb, nullptr);
-    }
+    for (auto fb : m_framebuffers) vkDestroyFramebuffer(device, fb, nullptr);
     m_framebuffers.clear();
 
     if (m_inFlightFence)           vkDestroyFence(device, m_inFlightFence, nullptr);
     if (m_renderFinishedSemaphore) vkDestroySemaphore(device, m_renderFinishedSemaphore, nullptr);
     if (m_imageAvailableSemaphore) vkDestroySemaphore(device, m_imageAvailableSemaphore, nullptr);
-
-    if (m_commandPool) vkDestroyCommandPool(device, m_commandPool, nullptr);
+    if (m_commandPool)             vkDestroyCommandPool(device, m_commandPool, nullptr);
     
     m_commandBuffers.clear();
-    m_inFlightFence        = VK_NULL_HANDLE;
-    m_commandPool          = VK_NULL_HANDLE;
-
-    m_ctx = nullptr; m_swapchain = nullptr; m_renderPass = nullptr;
+    m_inFlightFence = VK_NULL_HANDLE;
+    m_commandPool   = VK_NULL_HANDLE;
+    m_ctx = nullptr; m_swapchain = nullptr; m_renderPass = nullptr; m_pipeline = nullptr;
     m_initialized = false;
 }
 
@@ -96,13 +96,10 @@ bool Renderer::drawFrame(float r, float g, float b) {
     return true;
 }
 
-// ── Inicialização e Comandos ──────────────────────────────────────────────────
-
 bool Renderer::createFramebuffers() {
     m_framebuffers.resize(m_swapchain->imageViews().size());
     for (size_t i = 0; i < m_swapchain->imageViews().size(); i++) {
         VkImageView attachments[] = { m_swapchain->imageViews()[i] };
-
         VkFramebufferCreateInfo fbCI{};
         fbCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         fbCI.renderPass      = m_renderPass->handle();
@@ -111,10 +108,7 @@ bool Renderer::createFramebuffers() {
         fbCI.width           = m_swapchain->extent().width;
         fbCI.height          = m_swapchain->extent().height;
         fbCI.layers          = 1;
-
-        if (vkCreateFramebuffer(m_ctx->device(), &fbCI, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
-            return false;
-        }
+        if (vkCreateFramebuffer(m_ctx->device(), &fbCI, nullptr, &m_framebuffers[i]) != VK_SUCCESS) return false;
     }
     return true;
 }
@@ -138,12 +132,8 @@ bool Renderer::allocateCommandBuffers() {
 }
 
 bool Renderer::createSyncObjects() {
-    VkSemaphoreCreateInfo semCI{};
-    semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    VkFenceCreateInfo fenceCI{};
-    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
+    VkSemaphoreCreateInfo semCI{}; semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    VkFenceCreateInfo fenceCI{}; fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO; fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     VkDevice dev = m_ctx->device();
     return vkCreateSemaphore(dev, &semCI, nullptr, &m_imageAvailableSemaphore) == VK_SUCCESS
         && vkCreateSemaphore(dev, &semCI, nullptr, &m_renderFinishedSemaphore) == VK_SUCCESS
@@ -168,11 +158,48 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, flo
     rpBI.pClearValues      = &clearColor;
 
     vkCmdBeginRenderPass(cmd, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
-    // (O Letterbox com VkViewport e VkScissor sera ativado aqui na Fase 5 
-    // antes de começarmos a desenhar os sprites do jogo).
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+
+    int32_t winW = m_swapchain->extent().width;
+    int32_t winH = m_swapchain->extent().height;
+    float winAR  = (float)winW / (float)winH;
+
+    // Viewport adaptável sem números hardcoded
+    int32_t viewW = winW, viewH = winH;
+    if (winAR > config::TARGET_ASPECT) viewW = (int32_t)(winH * config::TARGET_ASPECT);
+    else                               viewH = (int32_t)(winW / config::TARGET_ASPECT);
+
+    int32_t offsetX = (winW - viewW) / 2;
+    int32_t offsetY = (winH - viewH) / 2;
+
+    VkViewport viewport{};
+    viewport.x = (float)offsetX; viewport.y = (float)offsetY;
+    viewport.width = (float)viewW; viewport.height = (float)viewH;
+    viewport.minDepth = 0.0f; viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {offsetX, offsetY};
+    scissor.extent = {(uint32_t)viewW, (uint32_t)viewH};
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    PushConstants push{};
+    push.color[0] = 0.9f; push.color[1] = 0.2f; push.color[2] = 0.2f; push.color[3] = 1.0f;
+    push.camPos[0] = 0.0f; push.camPos[1] = 0.0f;
+    push.objSize[0] = 60.0f; push.objSize[1] = 60.0f;
+    
+    // Injetar resolução global na placa gráfica
+    push.logicalRes[0] = config::LOGICAL_WIDTH;
+    push.logicalRes[1] = config::LOGICAL_HEIGHT;
+
+    // Centrar o quadrado perfeitamente, independentemente do que estiver no Config.h
+    push.objPos[0] = (config::LOGICAL_WIDTH / 2.0f) - (push.objSize[0] / 2.0f);
+    push.objPos[1] = (config::LOGICAL_HEIGHT / 2.0f) - (push.objSize[1] / 2.0f);
+
+    vkCmdPushConstants(cmd, m_pipeline->layout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &push);
+    vkCmdDraw(cmd, 6, 1, 0, 0);
     vkCmdEndRenderPass(cmd);
 
     return vkEndCommandBuffer(cmd) == VK_SUCCESS;
 }
-
 } // namespace gfx

@@ -1,11 +1,4 @@
 #pragma once
-// =============================================================================
-//  Game/Graphics/Pipeline.h
-//
-//  @version 5.1
-//  @history
-//    v5.1 — criado (carregamento de SPIR-V e configuração do Fixed-Function)
-// =============================================================================
 #include <vulkan/vulkan.h>
 #include <string>
 #include <vector>
@@ -16,12 +9,12 @@ class VulkanContext;
 class Swapchain;
 class RenderPass;
 
-// A estrutura exata de 40 bytes que será injetada diretamente na GPU
 struct PushConstants {
     float color[4];
     float camPos[2];
     float objPos[2];
     float objSize[2];
+    float logicalRes[2]; // INJETADO DAQUI PARA O SHADER
 };
 
 class Pipeline {

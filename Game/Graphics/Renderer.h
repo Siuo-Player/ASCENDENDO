@@ -2,9 +2,7 @@
 // =============================================================================
 //  Game/Graphics/Renderer.h
 //
-//  @version 4.2
-//  @history
-//    v4.2 — Reestruturação para Viewport Letterboxing direto no Swapchain
+//  @version 5.2
 // =============================================================================
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -14,6 +12,7 @@ namespace gfx {
 class VulkanContext;
 class Swapchain;
 class RenderPass;
+class Pipeline;
 
 class Renderer {
 public:
@@ -23,7 +22,7 @@ public:
     Renderer(const Renderer&)            = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    bool init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass);
+    bool init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
     bool drawFrame(float r, float g, float b);
     bool isInitialized() const { return m_initialized; }
@@ -38,6 +37,7 @@ private:
     VulkanContext* m_ctx        = nullptr;
     Swapchain* m_swapchain  = nullptr;
     RenderPass* m_renderPass = nullptr;
+    Pipeline* m_pipeline   = nullptr;
 
     std::vector<VkFramebuffer>   m_framebuffers;
     VkCommandPool                m_commandPool = VK_NULL_HANDLE;
