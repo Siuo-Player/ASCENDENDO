@@ -217,3 +217,13 @@ Ideia: v4.1 — Fase 4.1: Camara 2D e Sistema de Coordenadas.
     - Validar projecao de world space para NDC (Y invertido para Vulkan).
     - Mapeamento correto das bordas do viewport.
 Implementado: [A preencher apos make tests]
+
+[2026-06-09 19:30:00]
+Ideia: v5.1 — Fase 5.1: Graphics Pipeline e Shaders GLSL.
+  Objetivo: Escrever os shaders base e instruir o Makefile a compilar o código GLSL para SPIR-V.
+  Letterboxing nativo: Em vez de Offscreen Framebuffers, a Pipeline usará VkViewport e VkScissor dinâmicos para trancar a área de desenho aos exatos 360x640 (aspect ratio 9:16) no centro do ecrã.
+  Novos Ficheiros:
+    - Game/Assets/Shaders/base.vert (Vertex Shader c/ Push Constants)
+    - Game/Assets/Shaders/base.frag (Fragment Shader)
+    - Atualização do Makefile para usar o `glslc` do Vulkan SDK.
+Implementado: [A preencher apos make tests]

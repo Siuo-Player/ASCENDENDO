@@ -113,6 +113,25 @@ ifneq ($(strip $(GAME_OBJS)),)
     TEST_LINK_DEPS := $(GAME_LIB)
 endif
 
+# ── Shaders ───────────────────────────────────────────────────────────────────
+GLSLC       := glslc
+SHADER_DIR  := Game/Assets/Shaders
+SHADER_SRCS := $(wildcard $(SHADER_DIR)/*.vert) $(wildcard $(SHADER_DIR)/*.frag)
+SHADER_OBJS := $(patsubst %,%.spv,$(SHADER_SRCS))
+
+# Regra para compilar Shaders GLSL para SPIR-V
+$(SHADER_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
+	@echo "[GLSL] $<"
+	@$(GLSLC) $< -o $@
+
+$(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
+	@echo "[GLSL] $<"
+	@$(GLSLC) $< -o $@
+
+# Criar um target isolado para os shaders
+.PHONY: shaders
+shaders: $(SHADER_OBJS)
+
 # ── Targets Principais ────────────────────────────────────────────────────────
 .PHONY: all game tests tests-verbose clean help
 
@@ -130,9 +149,8 @@ help:
 	@echo "  make help          mostra esta mensagem"
 	@echo ""
 
-## tests — compila (em paralelo) e corre todos os testes de forma silenciosa
-tests:
-	@$(MAKE) $(TEST_BIN) -j6
+## tests — compila e corre todos os testes de forma silenciosa (ideal para commits)
+tests: shaders $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
@@ -140,9 +158,8 @@ tests:
 	@./$(TEST_BIN)
 	@echo ""
 
-## tests-fast — compila (em paralelo) e corre testes TDD (ignora Vulkan/GLFW)
-tests-fast:
-	@$(MAKE) $(TEST_BIN) -j6
+## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
+tests-fast: shaders $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
@@ -150,8 +167,14 @@ tests-fast:
 	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*"
 	@echo ""
 
-## tests-verbose — compila (em paralelo) e corre testes em modo detalhado
-tests-verbose:
+## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
+tests-verbose: shaders $(TEST_BIN)
+	@echo ""
+	@echo "  ==========================================="
+	@echo "  A executar testes (modo detalhado)..."
+	@echo "  ==========================================="
+	@./$(TEST_BIN) --success
+	@echo ""
 	@$(MAKE) $(TEST_BIN) -j6
 	@echo ""
 	@echo "  ==========================================="
@@ -159,6 +182,8 @@ tests-verbose:
 	@echo "  ==========================================="
 	@./$(TEST_BIN) --success
 	@echo ""
+
+
 ## game — compila o binário do jogo em modo release
 game: $(GAME_BIN)
 	@echo "[OK ] Jogo compilado: $(GAME_BIN)"
