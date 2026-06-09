@@ -1,4 +1,11 @@
 #pragma once
+// =============================================================================
+//  Game/Graphics/RenderPass.h
+//
+//  @version 4.2
+//  @history
+//    v4.2 — layout final alterado para TRANSFER_SRC_OPTIMAL para permitir Blit
+// =============================================================================
 #include <vulkan/vulkan.h>
 
 namespace gfx {

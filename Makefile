@@ -130,8 +130,9 @@ help:
 	@echo "  make help          mostra esta mensagem"
 	@echo ""
 
-## tests — compila e corre todos os testes de forma silenciosa (ideal para commits)
-tests: $(TEST_BIN)
+## tests — compila (em paralelo) e corre todos os testes de forma silenciosa
+tests:
+	@$(MAKE) $(TEST_BIN) -j6
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
@@ -139,8 +140,9 @@ tests: $(TEST_BIN)
 	@./$(TEST_BIN)
 	@echo ""
 
-## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
-tests-fast: $(TEST_BIN)
+## tests-fast — compila (em paralelo) e corre testes TDD (ignora Vulkan/GLFW)
+tests-fast:
+	@$(MAKE) $(TEST_BIN) -j6
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
@@ -148,15 +150,15 @@ tests-fast: $(TEST_BIN)
 	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*"
 	@echo ""
 
-## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
-tests-verbose: $(TEST_BIN)
+## tests-verbose — compila (em paralelo) e corre testes em modo detalhado
+tests-verbose:
+	@$(MAKE) $(TEST_BIN) -j6
 	@echo ""
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
 	@./$(TEST_BIN) --success
 	@echo ""
-
 ## game — compila o binário do jogo em modo release
 game: $(GAME_BIN)
 	@echo "[OK ] Jogo compilado: $(GAME_BIN)"

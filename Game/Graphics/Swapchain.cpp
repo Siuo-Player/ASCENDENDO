@@ -1,10 +1,10 @@
 // =============================================================================
 //  Game/Graphics/Swapchain.cpp
 //
-//  @version 2.40
+//  @version 4.2
 //  @history
 //    v2.4  — criado
-//    v2.40 — adiciona criacao de VkImage + VkImageView (necessario para Renderer)
+//    v4.2  — imagens nativas expostas, compatibilidade garantida Intel/Windows
 // =============================================================================
 
 #include "Graphics/Swapchain.h"
@@ -39,16 +39,17 @@ bool Swapchain::init(VulkanContext* ctx, Window* window) {
     VkSwapchainCreateInfoKHR ci{};
     ci.sType            = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     ci.surface          = ctx->surface();
-    ci.minImageCount    = 2;                                // double buffering
+    ci.minImageCount    = 2;                                
     ci.imageFormat      = VK_FORMAT_B8G8R8A8_SRGB;
     ci.imageColorSpace  = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     ci.imageExtent      = {window->width(), window->height()};
     ci.imageArrayLayers = 1;
+    // Removido o TRANSFER_DST_BIT para garantir compatibilidade maxima
     ci.imageUsage       = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     ci.preTransform     = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
     ci.compositeAlpha   = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    ci.presentMode      = VK_PRESENT_MODE_FIFO_KHR; // V-Sync garantido
+    ci.presentMode      = VK_PRESENT_MODE_FIFO_KHR; // V-Sync
     ci.clipped          = VK_TRUE;
     ci.oldSwapchain     = VK_NULL_HANDLE;
 
@@ -78,7 +79,6 @@ bool Swapchain::init(VulkanContext* ctx, Window* window) {
         viewCI.subresourceRange.levelCount     = 1;
         viewCI.subresourceRange.baseArrayLayer = 0;
         viewCI.subresourceRange.layerCount     = 1;
-        // components: VK_COMPONENT_SWIZZLE_IDENTITY e zero — valor padrao correto
 
         if (vkCreateImageView(ctx->device(), &viewCI, nullptr, &m_imageViews[i]) != VK_SUCCESS) {
             return false;

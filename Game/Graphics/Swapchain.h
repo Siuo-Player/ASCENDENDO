@@ -32,6 +32,7 @@ public:
     VkFormat                          imageFormat() const { return m_imageFormat; }
     VkExtent2D                        extent()      const { return m_extent;      }
     const std::vector<VkImageView>&   imageViews()  const { return m_imageViews;  }
+    const std::vector<VkImage>&       images()      const { return m_images; }
     uint32_t                          imageCount()  const { return static_cast<uint32_t>(m_imageViews.size()); }
     bool                              isInitialized() const { return m_swapchain != VK_NULL_HANDLE; }
 
