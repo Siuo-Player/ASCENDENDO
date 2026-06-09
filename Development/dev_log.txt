@@ -129,7 +129,8 @@ Ideia: v2.6 — Fase 2.6: Renderer — Framebuffers + CommandBuffers + Sync + dr
   test_renderer.cpp: mini render loop de 500 frames (~8s) a azul escuro.
     CHECK(successFrames == 500) verifica que todos os frames foram produzidos.
   Versao do projeto apos esta fase: 2.6
-Implementado: [A preencher apos make tests-verbose]
+Implementado: 40/40 testes a passar | 132 assertions | Status: SUCCESS.
+  (36 previstos + 4 extras detectados no verbose — contagem correcta: 40)
 
 [2026-06-06 06:00:00]
 Ideia: v2.60 — Fix: test_renderer.cpp — janela fecha automaticamente.
@@ -165,4 +166,20 @@ Ideia: v3.1 — Fase 3: Input + Fisica Deterministica.
     - Constantes: GRAVITY=-980 px/s², FIXED_STEP=1/60s, GROUND_Y=0
   test_input.cpp: 7 testes unitarios (sem GLFW — injecao de eventos)
   test_physics.cpp: 11 testes unitarios (Vec2, AABB, step, jump, Fixed Timestep)
-Implementado: [A preencher apos make tests-verbose]
+Implementado: 40/40 testes a passar | 132 assertions | Status: SUCCESS.
+  (36 previstos + 4 extras detectados no verbose — contagem correcta: 40)
+
+[2026-06-06 09:00:00]
+Ideia: v3.2 — Fase 3.2: Player — integracao Input + Physics.
+  Player.h/.cpp (Game/Logic/):
+    - MOVE_SPEED = 200 px/s (horizontal, sem aceleracao por agora)
+    - MIN_JUMP_FORCE = 300 px/s | MAX_JUMP_FORCE = 750 px/s | CHARGE_TIME = 0.5s
+    - update(input, world, dt): horizontal -> carga -> world.step()
+    - Toque rapido (press+release no mesmo frame) -> MIN_JUMP_FORCE
+    - Hold SPACE no chao -> acumula jumpCharge [0..1] -> release -> interpola forca
+    - Salto no ar ignorado
+    - chargeRatio() exposto para barra de UI (Fase 6)
+  test_player.cpp: helpers tap/frameWith/stepN para simular game loop correcto.
+  Testes de movimento: D, A, A+D, sem teclas.
+  Testes de salto: toque rapido, carga total, salto no ar, limite 1.0, 2 saltos comparados.
+Implementado: [A preencher apos make tests]

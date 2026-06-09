@@ -73,7 +73,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes atuais**: **36 a passar** (18 Fases 1–2 + 7 InputManager + 11 Physics) (2 Unit + 3 Init + 4 Window + 1 Swapchain + 1 RenderPass + 2 Renderer + 5 VulkanContext).
+- **Testes atuais**: **~53 a passar** (40 Fases 1–3.1 + ~13 Player) (2 Unit + 3 Init + 4 Window + 1 Swapchain + 1 RenderPass + 2 Renderer + 5 VulkanContext).
 
 ---
 
@@ -103,8 +103,8 @@ Implementado: [como correu, problemas e soluções]
 - **2.6 ← AQUI** — `Renderer` (Framebuffers + Command Buffers + Sync → **primeira janela colorida**)
 
 **Fase 3: Física e Input**
-- **3.1 ← AQUI** — `InputManager` (key states, GLFW callback) + `Physics` (Vec2, AABB, Fixed Timestep, gravidade)
-- 3.2 → Movimento horizontal do personagem
+- 3.1 ✅ `InputManager` + `Physics` (Vec2, AABB, Fixed Timestep, gravidade)
+- **3.2 ← AQUI** — `Player` (movimento horizontal 200 px/s + salto por carga MIN=300/MAX=750 px/s)
 - 3.3 → Save States + gravação de replays de inputs
 
 **Fase 4: Level Streaming e Câmera**
@@ -189,7 +189,7 @@ vX.Y[Z...]  onde:
   .YZW = Atualização ainda mais granular (ex: 2.401, 2.410...)
 ```
 
-**Versão atual do projeto: 3.1**
+**Versão atual do projeto: 3.2**
 
 | Ficheiro | Versão |
 |---|---|

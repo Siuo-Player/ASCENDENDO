@@ -55,6 +55,9 @@ MOVES = [
     # ── Testes Unit (continuacao) ─────────────────────────────────────────────
     ("test_input.cpp",          "Tests/Unit/test_input.cpp"),            # Fase 3.1
     ("test_physics.cpp",        "Tests/Unit/test_physics.cpp"),          # Fase 3.1
+    ("Player.h",                "Game/Logic/Player.h"),                  # Fase 3.2
+    ("Player.cpp",              "Game/Logic/Player.cpp"),                # Fase 3.2
+    ("test_player.cpp",         "Tests/Unit/test_player.cpp"),           # Fase 3.2
 ]
 
 # ── Estrutura de Diretórios Obrigatória (Com proteção .gitkeep) ──────────────
