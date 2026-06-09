@@ -67,15 +67,11 @@ else
 endif
 
 # ── GLFW (Fase 2.3) ───────────────────────────────────────────────────────────
-# Detetado automaticamente: se external/glfw/include/GLFW/glfw3.h existir,
-# GLFW_AVAILABLE e definido e os testes de janela sao ativados.
-# Instalacao: https://www.glfw.org/download.html → extrair para external/glfw/
 GLFW_DIR := external/glfw
 ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
     CXXFLAGS_BASE += -DGLFW_AVAILABLE
     INCLUDES      += -I$(GLFW_DIR)/include
     ifeq ($(PLATFORM),windows)
-        # O Clang no Windows usa o lld-link (MSVC ABI), logo usamos a lib-vc2022
         LDFLAGS_REL += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32 -lshell32
         LDFLAGS_DBG += -L$(GLFW_DIR)/lib-vc2022 -lglfw3 -lgdi32 -luser32 -lshell32
     else
@@ -85,18 +81,19 @@ ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
 endif
 
 # ── Fontes ────────────────────────────────────────────────────────────────────
-# Game: todos os .cpp em Game/ e subpastas (exceto main — adicionado à mão)
-GAME_SRCS := $(wildcard $(GAME_DIR)/*.cpp)          \
+GAME_SRCS := $(wildcard $(GAME_DIR)/Core/*.cpp)     \
              $(wildcard $(GAME_DIR)/Graphics/*.cpp) \
              $(wildcard $(GAME_DIR)/Logic/*.cpp)
 
-# Tests: test_runner.cpp (define main via doctest) + todos os .cpp em subpastas
 TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)            \
              $(wildcard $(TEST_DIR)/Unit/*.cpp)        \
              $(wildcard $(TEST_DIR)/Integration/*.cpp) \
              $(wildcard $(TEST_DIR)/System/*.cpp)      \
              $(wildcard $(TEST_DIR)/Regression/*.cpp)  \
              $(wildcard $(TEST_DIR)/Acceptance/*.cpp)
+
+GAME_MAIN_SRC := main.cpp
+GAME_MAIN_OBJ := $(BUILD_DIR)/main.o
 
 # ── Objects ───────────────────────────────────────────────────────────────────
 GAME_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_SRCS))
@@ -107,8 +104,6 @@ GAME_LIB  := $(BUILD_DIR)/libgame.a
 GAME_BIN  := $(BUILD_DIR)/game$(EXE_EXT)
 TEST_BIN  := $(BUILD_DIR)/tests$(EXE_EXT)
 
-# Quando há código de jogo compilado, os testes linkam também a game library.
-# Em Fase 1 (sem código de jogo), TEST_LINK_DEPS fica vazio.
 ifneq ($(strip $(GAME_OBJS)),)
     TEST_LINK_DEPS := $(GAME_LIB)
 endif
@@ -119,7 +114,6 @@ SHADER_DIR  := Game/Assets/Shaders
 SHADER_SRCS := $(wildcard $(SHADER_DIR)/*.vert) $(wildcard $(SHADER_DIR)/*.frag)
 SHADER_OBJS := $(patsubst %,%.spv,$(SHADER_SRCS))
 
-# Regra para compilar Shaders GLSL para SPIR-V
 $(SHADER_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
 	@echo "[GLSL] $<"
 	@$(GLSLC) $< -o $@
@@ -128,7 +122,6 @@ $(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
 	@echo "[GLSL] $<"
 	@$(GLSLC) $< -o $@
 
-# Criar um target isolado para os shaders
 .PHONY: shaders
 shaders: $(SHADER_OBJS)
 
@@ -137,7 +130,6 @@ shaders: $(SHADER_OBJS)
 
 all: help
 
-## help  — mostra os targets disponíveis
 help:
 	@echo ""
 	@echo "  Vertical Precision Platformer — sistema de build"
@@ -155,7 +147,7 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) > build/test_results.txt
+	@./$(TEST_BIN) > build/test_results.txt || (cat build/test_results.txt; exit 1)
 	@cat build/test_results.txt
 	@echo ""
 
@@ -165,7 +157,7 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt
+	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || (cat build/test_results.txt; exit 1)
 	@cat build/test_results.txt
 	@echo ""
 
@@ -175,12 +167,11 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --success > build/test_results.txt
+	@./$(TEST_BIN) --success > build/test_results.txt || (cat build/test_results.txt; exit 1)
 	@cat build/test_results.txt
 	@echo ""
-
-## game — compila o binário do jogo em modo release
-game: $(GAME_BIN)
+    
+game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 	@echo "[OK ] Jogo compilado: $(GAME_BIN)"
 
 # ── Regras de Linkagem ────────────────────────────────────────────────────────
@@ -190,7 +181,7 @@ $(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) \
             -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
 
-$(GAME_BIN): $(GAME_LIB) | $(BUILD_DIR)
+$(GAME_BIN): $(GAME_MAIN_OBJ) $(GAME_LIB) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) \
             -o $@ $^ $(LDFLAGS_REL)
@@ -209,7 +200,6 @@ $(BUILD_DIR)/%.o: %.cpp
 $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
-## clean — remove todos os artefactos de compilação
 clean:
 	@echo "[CLN] A remover $(BUILD_DIR)/..."
 	@rm -rf $(BUILD_DIR)

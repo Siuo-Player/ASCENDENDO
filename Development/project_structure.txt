@@ -16,4 +16,5 @@ ASCENDENDO/
 │   ├── Unit/                # Testes de Matemática e Lógica isolada
 │   └── test_runner.cpp      # Ponto de entrada (main) do Doctest
 ├── Makefile                 # Sistema de Build
+├── main.cpp                 # Entry Point do Jogo (O Executável)
 └── reorganize.py            # Gestor de ficheiros

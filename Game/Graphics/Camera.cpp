@@ -3,6 +3,7 @@
 //
 //  @version 4.1
 // =============================================================================
+
 #include "Graphics/Camera.h"
 #include "Core/Config.h" // Acesso às variáveis globais
 

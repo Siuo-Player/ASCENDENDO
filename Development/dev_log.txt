@@ -227,3 +227,24 @@ Ideia: v5.1 — Fase 5.1: Graphics Pipeline e Shaders GLSL.
     - Game/Assets/Shaders/base.frag (Fragment Shader)
     - Atualização do Makefile para usar o `glslc` do Vulkan SDK.
 Implementado: [A preencher apos make tests]
+
+[2026-06-09 20:30:00]
+Ideia: v5.2 e v5.3 — Arquitetura Global e A Ponte (Física -> Gráficos).
+  Objetivo: Criar ficheiro de Configurações Globais (Config.h) para eliminar magic numbers, 
+  e desenhar o Player em tempo real usando a Graphics Pipeline.
+  Implementação:
+    - Game/Core/Config.h: LOGICAL_WIDTH (640), LOGICAL_HEIGHT (360), FIXED_STEP.
+    - Shaders leem dinamicamente a resolução via Push Constants.
+    - Renderer agora recebe const Player& e const Camera& no drawFrame.
+    - Teste de Integração (test_renderer) simula 120 frames de queda livre do Player.
+Implementado: 54/54 testes a passar. O quadrado cai e colide perfeitamente com Y=0.
+
+[2026-06-09 21:00:00]
+Ideia: v6.1 — Salto Parabólico com Inércia (Commitment Jump).
+  Objetivo: O jogador não pode mudar de direção a meio do ar. O ângulo de salto é ditado por 60º.
+Implementado: main.cpp protegido com RAII no loop Vulkan. test_player.cpp totalmente refatorizado para as novas mecânicas. Funcional e testado.
+
+[2026-06-09 21:30:00]
+Ideia: v6.1 — Salto Parabólico com Inércia (Commitment Jump).
+  Objetivo: O jogador não pode mudar de direção a meio do ar. O ângulo de salto é ditado por 60º.
+Implementado: main.cpp criado com RAII no loop Vulkan. test_player.cpp adaptado para validar bloqueio aéreo de inputs e correção de aplicação instantânea de gravidade (-16.333/frame).
