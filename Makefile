@@ -155,7 +155,8 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN)
+	@./$(TEST_BIN) > build/test_results.txt
+	@cat build/test_results.txt
 	@echo ""
 
 ## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
@@ -164,7 +165,8 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*"
+	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt
+	@cat build/test_results.txt
 	@echo ""
 
 ## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
@@ -173,16 +175,9 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --success
+	@./$(TEST_BIN) --success > build/test_results.txt
+	@cat build/test_results.txt
 	@echo ""
-	@$(MAKE) $(TEST_BIN) -j6
-	@echo ""
-	@echo "  ==========================================="
-	@echo "  A executar testes (modo detalhado)..."
-	@echo "  ==========================================="
-	@./$(TEST_BIN) --success
-	@echo ""
-
 
 ## game — compila o binário do jogo em modo release
 game: $(GAME_BIN)
