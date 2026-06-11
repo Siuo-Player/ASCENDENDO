@@ -95,7 +95,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes confirmados**: **58/58** a passar (v6.2) — 201 assertions.
+- **Testes confirmados**: **66/66** esperados (v6.4) — Camera tracking + fix warning.
 
 ---
 
@@ -140,7 +140,10 @@ Implementado: [como correu, problemas e soluções]
 **Fase 6: Mecânicas de Jogo** ← AQUI
 - 6.1 ✅ **Commitment Jump** — salto parabólico com inércia, bloqueio aéreo, `main.cpp` RAII
 - 6.2 ✅ **Level class** — plataformas (AABBs), `resolveCollision` one-way, 10 testes (58/58 ✅)
-- 6.2b 🔄 **Renderer renderiza Level** — plataformas verdes no ecrã, `main.cpp` com nível real
+- 6.2b ✅ **Renderer renderiza Level** — plataformas verdes no ecrã, `main.cpp` com nível real
+- 6.2c ✅ **Física corrigida** — colisão lateral (MTV), paredes absolutas X, queda de borda sem inércia
+- 6.3 ✅ **Barra de Força** — UI visual Verde→Vermelho sobre o jogador (isCharging)
+- 6.4 🔄 **Camera tracking** — follow() vertical Lerp, jogador no 35% inferior do ecrã
 - 6.3 → Câmara a seguir o jogador verticalmente (tracking)
 - 6.4 → Barra de força do salto (UI)
 
@@ -210,7 +213,7 @@ git add . && git commit -m "feat: descrição"
 vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
 ```
 
-**Versão atual do projeto: 6.2b**
+**Versão atual do projeto: 6.4**
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -218,14 +221,15 @@ vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
-| Renderer.h/.cpp | v6.2b | drawFrame aceita Level* opcional |
-| Camera.h/.cpp | v4.1 | projeção world→NDC |
+| Renderer.h/.cpp | v6.3 | Barra de Força UI |
+| Camera.h/.cpp | v6.4 | follow() tracking vertical |
+
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
 | Config.h | v5.2 | constantes globais |
 | InputManager.h/.cpp | v3.1 | |
-| Physics.h/.cpp | v3.3 | m_accumulator exposto |
-| Player.h/.cpp | v6.1 | Commitment Jump, bloqueio aéreo |
-| Level.h/.cpp | v6.2 | plataformas + resolveCollision one-way |
+| Physics.h/.cpp | v3.3/6.2c | paredes absolutas X |
+| Player.h/.cpp | v6.2c | m_didJump: queda de borda sem inércia |
+| Level.h/.cpp | v6.2c | MTV full-AABB (topo + lados) |
 | ReplayManager.h/.cpp | v3.3 | save states + replay |
 | base.vert / base.frag | v5.1 | shaders GLSL |
-| main.cpp | v6.2b | Level com 4 plataformas |
+| main.cpp | v6.4 | camera.follow + 5 plataformas |

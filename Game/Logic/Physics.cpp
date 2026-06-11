@@ -1,41 +1,49 @@
 // =============================================================================
 //  Game/Logic/Physics.cpp
 //
-//  @version 3.1
+//  @version 6.2c
 //  @history
-//    v3.1 — criado
+//    v3.1  — criado
+//    v6.2c — paredes absolutas esquerda/direita (config::LOGICAL_WIDTH)
 // =============================================================================
 
 #include "Logic/Physics.h"
+#include "Core/Config.h"
 
 namespace logic {
 
-// ── AABB ──────────────────────────────────────────────────────────────────────
-
 bool AABB::overlaps(const AABB& other) const {
-    // Separating Axis Theorem simplificado para AABBs
     return min.x < other.max.x && max.x > other.min.x
         && min.y < other.max.y && max.y > other.min.y;
 }
 
-// ── PhysicsWorld ──────────────────────────────────────────────────────────────
-
 void PhysicsWorld::step(PhysicsBody& body, float dt) const {
-    // 1. Gravidade (só se não está no chão)
+    // 1. Gravidade
     if (!body.isGrounded) {
         body.velocity.y += GRAVITY * dt;
     }
 
-    // 2. Integração de Euler: posição += velocidade * dt
+    // 2. Integração de Euler
     body.position += body.velocity * dt;
 
-    // 3. Colisão simples com o chão (Y = GROUND_Y)
+    // 3. Chão absoluto (Y = GROUND_Y)
     if (body.position.y <= GROUND_Y) {
         body.position.y = GROUND_Y;
         body.velocity.y = 0.0f;
-        body.isGrounded = true;
+        body.isGrounded  = true;
     } else {
         body.isGrounded = false;
+    }
+
+    // 4. Paredes absolutas esquerda e direita
+    if (body.position.x < 0.0f) {
+        body.position.x  = 0.0f;
+        if (body.velocity.x < 0.0f) body.velocity.x = 0.0f;
+    }
+    const float rightWall = config::LOGICAL_WIDTH - body.width;
+    if (body.position.x > rightWall) {
+        body.position.x  = rightWall;
+        if (body.velocity.x > 0.0f) body.velocity.x = 0.0f;
     }
 }
 
@@ -44,7 +52,6 @@ void PhysicsWorld::jump(PhysicsBody& body, float force) const {
         body.velocity.y = force;
         body.isGrounded = false;
     }
-    // Salto no ar ignorado — mecânica de salto por carga (Fase 6)
 }
 
 bool PhysicsWorld::collides(const AABB& a, const AABB& b) {

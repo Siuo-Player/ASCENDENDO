@@ -11,7 +11,7 @@
 # Regra: cada ficheiro tem @version no seu cabeçalho a refletir quando foi
 #        modificado pela última vez. Incrementar sempre que houver mudança.
 # ─────────────────────────────────────────────────────────────────────────────
-# Versão atual do projeto: 6.2b
+# Versão atual do projeto: 6.4
 # ─────────────────────────────────────────────────────────────────────────────
 # Formato de entrada:
 #   [YYYY-MM-DD HH:MM:SS]
@@ -277,3 +277,50 @@ Ideia: v6.2b — Fase 6.2b: Renderizacao de Plataformas (Renderer integra Level)
     - Loop: player.update() + level.resolveCollision() + drawFrame(&level).
     - Jogador inicia em (320, 400) e cai para as plataformas visiveis.
 Implementado: [A preencher apos make game]
+
+[2026-06-11 00:00:00]
+Ideia: v6.2c — Fase 6.2c: Correcao de 3 bugs de fisica reportados apos teste.
+  Bug 1 — Colisao lateral: jogador atravessava plataformas pelo lado.
+    Fix: Level::resolveCollision() reescrita com MTV (Minimum Translation Vector).
+    Caso 1 (skin overlap): comportamento de topo inalterado.
+    Caso 2 (sobreposicao real): |vx| > |vy| → colisao lateral (empurra X);
+    caso contrario → colisao vertical: a cair pousa no topo, a subir passa (one-way).
+  Bug 2 — Paredes absolutas: sem limite esquerda/direita, jogador saia do nivel.
+    Fix: PhysicsWorld::step() agora clampeia X a [0, LOGICAL_WIDTH - body.width]
+    usando config::LOGICAL_WIDTH. Chao Y=0 ja existia; paredes laterais adicionadas.
+  Bug 3 — Queda de borda com trajectória parabólica indesejada.
+    Fix: Player::m_didJump distingue salto intencional (SPACE) de queda de borda.
+    Queda de borda (m_didJump=false no ar) → velocity.x=0, cai a pique.
+    Salto intencional (m_didJump=true) → mantém inércia (Commitment Jump intacto).
+  Testes novos:
+    test_level.cpp: +3 (colisao lateral esquerda, direita, queda nao empurra).
+    test_player.cpp: +2 (cair de borda zera vel.x, salto mantém inércia).
+  Testes antigos intocados: comportamento one-way mantido (one-way from below).
+Implementado: [A preencher apos make tests]
+
+[2026-06-11 01:00:00]
+Ideia: v6.3 — Barra de Forca Visual (UI sobre o jogador).
+  Renderer.cpp (v6.3): 2 draw calls adicionais quando player.isCharging=true.
+    - Fundo cinza escuro: largura=player.width, altura=6px, 8px acima da cabeca.
+    - Preenchimento: largura=player.width*chargeRatio, cor interpola verde→vermelho.
+  Sem novos testes unitarios (comportamento puramente visual).
+Implementado: 63/63 testes a passar | 215 assertions | Status: SUCCESS.
+  FASE 6.3 CONCLUIDA.
+
+[2026-06-11 02:00:00]
+Ideia: v6.4 — Camera Tracking Vertical.
+  Objetivo: A camera segue o jogador em Y para que ele nao saia do ecra ao saltar.
+  Camera.h/.cpp (v6.4):
+    - Camera::follow(target, dt, speed=5.0): Lerp suave em Y.
+    - Offset fixo de 126px (LOGICAL_HEIGHT*0.35): jogador no 35% inferior do ecra,
+      mostrando mais plataformas acima (melhor para jogo vertical).
+    - Camera Y nunca vai abaixo de 0 (chao absoluto).
+    - Camera X inalterado (o jogo tem paredes laterais absolutas).
+  main.cpp (v6.4): camera.follow(player.position(), dt) apos o loop de fisica.
+    - Quinta plataforma adicionada ao nivel de demo (Y=320).
+  test_camera.cpp (v6.4): ficheiro reconstruido + 3 novos testes (follow).
+    - follow() converge para alvo apos 2s.
+    - follow() nao vai abaixo de Y=0.
+    - follow() nao afeta camera.position.x.
+  Fix: test_level.cpp — removidas variaveis nao usadas (warning do compilador).
+Implementado: [A preencher apos make tests]

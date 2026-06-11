@@ -2,9 +2,11 @@
 // =============================================================================
 //  Game/Logic/Player.h
 //
-//  @version 6.1
+//  @version 6.2c
 //  @history
-//    v6.1 — Salto Parabólico e Perda de Controlo Aéreo implementados.
+//    v6.1  — Commitment Jump + bloqueio aereo implementados
+//    v6.2c — m_didJump: distingue salto intencional de queda de borda
+//            (queda de borda → sem inércia X; salto → mantém parábola)
 // =============================================================================
 
 #include "Logic/Physics.h"
@@ -22,16 +24,21 @@ public:
     PhysicsBody body;
     float       jumpCharge      = 0.0f;
     bool        isCharging      = false;
-    float       facingDirection = 1.0f; // 1.0f = Direita, -1.0f = Esquerda
+    float       facingDirection = 1.0f;
 
-    void update(const InputManager& input, PhysicsWorld& world, float dt);
+    void  update(const InputManager& input, PhysicsWorld& world, float dt);
 
-    Vec2  position()    const { return body.position;    }
-    Vec2  velocity()    const { return body.velocity;    }
-    bool  isGrounded()  const { return body.isGrounded;  }
-    float chargeRatio() const { return jumpCharge;       }
+    Vec2  position()    const { return body.position;   }
+    Vec2  velocity()    const { return body.velocity;   }
+    bool  isGrounded()  const { return body.isGrounded; }
+    float chargeRatio() const { return jumpCharge;      }
 
 private:
+    // true apenas quando o jogador executou um salto intencional (SPACE).
+    // Permite Commitment Jump (inércia X no ar).
+    // Reset quando pousa (isGrounded=true).
+    bool m_didJump = false;
+
     void applyHorizontalMovement(const InputManager& input);
     void updateJumpCharge(const InputManager& input, float dt);
 };

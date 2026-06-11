@@ -1,10 +1,12 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 6.2b
+//  @version 6.4
 //  @history
-//    v6.1  — RAII game loop + Commitment Jump
-//    v6.2b — Level com 4 plataformas; resolveCollision no loop; drawFrame(&level)
+//    v6.1  — RAII + Commitment Jump
+//    v6.2b — Level com 4 plataformas + resolveCollision
+//    v6.3  — Barra de Forca UI (Renderer)
+//    v6.4  — Camera tracking vertical (camera.follow)
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -37,7 +39,7 @@ int main() {
         Renderer     renderer;
         InputManager input;
 
-        if (!win.create(1280, 720, "ASCENDENDO — Plataformas")) return -1;
+        if (!win.create(1280, 720, "ASCENDENDO — Camera Tracking")) return -1;
 
         std::vector<const char*> exts;
         win.appendRequiredExtensions(exts);
@@ -52,23 +54,22 @@ int main() {
 
         input.registerWithWindow(win.handle());
 
-        // ── Nivel de demonstracao (Fase 6.2b) ────────────────────────────────
-        // Coordenadas: X=[0,640], Y=[0,360] (Y cresce para cima)
+        // ── Nivel de demonstracao ─────────────────────────────────────────────
         Level level;
-        level.addPlatform( 50.0f,  60.0f, 540.0f, 20.0f); // Chao elevado  (Y=60-80)
-        level.addPlatform(150.0f, 140.0f, 300.0f, 20.0f); // Plataforma media (Y=140-160)
-        level.addPlatform( 70.0f, 220.0f, 180.0f, 20.0f); // Alta esquerda  (Y=220-240)
-        level.addPlatform(390.0f, 200.0f, 170.0f, 20.0f); // Alta direita   (Y=200-220)
+        level.addPlatform( 50.0f,  60.0f, 540.0f, 20.0f); // Chao elevado  (Y=80)
+        level.addPlatform(150.0f, 140.0f, 300.0f, 20.0f); // Media          (Y=160)
+        level.addPlatform( 70.0f, 220.0f, 180.0f, 20.0f); // Alta esquerda  (Y=240)
+        level.addPlatform(390.0f, 200.0f, 170.0f, 20.0f); // Alta direita   (Y=220)
+        level.addPlatform(200.0f, 300.0f, 220.0f, 20.0f); // Topo           (Y=320)
 
         PhysicsWorld world;
         Camera       camera;
         Player       player;
 
-        // Jogador inicia acima do ecra e cai para as plataformas
         player.body.position = { config::LOGICAL_WIDTH / 2.0f, 400.0f };
 
         auto lastTime = std::chrono::high_resolution_clock::now();
-        std::cout << "[ASCENDENDO] Motor a correr! A/D mover, SPACE saltar.\n";
+        std::cout << "[ASCENDENDO] A/D = mover | SPACE = saltar | ESC = sair\n";
 
         while (!win.shouldClose()) {
             auto  now = std::chrono::high_resolution_clock::now();
@@ -77,15 +78,17 @@ int main() {
 
             input.beginFrame();
             win.pollEvents();
-
             if (input.isKeyDown(Key::ESCAPE)) break;
 
-            // Fixed Timestep: fisica + resolucao de colisao por passo
+            // ── Fisica (Fixed Timestep) ───────────────────────────────────────
             int steps = world.advance(dt);
             for (int i = 0; i < steps; ++i) {
                 player.update(input, world, config::FIXED_STEP);
-                level.resolveCollision(player.body); // one-way platforms
+                level.resolveCollision(player.body);
             }
+
+            // ── Camera tracking vertical (frame rate independente) ────────────
+            camera.follow(player.position(), dt);
 
             if (!renderer.drawFrame(player, camera, &level)) break;
         }

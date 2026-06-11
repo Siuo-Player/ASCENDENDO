@@ -1,11 +1,10 @@
 // =============================================================================
 //  Tests/Unit/test_level.cpp
 //
-//  @version 6.2
+//  @version 6.2c
 //  @history
-//    v6.2 — criado (10 testes: construcao, colisao de topo, queda, borda)
-//
-//  SEM dependencias de GPU. Testa o logic layer isolado.
+//    v6.2  — criado (10 testes: construcao, topo, queda, borda)
+//    v6.2c — +3 testes colisao lateral (esquerda, direita, subida ok)
 // =============================================================================
 
 #include "doctest/doctest.h"
@@ -15,7 +14,6 @@
 using namespace logic;
 
 // ── Helper ───────────────────────────────────────────────────────────────────
-// Simula N passos de fisica + resolucao de nivel. Padrao de uso no game loop.
 static void simulate(PhysicsBody& body, PhysicsWorld& world,
                      const Level& level, int steps)
 {
@@ -42,9 +40,9 @@ TEST_SUITE("Level / Construcao") {
         REQUIRE(level.platformCount() == 1);
         const auto& p = level.platforms()[0];
         CHECK(p.bounds.min.x == doctest::Approx(50.0f));
-        CHECK(p.bounds.min.y == doctest::Approx(100.0f)); // base
+        CHECK(p.bounds.min.y == doctest::Approx(100.0f));
         CHECK(p.bounds.max.x == doctest::Approx(250.0f));
-        CHECK(p.bounds.max.y == doctest::Approx(120.0f)); // topo
+        CHECK(p.bounds.max.y == doctest::Approx(120.0f));
         CHECK(p.bounds.width()  == doctest::Approx(200.0f));
         CHECK(p.bounds.height() == doctest::Approx(20.0f));
     }
@@ -66,7 +64,6 @@ TEST_SUITE("Level / Construcao") {
         level.addPlatform(0.0f, 100.0f, 100.0f, 10.0f);
         level.addPlatform(0.0f, 200.0f, 100.0f, 10.0f);
         REQUIRE(level.platformCount() == 2);
-
         level.clear();
         CHECK(level.platformCount() == 0);
     }
@@ -82,10 +79,10 @@ TEST_SUITE("Level / Colisao de Topo") {
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {100.0f, 200.0f}; // acima da plataforma
+        body.position   = {100.0f, 200.0f};
         body.isGrounded = false;
 
-        simulate(body, world, level, 200); // mais que suficiente para cair 80px
+        simulate(body, world, level, 200);
 
         CHECK(body.isGrounded == true);
         CHECK(body.position.y == doctest::Approx(120.0f));
@@ -93,61 +90,58 @@ TEST_SUITE("Level / Colisao de Topo") {
 
     TEST_CASE("corpo permanece na plataforma frame a frame") {
         Level level;
-        level.addPlatform(0.0f, 100.0f, 640.0f, 20.0f); // topo em Y=120
+        level.addPlatform(0.0f, 100.0f, 640.0f, 20.0f);
 
         PhysicsWorld world;
         PhysicsBody  body;
         body.position   = {100.0f, 200.0f};
         body.isGrounded = false;
 
-        simulate(body, world, level, 200); // pousar
+        simulate(body, world, level, 200);
         REQUIRE(body.isGrounded == true);
         REQUIRE(body.position.y == doctest::Approx(120.0f));
 
-        // 30 frames parado — isGrounded nao deve oscilar
         simulate(body, world, level, 30);
 
         CHECK(body.isGrounded == true);
         CHECK(body.position.y == doctest::Approx(120.0f));
     }
 
-    TEST_CASE("corpo a subir atravessa plataforma livremente (one-way)") {
+    TEST_CASE("corpo a subir atravessa plataforma por baixo (one-way)") {
         Level level;
         level.addPlatform(0.0f, 100.0f, 640.0f, 20.0f); // topo em Y=120
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {50.0f, 115.0f}; // dentro da plataforma, a subir
-        body.velocity.y = 300.0f;
+        body.position   = {50.0f, 115.0f}; // dentro da plataforma
+        body.velocity.y = 300.0f;           // a subir
         body.isGrounded = false;
 
         world.step(body, PhysicsWorld::FIXED_STEP);
         bool collided = level.resolveCollision(body);
 
-        // velocity.y > 0 → nao deve pousar
         CHECK(collided == false);
         CHECK(body.isGrounded == false);
-        CHECK(body.position.y > 115.0f); // subiu
+        CHECK(body.position.y > 115.0f);
     }
 
     TEST_CASE("corpo fora do intervalo X nao colide com a plataforma") {
         Level level;
-        level.addPlatform(100.0f, 100.0f, 100.0f, 20.0f); // X=[100,200], topo=120
+        level.addPlatform(100.0f, 100.0f, 100.0f, 20.0f); // X=[100,200]
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {400.0f, 200.0f}; // fora do X da plataforma
+        body.position   = {400.0f, 200.0f};
         body.isGrounded = false;
 
-        simulate(body, world, level, 300); // queda livre
+        simulate(body, world, level, 300);
 
-        // Deve cair ao chao (Y=0), nunca pousar na plataforma
         CHECK(body.isGrounded == true);
         CHECK(body.position.y == doctest::Approx(0.0f));
     }
 
     TEST_CASE("nivel vazio nao interfere com colisao do chao") {
-        Level level; // sem plataformas
+        Level level;
 
         PhysicsWorld world;
         PhysicsBody  body;
@@ -156,7 +150,6 @@ TEST_SUITE("Level / Colisao de Topo") {
 
         simulate(body, world, level, 200);
 
-        // Cai ao chao normalmente sem nivel
         CHECK(body.isGrounded == true);
         CHECK(body.position.y == doctest::Approx(0.0f));
     }
@@ -172,12 +165,11 @@ TEST_SUITE("Level / Fisica com Nivel") {
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {100.0f, 400.0f}; // cai de cima
+        body.position   = {100.0f, 400.0f};
         body.isGrounded = false;
 
-        simulate(body, world, level, 300); // max ~0.6s para atingir Y=220
+        simulate(body, world, level, 300);
 
-        // Deve pousar NA PLATAFORMA (Y=220), nao no chao (Y=0)
         CHECK(body.isGrounded == true);
         CHECK(body.position.y == doctest::Approx(220.0f));
     }
@@ -188,20 +180,81 @@ TEST_SUITE("Level / Fisica com Nivel") {
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {120.0f, 200.0f}; // acima da plataforma
+        body.position   = {120.0f, 200.0f};
         body.isGrounded = false;
 
-        simulate(body, world, level, 200); // pousar
+        simulate(body, world, level, 200);
         REQUIRE(body.isGrounded == true);
         REQUIRE(body.position.y == doctest::Approx(120.0f));
 
-        // Mover para fora dos limites X da plataforma
-        body.position.x = 350.0f; // x=[350,382] nao sobrepo X=[100,200]
+        body.position.x = 350.0f; // fora do X da plataforma
 
         world.step(body, PhysicsWorld::FIXED_STEP);
         level.resolveCollision(body);
 
-        // Sem suporte → deve comecar a cair
         CHECK(body.isGrounded == false);
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+
+TEST_SUITE("Level / Colisao Lateral") {
+
+    TEST_CASE("corpo bloqueado ao entrar pela esquerda da plataforma") {
+        Level level;
+        // Plataforma alta: X=[100,200], Y=[50,150] — corpo entra lateralmente
+        level.addPlatform(100.0f, 50.0f, 100.0f, 100.0f);
+
+        PhysicsBody body;
+        // Corpo sobrepoe 5px pela esquerda da plataforma, ao nivel do meio
+        // body.max.x = 73+32=105 (5px dentro), body.min.y=70 (abaixo do topo 150)
+        body.position   = {73.0f, 70.0f};
+        body.velocity.x = 200.0f; // a mover para a direita
+        body.velocity.y = 0.0f;
+        body.isGrounded = true;
+
+        bool collided = level.resolveCollision(body);
+
+        CHECK(collided == true);
+        CHECK(body.velocity.x == doctest::Approx(0.0f));
+        // Corpo empurrado para fora da borda esquerda
+        CHECK(body.position.x + body.width <= doctest::Approx(100.0f));
+    }
+
+    TEST_CASE("corpo bloqueado ao entrar pela direita da plataforma") {
+        Level level;
+        level.addPlatform(100.0f, 50.0f, 100.0f, 100.0f); // X=[100,200], Y=[50,150]
+
+        PhysicsBody body;
+        // Corpo sobrepoe 5px pela direita: body.min.x=195, body.max.x=227
+        body.position   = {195.0f, 70.0f};
+        body.velocity.x = -200.0f; // a mover para a esquerda
+        body.velocity.y = 0.0f;
+        body.isGrounded = true;
+
+        bool collided = level.resolveCollision(body);
+
+        CHECK(collided == true);
+        CHECK(body.velocity.x == doctest::Approx(0.0f));
+        // Corpo empurrado para fora da borda direita
+        CHECK(body.position.x == doctest::Approx(200.0f));
+    }
+
+    TEST_CASE("corpo a cair nao e empurrado lateralmente (colisao de topo)") {
+        Level level;
+        level.addPlatform(100.0f, 50.0f, 100.0f, 100.0f); // topo em Y=150
+
+        PhysicsWorld world;
+        PhysicsBody  body;
+        body.position   = {130.0f, 300.0f}; // acima da plataforma, no centro em X
+        body.isGrounded = false;
+        // Sem velocidade horizontal: deve pousar no topo, nao ser empurrado
+
+        simulate(body, world, level, 300);
+
+        CHECK(body.isGrounded == true);
+        CHECK(body.position.y == doctest::Approx(150.0f));
+        // X nao deve ter mudado (nao houve colisao lateral)
+        CHECK(body.position.x == doctest::Approx(130.0f));
     }
 }
