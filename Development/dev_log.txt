@@ -11,7 +11,7 @@
 # Regra: cada ficheiro tem @version no seu cabeçalho a refletir quando foi
 #        modificado pela última vez. Incrementar sempre que houver mudança.
 # ─────────────────────────────────────────────────────────────────────────────
-# Versão atual do projeto: 6.1
+# Versão atual do projeto: 6.2b
 # ─────────────────────────────────────────────────────────────────────────────
 # Formato de entrada:
 #   [YYYY-MM-DD HH:MM:SS]
@@ -248,3 +248,32 @@ Implementado: main.cpp protegido com RAII no loop Vulkan. test_player.cpp totalm
 Ideia: v6.1 — Salto Parabólico com Inércia (Commitment Jump).
   Objetivo: O jogador não pode mudar de direção a meio do ar. O ângulo de salto é ditado por 60º.
 Implementado: main.cpp criado com RAII no loop Vulkan. test_player.cpp adaptado para validar bloqueio aéreo de inputs e correção de aplicação instantânea de gravidade (-16.333/frame).
+[2026-06-10 00:00:00]
+Ideia: v6.2 — Fase 6.2: Sistema de Plataformas (Level class, logica pura).
+  Level.h/.cpp (Game/Logic/):
+    - struct Platform: apenas AABB de colisao (cor fica para Renderer na 6.2b)
+    - Level::addPlatform(x,y,w,h): canto inferior-esquerdo + dimensoes
+    - Level::resolveCollision(PhysicsBody&): pousa no TOPO (velocity.y<=0), one-way
+    - SKIN_WIDTH=1px: resolve persistencia de isGrounded sem tocar em Physics.cpp
+    - Retrocompativel: step() inalterado, todos os testes anteriores intocados
+  test_level.cpp (Tests/Unit/): 10 novos testes unitarios sem GPU.
+    - Construcao: nivel vazio, addPlatform bounds (min/max/width/height),
+      multiplas na ordem de insercao, clear()
+    - Colisao: pousar no topo, permanecer N frames, one-way (subida atravessa),
+      X fora do alcance cai ao chao, nivel vazio nao interfere
+    - Fisica combinada: plataforma mais alta intercepta antes do chao,
+      corpo cai ao sair lateralmente da borda
+Implementado: 58/58 testes a passar | 201 assertions | Status: SUCCESS.
+  FASE 6.2 CONCLUIDA.
+
+[2026-06-10 01:00:00]
+Ideia: v6.2b — Fase 6.2b: Renderizacao de Plataformas (Renderer integra Level).
+  Renderer.h/.cpp (v6.2b):
+    - drawFrame() aceita const logic::Level* level = nullptr (retrocompativel).
+    - recordCommandBuffer() desenha plataformas ANTES do jogador (camada de fundo).
+    - Cor plataformas: verde escuro (0.35, 0.65, 0.25).
+  main.cpp (v6.2b):
+    - Level criado com 4 plataformas de teste dispostas em altura crescente.
+    - Loop: player.update() + level.resolveCollision() + drawFrame(&level).
+    - Jogador inicia em (320, 400) e cai para as plataformas visiveis.
+Implementado: [A preencher apos make game]

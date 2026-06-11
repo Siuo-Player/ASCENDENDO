@@ -1,7 +1,11 @@
 // =============================================================================
 //  Game/Graphics/Renderer.cpp
 //
-//  @version 5.2
+//  @version 6.2b
+//  @history
+//    v5.2  — drawFrame(Player, Camera)
+//    v5.3  — versao do .h atualizada
+//    v6.2b — recordCommandBuffer desenha plataformas (nivel) antes do jogador
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
@@ -9,21 +13,21 @@
 #include "Graphics/RenderPass.h"
 #include "Graphics/Pipeline.h"
 #include "Logic/Player.h"
+#include "Logic/Level.h"
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
 namespace gfx {
 
-
-bool Renderer::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass, Pipeline* pipeline) {
+bool Renderer::init(VulkanContext* ctx, Swapchain* swapchain,
+                    RenderPass* renderPass, Pipeline* pipeline) {
     if (m_initialized) return true;
     if (!ctx || !swapchain || !renderPass || !pipeline) return false;
-    if (!ctx->isInitialized() || !swapchain->isInitialized() || !renderPass->isInitialized() || !pipeline->isInitialized()) return false;
+    if (!ctx->isInitialized() || !swapchain->isInitialized() ||
+        !renderPass->isInitialized() || !pipeline->isInitialized()) return false;
 
-    m_ctx        = ctx;
-    m_swapchain  = swapchain;
-    m_renderPass = renderPass;
-    m_pipeline   = pipeline;
+    m_ctx = ctx; m_swapchain = swapchain;
+    m_renderPass = renderPass; m_pipeline = pipeline;
 
     if (!createFramebuffers())     return false;
     if (!createCommandPool())      return false;
@@ -46,29 +50,30 @@ void Renderer::cleanup() {
     if (m_renderFinishedSemaphore) vkDestroySemaphore(device, m_renderFinishedSemaphore, nullptr);
     if (m_imageAvailableSemaphore) vkDestroySemaphore(device, m_imageAvailableSemaphore, nullptr);
     if (m_commandPool)             vkDestroyCommandPool(device, m_commandPool, nullptr);
-    
+
     m_commandBuffers.clear();
     m_inFlightFence = VK_NULL_HANDLE;
     m_commandPool   = VK_NULL_HANDLE;
-    m_ctx = nullptr; m_swapchain = nullptr; m_renderPass = nullptr; m_pipeline = nullptr;
+    m_ctx = nullptr; m_swapchain = nullptr;
+    m_renderPass = nullptr; m_pipeline = nullptr;
     m_initialized = false;
 }
 
-bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera) {
+bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
+                         const logic::Level* level) {
     VkDevice device = m_ctx->device();
     vkWaitForFences(device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
 
     uint32_t imageIndex = 0;
     VkResult result = vkAcquireNextImageKHR(device, m_swapchain->handle(), UINT64_MAX,
                                             m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-
     if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) return false;
 
     vkResetFences(device, 1, &m_inFlightFence);
     vkResetCommandBuffer(m_commandBuffers[imageIndex], 0);
 
-    // Passar o player e a camera para a gravação
-    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex, player, camera)) return false;
+    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex, player, camera, level))
+        return false;
 
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo{};
@@ -81,7 +86,8 @@ bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera)
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores    = &m_renderFinishedSemaphore;
 
-    if (vkQueueSubmit(m_ctx->graphicsQueue(), 1, &submitInfo, m_inFlightFence) != VK_SUCCESS) return false;
+    if (vkQueueSubmit(m_ctx->graphicsQueue(), 1, &submitInfo, m_inFlightFence) != VK_SUCCESS)
+        return false;
 
     VkSwapchainKHR sc = m_swapchain->handle();
     VkPresentInfoKHR presentInfo{};
@@ -93,9 +99,97 @@ bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera)
     presentInfo.pImageIndices      = &imageIndex;
 
     result = vkQueuePresentKHR(m_ctx->graphicsQueue(), &presentInfo);
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) return false;
+    return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
+}
 
-    return true;
+bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
+                                   const logic::Player& player,
+                                   const gfx::Camera& camera,
+                                   const logic::Level* level) {
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
+
+    VkClearValue clearColor{};
+    clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}};
+
+    VkRenderPassBeginInfo rpBI{};
+    rpBI.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpBI.renderPass        = m_renderPass->handle();
+    rpBI.framebuffer       = m_framebuffers[imageIndex];
+    rpBI.renderArea.offset = {0, 0};
+    rpBI.renderArea.extent = m_swapchain->extent();
+    rpBI.clearValueCount   = 1;
+    rpBI.pClearValues      = &clearColor;
+
+    vkCmdBeginRenderPass(cmd, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+
+    // ── Letterbox viewport ────────────────────────────────────────────────────
+    int32_t winW = m_swapchain->extent().width;
+    int32_t winH = m_swapchain->extent().height;
+    float   winAR = (float)winW / (float)winH;
+
+    int32_t viewW = winW, viewH = winH;
+    if (winAR > config::TARGET_ASPECT) viewW = (int32_t)(winH * config::TARGET_ASPECT);
+    else                               viewH = (int32_t)(winW / config::TARGET_ASPECT);
+
+    int32_t offsetX = (winW - viewW) / 2;
+    int32_t offsetY = (winH - viewH) / 2;
+
+    VkViewport viewport{};
+    viewport.x = (float)offsetX; viewport.y = (float)offsetY;
+    viewport.width = (float)viewW; viewport.height = (float)viewH;
+    viewport.minDepth = 0.0f; viewport.maxDepth = 1.0f;
+    vkCmdSetViewport(cmd, 0, 1, &viewport);
+
+    VkRect2D scissor{};
+    scissor.offset = {offsetX, offsetY};
+    scissor.extent = {(uint32_t)viewW, (uint32_t)viewH};
+    vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+    const VkShaderStageFlags stages =
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    // ── 1. PLATAFORMAS (fundo — desenhadas antes do jogador) ─────────────────
+    if (level && !level->platforms().empty()) {
+        PushConstants push{};
+        push.color[0] = 0.35f; push.color[1] = 0.65f;
+        push.color[2] = 0.25f; push.color[3] = 1.0f;  // verde escuro
+        push.camPos[0]     = camera.position.x;
+        push.camPos[1]     = camera.position.y;
+        push.logicalRes[0] = config::LOGICAL_WIDTH;
+        push.logicalRes[1] = config::LOGICAL_HEIGHT;
+
+        for (const auto& platform : level->platforms()) {
+            push.objPos[0]  = platform.bounds.min.x;
+            push.objPos[1]  = platform.bounds.min.y;
+            push.objSize[0] = platform.bounds.width();
+            push.objSize[1] = platform.bounds.height();
+            vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &push);
+            vkCmdDraw(cmd, 6, 1, 0, 0);
+        }
+    }
+
+    // ── 2. JOGADOR (frente — por cima das plataformas) ───────────────────────
+    {
+        PushConstants push{};
+        push.color[0] = 0.9f; push.color[1] = 0.2f;
+        push.color[2] = 0.2f; push.color[3] = 1.0f;  // vermelho
+        push.camPos[0]     = camera.position.x;
+        push.camPos[1]     = camera.position.y;
+        push.objPos[0]     = player.position().x;
+        push.objPos[1]     = player.position().y;
+        push.objSize[0]    = player.body.width;
+        push.objSize[1]    = player.body.height;
+        push.logicalRes[0] = config::LOGICAL_WIDTH;
+        push.logicalRes[1] = config::LOGICAL_HEIGHT;
+        vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &push);
+        vkCmdDraw(cmd, 6, 1, 0, 0);
+    }
+
+    vkCmdEndRenderPass(cmd);
+    return vkEndCommandBuffer(cmd) == VK_SUCCESS;
 }
 
 bool Renderer::createFramebuffers() {
@@ -110,7 +204,8 @@ bool Renderer::createFramebuffers() {
         fbCI.width           = m_swapchain->extent().width;
         fbCI.height          = m_swapchain->extent().height;
         fbCI.layers          = 1;
-        if (vkCreateFramebuffer(m_ctx->device(), &fbCI, nullptr, &m_framebuffers[i]) != VK_SUCCESS) return false;
+        if (vkCreateFramebuffer(m_ctx->device(), &fbCI, nullptr, &m_framebuffers[i]) != VK_SUCCESS)
+            return false;
     }
     return true;
 }
@@ -134,78 +229,13 @@ bool Renderer::allocateCommandBuffers() {
 }
 
 bool Renderer::createSyncObjects() {
-    VkSemaphoreCreateInfo semCI{}; semCI.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    VkFenceCreateInfo fenceCI{}; fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO; fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    VkSemaphoreCreateInfo semCI{};  semCI.sType  = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    VkFenceCreateInfo     fenceCI{}; fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCI.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     VkDevice dev = m_ctx->device();
-    return vkCreateSemaphore(dev, &semCI, nullptr, &m_imageAvailableSemaphore) == VK_SUCCESS
-        && vkCreateSemaphore(dev, &semCI, nullptr, &m_renderFinishedSemaphore) == VK_SUCCESS
-        && vkCreateFence(dev, &fenceCI, nullptr, &m_inFlightFence)             == VK_SUCCESS;
+    return vkCreateSemaphore(dev, &semCI,  nullptr, &m_imageAvailableSemaphore) == VK_SUCCESS
+        && vkCreateSemaphore(dev, &semCI,  nullptr, &m_renderFinishedSemaphore) == VK_SUCCESS
+        && vkCreateFence    (dev, &fenceCI,nullptr, &m_inFlightFence)           == VK_SUCCESS;
 }
 
-bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, const logic::Player& player, const gfx::Camera& camera) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
-
-    VkClearValue clearColor{};
-    clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}}; // Voltei ao Fundo Azul Noturno Escuro
-
-    VkRenderPassBeginInfo rpBI{};
-    rpBI.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBI.renderPass        = m_renderPass->handle();
-    rpBI.framebuffer       = m_framebuffers[imageIndex];
-    rpBI.renderArea.offset = {0, 0};
-    rpBI.renderArea.extent = m_swapchain->extent();
-    rpBI.clearValueCount   = 1;
-    rpBI.pClearValues      = &clearColor;
-
-    vkCmdBeginRenderPass(cmd, &rpBI, VK_SUBPASS_CONTENTS_INLINE);
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
-
-    int32_t winW = m_swapchain->extent().width;
-    int32_t winH = m_swapchain->extent().height;
-    float winAR  = (float)winW / (float)winH;
-
-    int32_t viewW = winW, viewH = winH;
-    if (winAR > config::TARGET_ASPECT) viewW = (int32_t)(winH * config::TARGET_ASPECT);
-    else                               viewH = (int32_t)(winW / config::TARGET_ASPECT);
-
-    int32_t offsetX = (winW - viewW) / 2;
-    int32_t offsetY = (winH - viewH) / 2;
-
-    VkViewport viewport{};
-    viewport.x = (float)offsetX; viewport.y = (float)offsetY;
-    viewport.width = (float)viewW; viewport.height = (float)viewH;
-    viewport.minDepth = 0.0f; viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {offsetX, offsetY};
-    scissor.extent = {(uint32_t)viewW, (uint32_t)viewH};
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
-
-    // PREPARAR DADOS PARA A GPU
-    PushConstants push{};
-    
-    // Cor do jogador
-    push.color[0] = 0.9f; push.color[1] = 0.2f; push.color[2] = 0.2f; push.color[3] = 1.0f;
-    
-    // LER DA NOSSA CÂMARA REAL
-    push.camPos[0] = camera.position.x; 
-    push.camPos[1] = camera.position.y;
-    
-    // LER DO NOSSO JOGADOR REAL
-    push.objPos[0] = player.position().x; 
-    push.objPos[1] = player.position().y;
-    push.objSize[0] = player.body.width;  
-    push.objSize[1] = player.body.height;
-    
-    push.logicalRes[0] = config::LOGICAL_WIDTH;
-    push.logicalRes[1] = config::LOGICAL_HEIGHT;
-
-    vkCmdPushConstants(cmd, m_pipeline->layout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstants), &push);
-    vkCmdDraw(cmd, 6, 1, 0, 0);
-    vkCmdEndRenderPass(cmd);
-
-    return vkEndCommandBuffer(cmd) == VK_SUCCESS;
-}} // namespace gfx
+} // namespace gfx

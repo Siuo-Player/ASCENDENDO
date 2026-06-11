@@ -26,13 +26,14 @@ ASCENDENDO/
 │   │   ├── Window.h/.cpp              ← janela GLFW (stub sem GLFW)
 │   │   ├── Swapchain.h/.cpp           ← double buffering + V-Sync
 │   │   ├── RenderPass.h/.cpp          ← clear + store por frame
-│   │   ├── Renderer.h/.cpp            ← Framebuffers + drawFrame(Player, Camera)
+│   │   ├── Renderer.h/.cpp            ← Framebuffers + drawFrame(Player, Camera, Level*)
 │   │   ├── Camera.h/.cpp              ← projeção world→NDC, viewport lógico
 │   │   └── Pipeline.h/.cpp            ← shaders SPIR-V + viewport/scissor dinâmicos
 │   ├── Logic/                         ← motor de jogo
 │   │   ├── InputManager.h/.cpp        ← estados de teclas + callbacks GLFW
 │   │   ├── Physics.h/.cpp             ← Vec2, AABB, Fixed Timestep, gravidade
 │   │   ├── Player.h/.cpp              ← Commitment Jump, movimento horizontal
+│   │   ├── Level.h/.cpp               ← plataformas (AABBs) + resolveCollision one-way
 │   │   └── ReplayManager.h/.cpp       ← save states + gravação/replay de inputs
 │   └── Assets/
 │       └── Shaders/
@@ -42,7 +43,7 @@ ASCENDENDO/
 │           └── base.frag.spv          ← compilado por glslc [build artifact]
 ├── Development/
 │   ├── dev_log.txt                    ← diário append-only (rastreado pelo git)
-│   └── project_structure.txt         ← mapa de arquitectura
+│   └── project_structure.txt         ← mapa de arquitectura (auto-gerado)
 ├── Tests/
 │   ├── test_runner.cpp                ← define main via doctest
 │   ├── Unit/
@@ -51,6 +52,7 @@ ASCENDENDO/
 │   │   ├── test_input.cpp             ← 7 test cases
 │   │   ├── test_physics.cpp           ← 15 test cases
 │   │   ├── test_player.cpp            ← Commitment Jump + bloqueio aéreo
+│   │   ├── test_level.cpp             ← 10 test cases — plataformas + colisão
 │   │   ├── test_replay.cpp            ← save states + replay determinístico
 │   │   └── test_camera.cpp            ← projeção world→NDC
 │   └── Integration/
@@ -58,7 +60,7 @@ ASCENDENDO/
 │       ├── test_window.cpp            ← janela GLFW + surface
 │       ├── test_swapchain.cpp         ← swapchain 800×600
 │       ├── test_render_pass.cpp       ← pipeline até RenderPass
-│       ├── test_renderer.cpp          ← 500 frames coloridos (visual ~8s)
+│       ├── test_renderer.cpp          ← 120 frames Player a cair
 │       └── test_pipeline.cpp          ← pipeline gráfica + shaders
 ├── external/
 │   ├── doctest/doctest.h              ← framework de testes (header-only)
@@ -93,7 +95,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes confirmados**: **54/54** a passar (v5.3) — `test_player.cpp` refatorizado em v6.1.
+- **Testes confirmados**: **58/58** a passar (v6.2) — 201 assertions.
 
 ---
 
@@ -124,28 +126,29 @@ Implementado: [como correu, problemas e soluções]
 
 **Fase 3: Física, Input e Replay** ✅ CONCLUÍDA
 - 3.1 ✅ `InputManager` + `Physics` (Vec2, AABB, Fixed Timestep 60Hz, gravidade)
-- 3.2 ✅ `Player` (movimento horizontal 200 px/s + salto por carga MIN=300/MAX=750 px/s)
+- 3.2 ✅ `Player` (movimento horizontal 200 px/s + salto por carga MIN=350/MAX=800 px/s)
 - 3.3 ✅ `ReplayManager` (save states + gravação/replay determinístico de inputs)
 
 **Fase 4: Câmera e Viewport** ✅ CONCLUÍDA
 - 4.1 ✅ `Camera` (projeção world→NDC, viewport lógico com letterboxing)
 
 **Fase 5: Pipeline Gráfica** ✅ CONCLUÍDA
-- 5.1 ✅ Shaders GLSL → SPIR-V (`base.vert`/`base.frag`) + `Pipeline` Vulkan (viewport/scissor dinâmicos)
-- 5.2 ✅ `Config.h` (constantes globais: LOGICAL_WIDTH=640, LOGICAL_HEIGHT=360, FIXED_STEP)
-- 5.3 ✅ `Renderer` integra `Player` + `Camera` → **primeiro quadrado a cair em tempo real** (54/54 testes ✅)
+- 5.1 ✅ Shaders GLSL → SPIR-V (`base.vert`/`base.frag`) + `Pipeline` Vulkan
+- 5.2 ✅ `Config.h` (constantes globais: LOGICAL_WIDTH=640, LOGICAL_HEIGHT=360)
+- 5.3 ✅ `Renderer` integra `Player` + `Camera` → **primeiro quadrado a cair** (54/54 testes ✅)
 
 **Fase 6: Mecânicas de Jogo** ← AQUI
-- 6.1 ✅ **Commitment Jump** — salto parabólico com inércia (bloqueio aéreo de inputs, ângulo 60°, `main.cpp` RAII)
-- 6.2 → *(a definir)*
+- 6.1 ✅ **Commitment Jump** — salto parabólico com inércia, bloqueio aéreo, `main.cpp` RAII
+- 6.2 ✅ **Level class** — plataformas (AABBs), `resolveCollision` one-way, 10 testes (58/58 ✅)
+- 6.2b 🔄 **Renderer renderiza Level** — plataformas verdes no ecrã, `main.cpp` com nível real
+- 6.3 → Câmara a seguir o jogador verticalmente (tracking)
+- 6.4 → Barra de força do salto (UI)
 
 **Fase 7: Level Design e Geração Procedural** *(planeada)*
 
 **Fase 8: UI e Polishing** *(planeada)*
-- Barra de carga do salto + valor numérico de força
 
 **Fase 9: IA de Validação** *(planeada)*
-- Validador algorítmico de dificuldade (grafos + parábolas)
 
 ---
 
@@ -176,34 +179,26 @@ Implementado: [como correu, problemas e soluções]
 | Vulkan SDK | ✅ | https://vulkan.lunarg.com/sdk/home (inclui `glslc`) |
 | GLFW 3.4 | ✅ | https://www.glfw.org/download.html → `glfw-3.4.bin.WIN64.zip` |
 
-**Instalar GLFW:**
-1. Descarregar `glfw-3.4.bin.WIN64.zip`
-2. Extrair `include/` e `lib-vc2022/` para `external/glfw/`
-3. `make clean && make tests` — o Makefile deteta automaticamente
-
 ### 8.2 Primeiros Passos
 
 ```bash
 git clone https://github.com/Siuo-Player/ASCENDENDO && cd ASCENDENDO
-python deps.py                       # verificar dependências
-python reorganize.py                 # organizar ficheiros descarregados
+python deps.py
+python reorganize.py
 cp scripts/pre-commit.sh .git/hooks/pre-commit
 chmod +x .git/hooks/pre-commit
-make tests                           # silencioso — mostra só resumo
-make tests-verbose                   # detalhado — mostra cada assertion
-make tests-fast                      # rápido — ignora testes Vulkan/GLFW
-make shaders                         # compila shaders GLSL → SPIR-V
-make game                            # compila o binário do jogo
+make tests          # silencioso — resumo final
+make tests-verbose  # detalhado — cada assertion
+make tests-fast     # rápido — ignora testes Vulkan/GLFW
+make shaders        # compila GLSL → SPIR-V
+make game           # compila o binário do jogo
 ```
 
 ### 8.3 Ciclo de Desenvolvimento (TDD)
 
 ```bash
-# 1. Escrever o teste primeiro
-# 2. Implementar até passar:
-make tests-fast          # iteração rápida (sem Vulkan)
-make tests               # validação completa antes de commit
-# 3. Commit automático protegido pelo hook:
+make tests-fast     # iteração rápida (sem Vulkan)
+make tests          # validação completa antes de commit
 git add . && git commit -m "feat: descrição"
 ```
 
@@ -211,32 +206,26 @@ git add . && git commit -m "feat: descrição"
 
 ## 9. Esquema de Versão dos Ficheiros
 
-Cada ficheiro tem `@version` no seu cabeçalho a indicar quando foi modificado pela última vez.
-
 ```
-vX.Y[Z...]  onde:
-  X    = Fase principal (1–9, conforme README)
-  .Y   = Sub-passo da fase  (ex: 2.3 = Fase 2, Passo 3)
-  .YZ  = Pequena atualização dentro do sub-passo (ex: 2.40 = 1ª fix em 2.4)
-  .YZW = Atualização ainda mais granular (ex: 2.401, 2.410...)
+vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
 ```
 
-**Versão atual do projeto: 6.1**
+**Versão atual do projeto: 6.2b**
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
-| VulkanContext.h | v2.3 | |
-| VulkanContext.cpp | v2.4 | |
+| VulkanContext.h/.cpp | v2.3 / v2.4 | |
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
-| Renderer.h/.cpp | v5.3 | integra Player + Camera |
+| Renderer.h/.cpp | v6.2b | drawFrame aceita Level* opcional |
 | Camera.h/.cpp | v4.1 | projeção world→NDC |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
 | Config.h | v5.2 | constantes globais |
 | InputManager.h/.cpp | v3.1 | |
-| Physics.h/.cpp | v3.3 | m_accumulator exposto para ReplayManager |
+| Physics.h/.cpp | v3.3 | m_accumulator exposto |
 | Player.h/.cpp | v6.1 | Commitment Jump, bloqueio aéreo |
+| Level.h/.cpp | v6.2 | plataformas + resolveCollision one-way |
 | ReplayManager.h/.cpp | v3.3 | save states + replay |
 | base.vert / base.frag | v5.1 | shaders GLSL |
-| main.cpp | v6.1 | entry point RAII |
+| main.cpp | v6.2b | Level com 4 plataformas |

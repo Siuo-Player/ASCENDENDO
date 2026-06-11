@@ -2,14 +2,17 @@
 // =============================================================================
 //  Game/Graphics/Renderer.h
 //
-//  @version 5.3
+//  @version 6.2b
+//  @history
+//    v5.3  — drawFrame recebe Player + Camera
+//    v6.2b — drawFrame aceita Level* opcional; plataformas desenhadas antes
+//             do jogador (retrocompativel: nullptr = comportamento anterior)
 // =============================================================================
 #include <vulkan/vulkan.h>
 #include <vector>
 
-// Forward declarations para não termos de incluir os .h gigantes aqui
-namespace logic { class Player; }
-namespace gfx { class Camera; }
+namespace logic { class Player; class Level; }
+namespace gfx   { class Camera; }
 
 namespace gfx {
 
@@ -26,12 +29,14 @@ public:
     Renderer(const Renderer&)            = delete;
     Renderer& operator=(const Renderer&) = delete;
 
-    bool init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass, Pipeline* pipeline);
+    bool init(VulkanContext* ctx, Swapchain* swapchain,
+              RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
-    
-    // MUDANÇA AQUI: Recebe o jogador e a câmara!
-    bool drawFrame(const logic::Player& player, const gfx::Camera& camera);
-    
+
+    // Level* e opcional: nullptr = so o jogador (testes de integracao existentes)
+    bool drawFrame(const logic::Player& player, const gfx::Camera& camera,
+                   const logic::Level* level = nullptr);
+
     bool isInitialized() const { return m_initialized; }
 
 private:
@@ -39,14 +44,16 @@ private:
     bool createCommandPool();
     bool allocateCommandBuffers();
     bool createSyncObjects();
-    
-    // MUDANÇA AQUI: Assinatura atualizada
-    bool recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex, const logic::Player& player, const gfx::Camera& camera);
+
+    bool recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
+                             const logic::Player& player,
+                             const gfx::Camera& camera,
+                             const logic::Level* level);
 
     VulkanContext* m_ctx        = nullptr;
-    Swapchain* m_swapchain  = nullptr;
-    RenderPass* m_renderPass = nullptr;
-    Pipeline* m_pipeline   = nullptr;
+    Swapchain*     m_swapchain  = nullptr;
+    RenderPass*    m_renderPass = nullptr;
+    Pipeline*      m_pipeline   = nullptr;
 
     std::vector<VkFramebuffer>   m_framebuffers;
     VkCommandPool                m_commandPool = VK_NULL_HANDLE;

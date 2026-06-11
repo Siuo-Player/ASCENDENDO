@@ -1,20 +1,82 @@
 ASCENDENDO/
-├── .vscode/                 # Configurações do editor (ex: c_cpp_properties.json)
-├── build/                   # Ficheiros gerados (.o, .spv, .exe) [IGNORADO NO GIT]
+├── deps.py
 ├── Development/
-│   ├── dev_log.txt          # Diário de bordo da arquitetura
-│   └── project_structure.txt# Este mapa
-├── external/                # Bibliotecas de terceiros (doctest, glfw)
+│   ├── AI_Validation/
+│   ├── dev_log.txt
+│   ├── LevelEditor/
+│   └── project_structure.txt
+├── external/
+│   ├── doctest/
+│   │   └── doctest.h
+│   └── glfw/
+│       ├── include/
+│       │   └── GLFW/
+│       │       ├── glfw3.h
+│       │       └── glfw3native.h
+│       └── lib-vc2022/
+│           ├── glfw3.dll
+│           ├── glfw3.lib
+│           ├── glfw3_mt.lib
+│           └── glfw3dll.lib
 ├── Game/
-│   ├── Assets/Shaders/      # Código GLSL (base.vert, base.frag)
-│   ├── Core/                # Definições globais do motor (Config.h)
-│   ├── Graphics/            # Wrappers do Vulkan (Context, Renderer, Pipeline, Camera, etc)
-│   └── Logic/               # Física, Inputs, Player e ReplayManager
-├── scripts/                 # Ferramentas (pre-commit.sh)
-├── Tests/
-│   ├── Integration/         # Testes de Motor e Sistemas combinados
-│   ├── Unit/                # Testes de Matemática e Lógica isolada
-│   └── test_runner.cpp      # Ponto de entrada (main) do Doctest
-├── Makefile                 # Sistema de Build
-├── main.cpp                 # Entry Point do Jogo (O Executável)
-└── reorganize.py            # Gestor de ficheiros
+│   ├── Assets/
+│   │   └── Shaders/
+│   │       ├── base.frag
+│   │       ├── base.frag.spv
+│   │       ├── base.vert
+│   │       └── base.vert.spv
+│   ├── Core/
+│   │   └── Config.h
+│   ├── Graphics/
+│   │   ├── Camera.cpp
+│   │   ├── Camera.h
+│   │   ├── Pipeline.cpp
+│   │   ├── Pipeline.h
+│   │   ├── Renderer.cpp
+│   │   ├── Renderer.h
+│   │   ├── RenderPass.cpp
+│   │   ├── RenderPass.h
+│   │   ├── Swapchain.cpp
+│   │   ├── Swapchain.h
+│   │   ├── VulkanContext.cpp
+│   │   ├── VulkanContext.h
+│   │   ├── Window.cpp
+│   │   └── Window.h
+│   └── Logic/
+│       ├── InputManager.cpp
+│       ├── InputManager.h
+│       ├── Level.cpp
+│       ├── Level.h
+│       ├── Physics.cpp
+│       ├── Physics.h
+│       ├── Player.cpp
+│       ├── Player.h
+│       ├── ReplayManager.cpp
+│       └── ReplayManager.h
+├── main.cpp
+├── Makefile
+├── README.md
+├── reorganize.py
+├── scripts/
+│   └── pre-commit.sh
+└── Tests/
+    ├── Acceptance/
+    ├── Integration/
+    │   ├── test_pipeline.cpp
+    │   ├── test_render_pass.cpp
+    │   ├── test_renderer.cpp
+    │   ├── test_swapchain.cpp
+    │   ├── test_vulkan_init.cpp
+    │   └── test_window.cpp
+    ├── Regression/
+    ├── System/
+    ├── test_runner.cpp
+    └── Unit/
+        ├── test_camera.cpp
+        ├── test_input.cpp
+        ├── test_level.cpp
+        ├── test_physics.cpp
+        ├── test_placeholder.cpp
+        ├── test_player.cpp
+        ├── test_replay.cpp
+        └── test_vulkan_context.cpp

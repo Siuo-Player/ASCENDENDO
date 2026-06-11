@@ -2,7 +2,7 @@
 """
 reorganize.py — Motor de Reorganização do ASCENDENDO
 Garante que a arquitetura do projeto se mantém imaculada e gera
-automaticamente o mapa estrutural atualizado.
+automaticamente o mapa estrutural atualizado, incluindo o novo sistema de níveis (Fase 6.2).
 """
 
 import shutil
@@ -27,6 +27,7 @@ MOVES = [
     ("test_player.cpp",         "Tests/Unit/test_player.cpp"),
     ("test_replay.cpp",         "Tests/Unit/test_replay.cpp"),
     ("test_camera.cpp",         "Tests/Unit/test_camera.cpp"),
+    ("test_level.cpp",          "Tests/Unit/test_level.cpp"),
 
     # Testes de Integração
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
@@ -61,6 +62,8 @@ MOVES = [
     ("Player.cpp",              "Game/Logic/Player.cpp"),
     ("ReplayManager.h",         "Game/Logic/ReplayManager.h"),
     ("ReplayManager.cpp",       "Game/Logic/ReplayManager.cpp"),
+    ("Level.h",                 "Game/Logic/Level.h"),
+    ("Level.cpp",               "Game/Logic/Level.cpp"),
 
     # Shaders
     ("base.vert",               "Game/Assets/Shaders/base.vert"),
@@ -78,20 +81,16 @@ def col(text: str, code: str) -> str: return f"\033[{code}m{text}\033[0m"
 OK, MOVE, WARN, DIR = col("✅", "32"), col("📦", "36"), col("⚠️ ", "33"), col("📁", "34")
 
 def generate_structure_map(dir_path: Path, prefix="", ignore_dirs={'.git', 'build', '__pycache__'}):
-    """Gera uma arvore de ficheiros estilo Linux 'tree'"""
+    """Gera uma árvore de ficheiros real e atualizada estilo Linux 'tree'"""
     lines = []
-    # Ignorar pastas não essenciais e ficheiros escondidos do sistema (como .DS_Store)
     paths = sorted([p for p in dir_path.iterdir() if p.name not in ignore_dirs and not p.name.startswith('.')])
-    
     for i, p in enumerate(paths):
         is_last = (i == len(paths) - 1)
         connector = "└── " if is_last else "├── "
         lines.append(f"{prefix}{connector}{p.name}{'/' if p.is_dir() else ''}")
-        
         if p.is_dir():
             extension = "    " if is_last else "│   "
             lines.extend(generate_structure_map(p, prefix + extension, ignore_dirs))
-            
     return lines
 
 def main() -> None:
@@ -100,7 +99,6 @@ def main() -> None:
     errors = []
     moved_count = 0
 
-    # 1. Garantir Pastas e Gitkeeps
     for d in DIRS_WITH_GITKEEP:
         target = ROOT / d
         target.mkdir(parents=True, exist_ok=True)
@@ -108,7 +106,6 @@ def main() -> None:
         if not gitkeep.exists():
             gitkeep.touch(); print(f"  {DIR} {d}/.gitkeep (Criado)")
 
-    # 2. Mover Ficheiros Novos
     for src_name, dst_rel in MOVES:
         src = ROOT / src_name; dst = ROOT / dst_rel
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -121,17 +118,14 @@ def main() -> None:
                 print(f"  {MOVE} Movido:     {dst_rel}"); moved_count += 1
         elif not dst.exists(): errors.append(dst_rel)
 
-    # 3. Gerar Mapa de Estrutura Automaticamente
     dev_dir = ROOT / "Development"
     dev_dir.mkdir(parents=True, exist_ok=True)
     map_file = dev_dir / "project_structure.txt"
-    
     tree_lines = generate_structure_map(ROOT)
     with open(map_file, "w", encoding="utf-8") as f:
         f.write("ASCENDENDO/\n")
         f.write("\n".join(tree_lines))
         f.write("\n")
-    
     print(f"  {OK} Mapa estrutural atualizado em Development/project_structure.txt")
 
     if moved_count == 0: print(f"  {OK} O projeto está perfeitamente organizado!")
