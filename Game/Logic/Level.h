@@ -2,19 +2,12 @@
 // =============================================================================
 //  Game/Logic/Level.h
 //
-//  @version 6.2c
-//  @history
-//    v6.2  — criado (colisao de topo one-way com SKIN_WIDTH)
-//    v6.2c — colisao lateral adicionada; resolucao full-AABB via MTV
-//
-//  CONVENÇÃO DE COORDENADAS (Y para cima):
-//    addPlatform(x, y, w, h)  →  canto inferior-esquerdo em (x, y).
-//    resolveCollision()        →  top landing + side blocking + one-way up.
-//    Deve ser chamada SEMPRE DEPOIS de PhysicsWorld::step().
+//  @version 6.9
 // =============================================================================
 
 #include "Logic/Physics.h"
 #include <vector>
+#include <string>
 
 namespace logic {
 
@@ -24,13 +17,17 @@ struct Platform {
 
 class Level {
 public:
-    void addPlatform(float x, float y, float w, float h);
+    std::string name = "Sem Nome";
+    
+    // Suporte para o objetivo final (Bandeira)
+    bool hasFlag = false;
+    AABB flagBounds;
 
-    // Resolve todas as colisoes (topo one-way + lados sólidos).
-    // Retorna true se houve pelo menos uma colisao.
+    bool loadFromFile(const std::string& filepath, float maxWidth);
+    void addPlatform(float x, float y, float w, float h);
     bool resolveCollision(PhysicsBody& body) const;
 
-    const std::vector<Platform>& platforms()    const { return m_platforms; }
+    const std::vector<Platform>& platforms()     const { return m_platforms; }
     int                          platformCount() const { return (int)m_platforms.size(); }
     void                         clear()               { m_platforms.clear(); }
 

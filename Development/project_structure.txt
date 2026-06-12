@@ -2,8 +2,10 @@ ASCENDENDO/
 ├── deps.py
 ├── Development/
 │   ├── AI_Validation/
+│   │   └── ai_validator.py
 │   ├── dev_log.txt
 │   ├── LevelEditor/
+│   │   └── level_validator.py
 │   └── project_structure.txt
 ├── external/
 │   ├── doctest/
@@ -20,6 +22,13 @@ ASCENDENDO/
 │           └── glfw3dll.lib
 ├── Game/
 │   ├── Assets/
+│   │   ├── Levels/
+│   │   │   ├── campaign.txt
+│   │   │   ├── inicio.lvl
+│   │   │   ├── NaoValidados/
+│   │   │   ├── precipicio.lvl
+│   │   │   ├── Unused/
+│   │   │   └── zigzag.lvl
 │   │   └── Shaders/
 │   │       ├── base.frag
 │   │       ├── base.frag.spv
@@ -58,7 +67,8 @@ ASCENDENDO/
 ├── README.md
 ├── reorganize.py
 ├── scripts/
-│   └── pre-commit.sh
+│   ├── pre-commit.sh
+│   └── pre-push.sh
 └── Tests/
     ├── Acceptance/
     ├── Integration/

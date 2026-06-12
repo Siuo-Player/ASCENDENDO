@@ -1,0 +1,4 @@
+# Playlist da Campanha (A ordem das linhas define a ordem no jogo)
+inicio.lvl
+zigzag.lvl
+precipicio.lvl
