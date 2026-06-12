@@ -1,7 +1,7 @@
 // =============================================================================
 //  Tests/Unit/test_level.cpp
 //
-//  @version 6.8
+//  @version 7.2
 // =============================================================================
 
 #include "doctest/doctest.h"
@@ -89,7 +89,8 @@ TEST_SUITE("Level / Colisao Vertical (Topo e Teto)") {
 
         PhysicsWorld world;
         PhysicsBody  body;
-        body.position   = {50.0f, 65.0f}; 
+        // AJUSTE: Subido de 65.0f para 80.0f para o corpo de 16px alcançar o teto
+        body.position   = {50.0f, 80.0f}; 
         body.velocity.y = 300.0f; 
         body.velocity.x = 100.0f; 
         body.isGrounded = false;
@@ -101,7 +102,6 @@ TEST_SUITE("Level / Colisao Vertical (Topo e Teto)") {
         CHECK(body.isGrounded == false);
         CHECK(body.position.y == doctest::Approx(100.0f - body.height));
         
-        // A velocidade Y sofre a accao de 1 frame de gravidade antes da colisao
         float expectedVy = (300.0f + (PhysicsWorld::GRAVITY * PhysicsWorld::FIXED_STEP)) * -0.3f;
         CHECK(body.velocity.y == doctest::Approx(expectedVy));
         CHECK(body.velocity.x == doctest::Approx(90.0f));
@@ -169,7 +169,8 @@ TEST_SUITE("Level / Colisao Lateral") {
         level.addPlatform(100.0f, 50.0f, 100.0f, 100.0f);
 
         PhysicsBody body;
-        body.position   = {73.0f, 70.0f};
+        // AJUSTE: Movido de 73.0f para 89.0f para colmatar a nova largura de 16px
+        body.position   = {89.0f, 70.0f};
         body.velocity.x = 200.0f; 
         body.velocity.y = 0.0f;
         body.isGrounded = true;

@@ -1,7 +1,7 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 6.9
+//  @version 7.1
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -16,6 +16,9 @@
 #include "Game/Logic/Level.h"
 #include "Game/Core/Config.h"
 
+// Necessário para detetar a resolução nativa do monitor
+#include <GLFW/glfw3.h> 
+
 #include <chrono>
 #include <iostream>
 #include <fstream>
@@ -28,6 +31,12 @@ using namespace logic;
 int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
 
+    glfwInit();
+    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
+    int screenWidth = mode->width;
+    int screenHeight = mode->height;
+
     {
         Window       win;
         VulkanContext ctx;
@@ -37,7 +46,7 @@ int main() {
         Renderer     renderer;
         InputManager input;
 
-        if (!win.create(1280, 720, "ASCENDENDO — Playlist Engine")) return -1;
+        if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) return -1;
 
         std::vector<const char*> exts;
         win.appendRequiredExtensions(exts);
@@ -52,10 +61,8 @@ int main() {
 
         input.registerWithWindow(win.handle());
 
-        // ── LER A PLAYLIST DE NÍVEIS (campaign.txt) ───────────────────────────
         std::vector<std::string> campaign;
         std::ifstream campaignFile("Game/Assets/Levels/campaign.txt");
-        
         if (campaignFile.is_open()) {
             std::string line;
             while (std::getline(campaignFile, line)) {
@@ -66,16 +73,16 @@ int main() {
             }
         }
 
-        int currentLevelIndex = 0;
         Level level;
-        
+        int currentLevelIndex = 0;
+        float currentSpawnY = 0.0f;
+
+        // Base sólida inicial
+        level.addPlatform(0.0f, -10.0f, config::LOGICAL_WIDTH, 10.0f);
+
         if (!campaign.empty()) {
-            if (!level.loadFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH)) {
-                std::cerr << "[ASCENDENDO] Erro a carregar " << campaign[currentLevelIndex] << "\n";
-            }
-        } else {
-            std::cerr << "[ASCENDENDO] AVISO: Playlist (campaign.txt) nao encontrada ou vazia!\n";
-            level.addPlatform(0.0f, 0.0f, config::LOGICAL_WIDTH, 20.0f);
+            currentSpawnY = level.appendFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH, currentSpawnY);
+            currentLevelIndex++;
         }
 
         PhysicsWorld world;
@@ -104,33 +111,18 @@ int main() {
 
             camera.follow(player.position(), dt);
 
-            // ── Transição Dinâmica e Objetivo Final ───────────────────────────
-            bool levelComplete = false;
-
-            if (level.hasFlag) {
-                // Último nível: Ganha ao tocar na bandeira
-                if (PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
-                    levelComplete = true;
-                }
-            } else {
-                // Nível normal: Ganha ao chegar à altura fixa do nível
-                if (player.position().y >= config::LOGICAL_HEIGHT) {
-                    levelComplete = true;
+            if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
+                if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
+                    currentSpawnY = level.appendFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH, currentSpawnY);
+                    currentLevelIndex++;
                 }
             }
 
-            if (levelComplete) {
-                currentLevelIndex++;
-                if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
-                    level.loadFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH);
-                    player.body.position = { config::LOGICAL_WIDTH / 2.0f, 0.0f };
-                    camera.position.y = 0.0f;                                     
-                } else {
-                    std::cout << "\n=========================================\n";
-                    std::cout << " 🎉 PARABÉNS! COMPLETÁSTE A CAMPANHA! 🎉\n";
-                    std::cout << "=========================================\n\n";
-                    break;
-                }
+            if (level.hasFlag && PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
+                std::cout << "\n=========================================\n";
+                std::cout << " 🎉 PARABÉNS! ALCANÇASTE O TOPO! 🎉\n";
+                std::cout << "=========================================\n\n";
+                break;
             }
 
             if (!renderer.drawFrame(player, camera, &level)) break;
@@ -139,6 +131,7 @@ int main() {
         vkDeviceWaitIdle(ctx.device());
     }
 
+    glfwTerminate();
     std::cout << "[ASCENDENDO] Motor encerrado com sucesso.\n";
     return 0;
 }

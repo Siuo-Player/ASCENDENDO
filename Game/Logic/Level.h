@@ -2,7 +2,7 @@
 // =============================================================================
 //  Game/Logic/Level.h
 //
-//  @version 6.9
+//  @version 7.1
 // =============================================================================
 
 #include "Logic/Physics.h"
@@ -19,11 +19,12 @@ class Level {
 public:
     std::string name = "Sem Nome";
     
-    // Suporte para o objetivo final (Bandeira)
     bool hasFlag = false;
     AABB flagBounds;
 
-    bool loadFromFile(const std::string& filepath, float maxWidth);
+    // Permite "colar" um nível por cima do anterior usando um Offset Y
+    float appendFromFile(const std::string& filepath, float maxWidth, float offsetY);
+    
     void addPlatform(float x, float y, float w, float h);
     bool resolveCollision(PhysicsBody& body) const;
 

@@ -1,10 +1,11 @@
 // =============================================================================
 //  Game/Logic/Level.cpp
 //
-//  @version 6.9
+//  @version 7.1
 // =============================================================================
 
 #include "Logic/Level.h"
+#include "Core/Config.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -13,17 +14,15 @@
 
 namespace logic {
 
-bool Level::loadFromFile(const std::string& filepath, float maxWidth) {
+float Level::appendFromFile(const std::string& filepath, float maxWidth, float offsetY) {
     std::ifstream file(filepath);
     if (!file.is_open()) {
         std::cerr << "[ERRO] Nao foi possivel abrir o nivel: " << filepath << "\n";
-        return false;
+        return offsetY; // Retorna o offset inalterado
     }
 
-    clear(); 
-    name = "Sem Nome";
     hasFlag = false;
-    
+    float highestY = offsetY;
     std::string line;
     int lineNum = 0;
 
@@ -40,24 +39,25 @@ bool Level::loadFromFile(const std::string& filepath, float maxWidth) {
         } else if (type == "PLATFORM") {
             float x, y, w, h;
             if (iss >> x >> y >> w >> h) {
+                float worldY = y + offsetY;
                 if (x < 0.0f || (x + w) > maxWidth) {
                     std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum 
                               << ": Plataforma fora dos limites laterais! X=" << x << "\n";
                 }
-                addPlatform(x, y, w, h);
+                addPlatform(x, worldY, w, h);
+                if (worldY + h > highestY) highestY = worldY + h;
             }
         } else if (type == "FLAG") {
             float x, y, w, h;
             if (iss >> x >> y >> w >> h) {
                 hasFlag = true;
-                flagBounds = AABB{{x, y}, {x + w, y + h}};
+                flagBounds = AABB{{x, y + offsetY}, {x + w, y + offsetY + h}};
             }
         }
     }
     
-    std::cout << "[ASCENDENDO] Nivel '" << name << "' carregado. " 
-              << platformCount() << " plataformas.\n";
-    return true;
+    std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY << ". O topo agora e " << highestY << "\n";
+    return highestY + 50.0f;
 }
 
 void Level::addPlatform(float x, float y, float w, float h) {

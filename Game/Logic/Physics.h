@@ -2,13 +2,10 @@
 // =============================================================================
 //  Game/Logic/Physics.h
 //
-//  @version 3.3
-//  @history
-//    v3.1 — criado (Vec2, AABB, PhysicsBody, PhysicsWorld + Fixed Timestep)
-//    v3.3 — setAccumulator() exposto para suporte a Save States determinísticos
+//  @version 7.1
 // =============================================================================
 
-#include <cstdint>
+#include "Core/Config.h"
 
 namespace logic {
 
@@ -16,29 +13,35 @@ struct Vec2 {
     float x = 0.0f;
     float y = 0.0f;
 
-    Vec2 operator+(Vec2 o)  const { return {x + o.x, y + o.y}; }
-    Vec2 operator-(Vec2 o)  const { return {x - o.x, y - o.y}; }
-    Vec2 operator*(float s) const { return {x * s,   y * s  }; }
-    Vec2& operator+=(Vec2 o)      { x += o.x; y += o.y; return *this; }
-    bool  operator==(Vec2 o) const { return x == o.x && y == o.y; }
+    Vec2 operator+(const Vec2& o) const { return {x + o.x, y + o.y}; }
+    Vec2 operator-(const Vec2& o) const { return {x - o.x, y - o.y}; }
+    Vec2 operator*(float s) const { return {x * s, y * s}; }
+    Vec2& operator+=(const Vec2& o) { x += o.x; y += o.y; return *this; }
+    bool operator==(const Vec2& o) const { return x == o.x && y == o.y; }
 };
 
 struct AABB {
-    Vec2 min{};
-    Vec2 max{};
+    Vec2 min;
+    Vec2 max;
 
-    bool overlaps(const AABB& other) const;
-    Vec2 center() const { return {(min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f}; }
-    float width()  const { return max.x - min.x; }
+    bool overlaps(const AABB& o) const {
+        return max.x > o.min.x && min.x < o.max.x &&
+               max.y > o.min.y && min.y < o.max.y;
+    }
+    
+    float width() const { return max.x - min.x; }
     float height() const { return max.y - min.y; }
 };
 
 struct PhysicsBody {
-    Vec2  position   = {};
-    Vec2  velocity   = {};
-    float width      = 32.0f;
-    float height     = 64.0f;
-    bool  isGrounded = false;
+    Vec2 position;
+    Vec2 velocity;
+    
+    // O tamanho do corpo agora é consumido diretamente da Configuração Global
+    float width = config::PLAYER_WIDTH;
+    float height = config::PLAYER_HEIGHT;
+    
+    bool isGrounded = false;
 
     AABB bounds() const {
         return { position, {position.x + width, position.y + height} };
@@ -47,17 +50,20 @@ struct PhysicsBody {
 
 class PhysicsWorld {
 public:
-    static constexpr float GRAVITY    = -980.0f;
-    static constexpr float FIXED_STEP = 1.0f / 60.0f;
-    static constexpr float GROUND_Y   = 0.0f;
+    // Mantém compatibilidade com os testes existentes
+    static constexpr float FIXED_STEP = config::FIXED_STEP;
+    static constexpr float GRAVITY    = config::GRAVITY;
 
-    void step(PhysicsBody& body, float dt) const;
-    void jump(PhysicsBody& body, float force) const;
-    static bool collides(const AABB& a, const AABB& b);
-    int advance(float deltaTime);
+    int advance(float dt);
+    void step(PhysicsBody& body, float dt);
+    void jump(PhysicsBody& body, float force);
+
+    static bool collides(const AABB& a, const AABB& b) {
+        return a.overlaps(b);
+    }
 
     float accumulator() const { return m_accumulator; }
-    void setAccumulator(float value) { m_accumulator = value; }
+    void setAccumulator(float val) { m_accumulator = val; }
 
 private:
     float m_accumulator = 0.0f;

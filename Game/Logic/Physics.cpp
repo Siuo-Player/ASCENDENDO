@@ -1,10 +1,7 @@
 // =============================================================================
 //  Game/Logic/Physics.cpp
 //
-//  @version 6.2c
-//  @history
-//    v3.1  — criado
-//    v6.2c — paredes absolutas esquerda/direita (config::LOGICAL_WIDTH)
+//  @version 7.2
 // =============================================================================
 
 #include "Logic/Physics.h"
@@ -12,60 +9,54 @@
 
 namespace logic {
 
-bool AABB::overlaps(const AABB& other) const {
-    return min.x < other.max.x && max.x > other.min.x
-        && min.y < other.max.y && max.y > other.min.y;
+int PhysicsWorld::advance(float dt) {
+    m_accumulator += dt;
+    int steps = 0;
+    while (m_accumulator >= FIXED_STEP) {
+        m_accumulator -= FIXED_STEP;
+        steps++;
+    }
+    return steps;
 }
 
-void PhysicsWorld::step(PhysicsBody& body, float dt) const {
-    // 1. Gravidade
+void PhysicsWorld::step(PhysicsBody& body, float dt) {
+    // 1. Aplica Gravidade se estiver no ar
     if (!body.isGrounded) {
         body.velocity.y += GRAVITY * dt;
     }
 
-    // 2. Integração de Euler
-    body.position += body.velocity * dt;
+    // 2. Integra a Velocidade na Posição
+    body.position.x += body.velocity.x * dt;
+    body.position.y += body.velocity.y * dt;
 
-    // 3. Chão absoluto (Y = GROUND_Y)
-    if (body.position.y <= GROUND_Y) {
-        body.position.y = GROUND_Y;
-        body.velocity.y = 0.0f;
-        body.isGrounded  = true;
-    } else {
-        body.isGrounded = false;
-    }
+    // FIX: Limpa a flag de Grounded! Se o jogador andar para o vazio, vai cair.
+    // O Level::resolveCollision ou o chão absoluto voltam a meter isto a true se colidirem.
+    body.isGrounded = false; 
 
-    // 4. Paredes absolutas esquerda e direita
+    // 3. Paredes Absolutas (Left e Right bounds)
     if (body.position.x < 0.0f) {
-        body.position.x  = 0.0f;
-        if (body.velocity.x < 0.0f) body.velocity.x = 0.0f;
+        body.position.x = 0.0f;
+        body.velocity.x = 0.0f;
+    } else if (body.position.x > config::LOGICAL_WIDTH - body.width) {
+        body.position.x = config::LOGICAL_WIDTH - body.width;
+        body.velocity.x = 0.0f;
     }
-    const float rightWall = config::LOGICAL_WIDTH - body.width;
-    if (body.position.x > rightWall) {
-        body.position.x  = rightWall;
-        if (body.velocity.x > 0.0f) body.velocity.x = 0.0f;
+
+    // 4. Chão Absoluto (Base do Mundo)
+    if (body.position.y <= 0.0f) {
+        body.position.y = 0.0f;
+        if (body.velocity.y < 0.0f) {
+            body.velocity.y = 0.0f;
+        }
+        body.isGrounded = true;
     }
 }
 
-void PhysicsWorld::jump(PhysicsBody& body, float force) const {
+void PhysicsWorld::jump(PhysicsBody& body, float force) {
     if (body.isGrounded) {
         body.velocity.y = force;
         body.isGrounded = false;
     }
-}
-
-bool PhysicsWorld::collides(const AABB& a, const AABB& b) {
-    return a.overlaps(b);
-}
-
-int PhysicsWorld::advance(float deltaTime) {
-    m_accumulator += deltaTime;
-    int steps = 0;
-    while (m_accumulator >= FIXED_STEP) {
-        m_accumulator -= FIXED_STEP;
-        ++steps;
-    }
-    return steps;
 }
 
 } // namespace logic
