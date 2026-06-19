@@ -1,7 +1,10 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 7.1
+//  @version 7.2
+//  @history
+//    v7.1  — Level streaming + Campaign + fullscreen + FLAG detection
+//    v7.2  — Debug HUD: força do salto no terminal
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -108,6 +111,13 @@ int main() {
                 player.update(input, world, config::FIXED_STEP);
                 level.resolveCollision(player.body);
             }
+
+            // ── Debug HUD: força do salto no terminal ─────────────────────────────
+            // Remove quando a barra de força Vulkan estiver pronta (Fase 7.3).
+            if (player.isCharging)
+                std::cout << "\r  [SPACE] Força: " << static_cast<int>(player.chargeRatio() * 100) << "%   " << std::flush;
+            else
+                std::cout << "\r                              \r" << std::flush;
 
             camera.follow(player.position(), dt);
 

@@ -95,7 +95,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes confirmados**: **66/66** esperados (v6.4) — Camera tracking + fix warning.
+- **Testes confirmados**: **66/66** esperados (v7.3) — test_level v7.3 (15 testes) + 62 restantes.
 
 ---
 
@@ -139,15 +139,17 @@ Implementado: [como correu, problemas e soluções]
 
 **Fase 6: Mecânicas de Jogo** ← AQUI
 - 6.1 ✅ **Commitment Jump** — salto parabólico com inércia, bloqueio aéreo, `main.cpp` RAII
-- 6.2 ✅ **Level class** — plataformas (AABBs), `resolveCollision` one-way, 10 testes (58/58 ✅)
-- 6.2b ✅ **Renderer renderiza Level** — plataformas verdes no ecrã, `main.cpp` com nível real
-- 6.2c ✅ **Física corrigida** — colisão lateral (MTV), paredes absolutas X, queda de borda sem inércia
-- 6.3 ✅ **Barra de Força** — UI visual Verde→Vermelho sobre o jogador (isCharging)
-- 6.4 🔄 **Camera tracking** — follow() vertical Lerp, jogador no 35% inferior do ecrã
-- 6.3 → Câmara a seguir o jogador verticalmente (tracking)
-- 6.4 → Barra de força do salto (UI)
+- 6.2 ✅ **Level class** — plataformas (AABBs), `resolveCollision` one-way
+- 6.2b ✅ **Renderer renderiza Level** — plataformas no ecrã, `main.cpp` com nível real
+- 6.2c ✅ **Física corrigida** — colisão lateral (MTV), paredes X, queda de borda
+- 6.3 ✅ **Barra de Força** — UI visual Verde→Vermelho sobre o jogador
+- 6.4 ✅ **Camera tracking** — follow() vertical Lerp, jogador no 35% inferior
 
-**Fase 7: Level Design e Geração Procedural** *(planeada)*
+**Fase 7: Level Design e Campanha** ← AQUI
+- 7.0 ✅ **Level Streaming** — `appendFromFile()`, `campaign.txt`, `FLAG`, seamless chunking
+- 7.1 ✅ **Refatoração Config-Driven** — PLAYER_WIDTH=16, inércia natural no ar, `physics::collides()`
+- 7.2 ✅ **Debug HUD (terminal)** — `[SPACE] Força: XX%` para calibrar o charge
+- 7.3 → **Ghost Trajectory** — ai_validator exporta JSON; Renderer desenha trajetória prevista
 
 **Fase 8: UI e Polishing** *(planeada)*
 
@@ -213,7 +215,7 @@ git add . && git commit -m "feat: descrição"
 vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
 ```
 
-**Versão atual do projeto: 6.4**
+**Versão atual do projeto: 7.2**
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -221,15 +223,14 @@ vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
-| Renderer.h/.cpp | v6.3 | Barra de Força UI |
+| Renderer.h/.cpp | v6.2b | drawFrame(Player, Camera, Level*) |
 | Camera.h/.cpp | v6.4 | follow() tracking vertical |
-
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
-| Config.h | v5.2 | constantes globais |
-| InputManager.h/.cpp | v3.1 | |
-| Physics.h/.cpp | v3.3/6.2c | paredes absolutas X |
-| Player.h/.cpp | v6.2c | m_didJump: queda de borda sem inércia |
-| Level.h/.cpp | v6.2c | MTV full-AABB (topo + lados) |
+| Config.h | v7.2 | PLAYER_WIDTH=16, jump/move speeds |
+| InputManager.h/.cpp | v3.3 | injectRawState() para replay |
+| Physics.h/.cpp | v7.1 / v7.2 | config-driven, collides() static |
+| Player.h/.cpp | v7.1 / v7.2 | config-driven, inércia natural |
+| Level.h/.cpp | v7.1 | appendFromFile, hasFlag, streaming |
 | ReplayManager.h/.cpp | v3.3 | save states + replay |
 | base.vert / base.frag | v5.1 | shaders GLSL |
-| main.cpp | v6.4 | camera.follow + 5 plataformas |
+| main.cpp | v7.2 | campaign + fullscreen + debug HUD |

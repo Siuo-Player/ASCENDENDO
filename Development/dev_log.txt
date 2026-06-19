@@ -324,3 +324,62 @@ Ideia: v6.4 — Camera Tracking Vertical.
     - follow() nao afeta camera.position.x.
   Fix: test_level.cpp — removidas variaveis nao usadas (warning do compilador).
 Implementado: [A preencher apos make tests]
+
+[2026-06-11 10:00:00]
+Ideia: v7.0 — Level Streaming + Sistema de Campanha.
+  Objetivo: eliminar níveis hardcoded do main.cpp e substituir por ficheiros .lvl
+  com carregamento contínuo (seamless chunking).
+  Level.h/.cpp (v7.1):
+    - appendFromFile(filepath, maxWidth, offsetY): parseia PLATFORM/FLAG/NAME,
+      acrescenta plataformas ao mundo com offset Y, retorna (highestY + 50) para
+      o próximo chunk.
+    - hasFlag / flagBounds: detetam bandeira de fim de nível.
+    - name: nome do nível (lido da diretiva NAME).
+  main.cpp (v7.1):
+    - glfwInit() para detetar resolução nativa do monitor (fullscreen).
+    - Leitura de campaign.txt: playlist de níveis na ordem de jogo.
+    - Loop de streaming: quando jogador atinge currentSpawnY - LOGICAL_HEIGHT,
+      o próximo chunk é colado em cima (appendFromFile com offsetY acumulado).
+    - Deteção de FLAG: colisão com flagBounds via PhysicsWorld::collides().
+  Ficheiros de nível criados: inicio.lvl, zigzag.lvl, precipicio.lvl.
+  reorganize.py: valida física dos .lvl com BFS antes de os mover; reprovados
+  vão para Game/Assets/Levels/NaoValidados/. Geração automática de
+  project_structure.txt. Hook pre-push.sh: corre ai_validator.py --campaign.
+Implementado: [A preencher após make tests]
+
+[2026-06-11 11:00:00]
+Ideia: v7.1 — Refatoração Config-Driven (Physics + Player).
+  Objetivo: eliminar constantes hardcoded de Player.h e Physics.h; tudo passa
+  a vir de Config.h para single source of truth.
+  Config.h (v7.2): PLAYER_WIDTH=16, PLAYER_HEIGHT=16, PLAYER_MOVE_SPEED=140,
+    PLAYER_MIN_JUMP=250, PLAYER_MAX_JUMP=600, PLAYER_CHARGE_TIME=0.4s.
+    Colors para plataformas e jogador.
+  Physics.h (v7.1): PhysicsBody::width/height agora lidos de config:: em vez
+    de hardcoded a 32. GRAVITY e FIXED_STEP também de config::.
+    PhysicsWorld::collides() static adicionado (usado em main.cpp para FLAG).
+  Player.h (v7.1) / Player.cpp (v7.2): constantes MIN_JUMP, MAX_JUMP,
+    MOVE_SPEED, CHARGE_TIME eliminadas — substituídas por config::
+    applyHorizontalMovement simplificada: no ar, vel.x é preservada intacta
+    (inércia natural — sem bloqueio aéreo nem zeragem de borda).
+  test_player.cpp (v7.1): atualizado para config:: constants + nova física de
+    queda de borda (preserva 100% de inércia X).
+  test_level.cpp (v7.2): ajustes para width=16 (posições e velocidades de
+    bounce); adicionado teste de teto sólido (corpo a subir).
+Implementado: [A preencher após make tests]
+
+[2026-06-11 12:00:00]
+Ideia: v7.2 — Debug HUD no terminal + test_level.cpp v7.3.
+  Problema: níveis validados pela IA mas difíceis de jogar sem feedback visual
+  da força de salto. Não é possível calibrar o charge sem saber a percentagem.
+  Solução adoptada: Terminal debug (antes de Ghost Visualization).
+    - Apenas 3 linhas em main.cpp; responde à pergunta imediata.
+    - Ghost visualization (ai_validator → JSON → Renderer) fica para v7.3.
+  main.cpp (v7.2): print "\r  [SPACE] Força: XX%  " no terminal enquanto
+    isCharging=true; limpa a linha quando false.
+  test_level.cpp (v7.3): +4 testes Level::appendFromFile:
+    - ficheiro inexistente: retorna offsetY, sem crash.
+    - PLATFORM carregada com offset Y correto.
+    - FLAG define hasFlag e flagBounds.
+    - Segundo chunk usa offsetY acumulado (stacking).
+    Total: 11 (v7.2) + 4 = 15 testes em test_level; 66 testes globais.
+Implementado: [A preencher após make tests]
