@@ -1,12 +1,17 @@
 // =============================================================================
 //  Tests/Unit/test_level.cpp
 //
-//  @version 7.3
+//  @version 7.4
 //  @history
 //    v6.2  — criado (10 testes)
 //    v6.2c — +3 testes colisao lateral (MTV + bounce elastico)
 //    v7.2  — refatorado: tetos solidos, ajuste width=16, suites renomeadas
 //    v7.3  — +4 testes Level::appendFromFile (carregamento de ficheiros .lvl)
+//    v7.4  — FIX: appendFromFile agora retorna SEMPRE offsetY+LOGICAL_HEIGHT
+//            (avanço padronizado a uma tela, antes era highestY+50 — variavel).
+//            Teste de stacking corrigido (360, nao 165). FLAG de teste movida
+//            para y=300 (dentro de uma tela). +1 teste de regressao explicito:
+//            nivel vazio e nivel cheio avançam o MESMO valor.
 //
 //  SEM dependencias de GPU. Testa o logic layer isolado.
 // =============================================================================
@@ -251,7 +256,7 @@ TEST_SUITE("Level / File Loading") {
         const std::string tmpPath = "tmp_lvl_flag.lvl";
         {
             std::ofstream f(tmpPath);
-            f << "FLAG 150.0 500.0 40.0 40.0\n";
+            f << "FLAG 150.0 300.0 40.0 40.0\n";
         }
 
         Level level;
@@ -259,30 +264,63 @@ TEST_SUITE("Level / File Loading") {
 
         CHECK(level.hasFlag == true);
         CHECK(level.flagBounds.min.x == doctest::Approx(150.0f));
-        CHECK(level.flagBounds.min.y == doctest::Approx(500.0f));
+        CHECK(level.flagBounds.min.y == doctest::Approx(300.0f));
         CHECK(level.flagBounds.max.x == doctest::Approx(190.0f));
-        CHECK(level.flagBounds.max.y == doctest::Approx(540.0f));
+        CHECK(level.flagBounds.max.y == doctest::Approx(340.0f));
 
         std::remove(tmpPath.c_str());
     }
 
-    TEST_CASE("appendFromFile: segundo chunk usa offsetY acumulado") {
+    TEST_CASE("appendFromFile: segundo chunk usa offsetY = offsetY_anterior + LOGICAL_HEIGHT") {
+        // v7.2: o avanço de chunk é SEMPRE padronizado a uma tela de altura,
+        // independentemente do conteudo do nivel (highestY deixou de ser usado
+        // no calculo do retorno).
         const std::string tmpPath = "tmp_lvl_stack.lvl";
         {
             std::ofstream f(tmpPath);
             f << "PLATFORM 0.0 100.0 200.0 15.0\n";
-            // highestY = 0 + 100 + 15 = 115 → return = 115 + 50 = 165
         }
 
         Level level;
         float nextY = level.appendFromFile(tmpPath, 640.0f, 0.0f);
-        CHECK(nextY == doctest::Approx(165.0f));
+        // Retorno padronizado: 0 + LOGICAL_HEIGHT (360), NAO depende de highestY
+        CHECK(nextY == doctest::Approx(360.0f));
 
-        // Segundo chunk: plataforma deve aparecer em 165 + 100 = 265
+        // Segundo chunk: plataforma local y=100 deve aparecer em 360 + 100 = 460
         level.appendFromFile(tmpPath, 640.0f, nextY);
         REQUIRE(level.platformCount() == 2);
-        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(265.0f));
+        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(460.0f));
 
         std::remove(tmpPath.c_str());
+    }
+
+    TEST_CASE("appendFromFile: avanco do chunk e identico mesmo sem plataformas") {
+        // Regressao do bug: antes, um nivel "vazio" ou raso avancava muito menos
+        // que um nivel cheio (highestY+50), quebrando o trigger de streaming em
+        // main.cpp. Agora ambos avancam exactamente LOGICAL_HEIGHT.
+        const std::string tmpEmpty = "tmp_lvl_empty.lvl";
+        const std::string tmpFull  = "tmp_lvl_full.lvl";
+        {
+            std::ofstream f(tmpEmpty);
+            f << "# nivel sem plataformas\n";
+        }
+        {
+            std::ofstream f(tmpFull);
+            f << "PLATFORM 0.0 0.0 640.0 20.0\n";
+            f << "PLATFORM 230.0 95.0 180.0 20.0\n";
+            f << "PLATFORM 30.0 195.0 180.0 20.0\n";
+            f << "PLATFORM 230.0 295.0 180.0 20.0\n"; // topo local = 315, < 360
+        }
+
+        Level levelEmpty, levelFull;
+        float nextEmpty = levelEmpty.appendFromFile(tmpEmpty, 640.0f, 0.0f);
+        float nextFull  = levelFull.appendFromFile(tmpFull,  640.0f, 0.0f);
+
+        CHECK(nextEmpty == doctest::Approx(360.0f));
+        CHECK(nextFull  == doctest::Approx(360.0f));
+        CHECK(nextEmpty == doctest::Approx(nextFull)); // o ponto crucial do fix
+
+        std::remove(tmpEmpty.c_str());
+        std::remove(tmpFull.c_str());
     }
 }

@@ -2,7 +2,9 @@
 import sys
 from pathlib import Path
 
-LOGICAL_WIDTH = 360.0
+# v7.3 — FIX: LOGICAL_WIDTH estava a 360 (errado). O motor é 640x360 (paisagem).
+LOGICAL_WIDTH  = 640.0
+LOGICAL_HEIGHT = 360.0  # cada nivel deve caber numa unica tela de altura
 
 def validate_level(filepath):
     try:
@@ -36,11 +38,28 @@ def validate_level(filepath):
                 if x < 0.0 or (x + w) > LOGICAL_WIDTH:
                     print(f"  ❌ Linha {i+1}: Plataforma fora dos limites! (X: {x}, W: {w}) -> Extremo: {x+w}. Limite máximo é {LOGICAL_WIDTH}.")
                     valid = False
+                if (y + h) > LOGICAL_HEIGHT:
+                    print(f"  ❌ Linha {i+1}: Plataforma ultrapassa uma tela de altura! (Y: {y}, H: {h}) -> Topo: {y+h}. Limite máximo é {LOGICAL_HEIGHT}.")
+                    valid = False
             except ValueError:
                 print(f"  ❌ Linha {i+1}: Valores não numéricos nas coordenadas.")
                 valid = False
         elif parts[0] == "FLAG":
-            pass # Ignora a flag nesta validação simples
+            if len(parts) != 5:
+                print(f"  ❌ Linha {i+1}: Formato inválido. Uso: FLAG x y w h")
+                valid = False
+                continue
+            try:
+                x, y, w, h = map(float, parts[1:])
+                if x < 0.0 or (x + w) > LOGICAL_WIDTH:
+                    print(f"  ❌ Linha {i+1}: FLAG fora dos limites laterais! (X: {x}, W: {w})")
+                    valid = False
+                if (y + h) > LOGICAL_HEIGHT:
+                    print(f"  ❌ Linha {i+1}: FLAG ultrapassa uma tela de altura! (Y: {y}, H: {h})")
+                    valid = False
+            except ValueError:
+                print(f"  ❌ Linha {i+1}: Valores não numéricos nas coordenadas da FLAG.")
+                valid = False
 
     if not has_name:
         print(f"  ⚠️  Aviso: O nível devia ter um NAME definido.")

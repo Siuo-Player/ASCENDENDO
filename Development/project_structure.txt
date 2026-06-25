@@ -1,92 +1,127 @@
-ASCENDENDO/
-├── deps.py
-├── Development/
-│   ├── AI_Validation/
-│   │   └── ai_validator.py
-│   ├── dev_log.txt
-│   ├── LevelEditor/
-│   │   └── level_validator.py
-│   └── project_structure.txt
-├── external/
-│   ├── doctest/
-│   │   └── doctest.h
-│   └── glfw/
-│       ├── include/
-│       │   └── GLFW/
-│       │       ├── glfw3.h
-│       │       └── glfw3native.h
-│       └── lib-vc2022/
-│           ├── glfw3.dll
-│           ├── glfw3.lib
-│           ├── glfw3_mt.lib
-│           └── glfw3dll.lib
-├── Game/
-│   ├── Assets/
-│   │   ├── Levels/
-│   │   │   ├── campaign.txt
-│   │   │   ├── inicio.lvl
-│   │   │   ├── NaoValidados/
-│   │   │   ├── precipicio.lvl
-│   │   │   ├── Unused/
-│   │   │   └── zigzag.lvl
-│   │   └── Shaders/
-│   │       ├── base.frag
-│   │       ├── base.frag.spv
-│   │       ├── base.vert
-│   │       └── base.vert.spv
-│   ├── Core/
-│   │   └── Config.h
-│   ├── Graphics/
-│   │   ├── Camera.cpp
-│   │   ├── Camera.h
-│   │   ├── Pipeline.cpp
-│   │   ├── Pipeline.h
-│   │   ├── Renderer.cpp
-│   │   ├── Renderer.h
-│   │   ├── RenderPass.cpp
-│   │   ├── RenderPass.h
-│   │   ├── Swapchain.cpp
-│   │   ├── Swapchain.h
-│   │   ├── VulkanContext.cpp
-│   │   ├── VulkanContext.h
-│   │   ├── Window.cpp
-│   │   └── Window.h
-│   └── Logic/
-│       ├── InputManager.cpp
-│       ├── InputManager.h
-│       ├── Level.cpp
-│       ├── Level.h
-│       ├── Physics.cpp
-│       ├── Physics.h
-│       ├── Player.cpp
-│       ├── Player.h
-│       ├── ReplayManager.cpp
-│       └── ReplayManager.h
-├── main.cpp
-├── Makefile
-├── README.md
-├── reorganize.py
-├── scripts/
-│   ├── pre-commit.sh
-│   └── pre-push.sh
-└── Tests/
-    ├── Acceptance/
-    ├── Integration/
-    │   ├── test_pipeline.cpp
-    │   ├── test_render_pass.cpp
-    │   ├── test_renderer.cpp
-    │   ├── test_swapchain.cpp
-    │   ├── test_vulkan_init.cpp
-    │   └── test_window.cpp
-    ├── Regression/
-    ├── System/
-    ├── test_runner.cpp
-    └── Unit/
-        ├── test_camera.cpp
-        ├── test_input.cpp
-        ├── test_level.cpp
-        ├── test_physics.cpp
-        ├── test_placeholder.cpp
-        ├── test_player.cpp
-        ├── test_replay.cpp
-        └── test_vulkan_context.cpp
+././.gitattributes
+././.gitignore
+././Makefile
+././README.md
+././deps.py
+././main.cpp
+././reorganize.py
+././.vscode/.gitkeep
+././.vscode/c_cpp_properties.json
+././.vscode/tasks.json
+././build/libgame.a
+././build/test_results.txt
+././build/tests.exe
+././build/tests.pdb
+././build/Game/Graphics/Camera.o
+././build/Game/Graphics/Pipeline.o
+././build/Game/Graphics/RenderPass.o
+././build/Game/Graphics/Renderer.o
+././build/Game/Graphics/Swapchain.o
+././build/Game/Graphics/VulkanContext.o
+././build/Game/Graphics/Window.o
+././build/Game/Logic/InputManager.o
+././build/Game/Logic/Level.o
+././build/Game/Logic/Physics.o
+././build/Game/Logic/Player.o
+././build/Game/Logic/ReplayManager.o
+././build/Tests/test_runner.o
+././build/Tests/Integration/test_pipeline.o
+././build/Tests/Integration/test_render_pass.o
+././build/Tests/Integration/test_renderer.o
+././build/Tests/Integration/test_swapchain.o
+././build/Tests/Integration/test_vulkan_init.o
+././build/Tests/Integration/test_window.o
+././build/Tests/Unit/test_camera.o
+././build/Tests/Unit/test_campaign.o
+././build/Tests/Unit/test_input.o
+././build/Tests/Unit/test_level.o
+././build/Tests/Unit/test_physics.o
+././build/Tests/Unit/test_placeholder.o
+././build/Tests/Unit/test_player.o
+././build/Tests/Unit/test_replay.o
+././build/Tests/Unit/test_vulkan_context.o
+././Development/dev_log.txt
+././Development/project_structure.txt
+././Development/AI_Validation/.gitkeep
+././Development/AI_Validation/ai_validator.py
+././Development/AI_Validation/sim/.gitkeep
+././Development/AI_Validation/sim/engine.py
+././Development/AI_Validation/sim/flag_solver.py
+././Development/AI_Validation/sim/levelgen.py
+././Development/AI_Validation/sim/solver.py
+././Development/LevelEditor/.gitkeep
+././Development/LevelEditor/level_validator.py
+././external/doctest/.gitkeep
+././external/doctest/doctest.h
+././external/glfw/include/GLFW/glfw3.h
+././external/glfw/include/GLFW/glfw3native.h
+././external/glfw/lib-vc2022/glfw3.dll
+././external/glfw/lib-vc2022/glfw3.lib
+././external/glfw/lib-vc2022/glfw3_mt.lib
+././external/glfw/lib-vc2022/glfw3dll.lib
+././Game/Assets/.gitkeep
+././Game/Assets/Levels/.gitkeep
+././Game/Assets/Levels/campaign.txt
+././Game/Assets/Levels/inicio.lvl
+././Game/Assets/Levels/precipicio.lvl
+././Game/Assets/Levels/zigzag.lvl
+././Game/Assets/Levels/NaoValidados/.gitkeep
+././Game/Assets/Levels/Unused/.gitkeep
+././Game/Assets/Shaders/.gitkeep
+././Game/Assets/Shaders/base.frag
+././Game/Assets/Shaders/base.frag.spv
+././Game/Assets/Shaders/base.vert
+././Game/Assets/Shaders/base.vert.spv
+././Game/Core/.gitkeep
+././Game/Core/Config.h
+././Game/Graphics/.gitkeep
+././Game/Graphics/Camera.cpp
+././Game/Graphics/Camera.h
+././Game/Graphics/Pipeline.cpp
+././Game/Graphics/Pipeline.h
+././Game/Graphics/RenderPass.cpp
+././Game/Graphics/RenderPass.h
+././Game/Graphics/Renderer.cpp
+././Game/Graphics/Renderer.h
+././Game/Graphics/Swapchain.cpp
+././Game/Graphics/Swapchain.h
+././Game/Graphics/VulkanContext.cpp
+././Game/Graphics/VulkanContext.h
+././Game/Graphics/Window.cpp
+././Game/Graphics/Window.h
+././Game/Logic/.gitkeep
+././Game/Logic/InputManager.cpp
+././Game/Logic/InputManager.h
+././Game/Logic/Level.cpp
+././Game/Logic/Level.h
+././Game/Logic/Physics.cpp
+././Game/Logic/Physics.h
+././Game/Logic/Player.cpp
+././Game/Logic/Player.h
+././Game/Logic/ReplayManager.cpp
+././Game/Logic/ReplayManager.h
+././scripts/.gitkeep
+././scripts/pre-commit.sh
+././scripts/pre-push.sh
+././Tests/log_testes.txt
+././Tests/test_runner.cpp
+././Tests/Acceptance/.gitkeep
+././Tests/Integration/.gitkeep
+././Tests/Integration/test_pipeline.cpp
+././Tests/Integration/test_render_pass.cpp
+././Tests/Integration/test_renderer.cpp
+././Tests/Integration/test_swapchain.cpp
+././Tests/Integration/test_vulkan_init.cpp
+././Tests/Integration/test_window.cpp
+././Tests/Regression/.gitkeep
+././Tests/System/.gitkeep
+././Tests/Unit/.gitkeep
+././Tests/Unit/test_camera.cpp
+././Tests/Unit/test_campaign.cpp
+././Tests/Unit/test_input.cpp
+././Tests/Unit/test_level.cpp
+././Tests/Unit/test_physics.cpp
+././Tests/Unit/test_placeholder.cpp
+././Tests/Unit/test_player.cpp
+././Tests/Unit/test_replay.cpp
+././Tests/Unit/test_vulkan_context.cpp

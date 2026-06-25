@@ -325,61 +325,175 @@ Ideia: v6.4 — Camera Tracking Vertical.
   Fix: test_level.cpp — removidas variaveis nao usadas (warning do compilador).
 Implementado: [A preencher apos make tests]
 
-[2026-06-11 10:00:00]
-Ideia: v7.0 — Level Streaming + Sistema de Campanha.
-  Objetivo: eliminar níveis hardcoded do main.cpp e substituir por ficheiros .lvl
-  com carregamento contínuo (seamless chunking).
-  Level.h/.cpp (v7.1):
-    - appendFromFile(filepath, maxWidth, offsetY): parseia PLATFORM/FLAG/NAME,
-      acrescenta plataformas ao mundo com offset Y, retorna (highestY + 50) para
-      o próximo chunk.
-    - hasFlag / flagBounds: detetam bandeira de fim de nível.
-    - name: nome do nível (lido da diretiva NAME).
-  main.cpp (v7.1):
-    - glfwInit() para detetar resolução nativa do monitor (fullscreen).
-    - Leitura de campaign.txt: playlist de níveis na ordem de jogo.
-    - Loop de streaming: quando jogador atinge currentSpawnY - LOGICAL_HEIGHT,
-      o próximo chunk é colado em cima (appendFromFile com offsetY acumulado).
-    - Deteção de FLAG: colisão com flagBounds via PhysicsWorld::collides().
-  Ficheiros de nível criados: inicio.lvl, zigzag.lvl, precipicio.lvl.
-  reorganize.py: valida física dos .lvl com BFS antes de os mover; reprovados
-  vão para Game/Assets/Levels/NaoValidados/. Geração automática de
-  project_structure.txt. Hook pre-push.sh: corre ai_validator.py --campaign.
-Implementado: [A preencher após make tests]
+[2026-06-19 15:00:00]
+Ideia: v7.3 — Fix Crítico: Validator V_MAX Mismatch + Redesign de Níveis.
+  DIAGNÓSTICO: Campanha impossível de completar porque ai_validator.py usava
+  V_MAX=800 mas Config.h v7.2 define PLAYER_MAX_JUMP=600. Consequência:
+    - Jogo:       max altura = (600×sin60°)² / (2×980) = 137.7 px
+    - Validator:  max altura = (800×0.85×sin60°)² / (2×980) = 176.9 px
+    - zigzag.lvl P0→P1 exige 145 px → IMPOSSÍVEL no jogo (137.7 < 145)
+  CORREÇÃO 1: ai_validator.py + reorganize.py
+    - V_MAX: 800 → 600 (alinhado com PLAYER_MAX_JUMP em Config.h)
+    - TOLERANCE: 0.85 → 0.90 (nível passável com 90% de carga)
+    - Novo max validador: 111.6 px
+  CORREÇÃO 2: Objetivo de níveis de trânsito (sem FLAG)
+    - Antes: BFS tentava atingir y=640 — impossível com plataformas em ~y=505
+    - Agora: BFS usa (topo_da_plataforma_mais_alta + 50) como saída
+    - Semanticamente correto: o jogo carrega o próximo chunk quando o jogador
+      sobe acima de currentSpawnY - LOGICAL_HEIGHT (não precisa atingir y=640)
+  REDESIGN DOS NÍVEIS (todos verificados matematicamente com novo validador):
+    inicio.lvl: plataformas largas (180px) em ZigZag L↔R. Gaps: 85-100px.
+      P0→P1→P2→P3→P4→P5 (5 saltos, topo em y=505)
+    zigzag.lvl: plataformas médias (160px), gap horizontal real de 40px. Gaps: 95-110px.
+      P0→P1→P2→P3→P4→P5 (5 saltos, topo em y=555)
+    precipicio.lvl: plataformas estreitas (100px), gap horizontal de 60px. Gaps: 100-110px.
+      P0→P1→P2→P3→P4→FLAG (5 saltos + flag em y=510)
+  GUIA DE JOGO (Commitment Jump 60°):
+    - Cada plataforma está ALTERNADA: direita→esquerda→direita
+    - Para alcançar P1 (lado DIREITO), o jogador está em x=320, SALTA PARA A ESQUERDA
+    - Para alcançar P2 (lado ESQUERDO), o jogador vai para a borda DIREITA de P1 e SALTA
+    - A mecânica de 60° significa: salta sempre do lado OPOSTO ao alvo
+Implementado: [A preencher após make tests + jogar a campanha]
 
-[2026-06-11 11:00:00]
-Ideia: v7.1 — Refatoração Config-Driven (Physics + Player).
-  Objetivo: eliminar constantes hardcoded de Player.h e Physics.h; tudo passa
-  a vir de Config.h para single source of truth.
-  Config.h (v7.2): PLAYER_WIDTH=16, PLAYER_HEIGHT=16, PLAYER_MOVE_SPEED=140,
-    PLAYER_MIN_JUMP=250, PLAYER_MAX_JUMP=600, PLAYER_CHARGE_TIME=0.4s.
-    Colors para plataformas e jogador.
-  Physics.h (v7.1): PhysicsBody::width/height agora lidos de config:: em vez
-    de hardcoded a 32. GRAVITY e FIXED_STEP também de config::.
-    PhysicsWorld::collides() static adicionado (usado em main.cpp para FLAG).
-  Player.h (v7.1) / Player.cpp (v7.2): constantes MIN_JUMP, MAX_JUMP,
-    MOVE_SPEED, CHARGE_TIME eliminadas — substituídas por config::
-    applyHorizontalMovement simplificada: no ar, vel.x é preservada intacta
-    (inércia natural — sem bloqueio aéreo nem zeragem de borda).
-  test_player.cpp (v7.1): atualizado para config:: constants + nova física de
-    queda de borda (preserva 100% de inércia X).
-  test_level.cpp (v7.2): ajustes para width=16 (posições e velocidades de
-    bounce); adicionado teste de teto sólido (corpo a subir).
-Implementado: [A preencher após make tests]
+[2026-06-19 16:30:00]
+Ideia: v7.3/7.4 — Fix Crítico: Streaming Quebrado + Spawn Dentro da Plataforma.
+  REPORT DO RAFAEL: "ele não carrega o proximo nivel" + "a primeira plataforma
+  fica com o jogador dentro dela" + "as alturas devem ser padronizadas, todos
+  os niveis têm no máximo uma tela de altura (360)".
 
-[2026-06-11 12:00:00]
-Ideia: v7.2 — Debug HUD no terminal + test_level.cpp v7.3.
-  Problema: níveis validados pela IA mas difíceis de jogar sem feedback visual
-  da força de salto. Não é possível calibrar o charge sem saber a percentagem.
-  Solução adoptada: Terminal debug (antes de Ghost Visualization).
-    - Apenas 3 linhas em main.cpp; responde à pergunta imediata.
-    - Ghost visualization (ai_validator → JSON → Renderer) fica para v7.3.
-  main.cpp (v7.2): print "\r  [SPACE] Força: XX%  " no terminal enquanto
-    isCharging=true; limpa a linha quando false.
-  test_level.cpp (v7.3): +4 testes Level::appendFromFile:
-    - ficheiro inexistente: retorna offsetY, sem crash.
-    - PLATFORM carregada com offset Y correto.
-    - FLAG define hasFlag e flagBounds.
-    - Segundo chunk usa offsetY acumulado (stacking).
-    Total: 11 (v7.2) + 4 = 15 testes em test_level; 66 testes globais.
-Implementado: [A preencher após make tests]
+  DIAGNÓSTICO 1 — Streaming quebrado:
+    Level::appendFromFile retornava (highestY + 50), um valor que dependia do
+    CONTEÚDO de cada nível (variável: ~505-570px nos níveis antigos). O trigger
+    em main.cpp (`player.y > currentSpawnY - LOGICAL_HEIGHT`) assume blocos de
+    altura FIXA — com avanço variável, o próximo chunk só carregava muito tarde
+    (ou em momentos imprevisíveis), dando a sensação de "não carrega".
+  CORREÇÃO: Level.cpp — appendFromFile agora retorna SEMPRE
+    `offsetY + config::LOGICAL_HEIGHT` (360px), independente do conteúdo.
+    Cada nível = exactamente uma tela. Chunk N ocupa sempre
+    [N*360, (N+1)*360) no mundo. Aviso (cerr) se alguma PLATFORM/FLAG
+    ultrapassar essa altura (nível mal desenhado).
+    Resultado colateral automático: o trigger de streaming passa a disparar
+    "assim que o jogador entra no nível anterior" (exactamente o pedido do
+    Rafael), porque agora currentSpawnY-LOGICAL_HEIGHT == início do chunk atual.
+
+  DIAGNÓSTICO 2 — Jogador dentro da plataforma:
+    main.cpp definia player.body.position.y = 0.0f, mas a primeira PLATFORM de
+    cada nível ocupa Y=[0,20]. O corpo do jogador (16px) nascia inteiramente
+    DENTRO da plataforma.
+  CORREÇÃO: main.cpp — spawn agora em Y=40.0f (queda visível de 20px até
+    pousar no chão do chunk 0).
+
+  DIAGNÓSTICO 3 — Validadores Python com constantes trocadas:
+    ai_validator.py tinha LOGICAL_WIDTH=360 e LOGICAL_HEIGHT=640 — TROCADOS
+    em relação ao motor real (640 largura × 360 altura, paisagem). Isto:
+      a) Bloqueava plataformas de largura total (640px) por engano (o limite
+         lateral usado era 360, nao 640) — usado no reorganize.py.
+      b) BFS de níveis de trânsito tentava provar alcançar Y=640 (LOGICAL_HEIGHT
+         errado), quando devia ser Y=360.
+  CORREÇÃO: ai_validator.py, reorganize.py (check_level_validity embutido),
+    level_validator.py — LOGICAL_WIDTH=640.0, LOGICAL_HEIGHT=360.0 em todos.
+    Removido o workaround "objetivo = topo_mais_alto+50" (já não é necessário
+    com chunks padronizados); revertido para o objetivo simples original
+    "alcançar Y=LOGICAL_HEIGHT". Adicionada validação HARD FAIL: nenhuma
+    PLATFORM/FLAG pode ultrapassar uma tela de altura (y+h <= 360).
+
+  REDESIGN DOS 3 NÍVEIS (todos re-verificados com os validadores corrigidos):
+    Estrutura padrão: chão (PLATFORM 1) com LARGURA TOTAL (640px) — pouso
+    seguro garantido em qualquer X — seguido de 3 plataformas de salto em
+    Y locais 95/195/295, todas dentro de uma tela (max topo=315, margem de
+    45px até Y=360).
+    inicio.lvl:      plataformas largas (180px), gaps horizontais de 20px.
+    zigzag.lvl:      plataformas médias (140px), gaps horizontais de 40px.
+    precipicio.lvl:  plataformas estreitas (100px), gaps de 60px, termina
+                      com FLAG (em vez do 3º salto de trânsito).
+
+  test_level.cpp (v7.4): teste de stacking corrigido (360, não 165 — refletindo
+    o novo avanço padronizado); FLAG de teste movida para Y=300 (dentro de uma
+    tela); +1 teste de regressão explícito ("nivel vazio e nivel cheio avançam
+    o MESMO valor de chunk") capturando directamente o bug corrigido.
+    Total: 16 testes em test_level; 67 testes globais.
+Implementado: [A preencher após make tests + jogar a campanha completa]
+
+[2026-06-24 18:00:00]
+Ideia: v7.4 — Niveis gerados por simulacao fisica real + integracao ai_validator como doctest.
+  PROBLEMAS DIAGNOSTICADOS E RESOLVIDOS:
+  1. Niveis anteriores exigiam quase carga maxima (90-100%) porque gap=95px era demasiado.
+     Com ângulo fixo de 60°, o corpo percorre sempre >=66px horizontais para ganhar 85px
+     de altura — niveis com gap<66px nao sao alcancaveis, gap muito grande aproxima-se
+     de 100% de carga (janela estreita, pixel-perfect).
+  2. Bug de colisao lateral na SUBIDA: corpo a saltar para a esquerda entrava na zona X
+     da plataforma alvo enquanto ainda subia. abs(vx)>abs(vy) → motor detectava colisao
+     LATERAL → ricochete → corpo perdia-se. Resolvido com ascending_x_at() que calcula
+     onde o corpo esta na subida e garante que a borda proxima da plataforma fica 40px
+     PARA LA desse ponto (clearance=40px).
+  3. Cross-chunk dy=105 (nao 85): o ultimo platform de cada nivel fica em local_top=275.
+     O primeiro do nivel seguinte fica em local_top=20 (offset+20 no mundo). Diferenca
+     = (N+1)*360+20 - (N*360+275) = 105px. SEMPRE 105px cross-chunk. Minimo de carga
+     para dy=105 e 78.3%. Usando charge_cross=92% (minimo noisy=84.6%, bem acima).
+  4. start_x para chao de largura total usava borda direita (x=624), batia na parede.
+     Corrigido para usar o centro (x=312).
+
+  ALGORITMO FINAL (levelgen.py v4):
+    Para cada salto:
+      1. ascending_x_at(): calcula x do corpo na SUBIDA ao atingir a altura alvo (analitico).
+      2. fly_descend_to(): simula voo completo, retorna x quando DESCE ate altura alvo.
+      3. place_platform(): centra na aterragem; garante borda proxima <= x_asc - 40px.
+      4. Verifica deterministicamente + 50 trials com +-8% carga e +-10px posicao.
+    Charges: intra-nivel=78%, cross-chunk=92%.
+    Resultado: 50/50 (100%) em todos os 11 saltos da campanha.
+
+  NIVEIS GERADOS (coordenadas locais por chunk):
+    inicio.lvl:      PLATFORM 0 0 640 20 | P1=[436,606] | P2=[148,328] | P3=[436,616]
+    zigzag.lvl:      entry=[170,310] | P2=[418,558] | P3=[170,310] | P4=[418,558]
+    precipicio.lvl:  entry=[181,281] | P2=[389,489] | P3=[181,281] | FLAG=[389,509] h=40
+
+  DOCTEST INTEGRATION (test_campaign.cpp v7.4):
+    Novo TEST_CASE chama python3 ai_validator.py --campaign e verifica ret==0.
+    O pre-commit corre 'make tests', que inclui este teste.
+    Se os niveis forem invalidos, o commit e bloqueado automaticamente.
+
+  REORGANIZE.PY: test_campaign.cpp adicionado a MOVES (→ Tests/Unit/).
+Implementado: [A confirmar com make tests + jogar campanha]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Versao atual do projeto: 7.4
+# ─────────────────────────────────────────────────────────────────────────────
+
+[2026-06-25 10:00:00]
+Ideia: v7.4 — Fix: duplicate symbol em test_campaign.cpp + UnicodeEncodeError no Windows.
+  PROBLEMA 1 — duplicate symbol ao linkar:
+    test_campaign.cpp tinha '#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN', que so'
+    pode existir num unico ficheiro de todo o projeto (Tests/test_runner.cpp).
+    Todos os outros ficheiros de teste incluem apenas '#include "doctest/doctest.h"'.
+  CORRECAO: removida a macro de test_campaign.cpp. Apenas TEST_SUITE + TEST_CASE.
+
+  PROBLEMA 2 — UnicodeEncodeError no Windows (cp1252):
+    ai_validator.py usava emojis (checkmark, X) no output. O Windows com codepage
+    cp1252 nao suporta esses caracteres, causando crash do script com retorno != 0,
+    o que fazia o TEST_CASE do doctest falhar mesmo quando os niveis eram validos.
+  CORRECAO: ai_validator.py reescrito sem emojis (usa [OK]/[ERRO] ASCII).
+    Adicionado 'sys.stdout.reconfigure(encoding="utf-8", errors="replace")' no topo
+    de ai_validator.py E reorganize.py para segurança cross-platform.
+
+  REORGANIZE.PY atualizado:
+    Novos MOVES:
+      engine.py, solver.py, flag_solver.py, levelgen.py
+        → Development/AI_Validation/sim/
+      level_validator.py → Development/LevelEditor/ (remove duplicado da raiz)
+      log_testes.txt     → Tests/log_testes.txt
+      pre-push.sh        → scripts/pre-push.sh
+    Novos DIRS_WITH_GITKEEP:
+      Development/AI_Validation/sim/
+      Game/Assets/Levels/NaoValidados/ (preservado)
+      Game/Assets/Levels/Unused/       (preservado)
+
+  VERSAO ATUAL: 7.4 — 68 testes esperados (67 + test_campaign).
+Implementado: [A confirmar com make tests > log_testes.txt 2>&1]
+
+[2026-06-25 11:00:00]
+Ideia: v7.4 — Comando canonico para capturar log completo de testes.
+  O operador '>' so' redireciona stdout; erros de compilacao iam para stderr
+  e nao apareciam em log_testes.txt.
+Implementado: Comando canonico:
+    python reorganize.py && make clean && make tests-verbose -j8 > log_testes.txt 2>&1
+  log_testes.txt passa a residir em Tests/ (adicionado ao reorganize.py MOVES).

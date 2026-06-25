@@ -1,10 +1,12 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 7.2
+//  @version 7.3
 //  @history
 //    v7.1  — Level streaming + Campaign + fullscreen + FLAG detection
 //    v7.2  — Debug HUD: força do salto no terminal
+//    v7.3  — FIX: spawn do jogador estava DENTRO da primeira plataforma (Y=0).
+//            Corrigido para Y=40 (queda visivel ate pousar no chao do chunk).
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -92,7 +94,10 @@ int main() {
         Camera       camera;
         Player       player;
 
-        player.body.position = { config::LOGICAL_WIDTH / 2.0f, 0.0f };
+        // Jogador nasce 40px acima do chao do primeiro chunk (PLATFORM ... 0 ... h=20).
+        // Antes era Y=0.0f, o que colocava o corpo DENTRO da plataforma (Y=[0,20]).
+        // Pequena margem (40) garante uma queda visivel e natural ate pousar.
+        player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f };
 
         auto lastTime = std::chrono::high_resolution_clock::now();
         std::cout << "[ASCENDENDO] A/D = mover | SPACE = saltar | ESC = sair\n";

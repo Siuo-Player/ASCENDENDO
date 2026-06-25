@@ -1,7 +1,15 @@
 // =============================================================================
 //  Game/Logic/Level.cpp
 //
-//  @version 7.1
+//  @version 7.2
+//  @history
+//    v7.1 — appendFromFile: avanço dinâmico (highestY + 50), nao padronizado
+//    v7.2 — FIX CRITICO: avanço do chunk passa a ser SEMPRE config::LOGICAL_HEIGHT
+//            (uma "tela" exacta por nivel). Antes, o avanço dependia do conteudo
+//            do nivel (highestY+50), o que quebrava o trigger de streaming em
+//            main.cpp (que assume blocos de altura fixa). Agora: chunk N ocupa
+//            sempre [N*LOGICAL_HEIGHT, (N+1)*LOGICAL_HEIGHT) no mundo.
+//            Aviso (cerr) se o conteudo do nivel ultrapassar uma tela de altura.
 // =============================================================================
 
 #include "Logic/Level.h"
@@ -44,6 +52,11 @@ float Level::appendFromFile(const std::string& filepath, float maxWidth, float o
                     std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum 
                               << ": Plataforma fora dos limites laterais! X=" << x << "\n";
                 }
+                if (y + h > config::LOGICAL_HEIGHT) {
+                    std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum
+                              << ": Plataforma ultrapassa uma tela de altura (Y_local="
+                              << (y + h) << " > " << config::LOGICAL_HEIGHT << ")\n";
+                }
                 addPlatform(x, worldY, w, h);
                 if (worldY + h > highestY) highestY = worldY + h;
             }
@@ -52,12 +65,19 @@ float Level::appendFromFile(const std::string& filepath, float maxWidth, float o
             if (iss >> x >> y >> w >> h) {
                 hasFlag = true;
                 flagBounds = AABB{{x, y + offsetY}, {x + w, y + offsetY + h}};
+                if (y + h > config::LOGICAL_HEIGHT) {
+                    std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum
+                              << ": FLAG ultrapassa uma tela de altura (Y_local="
+                              << (y + h) << " > " << config::LOGICAL_HEIGHT << ")\n";
+                }
             }
         }
     }
     
-    std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY << ". O topo agora e " << highestY << "\n";
-    return highestY + 50.0f;
+    std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY << ". O topo do conteudo e " << highestY << "\n";
+
+    // Avanço SEMPRE padronizado: cada nivel ocupa exactamente uma tela.
+    return offsetY + config::LOGICAL_HEIGHT;
 }
 
 void Level::addPlatform(float x, float y, float w, float h) {

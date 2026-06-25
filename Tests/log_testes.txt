@@ -1,0 +1,1091 @@
+[CC ] Tests/test_runner.cpp
+[CC ] Tests/Unit/test_camera.cpp
+[CC ] Tests/Unit/test_campaign.cpp
+[CC ] Tests/Unit/test_level.cpp
+[CC ] Tests/Unit/test_input.cpp
+[CC ] Tests/Unit/test_placeholder.cpp
+[CC ] Tests/Unit/test_physics.cpp
+[CC ] Tests/Unit/test_player.cpp
+[CC ] Tests/Unit/test_replay.cpp
+[CC ] Tests/Unit/test_vulkan_context.cpp
+[CC ] Tests/Integration/test_pipeline.cpp
+[CC ] Tests/Integration/test_render_pass.cpp
+[CC ] Tests/Integration/test_renderer.cpp
+[CC ] Tests/Integration/test_vulkan_init.cpp
+[CC ] Tests/Integration/test_swapchain.cpp
+[CC ] Game/Graphics/Pipeline.cpp
+[CC ] Tests/Integration/test_window.cpp
+[CC ] Game/Graphics/Camera.cpp
+[CC ] Game/Graphics/RenderPass.cpp
+[CC ] Game/Graphics/Renderer.cpp
+[CC ] Game/Graphics/Swapchain.cpp
+[CC ] Game/Graphics/Window.cpp
+[CC ] Game/Graphics/VulkanContext.cpp
+[CC ] Game/Logic/InputManager.cpp
+[CC ] Game/Logic/Level.cpp
+[CC ] Game/Logic/Physics.cpp
+[CC ] Game/Logic/Player.cpp
+[CC ] Game/Logic/ReplayManager.cpp
+[LIB] libgame.a
+[LNK] tests.exe
+
+  ===========================================
+  A executar testes (modo detalhado)...
+  ===========================================
+[ERRO] Nao foi possivel abrir o nivel: nao_existe_mesmo.lvl
+[doctest] doctest version is "2.5.0"
+[doctest] run with "--help" for options
+===============================================================================
+Tests/Integration/test_pipeline.cpp(20):
+TEST SUITE: Fase 5.1 — Graphics Pipeline
+TEST CASE:  Criacao da Pipeline e Shaders
+
+Tests/Integration/test_pipeline.cpp(27): SUCCESS: REQUIRE( win.create(800, 600, "Pipeline Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_pipeline.cpp(30): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_pipeline.cpp(33): SUCCESS: REQUIRE( surface != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_pipeline.cpp(34): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_pipeline.cpp(36): SUCCESS: REQUIRE( swapchain.init(&ctx, &win) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_pipeline.cpp(37): SUCCESS: REQUIRE( renderPass.init(&ctx, &swapchain) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_pipeline.cpp(44): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_pipeline.cpp(46): SUCCESS: CHECK( pipeline.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_pipeline.cpp(47): SUCCESS: CHECK( pipeline.handle() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_pipeline.cpp(48): SUCCESS: CHECK( pipeline.layout() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_pipeline.cpp(50): MESSAGE: Graphics Pipeline criada com sucesso e Shaders carregados!
+
+===============================================================================
+Tests/Integration/test_render_pass.cpp(11):
+TEST SUITE: RenderPass
+TEST CASE:  Criacao e destruicao do RenderPass
+
+Tests/Integration/test_render_pass.cpp(18): SUCCESS: REQUIRE( win.create(800, 600, "RenderPass Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_render_pass.cpp(21): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_render_pass.cpp(23): SUCCESS: REQUIRE( surface != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_render_pass.cpp(24): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_render_pass.cpp(25): SUCCESS: REQUIRE( swapchain.init(&ctx, &win) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_render_pass.cpp(29): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_render_pass.cpp(30): SUCCESS: CHECK( renderPass.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_render_pass.cpp(31): SUCCESS: CHECK( renderPass.handle() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_render_pass.cpp(33): MESSAGE: RenderPass criado com sucesso!
+
+===============================================================================
+Tests/Integration/test_renderer.cpp(25):
+TEST SUITE: Renderer
+TEST CASE:  drawFrame: Fisica e Player injetados (Cair no chao)
+
+Tests/Integration/test_renderer.cpp(33): SUCCESS: REQUIRE( win.create(800, 600, "ASCENDENDO v5.3 | A Fisica Funciona!") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(37): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(40): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(41): SUCCESS: REQUIRE( swapchain.init(&ctx, &win) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(42): SUCCESS: REQUIRE( renderPass.init(&ctx, &swapchain) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(43): SUCCESS: REQUIRE( pipeline.init(&ctx, &swapchain, &renderPass) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(44): SUCCESS: REQUIRE( renderer.init(&ctx, &swapchain, &renderPass, &pipeline) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_renderer.cpp(75): SUCCESS: CHECK( successFrames == FRAMES ) is correct!
+  values: CHECK( 120 == 120 )
+
+Tests/Integration/test_renderer.cpp(76): MESSAGE: Fase 5.3 CONCLUIDA! O quadrado caiu com gravidade e colidiu com o chao invisivel.
+
+===============================================================================
+Tests/Integration/test_swapchain.cpp(10):
+TEST SUITE: Swapchain
+TEST CASE:  Criacao e destruicao do Swapchain
+
+Tests/Integration/test_swapchain.cpp(16): SUCCESS: REQUIRE( win.create(800, 600, "Swapchain Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_swapchain.cpp(21): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_swapchain.cpp(25): SUCCESS: REQUIRE( surface != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_swapchain.cpp(26): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_swapchain.cpp(31): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_swapchain.cpp(32): SUCCESS: CHECK( swapchain.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_swapchain.cpp(33): SUCCESS: CHECK( swapchain.handle() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_swapchain.cpp(34): SUCCESS: CHECK( swapchain.extent().width == 800 ) is correct!
+  values: CHECK( 800 == 800 )
+
+Tests/Integration/test_swapchain.cpp(35): SUCCESS: CHECK( swapchain.extent().height == 600 ) is correct!
+  values: CHECK( 600 == 600 )
+
+Tests/Integration/test_swapchain.cpp(37): MESSAGE: Swapchain criado com sucesso! Formato: 50
+
+===============================================================================
+Tests/Integration/test_vulkan_init.cpp(46):
+TEST SUITE: Vulkan / Inicializacao
+TEST CASE:  VkInstance: criacao e destruicao sem erros
+
+Tests/Integration/test_vulkan_init.cpp(63): SUCCESS: REQUIRE( result == VK_SUCCESS ) is correct!
+  values: REQUIRE( 0 == 0 )
+
+Tests/Integration/test_vulkan_init.cpp(64): SUCCESS: REQUIRE( instance != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+===============================================================================
+Tests/Integration/test_vulkan_init.cpp(71):
+TEST SUITE: Vulkan / Inicializacao
+TEST CASE:  Vulkan: driver do sistema suporta versao >= 1.3
+
+Tests/Integration/test_vulkan_init.cpp(75): SUCCESS: REQUIRE( result == VK_SUCCESS ) is correct!
+  values: REQUIRE( 0 == 0 )
+
+Tests/Integration/test_vulkan_init.cpp(82): SUCCESS: CHECK( major == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Integration/test_vulkan_init.cpp(83): SUCCESS: CHECK( minor >= 3 ) is correct!
+  values: CHECK( 4 >= 3 )
+
+Tests/Integration/test_vulkan_init.cpp(85): MESSAGE: Versao Vulkan do driver: 1.4.341
+
+===============================================================================
+Tests/Integration/test_vulkan_init.cpp(89):
+TEST SUITE: Vulkan / Inicializacao
+TEST CASE:  GPU: pelo menos uma placa grafica Vulkan detectada
+
+Tests/Integration/test_vulkan_init.cpp(91): SUCCESS: REQUIRE( instance != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_vulkan_init.cpp(97): SUCCESS: REQUIRE( count >= 1 ) is correct!
+  values: REQUIRE( 1 >= 1 )
+
+Tests/Integration/test_vulkan_init.cpp(98): MESSAGE: GPUs Vulkan encontradas: 1
+
+Tests/Integration/test_vulkan_init.cpp(120): MESSAGE:   -> Intel(R) Iris(R) Xe Graphics [1] | API 1.3
+
+===============================================================================
+Tests/Integration/test_window.cpp(26):
+TEST SUITE: Window
+TEST CASE:  create: janela 800x600 e criada com sucesso
+
+Tests/Integration/test_window.cpp(30): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_window.cpp(31): SUCCESS: CHECK( win.isCreated() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_window.cpp(32): SUCCESS: CHECK( win.handle() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_window.cpp(33): SUCCESS: CHECK( win.width() == 800 ) is correct!
+  values: CHECK( 800 == 800 )
+
+Tests/Integration/test_window.cpp(34): SUCCESS: CHECK( win.height() == 600 ) is correct!
+  values: CHECK( 600 == 600 )
+
+===============================================================================
+Tests/Integration/test_window.cpp(40):
+TEST SUITE: Window
+TEST CASE:  destroy: idempotente (2x sem crash)
+
+Tests/Integration/test_window.cpp(47): SUCCESS: CHECK( !win.isCreated() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_window.cpp(48): SUCCESS: CHECK( win.handle() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+===============================================================================
+Tests/Integration/test_window.cpp(52):
+TEST SUITE: Window
+TEST CASE:  appendRequiredExtensions: lista nao vazia
+
+Tests/Integration/test_window.cpp(54): SUCCESS: REQUIRE( win.create(100, 100, "Teste Exts") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_window.cpp(60): SUCCESS: CHECK( exts.size() >= 2 ) is correct!
+  values: CHECK( 2 >= 2 )
+
+Tests/Integration/test_window.cpp(61): MESSAGE: Extensoes GLFW requeridas: 2
+
+===============================================================================
+Tests/Integration/test_window.cpp(71):
+TEST SUITE: Window + VulkanContext
+TEST CASE:  surface Vulkan criada e associada ao contexto
+
+Tests/Integration/test_window.cpp(74): SUCCESS: REQUIRE( win.create(800, 600, "Surface Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_window.cpp(82): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_window.cpp(86): SUCCESS: REQUIRE( surface != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_window.cpp(90): SUCCESS: CHECK( ok == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Integration/test_window.cpp(91): SUCCESS: CHECK( ctx.surface() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_window.cpp(95): SUCCESS: CHECK( !ctx.isInitialized() ) is correct!
+  values: CHECK( true )
+
+===============================================================================
+Tests/Unit/test_camera.cpp(19):
+TEST SUITE: Fase 4.1 — Camera 2D e Viewport
+TEST CASE:  worldToNDC: Camara na origem (0,0)
+
+Tests/Unit/test_camera.cpp(23): SUCCESS: CHECK( bottomLeft.x == doctest::Approx(-1.0f) ) is correct!
+  values: CHECK( -1 == Approx( -1 ) )
+
+Tests/Unit/test_camera.cpp(24): SUCCESS: CHECK( bottomLeft.y == doctest::Approx(1.0f) ) is correct!
+  values: CHECK( 1 == Approx( 1 ) )
+
+Tests/Unit/test_camera.cpp(27): SUCCESS: CHECK( topRight.x == doctest::Approx(1.0f) ) is correct!
+  values: CHECK( 1 == Approx( 1 ) )
+
+Tests/Unit/test_camera.cpp(28): SUCCESS: CHECK( topRight.y == doctest::Approx(-1.0f) ) is correct!
+  values: CHECK( -1 == Approx( -1 ) )
+
+Tests/Unit/test_camera.cpp(31): SUCCESS: CHECK( center.x == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_camera.cpp(32): SUCCESS: CHECK( center.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( -0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_camera.cpp(35):
+TEST SUITE: Fase 4.1 — Camera 2D e Viewport
+TEST CASE:  worldToNDC: Camara deslocada (Tracking do Player)
+
+Tests/Unit/test_camera.cpp(41): SUCCESS: CHECK( bottomLeft.x == doctest::Approx(-1.0f) ) is correct!
+  values: CHECK( -1 == Approx( -1 ) )
+
+Tests/Unit/test_camera.cpp(42): SUCCESS: CHECK( bottomLeft.y == doctest::Approx(1.0f) ) is correct!
+  values: CHECK( 1 == Approx( 1 ) )
+
+Tests/Unit/test_camera.cpp(47): SUCCESS: CHECK( center.x == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_camera.cpp(48): SUCCESS: CHECK( center.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( -0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_camera.cpp(54):
+TEST SUITE: Fase 6.4 — Camera T
+  Campanha: C:\Users\ASUS\Documents\Ascendendo\Game\Assets\Levels\campaign.txt
+
+  [OK]    inicio.lvl: Caminho fisicamente possivel encontrado
+  [OK]    zigzag.lvl: Caminho fisicamente possivel encontrado
+  [OK]    precipicio.lvl: Caminho fisicamente possivel encontrado
+
+  [OK] Campanha validada -- todos os niveis sao passiveis.
+racking Vertical
+TEST CASE:  follow() move camera em direcao ao jogador
+
+Tests/Unit/test_camera.cpp(66): SUCCESS: CHECK( cam.position.y > target * 0.9f ) is correct!
+  values: CHECK( 273.992 >  246.6 )
+
+Tests/Unit/test_camera.cpp(67): SUCCESS: CHECK( cam.position.y <= target + 1.0f ) is correct!
+  values: CHECK( 273.992 <= 275 )
+
+===============================================================================
+Tests/Unit/test_camera.cpp(70):
+TEST SUITE: Fase 6.4 — Camera Tracking Vertical
+TEST CASE:  follow() nao vai abaixo de zero
+
+Tests/Unit/test_camera.cpp(80): SUCCESS: CHECK( cam.position.y >= 0.0f ) is correct!
+  values: CHECK( 0.00145996 >= 0 )
+
+Tests/Unit/test_camera.cpp(81): SUCCESS: CHECK( cam.position.y < 1.0f ) is correct!
+  values: CHECK( 0.00145996 <  1 )
+
+===============================================================================
+Tests/Unit/test_camera.cpp(84):
+TEST SUITE: Fase 6.4 — Camera Tracking Vertical
+TEST CASE:  follow() nao move camera em X
+
+Tests/Unit/test_camera.cpp(91): SUCCESS: CHECK( cam.position.x == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_campaign.cpp(18):
+TEST SUITE: Campaign / AI Validation
+TEST CASE:  ai_validator --campaign: todos os niveis sao fisicamente passiveis
+
+Tests/Unit/test_campaign.cpp(24): SUCCESS: CHECK( ret == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+===============================================================================
+Tests/Unit/test_input.cpp(16):
+TEST SUITE: InputManager
+TEST CASE:  tecla premida: isKeyDown e isKeyJustPressed
+
+Tests/Unit/test_input.cpp(20): SUCCESS: CHECK( input.isKeyDown(Key::RIGHT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(21): SUCCESS: CHECK( input.isKeyJustPressed(Key::RIGHT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(22): SUCCESS: CHECK( input.isKeyJustReleased(Key::RIGHT) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input.cpp(25):
+TEST SUITE: InputManager
+TEST CASE:  tecla solta: isKeyDown false, isKeyJustReleased true
+
+Tests/Unit/test_input.cpp(30): SUCCESS: CHECK( input.isKeyDown(Key::RIGHT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(31): SUCCESS: CHECK( input.isKeyJustReleased(Key::RIGHT) == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_input.cpp(34):
+TEST SUITE: InputManager
+TEST CASE:  beginFrame limpa justPressed e justReleased, mantem isKeyDown
+
+Tests/Unit/test_input.cpp(37): SUCCESS: CHECK( input.isKeyJustPressed(Key::SPACE) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(41): SUCCESS: CHECK( input.isKeyDown(Key::SPACE) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(42): SUCCESS: CHECK( input.isKeyJustPressed(Key::SPACE) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(43): SUCCESS: CHECK( input.isKeyJustReleased(Key::SPACE) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input.cpp(46):
+TEST SUITE: InputManager
+TEST CASE:  tecla nunca premida: todos os estados false
+
+Tests/Unit/test_input.cpp(49): SUCCESS: CHECK( input.isKeyDown(Key::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(50): SUCCESS: CHECK( input.isKeyJustPressed(Key::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(51): SUCCESS: CHECK( input.isKeyJustReleased(Key::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input.cpp(54):
+TEST SUITE: InputManager
+TEST CASE:  isLeft() responde a A ou LEFT_ARROW
+
+Tests/Unit/test_input.cpp(56): SUCCESS: CHECK( input.isLeft() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(59): SUCCESS: CHECK( input.isLeft() == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(63): SUCCESS: CHECK( input.isLeft() == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_input.cpp(66):
+TEST SUITE: InputManager
+TEST CASE:  isJump() responde a SPACE
+
+Tests/Unit/test_input.cpp(68): SUCCESS: CHECK( input.isJump() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input.cpp(71): SUCCESS: CHECK( input.isJump() == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(74): SUCCESS: CHECK( input.isJump() == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input.cpp(77):
+TEST SUITE: InputManager
+TEST CASE:  REPEAT nao altera justPressed apos beginFrame
+
+Tests/Unit/test_input.cpp(84): SUCCESS: CHECK( input.isKeyDown(Key::D) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input.cpp(85): SUCCESS: CHECK( input.isKeyJustPressed(Key::D) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_level.cpp(43):
+TEST SUITE: Level / Construcao
+TEST CASE:  nivel vazio tem zero plataformas
+
+Tests/Unit/test_level.cpp(45): SUCCESS: CHECK( level.platformCount() == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_level.cpp(46): SUCCESS: CHECK( level.platforms().empty() ) is correct!
+  values: CHECK( true )
+
+===============================================================================
+Tests/Unit/test_level.cpp(49):
+TEST SUITE: Level / Construcao
+TEST CASE:  addPlatform cria plataforma com bounds corretos
+
+Tests/Unit/test_level.cpp(53): SUCCESS: REQUIRE( level.platformCount() == 1 ) is correct!
+  values: REQUIRE( 1 == 1 )
+
+Tests/Unit/test_level.cpp(55): SUCCESS: CHECK( p.bounds.min.x == doctest::Approx(50.0f) ) is correct!
+  values: CHECK( 50 == Approx( 50 ) )
+
+Tests/Unit/test_level.cpp(56): SUCCESS: CHECK( p.bounds.min.y == doctest::Approx(100.0f) ) is correct!
+  values: CHECK( 100 == Approx( 100 ) )
+
+Tests/Unit/test_level.cpp(57): SUCCESS: CHECK( p.bounds.max.x == doctest::Approx(250.0f) ) is correct!
+  values: CHECK( 250 == Approx( 250 ) )
+
+Tests/Unit/test_level.cpp(58): SUCCESS: CHECK( p.bounds.max.y == doctest::Approx(120.0f) ) is correct!
+  values: CHECK( 120 == Approx( 120 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(61):
+TEST SUITE: Level / Construcao
+TEST CASE:  multiplas plataformas guardadas na ordem de insercao
+
+Tests/Unit/test_level.cpp(67): SUCCESS: REQUIRE( level.platformCount() == 3 ) is correct!
+  values: REQUIRE( 3 == 3 )
+
+Tests/Unit/test_level.cpp(68): SUCCESS: CHECK( level.platforms()[0].bounds.min.y == doctest::Approx(50.0f) ) is correct!
+  values: CHECK( 50 == Approx( 50 ) )
+
+Tests/Unit/test_level.cpp(69): SUCCESS: CHECK( level.platforms()[1].bounds.min.y == doctest::Approx(150.0f) ) is correct!
+  values: CHECK( 150 == Approx( 150 ) )
+
+Tests/Unit/test_level.cpp(70): SUCCESS: CHECK( level.platforms()[2].bounds.min.y == doctest::Approx(250.0f) ) is correct!
+  values: CHECK( 250 == Approx( 250 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(73):
+TEST SUITE: Level / Construcao
+TEST CASE:  clear() remove todas as plataformas
+
+Tests/Unit/test_level.cpp(77): SUCCESS: REQUIRE( level.platformCount() == 2 ) is correct!
+  values: REQUIRE( 2 == 2 )
+
+Tests/Unit/test_level.cpp(79): SUCCESS: CHECK( level.platformCount() == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+===============================================================================
+Tests/Unit/test_level.cpp(87):
+TEST SUITE: Level / Colisao Vertical (Topo e Teto)
+TEST CASE:  corpo cai e pousa no topo da plataforma
+
+Tests/Unit/test_level.cpp(98): SUCCESS: CHECK( body.isGrounded == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(99): SUCCESS: CHECK( body.position.y == doctest::Approx(120.0f) ) is correct!
+  values: CHECK( 120 == Approx( 120 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(102):
+TEST SUITE: Level / Colisao Vertical (Topo e Teto)
+TEST CASE:  corpo a subir bate no teto (solid blocks - v6.6)
+
+Tests/Unit/test_level.cpp(117): SUCCESS: CHECK( collided == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(118): SUCCESS: CHECK( body.isGrounded == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_level.cpp(119): SUCCESS: CHECK( body.position.y == doctest::Approx(100.0f - body.height) ) is correct!
+  values: CHECK( 84 == Approx( 84 ) )
+
+Tests/Unit/test_level.cpp(122): SUCCESS: CHECK( body.velocity.y == doctest::Approx(expectedVy) ) is correct!
+  values: CHECK( -85.1 == Approx( -85.1 ) )
+
+Tests/Unit/test_level.cpp(123): SUCCESS: CHECK( body.velocity.x == doctest::Approx(90.0f) ) is correct!
+  values: CHECK( 90 == Approx( 90 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(126):
+TEST SUITE: Level / Colisao Vertical (Topo e Teto)
+TEST CASE:  nivel vazio nao interfere com colisao do chao
+
+Tests/Unit/test_level.cpp(135): SUCCESS: CHECK( body.isGrounded == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(136): SUCCESS: CHECK( body.position.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(144):
+TEST SUITE: Level / Fisica com Nivel
+TEST CASE:  plataforma mais alta intercepta antes do chao
+
+Tests/Unit/test_level.cpp(155): SUCCESS: CHECK( body.isGrounded == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(156): SUCCESS: CHECK( body.position.y == doctest::Approx(220.0f) ) is correct!
+  values: CHECK( 220 == Approx( 220 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(159):
+TEST SUITE: Level / Fisica com Nivel
+TEST CASE:  corpo cai apos sair lateralmente da plataforma
+
+Tests/Unit/test_level.cpp(169): SUCCESS: REQUIRE( body.isGrounded == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_level.cpp(175): SUCCESS: CHECK( body.isGrounded == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_level.cpp(183):
+TEST SUITE: Level / Colisao Lateral
+TEST CASE:  corpo bloqueado ao entrar pela esquerda da plataforma
+
+Tests/Unit/test_level.cpp(196): SUCCESS: CHECK( collided == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(197): SUCCESS: CHECK( body.velocity.x == doctest::Approx(-60.0f) ) is correct!
+  values: CHECK( -60 == Approx( -60 ) )
+
+Tests/Unit/test_level.cpp(198): SUCCESS: CHECK( body.position.x + body.width <= doctest::Approx(100.0f) ) is correct!
+  values: CHECK( 100 <= Approx( 100 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(201):
+TEST SUITE: Level / Colisao Lateral
+TEST CASE:  corpo bloqueado ao entrar pela direita da plataforma
+
+Tests/Unit/test_level.cpp(213): SUCCESS: CHECK( collided == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(214): SUCCESS: CHECK( body.velocity.x == doctest::Approx(60.0f) ) is correct!
+  values: CHECK( 60 == Approx( 60 ) )
+
+Tests/Unit/test_level.cpp(215): SUCCESS: CHECK( body.position.x == doctest::Approx(200.0f) ) is correct!
+  values: CHECK( 200 == Approx( 200 ) )
+
+===============================================================================
+Tests/Unit/test_level.cpp(226):
+TEST SUITE: Level / File Loading
+TEST CASE:  appendFromFile: ficheiro inexistente retorna offsetY inalterado
+
+Tests/Unit/test_level.cpp(231): SUCCESS: CHECK( result == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_level.cpp(232): SUCCESS: CHECK( level.platformCount() == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+[ASCENDENDO] Chunk colado em Y=0. O topo do conteudo e 115
+===============================================================================
+Tests/Unit/test_level.cpp(235):
+TEST SUITE: Level / File Loading
+TEST CASE:  appendFromFile: PLATFORM carregada com offset Y correto
+
+Tests/Unit/test_level.cpp(247): SUCCESS: REQUIRE( level.platformCount() == 1 ) is correct!
+  values: REQUIRE( 1 == 1 )
+
+Tests/Unit/test_level.cpp(248): SUCCESS: CHECK( level.platforms()[0].bounds.min.x == doctest::Approx(50.0f) ) is correct!
+  values: CHECK( 50 == Approx( 50 ) )
+
+Tests/Unit/test_level.cpp(249): SUCCESS: CHECK( level.platforms()[0].bounds.min.y == doctest::Approx(100.0f) ) is correct!
+  values: CHECK( 100 == Approx( 100 ) )
+
+Tests/Unit/test_level.cpp(250): SUCCESS: CHECK( level.platforms()[0].bounds.max.y == doctest::Approx(115.0f) ) is correct!
+  values: CHECK( 115 == Approx( 115 ) )
+
+[ASCENDENDO] Chunk colado em Y=0. O topo do conteudo e 0
+===============================================================================
+Tests/Unit/test_level.cpp(255):
+TEST SUITE: Level / File Loading
+TEST CASE:  appendFromFile: FLAG define hasFlag e flagBounds
+
+Tests/Unit/test_level.cpp(265): SUCCESS: CHECK( level.hasFlag == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_level.cpp(266): SUCCESS: CHECK( level.flagBounds.min.x == doctest::Approx(150.0f) ) is correct!
+  values: CHECK( 150 == Approx( 150 ) )
+
+Tests/Unit/test_level.cpp(267): SUCCESS: CHECK( level.flagBounds.min.y == doctest::Approx(300.0f) ) is correct!
+  values: CHECK( 300 == Approx( 300 ) )
+
+Tests/Unit/test_level.cpp(268): SUCCESS: CHECK( level.flagBounds.max.x == doctest::Approx(190.0f) ) is correct!
+  values: CHECK( 190 == Approx( 190 ) )
+
+Tests/Unit/test_level.cpp(269): SUCCESS: CHECK( level.flagBounds.max.y == doctest::Approx(340.0f) ) is correct!
+  values: CHECK( 340 == Approx( 340 ) )
+
+[ASCENDENDO] Chunk colado em Y=0. O topo do conteudo e 115
+===============================================================================
+Tests/Unit/test_level.cpp(274):
+TEST SUITE: Level / File Loading
+TEST CASE:  appendFromFile: segundo chunk usa offsetY = offsetY_anterior + LOGICAL_HEIGHT
+
+Tests/Unit/test_level.cpp(287): SUCCESS: CHECK( nextY == doctest::Approx(360.0f) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+[ASCENDENDO] Chunk colado em Y=360. O topo do conteudo e 475
+Tests/Unit/test_level.cpp(291): SUCCESS: REQUIRE( level.platformCount() == 2 ) is correct!
+  values: REQUIRE( 2 == 2 )
+
+Tests/Unit/test_level.cpp(292): SUCCESS: CHECK( level.platforms()[1].bounds.min.y == doctest::Approx(460.0f) ) is correct!
+  values: CHECK( 460 == Approx( 460 ) )
+
+[ASCENDENDO] Chunk colado em Y=0. O topo do conteudo e 0
+[ASCENDENDO] Chunk colado em Y=0. O topo do conteudo e 315
+===============================================================================
+Tests/Unit/test_level.cpp(297):
+TEST SUITE: Level / File Loading
+TEST CASE:  appendFromFile: avanco do chunk e identico mesmo sem plataformas
+
+Tests/Unit/test_level.cpp(319): SUCCESS: CHECK( nextEmpty == doctest::Approx(360.0f) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+Tests/Unit/test_level.cpp(320): SUCCESS: CHECK( nextFull == doctest::Approx(360.0f) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+Tests/Unit/test_level.cpp(321): SUCCESS: CHECK( nextEmpty == doctest::Approx(nextFull) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(16):
+TEST SUITE: Physics / Vec2
+TEST CASE:  soma
+
+Tests/Unit/test_physics.cpp(18): SUCCESS: CHECK( r.x == doctest::Approx(4.0f) ) is correct!
+  values: CHECK( 4 == Approx( 4 ) )
+
+Tests/Unit/test_physics.cpp(19): SUCCESS: CHECK( r.y == doctest::Approx(6.0f) ) is correct!
+  values: CHECK( 6 == Approx( 6 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(22):
+TEST SUITE: Physics / Vec2
+TEST CASE:  subtracao
+
+Tests/Unit/test_physics.cpp(24): SUCCESS: CHECK( r.x == doctest::Approx(3.0f) ) is correct!
+  values: CHECK( 3 == Approx( 3 ) )
+
+Tests/Unit/test_physics.cpp(25): SUCCESS: CHECK( r.y == doctest::Approx(4.0f) ) is correct!
+  values: CHECK( 4 == Approx( 4 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(28):
+TEST SUITE: Physics / Vec2
+TEST CASE:  escalar
+
+Tests/Unit/test_physics.cpp(30): SUCCESS: CHECK( r.x == doctest::Approx(4.0f) ) is correct!
+  values: CHECK( 4 == Approx( 4 ) )
+
+Tests/Unit/test_physics.cpp(31): SUCCESS: CHECK( r.y == doctest::Approx(6.0f) ) is correct!
+  values: CHECK( 6 == Approx( 6 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(34):
+TEST SUITE: Physics / Vec2
+TEST CASE:  operador +=
+
+Tests/Unit/test_physics.cpp(37): SUCCESS: CHECK( v.x == doctest::Approx(3.0f) ) is correct!
+  values: CHECK( 3 == Approx( 3 ) )
+
+Tests/Unit/test_physics.cpp(38): SUCCESS: CHECK( v.y == doctest::Approx(4.0f) ) is correct!
+  values: CHECK( 4 == Approx( 4 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(44):
+TEST SUITE: Physics / AABB
+TEST CASE:  sobreposicao
+
+Tests/Unit/test_physics.cpp(46): SUCCESS: CHECK( a.overlaps(b) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_physics.cpp(47): SUCCESS: CHECK( PhysicsWorld::collides(a, b) == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(50):
+TEST SUITE: Physics / AABB
+TEST CASE:  separados
+
+Tests/Unit/test_physics.cpp(52): SUCCESS: CHECK( a.overlaps(b) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(55):
+TEST SUITE: Physics / AABB
+TEST CASE:  adjacentes nao colidem
+
+Tests/Unit/test_physics.cpp(57): SUCCESS: CHECK( a.overlaps(b) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(60):
+TEST SUITE: Physics / AABB
+TEST CASE:  simetria: A colide B == B colide A
+
+Tests/Unit/test_physics.cpp(62): SUCCESS: CHECK( a.overlaps(b) == b.overlaps(a) ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(68):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  gravidade aplica-se quando no ar
+
+Tests/Unit/test_physics.cpp(76): SUCCESS: CHECK( body.velocity.y < 0.0f ) is correct!
+  values: CHECK( -16.3333 <  0 )
+
+Tests/Unit/test_physics.cpp(77): SUCCESS: CHECK( body.position.y < 100.0f ) is correct!
+  values: CHECK( 99.7278 <  100 )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(80):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  corpo no chao nao cai
+
+Tests/Unit/test_physics.cpp(88): SUCCESS: CHECK( body.position.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_physics.cpp(89): SUCCESS: CHECK( body.isGrounded == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(92):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  salto aplica velocidade para cima
+
+Tests/Unit/test_physics.cpp(100): SUCCESS: CHECK( body.velocity.y == doctest::Approx(500.0f) ) is correct!
+  values: CHECK( 500 == Approx( 500 ) )
+
+Tests/Unit/test_physics.cpp(101): SUCCESS: CHECK( body.isGrounded == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(104):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  salto no ar e ignorado
+
+Tests/Unit/test_physics.cpp(112): SUCCESS: CHECK( body.velocity.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(115):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  corpo cai e aterra
+
+Tests/Unit/test_physics.cpp(126): SUCCESS: CHECK( body.isGrounded == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_physics.cpp(127): SUCCESS: CHECK( body.position.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(130):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  Fixed Timestep: 1s a 60fps = 60 passos
+
+Tests/Unit/test_physics.cpp(136): SUCCESS: CHECK( total == 60 ) is correct!
+  values: CHECK( 60 == 60 )
+
+===============================================================================
+Tests/Unit/test_physics.cpp(139):
+TEST SUITE: Physics / PhysicsWorld
+TEST CASE:  Fixed Timestep: frame lento nao perde passos
+
+Tests/Unit/test_physics.cpp(143): SUCCESS: CHECK( steps == 6 ) is correct!
+  values: CHECK( 6 == 6 )
+
+===============================================================================
+Tests/Unit/test_placeholder.cpp(13):
+TEST SUITE: Infra
+TEST CASE:  framework de testes está operacional
+
+Tests/Unit/test_placeholder.cpp(15): SUCCESS: CHECK( 1 + 1 == 2 ) is correct!
+  values: CHECK( 2 == 2 )
+
+Tests/Unit/test_placeholder.cpp(16): SUCCESS: CHECK( true ) is correct!
+  values: CHECK( true )
+
+Tests/Unit/test_placeholder.cpp(17): MESSAGE: doctest inicializado com sucesso.
+
+===============================================================================
+Tests/Unit/test_placeholder.cpp(20):
+TEST SUITE: Infra
+TEST CASE:  tipos de dados fundamentais têm o tamanho esperado
+
+Tests/Unit/test_placeholder.cpp(23): SUCCESS: CHECK( sizeof(int) == 4 ) is correct!
+  values: CHECK( 4 == 4 )
+
+Tests/Unit/test_placeholder.cpp(24): SUCCESS: CHECK( sizeof(float) == 4 ) is correct!
+  values: CHECK( 4 == 4 )
+
+Tests/Unit/test_placeholder.cpp(25): SUCCESS: CHECK( sizeof(double) == 8 ) is correct!
+  values: CHECK( 8 == 8 )
+
+Tests/Unit/test_placeholder.cpp(26): SUCCESS: CHECK( sizeof(uint8_t) == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Unit/test_placeholder.cpp(27): SUCCESS: CHECK( sizeof(uint16_t) == 2 ) is correct!
+  values: CHECK( 2 == 2 )
+
+Tests/Unit/test_placeholder.cpp(28): SUCCESS: CHECK( sizeof(uint32_t) == 4 ) is correct!
+  values: CHECK( 4 == 4 )
+
+Tests/Unit/test_placeholder.cpp(29): SUCCESS: CHECK( sizeof(uint64_t) == 8 ) is correct!
+  values: CHECK( 8 == 8 )
+
+===============================================================================
+Tests/Unit/test_player.cpp(22):
+TEST SUITE: Player / Movimento e Salto
+TEST CASE:  Controlo Horizontal no chao
+
+Tests/Unit/test_player.cpp(28): SUCCESS: CHECK( p.velocity().x == doctest::Approx(config::PLAYER_MOVE_SPEED) ) is correct!
+  values: CHECK( 140 == Approx( 140 ) )
+
+Tests/Unit/test_player.cpp(29): SUCCESS: CHECK( p.facingDirection == 1.0f ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Unit/test_player.cpp(33): SUCCESS: CHECK( p.velocity().x == doctest::Approx(-config::PLAYER_MOVE_SPEED) ) is correct!
+  values: CHECK( -140 == Approx( -140 ) )
+
+Tests/Unit/test_player.cpp(34): SUCCESS: CHECK( p.facingDirection == -1.0f ) is correct!
+  values: CHECK( -1 == -1 )
+
+===============================================================================
+Tests/Unit/test_player.cpp(37):
+TEST SUITE: Player / Movimento e Salto
+TEST CASE:  Salto Parabolico e Perda de Controlo Aereo
+
+Tests/Unit/test_player.cpp(47): SUCCESS: CHECK( p.isGrounded() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_player.cpp(52): SUCCESS: CHECK( p.velocity().y == doctest::Approx(expectedY) ) is correct!
+  values: CHECK( 200.167 == Approx( 200.167 ) )
+
+Tests/Unit/test_player.cpp(53): SUCCESS: CHECK( p.velocity().x == doctest::Approx(expectedX) ) is correct!
+  values: CHECK( 125 == Approx( 125 ) )
+
+Tests/Unit/test_player.cpp(59): SUCCESS: CHECK( p.velocity().x == doctest::Approx(expectedX) ) is correct!
+  values: CHECK( 125 == Approx( 125 ) )
+
+===============================================================================
+Tests/Unit/test_player.cpp(65):
+TEST SUITE: Player / Queda de Borda
+TEST CASE:  cair da borda sem saltar: mantem inercia X a 100% (fisica normal)
+
+Tests/Unit/test_player.cpp(72): SUCCESS: REQUIRE( p.velocity().x == doctest::Approx(config::PLAYER_MOVE_SPEED) ) is correct!
+  values: REQUIRE( 140 == Approx( 140 ) )
+
+Tests/Unit/test_player.cpp(83): SUCCESS: CHECK( p.velocity().x == doctest::Approx(config::PLAYER_MOVE_SPEED) ) is correct!
+  values: CHECK( 140 == Approx( 140 ) )
+
+===============================================================================
+Tests/Unit/test_replay.cpp(20):
+TEST SUITE: Fase 3.3 — Save States & Replay System
+TEST CASE:  Save State Estático — Salvar e Carregar Slots
+
+Tests/Unit/test_replay.cpp(42): SUCCESS: REQUIRE( success == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_replay.cpp(44): SUCCESS: CHECK( player.body.position.x == 150.0f ) is correct!
+  values: CHECK( 150 == 150 )
+
+Tests/Unit/test_replay.cpp(45): SUCCESS: CHECK( player.body.position.y == 80.0f ) is correct!
+  values: CHECK( 80 == 80 )
+
+Tests/Unit/test_replay.cpp(46): SUCCESS: CHECK( player.body.velocity.x == 200.0f ) is correct!
+  values: CHECK( 200 == 200 )
+
+Tests/Unit/test_replay.cpp(47): SUCCESS: CHECK( player.body.velocity.y == -50.0f ) is correct!
+  values: CHECK( -50 == -50 )
+
+Tests/Unit/test_replay.cpp(48): SUCCESS: CHECK( player.jumpCharge == 0.75f ) is correct!
+  values: CHECK( 0.75 == 0.75 )
+
+Tests/Unit/test_replay.cpp(49): SUCCESS: CHECK( player.isCharging == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_replay.cpp(50): SUCCESS: CHECK( world.accumulator() == originalAcc ) is correct!
+  values: CHECK( 0.00833333 == 0.00833333 )
+
+===============================================================================
+Tests/Unit/test_replay.cpp(53):
+TEST SUITE: Fase 3.3 — Save States & Replay System
+TEST CASE:  Continuous Recording e Rewind Frame-by-Frame
+
+Tests/Unit/test_replay.cpp(74): SUCCESS: CHECK( replay.getReplayLength() == 3 ) is correct!
+  values: CHECK( 3 == 3 )
+
+Tests/Unit/test_replay.cpp(77): SUCCESS: CHECK( rew1 == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_replay.cpp(78): SUCCESS: CHECK( player.position() == posFrame2 ) is correct!
+  values: CHECK( {?} == {?} )
+
+Tests/Unit/test_replay.cpp(81): SUCCESS: CHECK( rew2 == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_replay.cpp(82): SUCCESS: CHECK( player.position() == posFrame1 ) is correct!
+  values: CHECK( {?} == {?} )
+
+===============================================================================
+Tests/Unit/test_replay.cpp(85):
+TEST SUITE: Fase 3.3 — Save States & Replay System
+TEST CASE:  Determinismo de Replay — Reprodução Exata de Sequência
+
+Tests/Unit/test_replay.cpp(115): SUCCESS: REQUIRE( replay.isPlaybackComplete() == false ) is correct!
+  values: REQUIRE( false == false )
+
+Tests/Unit/test_replay.cpp(122): SUCCESS: CHECK( playerPlayback.position().x == finalRecordingPos.x ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_replay.cpp(123): SUCCESS: CHECK( playerPlayback.position().y == finalRecordingPos.y ) is correct!
+  values: CHECK( 3.75708 == 3.75708 )
+
+Tests/Unit/test_replay.cpp(124): SUCCESS: CHECK( playerPlayback.velocity().x == finalRecordingVel.x ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_replay.cpp(125): SUCCESS: CHECK( playerPlayback.velocity().y == finalRecordingVel.y ) is correct!
+  values: CHECK( 225.425 == 225.425 )
+
+===============================================================================
+Tests/Unit/test_vulkan_context.cpp(15):
+TEST SUITE: VulkanContext
+TEST CASE:  init() devolve handles Vulkan validos
+
+Tests/Unit/test_vulkan_context.cpp(19): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_vulkan_context.cpp(20): SUCCESS: CHECK( ctx.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Unit/test_vulkan_context.cpp(21): SUCCESS: CHECK( ctx.instance() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(22): SUCCESS: CHECK( ctx.physicalDevice() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(23): SUCCESS: CHECK( ctx.device() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(24): SUCCESS: CHECK( ctx.graphicsQueue() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(25): SUCCESS: CHECK( ctx.graphicsFamily() != 0xffffffffui32 ) is correct!
+  values: CHECK( 0 != 4294967295 )
+
+===============================================================================
+Tests/Unit/test_vulkan_context.cpp(31):
+TEST SUITE: VulkanContext
+TEST CASE:  GPU selecionada tem nome nao vazio
+
+Tests/Unit/test_vulkan_context.cpp(33): SUCCESS: REQUIRE( ctx.init(false) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_vulkan_context.cpp(36): SUCCESS: CHECK( !name.empty() ) is correct!
+  values: CHECK( true )
+
+Tests/Unit/test_vulkan_context.cpp(37): MESSAGE: GPU selecionada: 1
+
+===============================================================================
+Tests/Unit/test_vulkan_context.cpp(43):
+TEST SUITE: VulkanContext
+TEST CASE:  shutdown() e idempotente
+
+Tests/Unit/test_vulkan_context.cpp(50): SUCCESS: CHECK( !ctx.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Unit/test_vulkan_context.cpp(51): SUCCESS: CHECK( ctx.instance() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(52): SUCCESS: CHECK( ctx.physicalDevice() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(53): SUCCESS: CHECK( ctx.device() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(54): SUCCESS: CHECK( ctx.graphicsQueue() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+===============================================================================
+Tests/Unit/test_vulkan_context.cpp(58):
+TEST SUITE: VulkanContext
+TEST CASE:  contexto nao inicializado devolve VK_NULL_HANDLE
+
+Tests/Unit/test_vulkan_context.cpp(62): SUCCESS: CHECK( !ctx.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Unit/test_vulkan_context.cpp(63): SUCCESS: CHECK( ctx.instance() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(64): SUCCESS: CHECK( ctx.physicalDevice() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(65): SUCCESS: CHECK( ctx.device() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+Tests/Unit/test_vulkan_context.cpp(66): SUCCESS: CHECK( ctx.graphicsQueue() == nullptr ) is correct!
+  values: CHECK( nullptr == nullptr )
+
+===============================================================================
+Tests/Unit/test_vulkan_context.cpp(70):
+TEST SUITE: VulkanContext
+TEST CASE:  init() e idempotente: chamar 2x e seguro
+
+Tests/Unit/test_vulkan_context.cpp(75): SUCCESS: CHECK( first == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_vulkan_context.cpp(76): SUCCESS: CHECK( second == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_vulkan_context.cpp(77): SUCCESS: CHECK( ctx.isInitialized() ) is correct!
+  values: CHECK( true )
+
+===============================================================================
+[doctest] test cases:  68 |  68 passed | 0 failed | 0 skipped
+[doctest] assertions: 225 | 225 passed | 0 failed |
+[doctest] Status: SUCCESS!
+

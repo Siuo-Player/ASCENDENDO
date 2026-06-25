@@ -8,7 +8,7 @@
 
 ## 1. Sobre o Projeto
 
-Motor 2D com renderização Vulkan explícita e física determinística em Fixed Timestep. Cada frame de input é gravável em replay e cada estado da simulação é revertível via save states. O jogo foca-se em **salto parabólico com inércia (Commitment Jump)** e dificuldade gerada algoritmicamente.
+Motor 2D com renderização Vulkan explícita e física determinística em Fixed Timestep. Cada frame de input é gravável em replay e cada estado da simulação é revertível via save states. O jogo foca-se em **salto parabólico com inércia (Commitment Jump)** — ângulo fixo de 60°, sem controlo aéreo — e em dificuldade gerada e validada algoritmicamente.
 
 ---
 
@@ -17,95 +17,120 @@ Motor 2D com renderização Vulkan explícita e física determinística em Fixed
 ```
 ASCENDENDO/
 ├── .vscode/
-│   └── c_cpp_properties.json          ← IntelliSense (Vulkan, GLFW, doctest)
+│   ├── c_cpp_properties.json          ← IntelliSense (Vulkan, GLFW, doctest)
+│   └── tasks.json                     ← atalhos de build no VS Code
 ├── Game/
 │   ├── Core/
-│   │   └── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, FIXED_STEP)
+│   │   └── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física)
 │   ├── Graphics/                      ← motor gráfico Vulkan
-│   │   ├── VulkanContext.h/.cpp       ← Instance + Device + Queues + Surface
-│   │   ├── Window.h/.cpp              ← janela GLFW (stub sem GLFW)
-│   │   ├── Swapchain.h/.cpp           ← double buffering + V-Sync
-│   │   ├── RenderPass.h/.cpp          ← clear + store por frame
-│   │   ├── Renderer.h/.cpp            ← Framebuffers + drawFrame(Player, Camera, Level*)
-│   │   ├── Camera.h/.cpp              ← projeção world→NDC, viewport lógico
-│   │   └── Pipeline.h/.cpp            ← shaders SPIR-V + viewport/scissor dinâmicos
+│   │   ├── VulkanContext.h/.cpp
+│   │   ├── Window.h/.cpp              ← janela GLFW
+│   │   ├── Swapchain.h/.cpp
+│   │   ├── RenderPass.h/.cpp
+│   │   ├── Renderer.h/.cpp            ← drawFrame(Player, Camera, Level*)
+│   │   ├── Camera.h/.cpp              ← projeção world→NDC, tracking vertical
+│   │   └── Pipeline.h/.cpp            ← shaders SPIR-V + viewport dinâmico
 │   ├── Logic/                         ← motor de jogo
-│   │   ├── InputManager.h/.cpp        ← estados de teclas + callbacks GLFW
-│   │   ├── Physics.h/.cpp             ← Vec2, AABB, Fixed Timestep, gravidade
-│   │   ├── Player.h/.cpp              ← Commitment Jump, movimento horizontal
-│   │   ├── Level.h/.cpp               ← plataformas (AABBs) + resolveCollision one-way
-│   │   └── ReplayManager.h/.cpp       ← save states + gravação/replay de inputs
+│   │   ├── InputManager.h/.cpp
+│   │   ├── Physics.h/.cpp             ← Vec2, AABB, Fixed Timestep 60Hz
+│   │   ├── Player.h/.cpp              ← Commitment Jump (60°), bloqueio aéreo
+│   │   ├── Level.h/.cpp               ← plataformas + resolveCollision + streaming
+│   │   └── ReplayManager.h/.cpp       ← save states + replay determinístico
 │   └── Assets/
-│       └── Shaders/
-│           ├── base.vert              ← vertex shader (push constants)
-│           ├── base.frag              ← fragment shader
-│           ├── base.vert.spv          ← compilado por glslc [build artifact]
-│           └── base.frag.spv          ← compilado por glslc [build artifact]
+│       ├── Shaders/
+│       │   ├── base.vert / base.frag  ← GLSL (push constants)
+│       │   └── *.spv                  ← compilados por glslc [build artifact]
+│       └── Levels/
+│           ├── campaign.txt           ← lista ordenada de niveis da campanha activa
+│           ├── inicio.lvl             ┐
+│           ├── zigzag.lvl             ├── niveis da campanha activa
+│           ├── precipicio.lvl         ┘
+│           ├── Unused/                ← niveis validos fora da campanha
+│           └── NaoValidados/          ← niveis em construcao / fisicamente invalidos
 ├── Development/
-│   ├── dev_log.txt                    ← diário append-only (rastreado pelo git)
-│   └── project_structure.txt         ← mapa de arquitectura (auto-gerado)
+│   ├── dev_log.txt                    ← diário append-only
+│   ├── project_structure.txt          ← mapa de arquitectura (auto-gerado)
+│   ├── AI_Validation/
+│   │   ├── ai_validator.py            ← validador BFS (--campaign bloqueia pre-push)
+│   │   └── sim/                       ← simulador Python fiel ao motor C++
+│   │       ├── engine.py              ← Body, physics_step, resolve_collision
+│   │       ├── solver.py              ← find_charge_for_target + robustness_test
+│   │       ├── flag_solver.py         ← verificação FLAG por overlap durante o voo
+│   │       └── levelgen.py            ← gerador de niveis por simulação directa
+│   └── LevelEditor/
+│       └── level_validator.py         ← validador standalone por linha de comando
 ├── Tests/
-│   ├── test_runner.cpp                ← define main via doctest
+│   ├── test_runner.cpp                ← define main via DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+│   ├── log_testes.txt                 ← output do último make tests (gerado automaticamente)
 │   ├── Unit/
-│   │   ├── test_placeholder.cpp       ← infra + sizeof de tipos
-│   │   ├── test_vulkan_context.cpp    ← 5 test cases
-│   │   ├── test_input.cpp             ← 7 test cases
-│   │   ├── test_physics.cpp           ← 15 test cases
-│   │   ├── test_player.cpp            ← Commitment Jump + bloqueio aéreo
-│   │   ├── test_level.cpp             ← 10 test cases — plataformas + colisão
-│   │   ├── test_replay.cpp            ← save states + replay determinístico
-│   │   └── test_camera.cpp            ← projeção world→NDC
+│   │   ├── test_placeholder.cpp
+│   │   ├── test_vulkan_context.cpp
+│   │   ├── test_input.cpp
+│   │   ├── test_physics.cpp
+│   │   ├── test_player.cpp
+│   │   ├── test_replay.cpp
+│   │   ├── test_camera.cpp
+│   │   ├── test_level.cpp             ← 16 test cases (Level + appendFromFile)
+│   │   └── test_campaign.cpp          ← chama ai_validator --campaign via system()
 │   └── Integration/
-│       ├── test_vulkan_init.cpp       ← instance, versão driver, GPUs
-│       ├── test_window.cpp            ← janela GLFW + surface
-│       ├── test_swapchain.cpp         ← swapchain 800×600
-│       ├── test_render_pass.cpp       ← pipeline até RenderPass
-│       ├── test_renderer.cpp          ← 120 frames Player a cair
-│       └── test_pipeline.cpp          ← pipeline gráfica + shaders
+│       ├── test_vulkan_init.cpp
+│       ├── test_window.cpp
+│       ├── test_swapchain.cpp
+│       ├── test_render_pass.cpp
+│       ├── test_renderer.cpp
+│       └── test_pipeline.cpp
 ├── external/
-│   ├── doctest/doctest.h              ← framework de testes (header-only)
-│   └── glfw/
-│       ├── include/GLFW/
-│       └── lib-vc2022/
+│   ├── doctest/doctest.h              ← framework de testes header-only v2.5.0
+│   └── glfw/ (include/ + lib-vc2022/)
 ├── scripts/
-│   └── pre-commit.sh                 ← bloqueia commits com testes a falhar
+│   ├── pre-commit.sh                  ← bloqueia commits com testes a falhar
+│   └── pre-push.sh                    ← valida campanha com ai_validator antes do push
 ├── build/                             ← artefactos de compilação [IGNORADO NO GIT]
-├── main.cpp                           ← entry point do jogo (loop RAII)
+├── main.cpp                           ← entry point do jogo (loop RAII + streaming)
 ├── Makefile
 ├── deps.py
-└── reorganize.py
+└── reorganize.py                      ← organiza ficheiros + valida e roteia niveis .lvl
 ```
+
+### Routing automático de níveis (`reorganize.py`)
+
+| Estado do `.lvl` | Destino |
+|---|---|
+| Válido + em `campaign.txt` | `Game/Assets/Levels/` |
+| Válido + **não** em `campaign.txt` | `Game/Assets/Levels/Unused/` |
+| Inválido / incompleto | `Game/Assets/Levels/NaoValidados/` |
 
 ---
 
 ## 3. Gestão de Dependências
 
-Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem pedido explícito de permissão. O `deps.py` implementa este contrato.
+Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem pedido explícito de permissão.
 
 | Biblioteca | Versão | Localização | Justificação |
 |---|---|---|---|
 | [doctest](https://github.com/doctest/doctest) | 2.5.0 | `external/doctest/` | Header-only, zero overhead, MIT |
 | [GLFW](https://www.glfw.org/) | 3.4 | `external/glfw/` | Windowing Vulkan cross-platform, zlib |
-| Vulkan SDK | 1.4.341.1 | sistema (`VULKAN_SDK`) | API gráfica principal + `glslc` para shaders |
+| Vulkan SDK | 1.4.x | sistema (`VULKAN_SDK`) | API gráfica principal + `glslc` para shaders |
 
 ---
 
 ## 4. Regras de Teste e Versionamento
 
-- **Pre-commit hook**: nenhum commit passa sem 100% dos testes a verde.
+- **Pre-commit**: bloqueia commits com qualquer teste a falhar (`make tests`).
+- **Pre-push**: valida a campanha completa com `ai_validator.py --campaign`.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
-- **Imutabilidade**: testes antigos não são alterados para acomodar código novo.
-- **Testes confirmados**: **66/66** esperados (v7.3) — test_level v7.3 (15 testes) + 62 restantes.
+- **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
+- **Testes confirmados**: **68/68** (v7.4) — 67 testes de motor + `test_campaign`.
 
 ---
 
 ## 5. Diário de Desenvolvimento
 
-Ficheiro `Development/dev_log.txt` — append-only. Formato obrigatório:
+`Development/dev_log.txt` — append-only, nunca editar entradas anteriores.
 
 ```
 [YYYY-MM-DD HH:MM:SS]
-Ideia: [o que vamos implementar]
+Ideia: [o que vamos implementar e o comportamento esperado]
 Implementado: [como correu, problemas e soluções]
 ```
 
@@ -113,47 +138,43 @@ Implementado: [como correu, problemas e soluções]
 
 ## 6. Planeamento de Desenvolvimento
 
-**Fase 1: Ambiente e Infraestrutura** ✅ CONCLUÍDA
-- Makefile cross-platform, doctest, hook de pre-commit, deps.py
+**Fase 1: Ambiente e Infraestrutura** ✅
+Makefile cross-platform, doctest, pre-commit hook, deps.py.
 
-**Fase 2: Motor Gráfico Base (Vulkan)** ✅ CONCLUÍDA
-- 2.1 ✅ SDK Vulkan integrado (instance, driver, GPUs — headless)
-- 2.2 ✅ `VulkanContext` (Instance + PhysicalDevice + Device + Queues)
-- 2.3 ✅ `Window` (GLFW) + Surface Vulkan
-- 2.4 ✅ `Swapchain` (double buffering, V-Sync)
-- 2.5 ✅ `RenderPass` (clear + store, layout para apresentação)
-- 2.6 ✅ `Renderer` (Framebuffers + Command Buffers + Sync → **primeira janela colorida**)
+**Fase 2: Motor Gráfico Base (Vulkan)** ✅
+`VulkanContext`, `Window` (GLFW), `Swapchain`, `RenderPass`, `Renderer` → primeira janela colorida.
 
-**Fase 3: Física, Input e Replay** ✅ CONCLUÍDA
-- 3.1 ✅ `InputManager` + `Physics` (Vec2, AABB, Fixed Timestep 60Hz, gravidade)
-- 3.2 ✅ `Player` (movimento horizontal 200 px/s + salto por carga MIN=350/MAX=800 px/s)
-- 3.3 ✅ `ReplayManager` (save states + gravação/replay determinístico de inputs)
+**Fase 3: Física, Input e Replay** ✅
+`InputManager`, `Physics` (Vec2, AABB, Fixed Timestep 60Hz, GRAVITY=-980),
+`Player` (Commitment Jump 60°, MIN_JUMP=250/MAX_JUMP=600 px/s),
+`ReplayManager` (save states + replay determinístico).
 
-**Fase 4: Câmera e Viewport** ✅ CONCLUÍDA
-- 4.1 ✅ `Camera` (projeção world→NDC, viewport lógico com letterboxing)
+**Fase 4: Câmera e Viewport** ✅
+`Camera` — projeção world→NDC, tracking vertical com Lerp (jogador no 35% inferior do ecrã).
 
-**Fase 5: Pipeline Gráfica** ✅ CONCLUÍDA
-- 5.1 ✅ Shaders GLSL → SPIR-V (`base.vert`/`base.frag`) + `Pipeline` Vulkan
-- 5.2 ✅ `Config.h` (constantes globais: LOGICAL_WIDTH=640, LOGICAL_HEIGHT=360)
-- 5.3 ✅ `Renderer` integra `Player` + `Camera` → **primeiro quadrado a cair** (54/54 testes ✅)
+**Fase 5: Pipeline Gráfica** ✅
+Shaders GLSL → SPIR-V, `Pipeline` Vulkan (viewport/scissor dinâmicos),
+`Config.h` (LOGICAL_WIDTH=640, LOGICAL_HEIGHT=360), `Renderer` integra Player + Camera.
 
-**Fase 6: Mecânicas de Jogo** ← AQUI
-- 6.1 ✅ **Commitment Jump** — salto parabólico com inércia, bloqueio aéreo, `main.cpp` RAII
-- 6.2 ✅ **Level class** — plataformas (AABBs), `resolveCollision` one-way
-- 6.2b ✅ **Renderer renderiza Level** — plataformas no ecrã, `main.cpp` com nível real
-- 6.2c ✅ **Física corrigida** — colisão lateral (MTV), paredes X, queda de borda
-- 6.3 ✅ **Barra de Força** — UI visual Verde→Vermelho sobre o jogador
-- 6.4 ✅ **Camera tracking** — follow() vertical Lerp, jogador no 35% inferior
+**Fase 6: Mecânicas de Jogo** ✅
+- 6.1 Commitment Jump — ângulo fixo 60°, bloqueio aéreo total
+- 6.2 `Level` — plataformas AABB, colisão MTV (topo one-way + lados sólidos)
+- 6.2b Renderer renderiza plataformas
+- 6.2c Física corrigida — paredes absolutas X, queda de borda sem inércia
+- 6.3 Barra de força — UI Verde→Vermelho (isCharging)
+- 6.4 Camera tracking — follow() Lerp vertical
 
-**Fase 7: Level Design e Campanha** ← AQUI
-- 7.0 ✅ **Level Streaming** — `appendFromFile()`, `campaign.txt`, `FLAG`, seamless chunking
-- 7.1 ✅ **Refatoração Config-Driven** — PLAYER_WIDTH=16, inércia natural no ar, `physics::collides()`
-- 7.2 ✅ **Debug HUD (terminal)** — `[SPACE] Força: XX%` para calibrar o charge
-- 7.3 → **Ghost Trajectory** — ai_validator exporta JSON; Renderer desenha trajetória prevista
+**Fase 7: Level Design e Campanha** ✅
+- 7.0 Level Streaming — `appendFromFile()`, `campaign.txt`, `FLAG`, chunks de 360px
+- 7.1 Refactoring config-driven — `PLAYER_WIDTH`, inércia natural, `physics::collides()`
+- 7.2 Debug HUD — `[SPACE] Força: XX%` no terminal durante a carga
+- 7.3 Fix crítico — chunks padronizados; spawn corrigido; LOGICAL_WIDTH/HEIGHT trocados nos validadores Python corrigidos
+- 7.4 ✅ **Níveis gerados por simulação** — `levelgen.py` com `ascending_x_at()` (guard contra colisão lateral na subida, 100% robustez ±8%/±10px); `test_campaign.cpp` integra `ai_validator` no ciclo doctest; fixes Windows (Unicode, duplicate symbol)
 
 **Fase 8: UI e Polishing** *(planeada)*
 
-**Fase 9: IA de Validação** *(planeada)*
+**Fase 9: Editor de Níveis Visual** *(planeada)*
+Editor com rato, validação IA automática em background, dificuldade por nível/campanha.
 
 ---
 
@@ -161,13 +182,14 @@ Implementado: [como correu, problemas e soluções]
 
 | Componente | Escolha | Notas |
 |---|---|---|
-| Linguagem | C++20 | controlo de memória, `concepts`, compatibilidade Vulkan |
+| Linguagem | C++20 | controlo de memória, compatibilidade Vulkan |
 | Compilador | Clang++ 22 (LLVM) | `Target: x86_64-pc-windows-msvc` |
-| Build | GNU Make (manual) | portável via Git Bash / MSYS2 |
-| API Gráfica | Vulkan 1.3 | explícita, determinística, cross-platform |
-| Windowing | GLFW 3.4 | propositado para Vulkan, zlib license |
+| Build | GNU Make | portável via Git Bash / MSYS2 |
+| API Gráfica | Vulkan 1.4 | explícita, determinística |
+| Windowing | GLFW 3.4 | zlib license |
 | Testes | doctest 2.5.0 | header-only, zero instalação |
-| Shaders | GLSL → SPIR-V | compilado com `glslc` (incluído no Vulkan SDK) |
+| Shaders | GLSL → SPIR-V | compilado com `glslc` (Vulkan SDK) |
+| Validação IA | Python 3.x | BFS com física real, sim/ fiel ao motor C++ |
 
 ---
 
@@ -175,62 +197,102 @@ Implementado: [como correu, problemas e soluções]
 
 ### 8.1 Requisitos
 
-| Ferramenta | Estado | Instalação |
-|---|---|---|
-| Clang++ ≥ 14 | ✅ | `winget install LLVM.LLVM` + adicionar ao PATH |
-| GNU Make | ✅ | Git Bash (incluído) ou `choco install make` |
-| Git | ✅ | https://git-scm.com/ |
-| Python ≥ 3.9 | ✅ | `winget install Python.Python.3` |
-| Vulkan SDK | ✅ | https://vulkan.lunarg.com/sdk/home (inclui `glslc`) |
-| GLFW 3.4 | ✅ | https://www.glfw.org/download.html → `glfw-3.4.bin.WIN64.zip` |
+| Ferramenta | Instalação |
+|---|---|
+| Clang++ ≥ 14 | `winget install LLVM.LLVM` + adicionar ao PATH |
+| GNU Make | Git Bash (incluído) |
+| Git | https://git-scm.com/ |
+| Python ≥ 3.9 | `winget install Python.Python.3` |
+| Vulkan SDK | https://vulkan.lunarg.com/sdk/home |
+| GLFW 3.4 | https://www.glfw.org/download → extrair para `external/glfw/` |
 
-### 8.2 Primeiros Passos
+### 8.2 Instalação
 
 ```bash
 git clone https://github.com/Siuo-Player/ASCENDENDO && cd ASCENDENDO
-python deps.py
-python reorganize.py
+
+# Instalar hooks de git
 cp scripts/pre-commit.sh .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
-make tests          # silencioso — resumo final
-make tests-verbose  # detalhado — cada assertion
-make tests-fast     # rápido — ignora testes Vulkan/GLFW
-make shaders        # compila GLSL → SPIR-V
-make game           # compila o binário do jogo
+cp scripts/pre-push.sh   .git/hooks/pre-push
+chmod +x .git/hooks/pre-commit .git/hooks/pre-push
+
+# Organizar ficheiros e validar níveis
+python reorganize.py
 ```
 
-### 8.3 Ciclo de Desenvolvimento (TDD)
+### 8.3 Comandos de Desenvolvimento
 
 ```bash
-make tests-fast     # iteração rápida (sem Vulkan)
-make tests          # validação completa antes de commit
+# Compilar e testar (captura stdout + stderr no log)
+python reorganize.py && make clean && make tests-verbose -j8 > Tests/log_testes.txt 2>&1
+
+# Ver resultado do log
+cat Tests/log_testes.txt
+
+# Correr o jogo
+make game && ./build/game.exe
+
+# Só compilar (sem limpar)
+make tests -j8
+
+# Compilar shaders GLSL → SPIR-V
+make shaders
+```
+
+### 8.4 Ciclo TDD
+
+```bash
+# 1. Escrever o teste primeiro
+# 2. Implementar até passar:
+make tests -j8
+# 3. Commit (bloqueado pelo hook se falhar):
 git add . && git commit -m "feat: descrição"
+# 4. Push (valida campanha antes de enviar):
+git push
+```
+
+### 8.5 Ferramentas de Nível
+
+```bash
+# Validar um nível isolado
+python3 Development/AI_Validation/ai_validator.py Game/Assets/Levels/meu_nivel.lvl
+
+# Validar campanha completa
+python3 Development/AI_Validation/ai_validator.py --campaign
+
+# Gerar novos níveis por simulação (produz .lvl na raiz → reorganize.py encaminha)
+python3 Development/AI_Validation/sim/levelgen.py
+python reorganize.py
 ```
 
 ---
 
-## 9. Esquema de Versão dos Ficheiros
+## 9. Esquema de Versão
 
 ```
-vX.Y[Z...]  X=fase  .Y=sub-passo  .YZ=fix incremental
+vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 ```
 
-**Versão atual do projeto: 7.2**
+**Versão actual: 7.4**
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
-| VulkanContext.h/.cpp | v2.3 / v2.4 | |
+| VulkanContext.h/.cpp | v2.3/v2.4 | |
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
 | Renderer.h/.cpp | v6.2b | drawFrame(Player, Camera, Level*) |
-| Camera.h/.cpp | v6.4 | follow() tracking vertical |
+| Camera.h/.cpp | v6.4 | follow() tracking vertical Lerp |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
-| Config.h | v7.2 | PLAYER_WIDTH=16, jump/move speeds |
+| Config.h | v7.2 | PLAYER_WIDTH=16, MIN_JUMP=250, MAX_JUMP=600 |
 | InputManager.h/.cpp | v3.3 | injectRawState() para replay |
-| Physics.h/.cpp | v7.1 / v7.2 | config-driven, collides() static |
-| Player.h/.cpp | v7.1 / v7.2 | config-driven, inércia natural |
-| Level.h/.cpp | v7.1 | appendFromFile, hasFlag, streaming |
+| Physics.h/.cpp | v7.1/v7.2 | config-driven, collides() static |
+| Player.h/.cpp | v7.1/v7.2 | config-driven, inércia natural |
+| Level.h/.cpp | v7.2 | appendFromFile, chunk padronizado a LOGICAL_HEIGHT |
 | ReplayManager.h/.cpp | v3.3 | save states + replay |
-| base.vert / base.frag | v5.1 | shaders GLSL |
-| main.cpp | v7.2 | campaign + fullscreen + debug HUD |
+| base.vert/base.frag | v5.1 | shaders GLSL |
+| main.cpp | v7.3 | spawn Y=40, campaign streaming |
+| ai_validator.py | v7.4 | ASCII-safe (fix Windows cp1252) |
+| levelgen.py | v7.4 | ascending_x_at(), clearance 40px, 100% robustez |
+| test_campaign.cpp | v7.4 | doctest → system(ai_validator --campaign) |
+| reorganize.py | v7.4 | routing por campaign.txt (Unused/NaoValidados) |

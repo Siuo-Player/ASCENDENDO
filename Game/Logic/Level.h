@@ -2,7 +2,10 @@
 // =============================================================================
 //  Game/Logic/Level.h
 //
-//  @version 7.1
+//  @version 7.2
+//  @history
+//    v7.2 — appendFromFile() agora retorna SEMPRE offsetY + LOGICAL_HEIGHT
+//           (cada nivel ocupa exactamente uma tela de altura, padronizado).
 // =============================================================================
 
 #include "Logic/Physics.h"
@@ -22,7 +25,10 @@ public:
     bool hasFlag = false;
     AABB flagBounds;
 
-    // Permite "colar" um nível por cima do anterior usando um Offset Y
+    // "Cola" um nivel por cima do anterior usando um Offset Y.
+    // Retorna SEMPRE (offsetY + config::LOGICAL_HEIGHT) — cada .lvl deve
+    // conter o seu conteudo dentro de uma unica tela de altura (LOGICAL_HEIGHT).
+    // Avisos (cerr) sao impressos se PLATFORM/FLAG ultrapassarem esse limite.
     float appendFromFile(const std::string& filepath, float maxWidth, float offsetY);
     
     void addPlatform(float x, float y, float w, float h);
