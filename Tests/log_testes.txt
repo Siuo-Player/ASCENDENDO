@@ -3,8 +3,8 @@
 [CC ] Tests/Unit/test_campaign.cpp
 [CC ] Tests/Unit/test_level.cpp
 [CC ] Tests/Unit/test_input.cpp
-[CC ] Tests/Unit/test_placeholder.cpp
 [CC ] Tests/Unit/test_physics.cpp
+[CC ] Tests/Unit/test_placeholder.cpp
 [CC ] Tests/Unit/test_player.cpp
 [CC ] Tests/Unit/test_replay.cpp
 [CC ] Tests/Unit/test_vulkan_context.cpp
@@ -13,14 +13,14 @@
 [CC ] Tests/Integration/test_renderer.cpp
 [CC ] Tests/Integration/test_vulkan_init.cpp
 [CC ] Tests/Integration/test_swapchain.cpp
-[CC ] Game/Graphics/Pipeline.cpp
 [CC ] Tests/Integration/test_window.cpp
 [CC ] Game/Graphics/Camera.cpp
+[CC ] Game/Graphics/Pipeline.cpp
 [CC ] Game/Graphics/RenderPass.cpp
 [CC ] Game/Graphics/Renderer.cpp
 [CC ] Game/Graphics/Swapchain.cpp
-[CC ] Game/Graphics/Window.cpp
 [CC ] Game/Graphics/VulkanContext.cpp
+[CC ] Game/Graphics/Window.cpp
 [CC ] Game/Logic/InputManager.cpp
 [CC ] Game/Logic/Level.cpp
 [CC ] Game/Logic/Physics.cpp

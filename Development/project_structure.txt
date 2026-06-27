@@ -8,7 +8,9 @@
 ././.vscode/.gitkeep
 ././.vscode/c_cpp_properties.json
 ././.vscode/tasks.json
+././build/game.exe
 ././build/libgame.a
+././build/main.o
 ././build/test_results.txt
 ././build/tests.exe
 ././build/tests.pdb

@@ -1,11 +1,10 @@
 // =============================================================================
-//  Game/Graphics/Renderer.cpp
-//
-//  @version 6.2b
+//  @version 7.5
 //  @history
 //    v5.2  — drawFrame(Player, Camera)
 //    v5.3  — versao do .h atualizada
 //    v6.2b — recordCommandBuffer desenha plataformas (nivel) antes do jogador
+//    v7.5  — GameState: PLAYING (+ FLAG visual), CREDITS, MENU
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
@@ -60,7 +59,8 @@ void Renderer::cleanup() {
 }
 
 bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
-                         const logic::Level* level) {
+                         const logic::Level* level,
+                         GameState state, int menuSel) {
     VkDevice device = m_ctx->device();
     vkWaitForFences(device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -72,7 +72,8 @@ bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
     vkResetFences(device, 1, &m_inFlightFence);
     vkResetCommandBuffer(m_commandBuffers[imageIndex], 0);
 
-    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex, player, camera, level))
+    if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex,
+                              player, camera, level, state, menuSel))
         return false;
 
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -105,13 +106,23 @@ bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
 bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
                                    const logic::Player& player,
                                    const gfx::Camera& camera,
-                                   const logic::Level* level) {
+                                   const logic::Level* level,
+                                   GameState state, int menuSel) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
 
+    // ── Cor de fundo baseada no estado ────────────────────────────────────────
     VkClearValue clearColor{};
-    clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}};
+    if (state == GameState::CREDITS) {
+        clearColor.color = {{config::CLEAR_CREDITS_R, config::CLEAR_CREDITS_G,
+                              config::CLEAR_CREDITS_B, 1.0f}};
+    } else if (state == GameState::MENU) {
+        clearColor.color = {{config::CLEAR_MENU_R, config::CLEAR_MENU_G,
+                              config::CLEAR_MENU_B, 1.0f}};
+    } else {
+        clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}};
+    }
 
     VkRenderPassBeginInfo rpBI{};
     rpBI.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -151,41 +162,113 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
     const VkShaderStageFlags stages =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    // ── 1. PLATAFORMAS (fundo — desenhadas antes do jogador) ─────────────────
-    if (level && !level->platforms().empty()) {
-        PushConstants push{};
-        push.color[0] = 0.35f; push.color[1] = 0.65f;
-        push.color[2] = 0.25f; push.color[3] = 1.0f;  // verde escuro
-        push.camPos[0]     = camera.position.x;
-        push.camPos[1]     = camera.position.y;
-        push.logicalRes[0] = config::LOGICAL_WIDTH;
-        push.logicalRes[1] = config::LOGICAL_HEIGHT;
-
-        for (const auto& platform : level->platforms()) {
-            push.objPos[0]  = platform.bounds.min.x;
-            push.objPos[1]  = platform.bounds.min.y;
-            push.objSize[0] = platform.bounds.width();
-            push.objSize[1] = platform.bounds.height();
-            vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &push);
-            vkCmdDraw(cmd, 6, 1, 0, 0);
-        }
-    }
-
-    // ── 2. JOGADOR (frente — por cima das plataformas) ───────────────────────
-    {
-        PushConstants push{};
-        push.color[0] = 0.9f; push.color[1] = 0.2f;
-        push.color[2] = 0.2f; push.color[3] = 1.0f;  // vermelho
-        push.camPos[0]     = camera.position.x;
-        push.camPos[1]     = camera.position.y;
-        push.objPos[0]     = player.position().x;
-        push.objPos[1]     = player.position().y;
-        push.objSize[0]    = player.body.width;
-        push.objSize[1]    = player.body.height;
-        push.logicalRes[0] = config::LOGICAL_WIDTH;
-        push.logicalRes[1] = config::LOGICAL_HEIGHT;
-        vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &push);
+    // ── Helper: desenhar retangulo no espaco logico ───────────────────────────
+    // 'cam' = nullptr → camara neutra (UI em coordenadas logicas fixas)
+    auto drawRect = [&](float x, float y, float w, float h,
+                        float r, float g, float b, float a = 1.0f,
+                        const gfx::Camera* cam = nullptr) {
+        PushConstants p{};
+        p.color[0] = r; p.color[1] = g; p.color[2] = b; p.color[3] = a;
+        p.camPos[0]     = cam ? cam->position.x : 0.0f;
+        p.camPos[1]     = cam ? cam->position.y : 0.0f;
+        p.objPos[0]     = x; p.objPos[1] = y;
+        p.objSize[0]    = w; p.objSize[1] = h;
+        p.logicalRes[0] = config::LOGICAL_WIDTH;
+        p.logicalRes[1] = config::LOGICAL_HEIGHT;
+        vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &p);
         vkCmdDraw(cmd, 6, 1, 0, 0);
+    };
+
+    // ═════════════════════════════════════════════════════════════════════════
+    if (state == GameState::PLAYING) {
+    // ═════════════════════════════════════════════════════════════════════════
+
+        // ── 1. PLATAFORMAS ────────────────────────────────────────────────────
+        if (level && !level->platforms().empty()) {
+            for (const auto& platform : level->platforms()) {
+                drawRect(platform.bounds.min.x, platform.bounds.min.y,
+                         platform.bounds.width(), platform.bounds.height(),
+                         config::COLOR_PLATFORM_R, config::COLOR_PLATFORM_G,
+                         config::COLOR_PLATFORM_B, 1.0f, &camera);
+            }
+        }
+
+        // ── 2. FLAG (mastro + pano dourado) ───────────────────────────────────
+        if (level && level->hasFlag) {
+            const auto& fb = level->flagBounds;
+            float cx   = fb.min.x + (fb.width() - 4.0f) / 2.0f; // centro horizontal
+
+            // Mastro (dourado escuro, 4px, altura total da AABB)
+            drawRect(cx, fb.min.y, 4.0f, fb.height(),
+                     config::COLOR_FLAG_POLE_R, config::COLOR_FLAG_POLE_G,
+                     config::COLOR_FLAG_POLE_B, 1.0f, &camera);
+
+            // Pano (dourado brilhante, 60% da largura, 35% superior)
+            float panoH = fb.height() * 0.35f;
+            drawRect(cx + 4.0f, fb.max.y - panoH,
+                     fb.width() * 0.60f, panoH,
+                     config::COLOR_FLAG_R, config::COLOR_FLAG_G,
+                     config::COLOR_FLAG_B, 1.0f, &camera);
+        }
+
+        // ── 3. JOGADOR ────────────────────────────────────────────────────────
+        drawRect(player.position().x, player.position().y,
+                 player.body.width, player.body.height,
+                 config::COLOR_PLAYER_R, config::COLOR_PLAYER_G,
+                 config::COLOR_PLAYER_B, 1.0f, &camera);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    } else if (state == GameState::CREDITS) {
+    // ═════════════════════════════════════════════════════════════════════════
+        // Coordenadas em espaco logico (640×360). Y=0=baixo, Y=360=cima.
+        // Sem texto real: barras coloridas sugerem linhas de texto.
+
+        // Titulo (dourado largo)
+        drawRect(100, 295, 440, 26, 1.0f, 0.85f, 0.10f);
+        // Subtitulo (branco dimmer)
+        drawRect(100, 265, 440, 14, 0.75f, 0.75f, 0.80f);
+        // Separador
+        drawRect( 90, 250, 460,  2, 0.30f, 0.30f, 0.40f);
+
+        // Autor
+        drawRect(100, 220, 240, 14, 0.95f, 0.95f, 0.95f);
+        // "Auxiliado por: Claude (Anthropic)"
+        drawRect(100, 198, 310, 12, 0.70f, 0.80f, 1.00f);
+        // "              Gemini (Google)"
+        drawRect(100, 180, 270, 12, 0.60f, 0.90f, 0.78f);
+
+        // Separador inferior
+        drawRect( 90,  90, 460,  2, 0.25f, 0.25f, 0.35f);
+        // "Pressiona ESPACO" (barra discreta a piscar — sempre visivel por agora)
+        drawRect(180,  62, 280, 10, 0.35f, 0.35f, 0.50f);
+
+    // ═════════════════════════════════════════════════════════════════════════
+    } else if (state == GameState::MENU) {
+    // ═════════════════════════════════════════════════════════════════════════
+        // Titulo do menu
+        drawRect(180, 280, 280, 22, 0.90f, 0.80f, 0.20f);
+        // Separador
+        drawRect( 80, 262, 480,  2, 0.25f, 0.25f, 0.35f);
+
+        // Opcao 0: "Comecar" (esquerda)
+        float sel0r = (menuSel == 0) ? 1.0f : 0.20f;
+        float sel0g = (menuSel == 0) ? 0.85f : 0.20f;
+        float sel0b = (menuSel == 0) ? 0.10f : 0.25f;
+        drawRect( 80, 150, 200, 55, sel0r, sel0g, sel0b);
+        // Icone interno (retangulo menor centrado, ≈ triangulo play)
+        drawRect(140, 163, 80, 30, sel0r * 0.7f, sel0g * 0.7f, sel0b * 0.6f);
+
+        // Opcao 1: "Creditos" (direita)
+        float sel1r = (menuSel == 1) ? 1.0f : 0.20f;
+        float sel1g = (menuSel == 1) ? 0.85f : 0.20f;
+        float sel1b = (menuSel == 1) ? 0.10f : 0.25f;
+        drawRect(360, 150, 200, 55, sel1r, sel1g, sel1b);
+        drawRect(400, 163, 120, 10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
+        drawRect(400, 178, 100, 10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
+        drawRect(400, 193, 80,  10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
+
+        // Dica de navegacao (barra discreta)
+        drawRect(160,  50, 320,  8, 0.25f, 0.25f, 0.35f);
     }
 
     vkCmdEndRenderPass(cmd);

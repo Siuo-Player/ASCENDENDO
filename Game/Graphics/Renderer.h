@@ -2,11 +2,11 @@
 // =============================================================================
 //  Game/Graphics/Renderer.h
 //
-//  @version 6.2b
+//  @version 7.5
 //  @history
 //    v5.3  — drawFrame recebe Player + Camera
-//    v6.2b — drawFrame aceita Level* opcional; plataformas desenhadas antes
-//             do jogador (retrocompativel: nullptr = comportamento anterior)
+//    v6.2b — drawFrame aceita Level* opcional; plataformas antes do jogador
+//    v7.5  — GameState (PLAYING/CREDITS/MENU), FLAG visual, ecrã de créditos
 // =============================================================================
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -15,6 +15,10 @@ namespace logic { class Player; class Level; }
 namespace gfx   { class Camera; }
 
 namespace gfx {
+
+// ─── Estado do Jogo ───────────────────────────────────────────────────────────
+// Partilhado entre Renderer e main.cpp (inclui Renderer.h).
+enum class GameState { PLAYING, CREDITS, MENU };
 
 class VulkanContext;
 class Swapchain;
@@ -33,9 +37,12 @@ public:
               RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
 
-    // Level* e opcional: nullptr = so o jogador (testes de integracao existentes)
-    bool drawFrame(const logic::Player& player, const gfx::Camera& camera,
-                   const logic::Level* level = nullptr);
+    // state e menuSel têm defaults → retrocompativel com testes existentes
+    bool drawFrame(const logic::Player& player,
+                   const gfx::Camera&  camera,
+                   const logic::Level* level    = nullptr,
+                   GameState           state    = GameState::PLAYING,
+                   int                 menuSel  = 0);
 
     bool isInitialized() const { return m_initialized; }
 
@@ -47,8 +54,9 @@ private:
 
     bool recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
                              const logic::Player& player,
-                             const gfx::Camera& camera,
-                             const logic::Level* level);
+                             const gfx::Camera&  camera,
+                             const logic::Level* level,
+                             GameState state, int menuSel);
 
     VulkanContext* m_ctx        = nullptr;
     Swapchain*     m_swapchain  = nullptr;

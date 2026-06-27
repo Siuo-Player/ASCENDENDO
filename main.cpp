@@ -1,12 +1,11 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 7.3
+//  @version 7.5
 //  @history
-//    v7.1  — Level streaming + Campaign + fullscreen + FLAG detection
-//    v7.2  — Debug HUD: força do salto no terminal
-//    v7.3  — FIX: spawn do jogador estava DENTRO da primeira plataforma (Y=0).
-//            Corrigido para Y=40 (queda visivel ate pousar no chao do chunk).
+//    v7.1  — Campaign streaming + nivel nativo
+//    v7.5  — GameState (PLAYING / CREDITS / MENU), FLAG visual,
+//             ecra de creditos, menu simples com A/D + ESPACO
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -21,9 +20,7 @@
 #include "Game/Logic/Level.h"
 #include "Game/Core/Config.h"
 
-// Necessário para detetar a resolução nativa do monitor
-#include <GLFW/glfw3.h> 
-
+#include <GLFW/glfw3.h>
 #include <chrono>
 #include <iostream>
 #include <fstream>
@@ -37,9 +34,9 @@ int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
 
     glfwInit();
-    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
-    int screenWidth = mode->width;
+    GLFWmonitor*      primaryMonitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode          = glfwGetVideoMode(primaryMonitor);
+    int screenWidth  = mode->width;
     int screenHeight = mode->height;
 
     {
@@ -66,38 +63,54 @@ int main() {
 
         input.registerWithWindow(win.handle());
 
+        // ── Carregar lista de niveis da campanha ──────────────────────────────
         std::vector<std::string> campaign;
-        std::ifstream campaignFile("Game/Assets/Levels/campaign.txt");
-        if (campaignFile.is_open()) {
+        {
+            std::ifstream f("Game/Assets/Levels/campaign.txt");
             std::string line;
-            while (std::getline(campaignFile, line)) {
-                if (!line.empty() && line[0] != '#') {
-                    if (line.back() == '\r') line.pop_back();
+            while (std::getline(f, line)) {
+                if (line.back() == '\r') line.pop_back();
+                if (!line.empty() && line[0] != '#')
                     campaign.push_back("Game/Assets/Levels/" + line);
-                }
             }
         }
 
-        Level level;
-        int currentLevelIndex = 0;
-        float currentSpawnY = 0.0f;
-
-        // Base sólida inicial
-        level.addPlatform(0.0f, -10.0f, config::LOGICAL_WIDTH, 10.0f);
-
-        if (!campaign.empty()) {
-            currentSpawnY = level.appendFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH, currentSpawnY);
-            currentLevelIndex++;
-        }
-
+        // ── Estado do nivel ───────────────────────────────────────────────────
+        Level        level;
         PhysicsWorld world;
         Camera       camera;
         Player       player;
+        int          currentLevelIndex = 0;
+        float        currentSpawnY     = 0.0f;
 
-        // Jogador nasce 40px acima do chao do primeiro chunk (PLATFORM ... 0 ... h=20).
-        // Antes era Y=0.0f, o que colocava o corpo DENTRO da plataforma (Y=[0,20]).
-        // Pequena margem (40) garante uma queda visivel e natural ate pousar.
-        player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f };
+        // ── Estado do jogo ────────────────────────────────────────────────────
+        GameState state   = GameState::PLAYING;
+        int       menuSel = 0;   // 0 = Comecar  |  1 = Creditos
+
+        // ── Funcao de reset / (re)inicio ─────────────────────────────────────
+        auto resetGame = [&]() {
+            player             = logic::Player{};
+            player.body.position = { config::LOGICAL_WIDTH / 2.0f, 0.0f };
+            camera             = gfx::Camera{};
+            world              = logic::PhysicsWorld{};
+            level.clear();
+            currentLevelIndex  = 0;
+            currentSpawnY      = 0.0f;
+
+            // Chao absoluto + primeiro chunk
+            level.addPlatform(0.0f, -10.0f, config::LOGICAL_WIDTH, 10.0f);
+            if (!campaign.empty()) {
+                currentSpawnY = level.appendFromFile(
+                    campaign[0], config::LOGICAL_WIDTH, 0.0f);
+                currentLevelIndex = 1;
+            }
+
+            state   = GameState::PLAYING;
+            menuSel = 0;
+        };
+
+        // Arranque inicial
+        resetGame();
 
         auto lastTime = std::chrono::high_resolution_clock::now();
         std::cout << "[ASCENDENDO] A/D = mover | SPACE = saltar | ESC = sair\n";
@@ -109,38 +122,73 @@ int main() {
 
             input.beginFrame();
             win.pollEvents();
+
+            // ── ESC: fecha sempre ─────────────────────────────────────────────
             if (input.isKeyDown(Key::ESCAPE)) break;
 
-            int steps = world.advance(dt);
-            for (int i = 0; i < steps; ++i) {
-                player.update(input, world, config::FIXED_STEP);
-                level.resolveCollision(player.body);
-            }
+            // ── Logica por estado ─────────────────────────────────────────────
+            if (state == GameState::PLAYING) {
+                // Fisica (Fixed Timestep)
+                int steps = world.advance(dt);
+                for (int i = 0; i < steps; ++i) {
+                    player.update(input, world, config::FIXED_STEP);
+                    level.resolveCollision(player.body);
+                }
 
-            // ── Debug HUD: força do salto no terminal ─────────────────────────────
-            // Remove quando a barra de força Vulkan estiver pronta (Fase 7.3).
-            if (player.isCharging)
-                std::cout << "\r  [SPACE] Força: " << static_cast<int>(player.chargeRatio() * 100) << "%   " << std::flush;
-            else
-                std::cout << "\r                              \r" << std::flush;
+                // Camera tracking
+                camera.follow(player.position(), dt);
 
-            camera.follow(player.position(), dt);
+                // Streaming: carregar proximo chunk quando o jogador se aproxima
+                if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
+                    if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
+                        currentSpawnY = level.appendFromFile(
+                            campaign[currentLevelIndex],
+                            config::LOGICAL_WIDTH, currentSpawnY);
+                        currentLevelIndex++;
+                    }
+                }
 
-            if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
-                if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
-                    currentSpawnY = level.appendFromFile(campaign[currentLevelIndex], config::LOGICAL_WIDTH, currentSpawnY);
-                    currentLevelIndex++;
+                // Detecao de FLAG (fim da campanha)
+                if (level.hasFlag &&
+                    PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
+                    state = GameState::CREDITS;
+                    std::cout
+                        << "\n============================================\n"
+                        << "  ASCENDENDO -- FIM DA CAMPANHA\n"
+                        << "  Autor:         Rafael Gomes Bernardo\n"
+                        << "  Auxiliado por: Claude (Anthropic)\n"
+                        << "                 Gemini (Google)\n"
+                        << "============================================\n"
+                        << "  Pressiona ESPACO para continuar\n\n";
+                }
+
+            } else if (state == GameState::CREDITS) {
+                // Qualquer tecla de accao avanca para o menu
+                if (input.isKeyJustPressed(Key::SPACE)) {
+                    state   = GameState::MENU;
+                    menuSel = 0;
+                }
+
+            } else if (state == GameState::MENU) {
+                // A/LEFT = opcao da esquerda (Comecar)
+                if (input.isKeyJustPressed(Key::LEFT)  && menuSel != 0) menuSel = 0;
+                // D/RIGHT = opcao da direita (Creditos)
+                if (input.isKeyJustPressed(Key::RIGHT) && menuSel != 1) menuSel = 1;
+
+                // ESPACO = confirmar seleccao
+                if (input.isKeyJustPressed(Key::SPACE)) {
+                    if (menuSel == 0) {
+                        // Comecar: reinicia tudo
+                        resetGame();
+                    } else {
+                        // Creditos: volta a mostrar os creditos
+                        state = GameState::CREDITS;
+                    }
                 }
             }
 
-            if (level.hasFlag && PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
-                std::cout << "\n=========================================\n";
-                std::cout << " 🎉 PARABÉNS! ALCANÇASTE O TOPO! 🎉\n";
-                std::cout << "=========================================\n\n";
-                break;
-            }
-
-            if (!renderer.drawFrame(player, camera, &level)) break;
+            // ── Renderizacao ──────────────────────────────────────────────────
+            if (!renderer.drawFrame(player, camera, &level, state, menuSel)) break;
         }
 
         vkDeviceWaitIdle(ctx.device());
