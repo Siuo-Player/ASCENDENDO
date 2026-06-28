@@ -90,15 +90,14 @@ int main() {
         // ── Funcao de reset / (re)inicio ─────────────────────────────────────
         auto resetGame = [&]() {
             player             = logic::Player{};
-            player.body.position = { config::LOGICAL_WIDTH / 2.0f, 0.0f };
+            player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f }; // acima do chao (top=20)
             camera             = gfx::Camera{};
             world              = logic::PhysicsWorld{};
             level.clear();
             currentLevelIndex  = 0;
             currentSpawnY      = 0.0f;
 
-            // Chao absoluto + primeiro chunk
-            level.addPlatform(0.0f, -10.0f, config::LOGICAL_WIDTH, 10.0f);
+            // Carregar primeiro chunk (inclui o chao full-width em inicio.lvl)
             if (!campaign.empty()) {
                 currentSpawnY = level.appendFromFile(
                     campaign[0], config::LOGICAL_WIDTH, 0.0f);
@@ -107,6 +106,7 @@ int main() {
 
             state   = GameState::PLAYING;
             menuSel = 0;
+            glfwSetWindowTitle(win.handle(), "ASCENDENDO");
         };
 
         // Arranque inicial
@@ -152,6 +152,8 @@ int main() {
                 if (level.hasFlag &&
                     PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
                     state = GameState::CREDITS;
+                    glfwSetWindowTitle(win.handle(),
+                        "ASCENDENDO | Creditos | ESPACO para continuar");
                     std::cout
                         << "\n============================================\n"
                         << "  ASCENDENDO -- FIM DA CAMPANHA\n"
@@ -167,6 +169,8 @@ int main() {
                 if (input.isKeyJustPressed(Key::SPACE)) {
                     state   = GameState::MENU;
                     menuSel = 0;
+                    glfwSetWindowTitle(win.handle(),
+                        "ASCENDENDO | A/D navegar  ESPACO confirmar  ESC sair");
                 }
 
             } else if (state == GameState::MENU) {

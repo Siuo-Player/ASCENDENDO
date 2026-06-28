@@ -497,3 +497,37 @@ Ideia: v7.4 — Comando canonico para capturar log completo de testes.
 Implementado: Comando canonico:
     python reorganize.py && make clean && make tests-verbose -j8 > log_testes.txt 2>&1
   log_testes.txt passa a residir em Tests/ (adicionado ao reorganize.py MOVES).
+
+[2026-06-29 12:00:00]
+Ideia: v7.5 — FLAG visual, plataforma sob FLAG, spawn acima do chao, menu legivel (BitmapFont).
+  PROBLEMAS CORRIGIDOS:
+  1. FLAG sem representacao fisica: A FLAG era apenas uma zona de colisao
+     invisivel. Adicionado visual com mastro (pole, 4px, dourado escuro) +
+     pano (pennant, 45% largura, dourado brilhante) + zona de touchdown
+     semi-transparente (alpha 0.18). Plataforma solida adicionada em
+     precipicio.lvl (PLATFORM 389 215 120 20) mesmo abaixo da FLAG.
+  2. Spawn dentro do chao: player.body.position.y = 0.0f colocava o
+     jogador DENTRO da primeira plataforma (y=0, top=20). Corrigido
+     para y=40.0f (20px acima do topo da plataforma). Removido tambem
+     o addPlatform de chao absoluto redundante do resetGame().
+  3. Menu ilegivel (so blocos coloridos): Implementada fonte bitmap 5x5
+     (BitmapFont.h) com todos os caracteres ASCII imprimiveis, maiusculas
+     e minusculas (mapeadas para maiusculas). drawGlyph() + drawText() +
+     drawTextC() (centrado) como lambdas locais no recordCommandBuffer.
+     CREDITS: texto real com ASCENDENDO, FIM DA CAMPANHA, AUTOR:,
+     RAFAEL GOMES BERNARDO, AUXILIADO POR:, CLAUDE ANTHROPIC, GEMINI GOOGLE,
+     ESPACO PARA CONTINUAR. MENU: duas caixas com borda (4 rectangulos),
+     fundo escuro, label em texto real, seta indicadora, dicas de navegacao.
+  4. glfwSetWindowTitle: titulo da janela muda com o estado (CREDITS/MENU)
+     para reforcar as instrucoes de controlo.
+
+  FICHEIROS ALTERADOS:
+    Game/Graphics/BitmapFont.h  — NOVO: fonte 5x5 (128 chars)
+    Game/Graphics/Renderer.h    — v7.5: GameState enum, assinaturas
+    Game/Graphics/Renderer.cpp  — v7.5: drawText, FLAG visual, CREDITS/MENU reais
+    main.cpp                    — v7.5: spawn y=40, sem addPlatform redundante, titles
+    Game/Assets/Levels/precipicio.lvl — PLATFORM 389 215 120 20 (pedestal FLAG)
+
+  NOTA FUTURA (editor de niveis): a FLAG deve sempre ter um PLATFORM logo
+  abaixo. O levelgen.py devera garantir isso automaticamente.
+Implementado: [A confirmar com make tests && make game]

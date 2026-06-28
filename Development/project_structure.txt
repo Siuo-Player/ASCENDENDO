@@ -77,6 +77,7 @@
 ././Game/Core/.gitkeep
 ././Game/Core/Config.h
 ././Game/Graphics/.gitkeep
+././Game/Graphics/BitmapFont.h
 ././Game/Graphics/Camera.cpp
 ././Game/Graphics/Camera.h
 ././Game/Graphics/Pipeline.cpp

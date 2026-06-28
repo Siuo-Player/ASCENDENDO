@@ -53,6 +53,7 @@ MOVES = [
     # Game / Graphics
     ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
     ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
+    ("BitmapFont.h",            "Game/Graphics/BitmapFont.h"),
     ("Window.h",                "Game/Graphics/Window.h"),
     ("Window.cpp",              "Game/Graphics/Window.cpp"),
     ("Swapchain.h",             "Game/Graphics/Swapchain.h"),

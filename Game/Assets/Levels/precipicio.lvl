@@ -1,5 +1,9 @@
 NAME O Precipicio
+# Plataformas estreitas (100px), gaps de 80px.
+# Entrada: cross-chunk de zigzag (dy=105).
+# Pedestal sob a FLAG: plataforma solida onde o jogador aterra antes de vencer.
 PLATFORM 181 0 100 20
 PLATFORM 389 85 100 20
 PLATFORM 181 170 100 20
+PLATFORM 389 215 120 20
 FLAG 389 235 120 40

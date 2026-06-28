@@ -1,10 +1,11 @@
 // =============================================================================
+//  Game/Graphics/Renderer.cpp
+//
 //  @version 7.5
 //  @history
 //    v5.2  — drawFrame(Player, Camera)
-//    v5.3  — versao do .h atualizada
-//    v6.2b — recordCommandBuffer desenha plataformas (nivel) antes do jogador
-//    v7.5  — GameState: PLAYING (+ FLAG visual), CREDITS, MENU
+//    v6.2b — plataformas desenhadas antes do jogador
+//    v7.5  — GameState, FLAG visual melhorado, BitmapFont (drawText real)
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
@@ -14,6 +15,7 @@
 #include "Logic/Player.h"
 #include "Logic/Level.h"
 #include "Graphics/Camera.h"
+#include "Graphics/BitmapFont.h"   // fonte 5x5 bitmap
 #include "Core/Config.h"
 
 namespace gfx {
@@ -112,17 +114,14 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
 
-    // ── Cor de fundo baseada no estado ────────────────────────────────────────
+    // ── Cor de fundo por estado ───────────────────────────────────────────────
     VkClearValue clearColor{};
-    if (state == GameState::CREDITS) {
-        clearColor.color = {{config::CLEAR_CREDITS_R, config::CLEAR_CREDITS_G,
-                              config::CLEAR_CREDITS_B, 1.0f}};
-    } else if (state == GameState::MENU) {
-        clearColor.color = {{config::CLEAR_MENU_R, config::CLEAR_MENU_G,
-                              config::CLEAR_MENU_B, 1.0f}};
-    } else {
+    if      (state == GameState::CREDITS)
+        clearColor.color = {{config::CLEAR_CREDITS_R, config::CLEAR_CREDITS_G, config::CLEAR_CREDITS_B, 1.0f}};
+    else if (state == GameState::MENU)
+        clearColor.color = {{config::CLEAR_MENU_R, config::CLEAR_MENU_G, config::CLEAR_MENU_B, 1.0f}};
+    else
         clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}};
-    }
 
     VkRenderPassBeginInfo rpBI{};
     rpBI.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -137,138 +136,200 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
 
     // ── Letterbox viewport ────────────────────────────────────────────────────
-    int32_t winW = m_swapchain->extent().width;
-    int32_t winH = m_swapchain->extent().height;
+    int32_t winW = (int32_t)m_swapchain->extent().width;
+    int32_t winH = (int32_t)m_swapchain->extent().height;
     float   winAR = (float)winW / (float)winH;
-
     int32_t viewW = winW, viewH = winH;
     if (winAR > config::TARGET_ASPECT) viewW = (int32_t)(winH * config::TARGET_ASPECT);
     else                               viewH = (int32_t)(winW / config::TARGET_ASPECT);
-
     int32_t offsetX = (winW - viewW) / 2;
     int32_t offsetY = (winH - viewH) / 2;
 
-    VkViewport viewport{};
-    viewport.x = (float)offsetX; viewport.y = (float)offsetY;
-    viewport.width = (float)viewW; viewport.height = (float)viewH;
-    viewport.minDepth = 0.0f; viewport.maxDepth = 1.0f;
-    vkCmdSetViewport(cmd, 0, 1, &viewport);
-
-    VkRect2D scissor{};
-    scissor.offset = {offsetX, offsetY};
-    scissor.extent = {(uint32_t)viewW, (uint32_t)viewH};
-    vkCmdSetScissor(cmd, 0, 1, &scissor);
+    VkViewport vp{}; vp.x=(float)offsetX; vp.y=(float)offsetY;
+    vp.width=(float)viewW; vp.height=(float)viewH; vp.maxDepth=1.0f;
+    vkCmdSetViewport(cmd, 0, 1, &vp);
+    VkRect2D sc{}; sc.offset={offsetX,offsetY};
+    sc.extent={(uint32_t)viewW,(uint32_t)viewH};
+    vkCmdSetScissor(cmd, 0, 1, &sc);
 
     const VkShaderStageFlags stages =
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    // ── Helper: desenhar retangulo no espaco logico ───────────────────────────
-    // 'cam' = nullptr → camara neutra (UI em coordenadas logicas fixas)
+    // ── Helper: drawRect ──────────────────────────────────────────────────────
+    // cam=nullptr → UI (coordenadas logicas sem camera)
     auto drawRect = [&](float x, float y, float w, float h,
                         float r, float g, float b, float a = 1.0f,
                         const gfx::Camera* cam = nullptr) {
         PushConstants p{};
-        p.color[0] = r; p.color[1] = g; p.color[2] = b; p.color[3] = a;
+        p.color[0]=r; p.color[1]=g; p.color[2]=b; p.color[3]=a;
         p.camPos[0]     = cam ? cam->position.x : 0.0f;
         p.camPos[1]     = cam ? cam->position.y : 0.0f;
-        p.objPos[0]     = x; p.objPos[1] = y;
-        p.objSize[0]    = w; p.objSize[1] = h;
+        p.objPos[0]=x;  p.objPos[1]=y;
+        p.objSize[0]=w; p.objSize[1]=h;
         p.logicalRes[0] = config::LOGICAL_WIDTH;
         p.logicalRes[1] = config::LOGICAL_HEIGHT;
         vkCmdPushConstants(cmd, m_pipeline->layout(), stages, 0, sizeof(PushConstants), &p);
         vkCmdDraw(cmd, 6, 1, 0, 0);
     };
 
-    // ═════════════════════════════════════════════════════════════════════════
-    if (state == GameState::PLAYING) {
-    // ═════════════════════════════════════════════════════════════════════════
-
-        // ── 1. PLATAFORMAS ────────────────────────────────────────────────────
-        if (level && !level->platforms().empty()) {
-            for (const auto& platform : level->platforms()) {
-                drawRect(platform.bounds.min.x, platform.bounds.min.y,
-                         platform.bounds.width(), platform.bounds.height(),
-                         config::COLOR_PLATFORM_R, config::COLOR_PLATFORM_G,
-                         config::COLOR_PLATFORM_B, 1.0f, &camera);
+    // ── Helper: drawGlyph / drawText (fonte bitmap 5x5) ──────────────────────
+    // ps = tamanho de cada pixel da fonte em unidades logicas
+    auto drawGlyph = [&](char c, float x, float y, float ps,
+                          float r, float g, float b, float a = 1.0f,
+                          const gfx::Camera* cam = nullptr) {
+        auto uc = (unsigned char)(c>='a'&&c<='z' ? c-32 : c);
+        const uint8_t* rows = gfx::FONT_5X5[uc & 0x7Fu];
+        float gap = ps * 0.2f;   // pequena folga entre pixeis da fonte
+        for (int row = 0; row < 5; ++row) {
+            uint8_t bits = rows[row];
+            if (!bits) continue;
+            for (int col = 0; col < 5; ++col) {
+                if (bits & (0x10u >> col)) {
+                    drawRect(x + col*(ps+gap),
+                             y + (4-row)*(ps+gap),
+                             ps, ps, r, g, b, a, cam);
+                }
             }
         }
+    };
 
-        // ── 2. FLAG (mastro + pano dourado) ───────────────────────────────────
+    // Largura de uma string com dado ps (para centrar)
+    auto textWidth = [&](const char* text, float ps) -> float {
+        float w = 0.0f; float stride = ps*5 + ps*1.2f;
+        for (const char* p = text; *p; ++p)
+            w += (*p==' ') ? ps*3.0f : stride;
+        return w;
+    };
+
+    auto drawText = [&](const char* text, float x, float y, float ps,
+                         float r, float g, float b, float a = 1.0f,
+                         const gfx::Camera* cam = nullptr) {
+        float cx = x; float stride = ps*5 + ps*1.2f;
+        for (const char* p = text; *p; ++p) {
+            if (*p==' ') { cx += ps*3.0f; continue; }
+            drawGlyph(*p, cx, y, ps, r, g, b, a, cam);
+            cx += stride;
+        }
+    };
+
+    auto drawTextC = [&](const char* text, float cx, float y, float ps,
+                          float r, float g, float b, float a = 1.0f,
+                          const gfx::Camera* cam = nullptr) {
+        drawText(text, cx - textWidth(text,ps)/2.0f, y, ps, r, g, b, a, cam);
+    };
+
+    // =========================================================================
+    if (state == GameState::PLAYING) {
+    // =========================================================================
+
+        // 1. PLATAFORMAS (verdes)
+        if (level && !level->platforms().empty()) {
+            for (const auto& plat : level->platforms())
+                drawRect(plat.bounds.min.x, plat.bounds.min.y,
+                         plat.bounds.width(), plat.bounds.height(),
+                         config::COLOR_PLATFORM_R, config::COLOR_PLATFORM_G,
+                         config::COLOR_PLATFORM_B, 1.0f, &camera);
+        }
+
+        // 2. FLAG (mastro + pano) com zona de touchdown semi-transparente
         if (level && level->hasFlag) {
             const auto& fb = level->flagBounds;
-            float cx   = fb.min.x + (fb.width() - 4.0f) / 2.0f; // centro horizontal
+            float mid = fb.min.x + fb.width() * 0.5f;  // centro horizontal
 
-            // Mastro (dourado escuro, 4px, altura total da AABB)
-            drawRect(cx, fb.min.y, 4.0f, fb.height(),
+            // Zona de touchdown (dourado muito transparente — ajuda a ver a area)
+            drawRect(fb.min.x, fb.min.y, fb.width(), fb.height(),
+                     0.9f, 0.75f, 0.05f, 0.18f, &camera);
+
+            // Mastro: 4px de largura, centrado horizontalmente, altura total
+            drawRect(mid - 2.0f, fb.min.y, 4.0f, fb.height(),
                      config::COLOR_FLAG_POLE_R, config::COLOR_FLAG_POLE_G,
                      config::COLOR_FLAG_POLE_B, 1.0f, &camera);
 
-            // Pano (dourado brilhante, 60% da largura, 35% superior)
-            float panoH = fb.height() * 0.35f;
-            drawRect(cx + 4.0f, fb.max.y - panoH,
-                     fb.width() * 0.60f, panoH,
+            // Pano: 45% da largura total, 40% superior, a DIREITA do mastro
+            float panoW = fb.width() * 0.45f;
+            float panoH = fb.height() * 0.42f;
+            drawRect(mid + 2.0f, fb.max.y - panoH, panoW, panoH,
                      config::COLOR_FLAG_R, config::COLOR_FLAG_G,
                      config::COLOR_FLAG_B, 1.0f, &camera);
+
+            // Faixa escura no pano (detalhe visual)
+            drawRect(mid + 2.0f, fb.max.y - panoH + panoH*0.35f,
+                     panoW, panoH*0.18f,
+                     0.6f, 0.45f, 0.0f, 0.85f, &camera);
         }
 
-        // ── 3. JOGADOR ────────────────────────────────────────────────────────
+        // 3. JOGADOR
         drawRect(player.position().x, player.position().y,
                  player.body.width, player.body.height,
                  config::COLOR_PLAYER_R, config::COLOR_PLAYER_G,
                  config::COLOR_PLAYER_B, 1.0f, &camera);
 
-    // ═════════════════════════════════════════════════════════════════════════
+    // =========================================================================
     } else if (state == GameState::CREDITS) {
-    // ═════════════════════════════════════════════════════════════════════════
-        // Coordenadas em espaco logico (640×360). Y=0=baixo, Y=360=cima.
-        // Sem texto real: barras coloridas sugerem linhas de texto.
+    // =========================================================================
+        // Todas as coordenadas em espaco logico 640x360 (camera=0,0)
+        const float CX = config::LOGICAL_WIDTH / 2.0f;   // 320
 
-        // Titulo (dourado largo)
-        drawRect(100, 295, 440, 26, 1.0f, 0.85f, 0.10f);
-        // Subtitulo (branco dimmer)
-        drawRect(100, 265, 440, 14, 0.75f, 0.75f, 0.80f);
+        // Titulo principal
+        drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 1.0f, 0.85f, 0.10f);
+        // Subtitulo
+        drawTextC("FIM DA CAMPANHA", CX, 268.0f, 3.0f, 0.80f, 0.80f, 0.80f);
         // Separador
-        drawRect( 90, 250, 460,  2, 0.30f, 0.30f, 0.40f);
+        drawRect(60.0f, 255.0f, 520.0f, 2.0f, 0.30f, 0.30f, 0.40f);
 
         // Autor
-        drawRect(100, 220, 240, 14, 0.95f, 0.95f, 0.95f);
-        // "Auxiliado por: Claude (Anthropic)"
-        drawRect(100, 198, 310, 12, 0.70f, 0.80f, 1.00f);
-        // "              Gemini (Google)"
-        drawRect(100, 180, 270, 12, 0.60f, 0.90f, 0.78f);
+        drawText("AUTOR:", 80.0f, 228.0f, 2.0f, 0.50f, 0.50f, 0.60f);
+        drawText("RAFAEL GOMES BERNARDO", 80.0f, 206.0f, 3.0f, 0.95f, 0.95f, 0.95f);
+
+        // Assistentes
+        drawText("AUXILIADO POR:", 80.0f, 178.0f, 2.0f, 0.50f, 0.50f, 0.60f);
+        drawText("CLAUDE  ANTHROPIC", 80.0f, 156.0f, 3.0f, 0.70f, 0.80f, 1.00f);
+        drawText("GEMINI  GOOGLE",    80.0f, 128.0f, 3.0f, 0.60f, 0.90f, 0.78f);
 
         // Separador inferior
-        drawRect( 90,  90, 460,  2, 0.25f, 0.25f, 0.35f);
-        // "Pressiona ESPACO" (barra discreta a piscar — sempre visivel por agora)
-        drawRect(180,  62, 280, 10, 0.35f, 0.35f, 0.50f);
+        drawRect(60.0f, 90.0f, 520.0f, 2.0f, 0.25f, 0.25f, 0.35f);
+        // Dica
+        drawTextC("ESPACO PARA CONTINUAR", CX, 60.0f, 2.0f, 0.40f, 0.40f, 0.55f);
 
-    // ═════════════════════════════════════════════════════════════════════════
+    // =========================================================================
     } else if (state == GameState::MENU) {
-    // ═════════════════════════════════════════════════════════════════════════
-        // Titulo do menu
-        drawRect(180, 280, 280, 22, 0.90f, 0.80f, 0.20f);
-        // Separador
-        drawRect( 80, 262, 480,  2, 0.25f, 0.25f, 0.35f);
+    // =========================================================================
+        const float CX = config::LOGICAL_WIDTH / 2.0f;
 
-        // Opcao 0: "Comecar" (esquerda)
-        float sel0r = (menuSel == 0) ? 1.0f : 0.20f;
-        float sel0g = (menuSel == 0) ? 0.85f : 0.20f;
-        float sel0b = (menuSel == 0) ? 0.10f : 0.25f;
-        drawRect( 80, 150, 200, 55, sel0r, sel0g, sel0b);
-        // Icone interno (retangulo menor centrado, ≈ triangulo play)
-        drawRect(140, 163, 80, 30, sel0r * 0.7f, sel0g * 0.7f, sel0b * 0.6f);
+        // Titulo
+        drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 0.95f, 0.80f, 0.10f);
+        drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
 
-        // Opcao 1: "Creditos" (direita)
-        float sel1r = (menuSel == 1) ? 1.0f : 0.20f;
-        float sel1g = (menuSel == 1) ? 0.85f : 0.20f;
-        float sel1b = (menuSel == 1) ? 0.10f : 0.25f;
-        drawRect(360, 150, 200, 55, sel1r, sel1g, sel1b);
-        drawRect(400, 163, 120, 10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
-        drawRect(400, 178, 100, 10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
-        drawRect(400, 193, 80,  10, sel1r * 0.7f, sel1g * 0.7f, sel1b * 0.6f);
+        // Funcao utilitaria: desenhar caixa de opcao com borda e texto
+        auto drawOption = [&](const char* label, float boxX, bool selected) {
+            const float bW=220, bH=80, bY=160;
+            float lr = selected ? 1.0f : 0.22f;
+            float lg = selected ? 0.85f: 0.22f;
+            float lb = selected ? 0.10f: 0.28f;
+            // Fundo escuro
+            drawRect(boxX, bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
+            // Bordas (4 rectangulos = frame)
+            drawRect(boxX,          bY,      bW, 2.0f, lr, lg, lb); // baixo
+            drawRect(boxX,          bY+bH-2, bW, 2.0f, lr, lg, lb); // cima
+            drawRect(boxX,          bY,  2.0f, bH, lr, lg, lb);     // esq
+            drawRect(boxX+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);     // dir
+            // Label centrado horizontalmente na caixa
+            drawTextC(label, boxX + bW/2.0f, bY + bH/2.0f - 7.5f,
+                      3.0f, lr, lg, lb);
+        };
 
-        // Dica de navegacao (barra discreta)
-        drawRect(160,  50, 320,  8, 0.25f, 0.25f, 0.35f);
+        drawOption("COMECAR",  60.0f,  menuSel == 0);   // opcao esquerda
+        drawOption("CREDITOS", 360.0f, menuSel == 1);   // opcao direita
+
+        // Indicador de seleccao (seta/triangulo simulado por rectangulos)
+        float arrowX = (menuSel == 0) ? 170.0f : 470.0f;
+        drawRect(arrowX-4.0f, 148.0f, 8.0f, 8.0f, 1.0f, 0.85f, 0.10f); // ponta
+
+        // Dica de navegacao
+        drawTextC("A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
+                  CX, 80.0f, 2.0f, 0.30f, 0.30f, 0.42f);
+        drawTextC("ESC PARA SAIR",
+                  CX, 58.0f, 2.0f, 0.25f, 0.25f, 0.35f);
     }
 
     vkCmdEndRenderPass(cmd);
