@@ -1,26 +1,44 @@
-[CC ] Tests/Unit/test_input.cpp
-[CC ] Tests/Unit/test_campaign.cpp
 [CC ] Tests/test_runner.cpp
+[CC ] Tests/Unit/test_camera.cpp
+[CC ] Tests/Unit/test_campaign.cpp
+[CC ] Tests/Unit/test_campaign_id.cpp
+[CC ] Tests/Unit/test_input.cpp
+[CC ] Tests/Unit/test_placeholder.cpp
 [CC ] Tests/Unit/test_level.cpp
 [CC ] Tests/Unit/test_physics.cpp
-[CC ] Tests/Unit/test_placeholder.cpp
-[CC ] Tests/Unit/test_camera.cpp
-[CC ] Tests/Unit/test_player.cpp
-[CC ] Tests/Integration/test_pipeline.cpp
+[CC ] Tests/Unit/test_run_history.cpp
 [CC ] Tests/Unit/test_replay.cpp
+[CC ] Tests/Unit/test_player.cpp
 [CC ] Tests/Unit/test_vulkan_context.cpp
 [CC ] Tests/Integration/test_render_pass.cpp
+[CC ] Tests/Integration/test_pipeline.cpp
 [CC ] Tests/Integration/test_renderer.cpp
-[CC ] Tests/Integration/test_vulkan_init.cpp
+[CC ] Tests/Integration/test_sprite_pipeline.cpp
 [CC ] Tests/Integration/test_swapchain.cpp
+[CC ] Tests/Integration/test_vulkan_init.cpp
 [CC ] Tests/Integration/test_window.cpp
 [CC ] Game/Graphics/Camera.cpp
 [CC ] Game/Graphics/Pipeline.cpp
+[CC ] Game/Graphics/FontRenderer.cpp
 [CC ] Game/Graphics/RenderPass.cpp
+[CC ] Game/Graphics/SpritePipeline.cpp
 [CC ] Game/Graphics/Renderer.cpp
-[CC ] Game/Graphics/VulkanContext.cpp
+[CC ] Game/Graphics/SpriteRenderer.cpp
 [CC ] Game/Graphics/Swapchain.cpp
+[CC ] Game/Graphics/TextPipeline.cpp
+In file included from Game/Graphics/SpriteRenderer.cpp:21:
+external\stb/stb_image.h:732:12: warning: unused function 'stbi__cpuid3' [-Wunused-function]
+  732 | static int stbi__cpuid3(void)
+      |            ^~~~~~~~~~~~
+external\stb/stb_image.h:1070:12: warning: unused function 'stbi__addints_valid' [-Wunused-function]
+ 1070 | static int stbi__addints_valid(int a, int b)
+      |            ^~~~~~~~~~~~~~~~~~~
+external\stb/stb_image.h:1078:12: warning: unused function 'stbi__mul2shorts_valid' [-Wunused-function]
+ 1078 | static int stbi__mul2shorts_valid(int a, int b)
+      |            ^~~~~~~~~~~~~~~~~~~~~~
+[CC ] Game/Graphics/VulkanContext.cpp
 [CC ] Game/Graphics/Window.cpp
+3 warnings generated.
 [CC ] Game/Logic/InputManager.cpp
 [CC ] Game/Logic/Level.cpp
 [CC ] Game/Logic/Physics.cpp
@@ -133,6 +151,83 @@ Tests/Integration/test_renderer.cpp(75): SUCCESS: CHECK( successFrames == FRAMES
   values: CHECK( 120 == 120 )
 
 Tests/Integration/test_renderer.cpp(76): MESSAGE: Fase 5.3 CONCLUIDA! O quadrado caiu com gravidade e colidiu com o chao invisivel.
+
+===============================================================================
+Tests/Integration/test_sprite_pipeline.cpp(32):
+TEST SUITE: Fase 8.2 — Sprite Pipeline (pixel-art)
+TEST CASE:  SpritePipeline: criacao com descriptor set layout
+
+Tests/Integration/test_sprite_pipeline.cpp(39): SUCCESS: REQUIRE( win.create(800, 600, "SpritePipeline Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(42): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(45): SUCCESS: REQUIRE( surface != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Integration/test_sprite_pipeline.cpp(46): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(47): SUCCESS: REQUIRE( swapchain.init(&ctx, &win) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(48): SUCCESS: REQUIRE( renderPass.init(&ctx, &swapchain) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(51): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_sprite_pipeline.cpp(53): SUCCESS: CHECK( spritePipeline.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(54): SUCCESS: CHECK( spritePipeline.handle() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_sprite_pipeline.cpp(55): SUCCESS: CHECK( spritePipeline.layout() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_sprite_pipeline.cpp(56): SUCCESS: CHECK( spritePipeline.descriptorSetLayout() != nullptr ) is correct!
+  values: CHECK( 1 != nullptr )
+
+Tests/Integration/test_sprite_pipeline.cpp(58): MESSAGE: SpritePipeline criada com sucesso (sampler NEAREST, descriptor set incluido).
+
+===============================================================================
+Tests/Integration/test_sprite_pipeline.cpp(61):
+TEST SUITE: Fase 8.2 — Sprite Pipeline (pixel-art)
+TEST CASE:  SpriteRenderer: carga do PNG do jogador + upload para a GPU
+
+Tests/Integration/test_sprite_pipeline.cpp(69): SUCCESS: REQUIRE( win.create(800, 600, "SpriteRenderer Test") ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(72): SUCCESS: REQUIRE( ctx.init(false, exts) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(75): SUCCESS: REQUIRE( ctx.createSurface(surface) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(76): SUCCESS: REQUIRE( swapchain.init(&ctx, &win) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(77): SUCCESS: REQUIRE( renderPass.init(&ctx, &swapchain) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(78): SUCCESS: REQUIRE( spritePipeline.init(&ctx, &swapchain, &renderPass) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(86): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Integration/test_sprite_pipeline.cpp(88): SUCCESS: CHECK( sprite.isInitialized() ) is correct!
+  values: CHECK( true )
+
+Tests/Integration/test_sprite_pipeline.cpp(89): SUCCESS: CHECK( sprite.width() > 0 ) is correct!
+  values: CHECK( 32 >  0 )
+
+Tests/Integration/test_sprite_pipeline.cpp(90): SUCCESS: CHECK( sprite.height() > 0 ) is correct!
+  values: CHECK( 32 >  0 )
+
+Tests/Integration/test_sprite_pipeline.cpp(93): MESSAGE: SpriteRenderer: PNG carregado e enviado para a GPU com sucesso (32x32).
 
 ===============================================================================
 Tests/Integration/test_swapchain.cpp(10):
@@ -319,15 +414,7 @@ Tests/Unit/test_camera.cpp(48): SUCCESS: CHECK( center.y == doctest::Approx(0.0f
 
 ===============================================================================
 Tests/Unit/test_camera.cpp(54):
-TEST SUITE: Fase 6.4 — Camera T
-  Campanha: C:\Users\ASUS\Documents\Ascendendo\Game\Assets\Levels\campaign.txt
-
-  [OK]    inicio.lvl: Caminho fisicamente possivel encontrado
-  [OK]    zigzag.lvl: Caminho fisicamente possivel encontrado
-  [OK]    precipicio.lvl: Caminho fisicamente possivel encontrado
-
-  [OK] Campanha validada -- todos os niveis sao passiveis.
-racking Vertical
+TEST SUITE: Fase 6.4 — Camera Tracking Vertical
 TEST CASE:  follow() move camera em direcao ao jogador
 
 Tests/Unit/test_camera.cpp(66): SUCCESS: CHECK( cam.position.y > target * 0.9f ) is correct!
@@ -338,7 +425,15 @@ Tests/Unit/test_camera.cpp(67): SUCCESS: CHECK( cam.position.y <= target + 1.0f 
 
 ===============================================================================
 Tests/Unit/test_camera.cpp(70):
-TEST SUITE: Fase 6.4 — Camera Tracking Vertical
+TEST
+  Campanha: C:\Users\ASUS\Documents\Ascendendo\Game\Assets\Levels\campaign.txt
+
+  [OK]    inicio.lvl: Caminho fisicamente possivel encontrado
+  [OK]    zigzag.lvl: Caminho fisicamente possivel encontrado
+  [OK]    precipicio.lvl: Caminho fisicamente possivel encontrado
+
+  [OK] Campanha validada -- todos os niveis sao passiveis.
+ SUITE: Fase 6.4 — Camera Tracking Vertical
 TEST CASE:  follow() nao vai abaixo de zero
 
 Tests/Unit/test_camera.cpp(80): SUCCESS: CHECK( cam.position.y >= 0.0f ) is correct!
@@ -362,6 +457,94 @@ TEST CASE:  ai_validator --campaign: todos os niveis sao fisicamente passiveis
 
 Tests/Unit/test_campaign.cpp(24): SUCCESS: CHECK( ret == 0 ) is correct!
   values: CHECK( 0 == 0 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(48):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  fnv1a64: mesma entrada produz sempre o mesmo hash
+
+Tests/Unit/test_campaign_id.cpp(52): SUCCESS: CHECK( h1 == h2 ) is correct!
+  values: CHECK( 1109817072422714760 == 1109817072422714760 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(55):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  fnv1a64: entradas diferentes produzem hashes diferentes
+
+Tests/Unit/test_campaign_id.cpp(58): SUCCESS: CHECK( fnv1a64(dataA, 3) != fnv1a64(dataB, 3) ) is correct!
+  values: CHECK( 15035938162879559083 != 15035943660437700138 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(61):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  toHex16: produz sempre 16 caracteres
+
+Tests/Unit/test_campaign_id.cpp(62): SUCCESS: CHECK( toHex16(0).length() == 16 ) is correct!
+  values: CHECK( 16 == 16 )
+
+Tests/Unit/test_campaign_id.cpp(63): SUCCESS: CHECK( toHex16(0xFFFFFFFFFFFFFFFFull).length() == 16 ) is correct!
+  values: CHECK( 16 == 16 )
+
+Tests/Unit/test_campaign_id.cpp(64): SUCCESS: CHECK( toHex16(0xFFFFFFFFFFFFFFFFull) == "ffffffffffffffff" ) is correct!
+  values: CHECK( ffffffffffffffff == ffffffffffffffff )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(67):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  computeCampaignID: campanha inexistente devolve string vazia
+
+Tests/Unit/test_campaign_id.cpp(69): SUCCESS: CHECK( id.empty() ) is correct!
+  values: CHECK( true )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(72):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  computeCampaignID: mesma campanha produz sempre o mesmo ID
+
+Tests/Unit/test_campaign_id.cpp(83): SUCCESS: REQUIRE( !id1.empty() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_campaign_id.cpp(84): SUCCESS: CHECK( id1 == id2 ) is correct!
+  values: CHECK( 3e53f546537b8733 == 3e53f546537b8733 )
+
+Tests/Unit/test_campaign_id.cpp(85): SUCCESS: CHECK( id1.length() == 16 ) is correct!
+  values: CHECK( 16 == 16 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(90):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  computeCampaignID: alterar um nivel muda o ID
+
+Tests/Unit/test_campaign_id.cpp(101): SUCCESS: REQUIRE( !idBefore.empty() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_campaign_id.cpp(102): SUCCESS: REQUIRE( !idAfter.empty() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_campaign_id.cpp(103): SUCCESS: CHECK( idBefore != idAfter ) is correct!
+  values: CHECK( eae105cd5df2e64d != b196bb0a75969c28 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(108):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  computeCampaignID: mudar a ORDEM dos niveis muda o ID
+
+Tests/Unit/test_campaign_id.cpp(127): SUCCESS: REQUIRE( !idA.empty() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_campaign_id.cpp(128): SUCCESS: REQUIRE( !idB.empty() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_campaign_id.cpp(129): SUCCESS: CHECK( idA != idB ) is correct!
+  values: CHECK( 3b7f7389031aea01 != 0040aae27065c393 )
+
+===============================================================================
+Tests/Unit/test_campaign_id.cpp(135):
+TEST SUITE: Fase 8.1 — CampaignID
+TEST CASE:  computeCampaignID: nomes iguais, conteudo igual -> mesmo ID (mesma campanha)
+
+Tests/Unit/test_campaign_id.cpp(148): SUCCESS: CHECK( computeCampaignID(dirA) == computeCampaignID(dirB) ) is correct!
+  values: CHECK( fc90e052c6bf7620 == fc90e052c6bf7620 )
 
 ===============================================================================
 Tests/Unit/test_input.cpp(16):
@@ -992,6 +1175,57 @@ Tests/Unit/test_replay.cpp(125): SUCCESS: CHECK( playerPlayback.velocity().y == 
   values: CHECK( 225.425 == 225.425 )
 
 ===============================================================================
+Tests/Unit/test_run_history.cpp(31):
+TEST SUITE: Fase 8.1 — RunHistory
+TEST CASE:  formatElapsed: formata MM:SS.mmm correctamente
+
+Tests/Unit/test_run_history.cpp(32): SUCCESS: CHECK( formatElapsed(0.0f) == "00:00.000" ) is correct!
+  values: CHECK( 00:00.000 == 00:00.000 )
+
+Tests/Unit/test_run_history.cpp(33): SUCCESS: CHECK( formatElapsed(5.5f) == "00:05.500" ) is correct!
+  values: CHECK( 00:05.500 == 00:05.500 )
+
+Tests/Unit/test_run_history.cpp(34): SUCCESS: CHECK( formatElapsed(65.25f) == "01:05.250" ) is correct!
+  values: CHECK( 01:05.250 == 01:05.250 )
+
+Tests/Unit/test_run_history.cpp(35): SUCCESS: CHECK( formatElapsed(125.487f) == "02:05.487" ) is correct!
+  values: CHECK( 02:05.487 == 02:05.487 )
+
+Tests/Unit/test_run_history.cpp(36): SUCCESS: CHECK( formatElapsed(-3.0f) == "00:00.000" ) is correct!
+  values: CHECK( 00:00.000 == 00:00.000 )
+
+===============================================================================
+Tests/Unit/test_run_history.cpp(39):
+TEST SUITE: Fase 8.1 — RunHistory
+TEST CASE:  recordRun: cria pasta e ficheiro com cabecalho na primeira escrita
+
+Tests/Unit/test_run_history.cpp(45): SUCCESS: REQUIRE( ok == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_run_history.cpp(46): SUCCESS: REQUIRE( std::filesystem::exists(path) ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_run_history.cpp(51): SUCCESS: CHECK( header == "timestamp,campaign_name,campaign_id,elapsed_seconds,elapsed_formatted" ) is correct!
+  values: CHECK( timestamp,campaign_name,campaign_id,elapsed_seconds,elapsed_formatted == timestamp,campaign_name,campaign_id,elapsed_seconds,elapsed_formatted )
+
+Tests/Unit/test_run_history.cpp(55): SUCCESS: CHECK( dataLine.find("TesteCampanha") != std::string::npos ) is correct!
+  values: CHECK( 20 != 18446744073709551615 )
+
+Tests/Unit/test_run_history.cpp(56): SUCCESS: CHECK( dataLine.find("abc123") != std::string::npos ) is correct!
+  values: CHECK( 34 != 18446744073709551615 )
+
+===============================================================================
+Tests/Unit/test_run_history.cpp(62):
+TEST SUITE: Fase 8.1 — RunHistory
+TEST CASE:  recordRun: segunda chamada acrescenta sem duplicar cabecalho
+
+Tests/Unit/test_run_history.cpp(80): SUCCESS: CHECK( lineCount == 3 ) is correct!
+  values: CHECK( 3 == 3 )
+
+Tests/Unit/test_run_history.cpp(81): SUCCESS: CHECK( headerCount == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+===============================================================================
 Tests/Unit/test_vulkan_context.cpp(15):
 TEST SUITE: VulkanContext
 TEST CASE:  init() devolve handles Vulkan validos
@@ -1085,7 +1319,7 @@ Tests/Unit/test_vulkan_context.cpp(77): SUCCESS: CHECK( ctx.isInitialized() ) is
   values: CHECK( true )
 
 ===============================================================================
-[doctest] test cases:  68 |  68 passed | 0 failed | 0 skipped
-[doctest] assertions: 225 | 225 passed | 0 failed |
+[doctest] test cases:  81 |  81 passed | 0 failed | 0 skipped
+[doctest] assertions: 274 | 274 passed | 0 failed |
 [doctest] Status: SUCCESS!
 

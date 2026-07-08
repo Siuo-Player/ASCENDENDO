@@ -1,22 +1,41 @@
 // =============================================================================
 //  Game/Graphics/Renderer.cpp
 //
-//  @version 7.5
+//  @version 8.2
 //  @history
 //    v5.2  — drawFrame(Player, Camera)
 //    v6.2b — plataformas desenhadas antes do jogador
 //    v7.5  — GameState, FLAG visual melhorado, BitmapFont (drawText real)
+//    v7.6  — attachText(): TTF real (FontRenderer+TextPipeline) em
+//             CREDITS/MENU, com fallback para BitmapFont se nao anexado.
+//    v8.1  — GameState::PAUSED (mundo congelado + overlay + menu 3 opcoes).
+//             drawWorld() extraido como helper partilhado PLAYING/PAUSED.
+//             Timer HUD em PLAYING. MENU (fim-de-run) agora tem 3 opcoes.
+//    v8.2  — FIX: zona de touchdown da FLAG removida (misturava-se com o
+//             fundo escuro, parecia bug de cor). FIX: timer HUD deslocado
+//             para longe do topo do ecra (estava a ser cortado pelo
+//             clipping de viewport — causa real do "texto garbled").
+//             FIX: layout de CREDITOS recalculado (labels e nomes tinham
+//             pouco espaco entre si). attachSprite(): jogador desenhado
+//             como pixel-art (SpriteRenderer) com flip conforme
+//             facingDirection; fallback para rectangulo solido.
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
 #include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
 #include "Graphics/Pipeline.h"
+#include "Graphics/TextPipeline.h"
+#include "Graphics/FontRenderer.h"
+#include "Graphics/SpritePipeline.h"
+#include "Graphics/SpriteRenderer.h"
 #include "Logic/Player.h"
 #include "Logic/Level.h"
 #include "Graphics/Camera.h"
-#include "Graphics/BitmapFont.h"   // fonte 5x5 bitmap
+#include "Graphics/BitmapFont.h"   // fallback (usado se attachText() nao for chamado)
 #include "Core/Config.h"
+#include <string>
+#include <cstdio>
 
 namespace gfx {
 
@@ -37,6 +56,16 @@ bool Renderer::init(VulkanContext* ctx, Swapchain* swapchain,
 
     m_initialized = true;
     return true;
+}
+
+void Renderer::attachText(TextPipeline* textPipeline, FontRenderer* font) {
+    m_textPipeline = textPipeline;
+    m_font         = font;
+}
+
+void Renderer::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite) {
+    m_spritePipeline = spritePipeline;
+    m_sprite         = sprite;
 }
 
 void Renderer::cleanup() {
@@ -62,7 +91,7 @@ void Renderer::cleanup() {
 
 bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
                          const logic::Level* level,
-                         GameState state, int menuSel) {
+                         GameState state, int menuSel, float elapsedSeconds) {
     VkDevice device = m_ctx->device();
     vkWaitForFences(device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX);
 
@@ -75,7 +104,7 @@ bool Renderer::drawFrame(const logic::Player& player, const gfx::Camera& camera,
     vkResetCommandBuffer(m_commandBuffers[imageIndex], 0);
 
     if (!recordCommandBuffer(m_commandBuffers[imageIndex], imageIndex,
-                              player, camera, level, state, menuSel))
+                              player, camera, level, state, menuSel, elapsedSeconds))
         return false;
 
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -109,12 +138,14 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
                                    const logic::Player& player,
                                    const gfx::Camera& camera,
                                    const logic::Level* level,
-                                   GameState state, int menuSel) {
+                                   GameState state, int menuSel, float elapsedSeconds) {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     if (vkBeginCommandBuffer(cmd, &beginInfo) != VK_SUCCESS) return false;
 
     // ── Cor de fundo por estado ───────────────────────────────────────────────
+    // PAUSED usa a MESMA cor de fundo que PLAYING — o mundo continua visivel
+    // por baixo do overlay escuro (ver mais abaixo).
     VkClearValue clearColor{};
     if      (state == GameState::CREDITS)
         clearColor.color = {{config::CLEAR_CREDITS_R, config::CLEAR_CREDITS_G, config::CLEAR_CREDITS_B, 1.0f}};
@@ -218,11 +249,10 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
         drawText(text, cx - textWidth(text,ps)/2.0f, y, ps, r, g, b, a, cam);
     };
 
-    // =========================================================================
-    if (state == GameState::PLAYING) {
-    // =========================================================================
-
-        // 1. PLATAFORMAS (verdes)
+    // ── Helper: mundo do jogo (plataformas + FLAG + jogador) ──────────────────
+    // Partilhado por PLAYING e PAUSED — em PAUSED o mundo fica visivel,
+    // congelado, por baixo do overlay + menu (em vez de desaparecer).
+    auto drawWorld = [&]() {
         if (level && !level->platforms().empty()) {
             for (const auto& plat : level->platforms())
                 drawRect(plat.bounds.min.x, plat.bounds.min.y,
@@ -230,106 +260,274 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
                          config::COLOR_PLATFORM_R, config::COLOR_PLATFORM_G,
                          config::COLOR_PLATFORM_B, 1.0f, &camera);
         }
-
-        // 2. FLAG (mastro + pano) com zona de touchdown semi-transparente
         if (level && level->hasFlag) {
             const auto& fb = level->flagBounds;
-            float mid = fb.min.x + fb.width() * 0.5f;  // centro horizontal
+            float mid = fb.min.x + fb.width() * 0.5f;
 
-            // Zona de touchdown (dourado muito transparente — ajuda a ver a area)
-            drawRect(fb.min.x, fb.min.y, fb.width(), fb.height(),
-                     0.9f, 0.75f, 0.05f, 0.18f, &camera);
-
-            // Mastro: 4px de largura, centrado horizontalmente, altura total
+            // v8.2: removida a zona de touchdown semi-transparente (alpha 0.18)
+            // que aqui estava — sobre o fundo azul-escuro do jogo, um dourado
+            // a 18% de alpha misturava-se para um castanho/oliva que parecia
+            // um bug de cor errada. O mastro+pano ja comunicam bem onde fica
+            // a FLAG; a plataforma solida por baixo (Level.cpp) já indica o
+            // ponto de aterragem.
             drawRect(mid - 2.0f, fb.min.y, 4.0f, fb.height(),
                      config::COLOR_FLAG_POLE_R, config::COLOR_FLAG_POLE_G,
                      config::COLOR_FLAG_POLE_B, 1.0f, &camera);
 
-            // Pano: 45% da largura total, 40% superior, a DIREITA do mastro
             float panoW = fb.width() * 0.45f;
             float panoH = fb.height() * 0.42f;
             drawRect(mid + 2.0f, fb.max.y - panoH, panoW, panoH,
                      config::COLOR_FLAG_R, config::COLOR_FLAG_G,
                      config::COLOR_FLAG_B, 1.0f, &camera);
-
-            // Faixa escura no pano (detalhe visual)
             drawRect(mid + 2.0f, fb.max.y - panoH + panoH*0.35f,
                      panoW, panoH*0.18f,
                      0.6f, 0.45f, 0.0f, 0.85f, &camera);
         }
+        // JOGADOR: sprite pixel-art se disponivel, senao rectangulo solido.
+        // O sprite precisa da SUA PROPRIA troca de pipeline (igual ao texto)
+        // porque usa um VkPipelineLayout com descriptor set diferente do da
+        // pipeline solida usada pelas plataformas/FLAG acima.
+        if (m_sprite && m_spritePipeline) {
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_spritePipeline->handle());
+            m_sprite->bind(cmd, m_spritePipeline->layout());
+            bool flip = player.facingDirection < 0.0f;
+            m_sprite->draw(cmd, m_spritePipeline->layout(),
+                          player.position().x, player.position().y,
+                          player.body.width, player.body.height, flip,
+                          1.0f, 1.0f, 1.0f, 1.0f,
+                          camera.position.x, camera.position.y);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+        } else {
+            drawRect(player.position().x, player.position().y,
+                     player.body.width, player.body.height,
+                     config::COLOR_PLAYER_R, config::COLOR_PLAYER_G,
+                     config::COLOR_PLAYER_B, 1.0f, &camera);
+        }
+    };
 
-        // 3. JOGADOR
-        drawRect(player.position().x, player.position().y,
-                 player.body.width, player.body.height,
-                 config::COLOR_PLAYER_R, config::COLOR_PLAYER_G,
-                 config::COLOR_PLAYER_B, 1.0f, &camera);
+    // Formata segundos como MM:SS para o timer HUD (sem depender de
+    // RunHistory.h — Renderer nao deve conhecer detalhes de ficheiros).
+    auto formatTimerMMSS = [](float seconds) -> std::string {
+        if (seconds < 0.0f) seconds = 0.0f;
+        int totalSec = (int)seconds;
+        int sec = totalSec % 60;
+        int min = totalSec / 60;
+        char buf[16];
+        std::snprintf(buf, sizeof(buf), "%02d:%02d", min, sec);
+        return std::string(buf);
+    };
+
+    // =========================================================================
+    if (state == GameState::PLAYING) {
+    // =========================================================================
+        drawWorld();
+
+        // Timer HUD — canto superior direito, espaco logico (sem camera).
+        // v8.2 FIX: o baseline estava em LOGICAL_HEIGHT-12=348. Com scale=0.6
+        // a altura do glyph (~28*0.6=16.8un) fazia o TOPO do texto chegar a
+        // ~364.8, ULTRAPASSANDO o limite superior do ecra logico (360) — o
+        // topo de cada digito era cortado pelo clipping de viewport/NDC,
+        // dando o aspecto de caracteres garbled/errados. Corrigido: baseline
+        // bem mais abaixo do topo (332), com margem folgada.
+        if (m_font && m_textPipeline) {
+            std::string t = formatTimerMMSS(elapsedSeconds);
+            const float TIMER_SCALE = 0.7f;
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->handle());
+            m_font->bind(cmd, m_textPipeline->layout());
+            m_font->drawText(cmd, m_textPipeline->layout(), t.c_str(),
+                             config::LOGICAL_WIDTH - m_font->textWidth(t.c_str(), TIMER_SCALE) - 16.0f,
+                             config::LOGICAL_HEIGHT - 28.0f, TIMER_SCALE,
+                             0.90f, 0.90f, 0.90f, 0.85f);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+        }
+
+    // =========================================================================
+    } else if (state == GameState::PAUSED) {
+    // =========================================================================
+        drawWorld();   // mundo congelado, continua visivel
+
+        // Overlay escuro semi-transparente sobre TODO o ecra logico.
+        drawRect(0.0f, 0.0f, config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT,
+                 0.0f, 0.0f, 0.0f, 0.55f);
+
+        const float CX = config::LOGICAL_WIDTH / 2.0f;
+        const float bW = 170.0f, bH = 62.0f, bY = 150.0f, gap = 18.0f;
+        const float totalW = bW*3.0f + gap*2.0f;
+        const float startX = CX - totalW/2.0f;
+        const char* labels[3] = { "CONTINUAR", "CREDITOS", "SAIR" };
+
+        auto boxX = [&](int i) { return startX + i*(bW+gap); };
+
+        if (m_font && m_textPipeline) {
+            drawRect(60.0f, 245.0f, 520.0f, 2.0f, 0.35f, 0.35f, 0.45f);
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.30f, lg = sel ? 0.85f : 0.30f, lb = sel ? 0.10f : 0.36f;
+                drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.15f, 0.92f);
+                drawRect(boxX(i),          bY,      bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY+bH-2, bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY,  2.0f, bH, lr, lg, lb);
+                drawRect(boxX(i)+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);
+            }
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->handle());
+            m_font->bind(cmd, m_textPipeline->layout());
+
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "PAUSA",
+                                     CX, 275.0f, 1.3f, 1.0f, 0.85f, 0.10f, 1.0f);
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.55f, lg = sel ? 0.85f : 0.55f, lb = sel ? 0.10f : 0.62f;
+                m_font->drawTextCentered(cmd, m_textPipeline->layout(), labels[i],
+                                         boxX(i) + bW/2.0f, bY + bH/2.0f - 6.5f, 0.5f, lr, lg, lb, 1.0f);
+            }
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(),
+                                     "A/D NAVEGAR   ESPACO CONFIRMAR   ESC CONTINUAR",
+                                     CX, 100.0f, 0.42f, 0.60f, 0.60f, 0.70f, 1.0f);
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+        } else {
+            // Fallback BitmapFont
+            drawTextC("PAUSA", CX, 275.0f, 4.0f, 1.0f, 0.85f, 0.10f);
+            drawRect(60.0f, 245.0f, 520.0f, 2.0f, 0.35f, 0.35f, 0.45f);
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.30f, lg = sel ? 0.85f : 0.30f, lb = sel ? 0.10f : 0.36f;
+                drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.15f, 0.92f);
+                drawRect(boxX(i),          bY,      bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY+bH-2, bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY,  2.0f, bH, lr, lg, lb);
+                drawRect(boxX(i)+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);
+                drawTextC(labels[i], boxX(i)+bW/2.0f, bY+bH/2.0f-6.0f, 1.8f, lr, lg, lb);
+            }
+            drawTextC("A/D NAVEGAR  ESPACO CONFIRMAR  ESC CONTINUAR", CX, 100.0f, 1.4f, 0.5f,0.5f,0.6f);
+        }
 
     // =========================================================================
     } else if (state == GameState::CREDITS) {
     // =========================================================================
-        // Todas as coordenadas em espaco logico 640x360 (camera=0,0)
         const float CX = config::LOGICAL_WIDTH / 2.0f;   // 320
 
-        // Titulo principal
-        drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 1.0f, 0.85f, 0.10f);
-        // Subtitulo
-        drawTextC("FIM DA CAMPANHA", CX, 268.0f, 3.0f, 0.80f, 0.80f, 0.80f);
-        // Separador
-        drawRect(60.0f, 255.0f, 520.0f, 2.0f, 0.30f, 0.30f, 0.40f);
+        if (m_font && m_textPipeline) {
+            // v8.2 FIX: layout recalculado por completo. O problema nao era
+            // so o tamanho — era o ESPACAMENTO: um label pequeno (scale~0.55)
+            // seguido de um nome grande (scale~0.85) com baselines a 22un de
+            // distancia significa que o TOPO do nome (baseline+altura) fica
+            // em cima do BASELINE do label acima (crowding/sobreposicao
+            // visual). Recalculado com folga >=8un entre qualquer topo de
+            // texto e o baseline do texto acima.
 
-        // Autor
-        drawText("AUTOR:", 80.0f, 228.0f, 2.0f, 0.50f, 0.50f, 0.60f);
-        drawText("RAFAEL GOMES BERNARDO", 80.0f, 206.0f, 3.0f, 0.95f, 0.95f, 0.95f);
+            // ── Passo 1: decoracoes (pipeline solida, ja vinculada) ────────────
+            drawRect(60.0f, 250.0f, 520.0f, 2.0f, 0.30f, 0.30f, 0.40f);
+            drawRect(60.0f,  82.0f, 520.0f, 2.0f, 0.25f, 0.25f, 0.35f);
 
-        // Assistentes
-        drawText("AUXILIADO POR:", 80.0f, 178.0f, 2.0f, 0.50f, 0.50f, 0.60f);
-        drawText("CLAUDE  ANTHROPIC", 80.0f, 156.0f, 3.0f, 0.70f, 0.80f, 1.00f);
-        drawText("GEMINI  GOOGLE",    80.0f, 128.0f, 3.0f, 0.60f, 0.90f, 0.78f);
+            // ── Passo 2: texto TTF real (troca de pipeline UMA vez) ────────────
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->handle());
+            m_font->bind(cmd, m_textPipeline->layout());
 
-        // Separador inferior
-        drawRect(60.0f, 90.0f, 520.0f, 2.0f, 0.25f, 0.25f, 0.35f);
-        // Dica
-        drawTextC("ESPACO PARA CONTINUAR", CX, 60.0f, 2.0f, 0.40f, 0.40f, 0.55f);
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "ASCENDENDO",
+                                     CX, 298.0f, 1.5f, 1.0f, 0.85f, 0.10f, 1.0f);
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "FIM DA CAMPANHA",
+                                     CX, 266.0f, 0.75f, 0.80f, 0.80f, 0.80f, 1.0f);
+
+            m_font->drawText(cmd, m_textPipeline->layout(), "AUTOR:",
+                             80.0f, 225.0f, 0.45f, 0.50f, 0.50f, 0.60f, 1.0f);
+            m_font->drawText(cmd, m_textPipeline->layout(), "RAFAEL GOMES BERNARDO",
+                             80.0f, 193.0f, 0.70f, 0.95f, 0.95f, 0.95f, 1.0f);
+
+            m_font->drawText(cmd, m_textPipeline->layout(), "AUXILIADO POR:",
+                             80.0f, 160.0f, 0.45f, 0.50f, 0.50f, 0.60f, 1.0f);
+            m_font->drawText(cmd, m_textPipeline->layout(), "CLAUDE  (ANTHROPIC)",
+                             80.0f, 128.0f, 0.65f, 0.70f, 0.80f, 1.00f, 1.0f);
+            m_font->drawText(cmd, m_textPipeline->layout(), "GEMINI  (GOOGLE)",
+                             80.0f, 98.0f, 0.65f, 0.60f, 0.90f, 0.78f, 1.0f);
+
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "ESPACO PARA CONTINUAR",
+                                     CX, 55.0f, 0.45f, 0.40f, 0.40f, 0.55f, 1.0f);
+
+            // Volta a pipeline solida para o resto do frame (caso haja mais draws)
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+
+        } else {
+            // ── Fallback: fonte bitmap 5x5 (sem TextPipeline/FontRenderer) ────
+            drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 1.0f, 0.85f, 0.10f);
+            drawTextC("FIM DA CAMPANHA", CX, 268.0f, 3.0f, 0.80f, 0.80f, 0.80f);
+            drawRect(60.0f, 255.0f, 520.0f, 2.0f, 0.30f, 0.30f, 0.40f);
+
+            drawText("AUTOR:", 80.0f, 228.0f, 2.0f, 0.50f, 0.50f, 0.60f);
+            drawText("RAFAEL GOMES BERNARDO", 80.0f, 206.0f, 3.0f, 0.95f, 0.95f, 0.95f);
+
+            drawText("AUXILIADO POR:", 80.0f, 178.0f, 2.0f, 0.50f, 0.50f, 0.60f);
+            drawText("CLAUDE  ANTHROPIC", 80.0f, 156.0f, 3.0f, 0.70f, 0.80f, 1.00f);
+            drawText("GEMINI  GOOGLE",    80.0f, 128.0f, 3.0f, 0.60f, 0.90f, 0.78f);
+
+            drawRect(60.0f, 90.0f, 520.0f, 2.0f, 0.25f, 0.25f, 0.35f);
+            drawTextC("ESPACO PARA CONTINUAR", CX, 60.0f, 2.0f, 0.40f, 0.40f, 0.55f);
+        }
 
     // =========================================================================
     } else if (state == GameState::MENU) {
     // =========================================================================
         const float CX = config::LOGICAL_WIDTH / 2.0f;
 
-        // Titulo
-        drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 0.95f, 0.80f, 0.10f);
-        drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
+        // Mesma geometria de 3 caixas usada em PAUSED (consistencia visual).
+        const float bW = 170.0f, bH = 62.0f, bY = 150.0f, gap = 18.0f;
+        const float totalW = bW*3.0f + gap*2.0f;
+        const float startX = CX - totalW/2.0f;
+        const char* labels[3] = { "COMECAR", "CREDITOS", "SAIR" };
+        auto boxX = [&](int i) { return startX + i*(bW+gap); };
 
-        // Funcao utilitaria: desenhar caixa de opcao com borda e texto
-        auto drawOption = [&](const char* label, float boxX, bool selected) {
-            const float bW=220, bH=80, bY=160;
-            float lr = selected ? 1.0f : 0.22f;
-            float lg = selected ? 0.85f: 0.22f;
-            float lb = selected ? 0.10f: 0.28f;
-            // Fundo escuro
-            drawRect(boxX, bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
-            // Bordas (4 rectangulos = frame)
-            drawRect(boxX,          bY,      bW, 2.0f, lr, lg, lb); // baixo
-            drawRect(boxX,          bY+bH-2, bW, 2.0f, lr, lg, lb); // cima
-            drawRect(boxX,          bY,  2.0f, bH, lr, lg, lb);     // esq
-            drawRect(boxX+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);     // dir
-            // Label centrado horizontalmente na caixa
-            drawTextC(label, boxX + bW/2.0f, bY + bH/2.0f - 7.5f,
-                      3.0f, lr, lg, lb);
-        };
+        if (m_font && m_textPipeline) {
+            drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
 
-        drawOption("COMECAR",  60.0f,  menuSel == 0);   // opcao esquerda
-        drawOption("CREDITOS", 360.0f, menuSel == 1);   // opcao direita
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.22f, lg = sel ? 0.85f : 0.22f, lb = sel ? 0.10f : 0.28f;
+                drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
+                drawRect(boxX(i),          bY,      bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY+bH-2, bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY,  2.0f, bH, lr, lg, lb);
+                drawRect(boxX(i)+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);
+            }
 
-        // Indicador de seleccao (seta/triangulo simulado por rectangulos)
-        float arrowX = (menuSel == 0) ? 170.0f : 470.0f;
-        drawRect(arrowX-4.0f, 148.0f, 8.0f, 8.0f, 1.0f, 0.85f, 0.10f); // ponta
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->handle());
+            m_font->bind(cmd, m_textPipeline->layout());
 
-        // Dica de navegacao
-        drawTextC("A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
-                  CX, 80.0f, 2.0f, 0.30f, 0.30f, 0.42f);
-        drawTextC("ESC PARA SAIR",
-                  CX, 58.0f, 2.0f, 0.25f, 0.25f, 0.35f);
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "ASCENDENDO",
+                                     CX, 300.0f, 1.6f, 0.95f, 0.80f, 0.10f, 1.0f);
+
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.55f, lg = sel ? 0.85f : 0.55f, lb = sel ? 0.10f : 0.62f;
+                m_font->drawTextCentered(cmd, m_textPipeline->layout(), labels[i],
+                                         boxX(i) + bW/2.0f, bY + bH/2.0f - 6.5f, 0.5f, lr, lg, lb, 1.0f);
+            }
+
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(),
+                                     "A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
+                                     CX, 80.0f, 0.45f, 0.30f, 0.30f, 0.42f, 1.0f);
+
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+
+        } else {
+            // ── Fallback: fonte bitmap 5x5 ──────────────────────────────────────
+            drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 0.95f, 0.80f, 0.10f);
+            drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
+
+            for (int i = 0; i < 3; ++i) {
+                bool sel = (menuSel == i);
+                float lr = sel ? 1.0f : 0.22f, lg = sel ? 0.85f : 0.22f, lb = sel ? 0.10f : 0.28f;
+                drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
+                drawRect(boxX(i),          bY,      bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY+bH-2, bW, 2.0f, lr, lg, lb);
+                drawRect(boxX(i),          bY,  2.0f, bH, lr, lg, lb);
+                drawRect(boxX(i)+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);
+                drawTextC(labels[i], boxX(i)+bW/2.0f, bY+bH/2.0f-6.0f, 1.8f, lr, lg, lb);
+            }
+
+            drawTextC("A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
+                      CX, 80.0f, 2.0f, 0.30f, 0.30f, 0.42f);
+        }
     }
 
     vkCmdEndRenderPass(cmd);

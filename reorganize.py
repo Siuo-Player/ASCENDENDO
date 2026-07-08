@@ -8,7 +8,7 @@ Routing de niveis .lvl:
   Valido + nao listado              →  Game/Assets/Levels/Unused/
   Invalido / incompleto             →  Game/Assets/Levels/NaoValidados/
 """
-import math, shutil, sys
+import math, shutil, sys, re, base64, subprocess
 from pathlib import Path
 
 # Forcar UTF-8 no Windows (evita UnicodeEncodeError com cp1252)
@@ -30,6 +30,7 @@ MOVES = [
 
     # Core
     ("Config.h",                "Game/Core/Config.h"),
+    ("CampaignID.h",             "Game/Core/CampaignID.h"),
 
     # Testes Unitarios
     ("test_placeholder.cpp",    "Tests/Unit/test_placeholder.cpp"),
@@ -41,6 +42,8 @@ MOVES = [
     ("test_camera.cpp",         "Tests/Unit/test_camera.cpp"),
     ("test_level.cpp",          "Tests/Unit/test_level.cpp"),
     ("test_campaign.cpp",       "Tests/Unit/test_campaign.cpp"),
+    ("test_campaign_id.cpp",    "Tests/Unit/test_campaign_id.cpp"),
+    ("test_run_history.cpp",    "Tests/Unit/test_run_history.cpp"),
 
     # Testes de Integracao
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
@@ -49,11 +52,21 @@ MOVES = [
     ("test_render_pass.cpp",    "Tests/Integration/test_render_pass.cpp"),
     ("test_renderer.cpp",       "Tests/Integration/test_renderer.cpp"),
     ("test_pipeline.cpp",       "Tests/Integration/test_pipeline.cpp"),
+    ("test_text_pipeline.cpp",  "Tests/Integration/test_text_pipeline.cpp"),
+    ("test_sprite_pipeline.cpp", "Tests/Integration/test_sprite_pipeline.cpp"),
 
     # Game / Graphics
     ("VulkanContext.h",         "Game/Graphics/VulkanContext.h"),
     ("VulkanContext.cpp",       "Game/Graphics/VulkanContext.cpp"),
     ("BitmapFont.h",            "Game/Graphics/BitmapFont.h"),
+    ("TextPipeline.h",          "Game/Graphics/TextPipeline.h"),
+    ("TextPipeline.cpp",        "Game/Graphics/TextPipeline.cpp"),
+    ("FontRenderer.h",          "Game/Graphics/FontRenderer.h"),
+    ("FontRenderer.cpp",        "Game/Graphics/FontRenderer.cpp"),
+    ("SpritePipeline.h",        "Game/Graphics/SpritePipeline.h"),
+    ("SpritePipeline.cpp",      "Game/Graphics/SpritePipeline.cpp"),
+    ("SpriteRenderer.h",        "Game/Graphics/SpriteRenderer.h"),
+    ("SpriteRenderer.cpp",      "Game/Graphics/SpriteRenderer.cpp"),
     ("Window.h",                "Game/Graphics/Window.h"),
     ("Window.cpp",              "Game/Graphics/Window.cpp"),
     ("Swapchain.h",             "Game/Graphics/Swapchain.h"),
@@ -78,10 +91,20 @@ MOVES = [
     ("ReplayManager.cpp",       "Game/Logic/ReplayManager.cpp"),
     ("Level.h",                 "Game/Logic/Level.h"),
     ("Level.cpp",               "Game/Logic/Level.cpp"),
+    ("RunHistory.h",            "Game/Logic/RunHistory.h"),
 
     # Shaders
     ("base.vert",               "Game/Assets/Shaders/base.vert"),
     ("base.frag",               "Game/Assets/Shaders/base.frag"),
+    ("text.vert",               "Game/Assets/Shaders/text.vert"),
+    ("text.frag",               "Game/Assets/Shaders/text.frag"),
+    ("sprite.vert",             "Game/Assets/Shaders/sprite.vert"),
+    ("sprite.frag",             "Game/Assets/Shaders/sprite.frag"),
+
+    # Fontes + bibliotecas stb (header-only)
+    ("UIFont.ttf",               "Game/Assets/Fonts/UIFont.ttf"),
+    ("stb_truetype.h",          "external/stb/stb_truetype.h"),
+    ("stb_image.h",             "external/stb/stb_image.h"),
 
     # Ferramentas de validacao / geracao
     ("engine.py",               "Development/AI_Validation/sim/engine.py"),
@@ -95,16 +118,30 @@ MOVES = [
 DIRS_WITH_GITKEEP = [
     ".vscode",
     "Game/Core", "Game/Graphics", "Game/Assets", "Game/Assets/Shaders",
+    "Game/Assets/Fonts",
+    "Game/Assets/Sprites", "Game/Assets/Sprites/Source",
     "Game/Assets/Levels", "Game/Assets/Levels/NaoValidados", "Game/Assets/Levels/Unused",
     "Game/Logic",
     "Development/LevelEditor", "Development/AI_Validation", "Development/AI_Validation/sim",
+    "Development/Runs",
     "Tests/Unit", "Tests/Integration", "Tests/System",
     "Tests/Regression", "Tests/Acceptance",
-    "external/doctest", "scripts",
+    "external/doctest", "external/stb", "scripts",
 ]
 
 # Niveis .lvl colocados na raiz pelo utilizador/levelgen
 LEVEL_CANDIDATES = ["inicio.lvl", "zigzag.lvl", "precipicio.lvl"]
+
+# Ficheiros .pixil (Pixilart) colocados na raiz. SEM adivinhar papeis
+# semanticos a partir do nome (isso ja causou um bug: "personagem.pixil"
+# nao correspondia ao "ascended" que estava aqui hardcoded). A conversao
+# e' sempre generica e previsivel: nome_do_ficheiro.pixil -> nome_do_ficheiro.png.
+# O motor (main.cpp) referencia explicitamente o nome real do ficheiro que
+# Rafael escolheu para cada sprite — nao ha adivinhacao nem sinonimos.
+PIXIL_NAME_MAP = {
+    # Registar aqui APENAS se quiseres um nome de saida DIFERENTE do nome
+    # do .pixil (ex: "sprite_bruto_v3": "ground_grass"). Vazio por omissao.
+}
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -129,7 +166,100 @@ def read_campaign(campaign_path: Path) -> set:
             names.add(line)
     return names
 
-def check_level_validity(filepath) -> bool:
+def _extract_data_uri_png(data_uri: str) -> bytes:
+    """Extrai bytes PNG de um data URI 'data:image/png...base64,<dados>'.
+    Tolerante a lixo entre 'image/png' e 'base64,' (visto em exports reais
+    do Pixilart — nao se sabe a causa, mas o padrao regex ignora-o)."""
+    m = re.match(r'data:image/\w+.*?base64,(.*)', data_uri, re.DOTALL)
+    if not m:
+        return b''
+    try:
+        return base64.b64decode(m.group(1))
+    except Exception:
+        return b''
+
+def convert_pixil_to_png(pixil_path, out_png_path) -> bool:
+    """Converte um ficheiro .pixil (Pixilart) para PNG.
+    Caso simples (1 layer): extraccao directa dos bytes PNG, zero
+    dependencias externas. Caso multi-layer: tenta compor com Pillow (se
+    disponivel); se nao estiver, usa so a primeira layer com um aviso.
+    """
+    import json
+    try:
+        with open(pixil_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        print(f"  {ERR} Nao foi possivel ler {pixil_path.name} como JSON .pixil: {e}")
+        return False
+
+    try:
+        frame = data['frames'][0]
+        layers = frame['layers']
+    except (KeyError, IndexError) as e:
+        print(f"  {ERR} Estrutura .pixil inesperada em {pixil_path.name}: {e}")
+        return False
+
+    if len(layers) == 0:
+        print(f"  {ERR} {pixil_path.name}: frame sem layers")
+        return False
+
+    if len(layers) == 1:
+        png_bytes = _extract_data_uri_png(layers[0]['src'])
+        if not png_bytes:
+            print(f"  {ERR} {pixil_path.name}: falha ao extrair PNG da layer unica")
+            return False
+        out_png_path.parent.mkdir(parents=True, exist_ok=True)
+        out_png_path.write_bytes(png_bytes)
+    else:
+        # Multi-layer: tenta compor com Pillow (alpha-over, pela ordem das layers)
+        try:
+            from PIL import Image
+            import io
+            composed = None
+            for layer in layers:
+                if not layer.get('active', True):
+                    continue
+                png_bytes = _extract_data_uri_png(layer['src'])
+                if not png_bytes:
+                    continue
+                layer_img = Image.open(io.BytesIO(png_bytes)).convert('RGBA')
+                if composed is None:
+                    composed = Image.new('RGBA', layer_img.size, (0, 0, 0, 0))
+                composed.alpha_composite(layer_img)
+            if composed is None:
+                print(f"  {ERR} {pixil_path.name}: nenhuma layer valida para compor")
+                return False
+            out_png_path.parent.mkdir(parents=True, exist_ok=True)
+            composed.save(out_png_path)
+            print(f"  {DIR} {pixil_path.name}: {len(layers)} layers compostas (Pillow)")
+        except ImportError:
+            print(f"  {WARN} Pillow nao disponivel — {pixil_path.name} tem "
+                  f"{len(layers)} layers, a usar so a primeira (pode ficar incompleto)")
+            png_bytes = _extract_data_uri_png(layers[0]['src'])
+            if not png_bytes:
+                return False
+            out_png_path.parent.mkdir(parents=True, exist_ok=True)
+            out_png_path.write_bytes(png_bytes)
+
+    # Optimizacao sem perda (opcional — melhora automaticamente se instalado).
+    # "quero um jogo o mais otimizado possivel... no espaco" (Rafael).
+    try:
+        result = subprocess.run(
+            ["optipng", "-o7", "-quiet", str(out_png_path)],
+            capture_output=True, timeout=30
+        )
+        if result.returncode == 0:
+            print(f"  {OK} {out_png_path.name} optimizado sem perdas (optipng -o7)")
+    except FileNotFoundError:
+        print(f"  {WARN} optipng nao encontrado — {out_png_path.name} guardado sem "
+              f"optimizacao extra (instala optipng para reduzir mais o tamanho; "
+              f"ver README secção de optimização de espaço)")
+    except Exception:
+        pass  # optimizacao e' um bonus, nunca deve travar o reorganize
+
+    return True
+
+
     """BFS com fisica real (V_MAX=600, TOLERANCE=0.90, LOGICAL_WIDTH=640)."""
     LOGICAL_WIDTH  = 640.0
     LOGICAL_HEIGHT = 360.0
@@ -254,6 +384,44 @@ def main() -> None:
             dst = invalid_dir / lvl_name
             shutil.move(str(src), str(dst))
             print(f"  {WARN} Nivel INVALIDO -> NaoValidados/: {lvl_name}"); moved += 1
+
+    # 3b. Ficheiros .pixil (Pixilart) -> PNG optimizado
+    sprites_dir = ROOT / "Game/Assets/Sprites"
+    source_dir  = sprites_dir / "Source"
+    for pixil_path in ROOT.glob("*.pixil"):
+        # Nome base limpo: "personagem (1).pixil" / "chao__2_.pixil" -> "personagem" / "chao"
+        base = re.sub(r'[\s_]*\(?\d+\)?[\s_]*$', '', pixil_path.stem).strip('_').strip()
+        out_name = PIXIL_NAME_MAP.get(base, base)
+        out_png  = sprites_dir / f"{out_name}.png"
+
+        if convert_pixil_to_png(pixil_path, out_png):
+            print(f"  {LVL} Sprite convertido: {pixil_path.name} -> Game/Assets/Sprites/{out_name}.png")
+            moved += 1
+            # Guardar o .pixil original em Source/ (permite reeditar mais tarde)
+            source_dir.mkdir(parents=True, exist_ok=True)
+            dest_pixil = source_dir / pixil_path.name
+            if dest_pixil.exists():
+                dest_pixil.unlink()
+            shutil.move(str(pixil_path), str(dest_pixil))
+        else:
+            print(f"  {ERR} Falha ao converter {pixil_path.name} — ficheiro deixado na raiz para inspecao")
+
+    # 3c. Optimizacao retroactiva — corre optipng sobre TODOS os sprites
+    # existentes (nao so os convertidos agora). Util se optipng for
+    # instalado DEPOIS de sprites ja terem sido convertidos sem ele —
+    # basta correr reorganize.py de novo. Barato/idempotente: optipng
+    # sobre um PNG ja optimo e' rapido e nao muda nada.
+    if sprites_dir.exists():
+        existing_pngs = list(sprites_dir.glob("*.png"))
+        if existing_pngs:
+            try:
+                subprocess.run(["optipng", "-o7", "-quiet", *[str(p) for p in existing_pngs]],
+                              capture_output=True, timeout=60)
+                print(f"  {OK} {len(existing_pngs)} sprite(s) verificados/optimizados (optipng -o7)")
+            except FileNotFoundError:
+                pass  # ja avisado acima se algum sprite foi convertido agora; nao repetir aviso
+            except Exception:
+                pass
 
     # 4. Mapa estrutural
     try:

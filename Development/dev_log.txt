@@ -531,3 +531,388 @@ Ideia: v7.5 — FLAG visual, plataforma sob FLAG, spawn acima do chao, menu legi
   NOTA FUTURA (editor de niveis): a FLAG deve sempre ter um PLATFORM logo
   abaixo. O levelgen.py devera garantir isso automaticamente.
 Implementado: [A confirmar com make tests && make game]
+
+[2026-07-02 20:00:00]
+Ideia: v7.6 — Substituir BitmapFont (pixelado, feedback negativo do Rafael:
+  "trocar a escrita meio que pixelada (ainda por cima mal) por fontes
+  normais") por texto TTF real, anti-aliased, via stb_truetype.
+
+  DECISAO ARQUITECTURAL: pipeline SEPARADA em vez de modificar Pipeline.h/.cpp
+  existente. Razao: Pipeline.h/.cpp e base.vert/base.frag ja estao cobertos
+  por 68 testes a passar (incl. test_pipeline.cpp, test_renderer.cpp,
+  test_render_pass.cpp que usam a pipeline solida). Adicionar sampling de
+  textura aa MESMA pipeline exigiria descriptor sets na PushConstants
+  existente, arriscando quebrar esses testes por qualquer erro de
+  alinhamento/layout. Uma TextPipeline nova e 100% aditiva: zero linhas
+  alteradas em Pipeline.h/.cpp/base.vert/base.frag. As duas pipelines
+  partilham o mesmo RenderPass e alternam dentro do mesmo command buffer
+  via vkCmdBindPipeline (viewport/scissor dinamicos mantem-se validos
+  entre pipelines compativeis — nao e necessario re-programar).
+
+  NOVOS FICHEIROS:
+    Game/Graphics/TextPipeline.h/.cpp — pipeline dedicada. Declara um
+      VkDescriptorSetLayout (1 combined image sampler, estagio fragment)
+      no VkPipelineLayoutCreateInfo. TextPushConstants (56 bytes: color,
+      objPos, objSize, uv0, uv1, logicalRes — todos float/float[N], sem
+      padding escondido pelo compilador).
+    Game/Graphics/FontRenderer.h/.cpp — baking CPU (stb_truetype) + upload
+      GPU (staging buffer -> VkImage R8_UNORM -> VkImageView -> VkSampler
+      -> VkDescriptorSet). Atlas 512x512, ASCII 32-126 (95 chars), baked a
+      48px. drawText()/drawTextCentered()/textWidth() calculam a geometria
+      do quad em espaco Y-CIMA (mundo do jogo) a partir dos dados Y-BAIXO
+      do stb_truetype (yoff negativo = acima do baseline).
+      IMPORTANTE (mesma licao do bug duplicate-symbol do doctest):
+      STB_TRUETYPE_IMPLEMENTATION definido APENAS em FontRenderer.cpp.
+      FontRenderer.h NAO inclui stb_truetype.h (evita vazar a macro).
+    Game/Assets/Shaders/text.vert/text.frag — shaders dedicados, UV mapeado
+      para o atlas (V invertido: c.y=0 do quad -> t1 do atlas, V-baixo).
+    Game/Assets/Fonts/UIFont.ttf — Orbitron (Google Fonts, licenca OFL),
+      geometrica/futurista, adequada ao tema. FACILMENTE SUBSTITUIVEL —
+      e so um ficheiro de dados, o codigo nao assume nada sobre o
+      conteudo tipografico especifico.
+    Tests/Integration/test_text_pipeline.cpp — 2 testes seguindo o padrao
+      de test_pipeline.cpp/test_renderer.cpp (VulkanContext real).
+
+  RETROCOMPATIBILIDADE: Renderer::attachText(TextPipeline*, FontRenderer*)
+  e um setter OPCIONAL chamado por main.cpp apos ambas as pipelines
+  inicializarem. Se falhar (shaders .spv em falta, .ttf em falta), o jogo
+  IMPRIME AVISO e cai automaticamente no BitmapFont (mantido, nao removido).
+  O estado PLAYING nunca desenha texto — nem tocado por esta mudanca.
+
+  VALIDACAO EMPIRICA (sem Windows/GPU disponivel neste ambiente):
+    - glslc real instalado (apt) — text.vert/text.frag compilam p/ SPIR-V
+      sem erros.
+    - vulkan.h real instalado (libvulkan-dev via apt) — TextPipeline.cpp e
+      FontRenderer.cpp compilam limpos com g++ -Wall -Wextra (zero avisos).
+    - stb_truetype.h testado com um pequeno programa C real: baking de
+      Orbitron.ttf confirmado (95/96 glyphs nao-vazios), atlas volcado
+      para PNG e inspeccionado visualmente (glifos limpos, anti-aliased).
+    - stbtt_GetBakedQuad testado empiricamente para confirmar a semantica
+      exacta de yoff/y0/y1 antes de escrever a logica de conversao Y-baixo
+      -> Y-cima em FontRenderer::drawText.
+    - Renderer.cpp e main.cpp (modificados) compilados com sucesso contra
+      stubs completos das classes do projecto (Physics, Player, Level,
+      Camera, InputManager, Pipeline) replicando as assinaturas reais.
+    - Link final de main.cpp+Renderer.cpp+TextPipeline.cpp+FontRenderer.cpp
+      contra libvulkan+libglfw reais: sucesso.
+    Apesar disto, o comportamento em GPU real (Intel Iris Xe) so pode ser
+    confirmado por Rafael — nomeadamente a troca de pipeline a meio do
+    render pass e as transicoes de layout de imagem.
+
+  REORGANIZE.PY: rotas novas para TextPipeline.h/.cpp, FontRenderer.h/.cpp,
+    text.vert/text.frag, UIFont.ttf (-> Game/Assets/Fonts/), stb_truetype.h
+    (-> external/stb/), test_text_pipeline.cpp. DIRS_WITH_GITKEEP:
+    Game/Assets/Fonts, external/stb.
+
+  README.md: nova seccao "6.1 Planos Futuros" com as ideias do Rafael
+  (botao Sair, menu de pausa via ESC sem terminar a run, botao Creditos
+  no(s) menu(s), timer com pausa ao entrar em menu, pasta de runs com
+  tempos + identificacao de campanha). Marcadas explicitamente como NAO
+  aprovadas — apenas registo, nada implementado.
+Implementado: [A confirmar com make tests (esperado 70/70) + make game]
+
+[2026-07-04 14:00:00]
+Ideia: v8.1 — Implementar Fase 8.2 completa: menu de pausa via ESC (distinto
+  do menu de fim-de-run, confirmado por Rafael), botao "Sair" em ambos os
+  menus, "Creditos" acessivel a partir de qualquer um dos dois, timer de
+  run que pausa fora de PLAYING, e registo de runs completas com ID
+  deterministico de campanha.
+
+  NOVO ESTADO: GameState::PAUSED (Renderer.h/main.cpp).
+    - ESC durante PLAYING -> PAUSED (NAO termina a run, NAO mostra ecra de
+      "fim de jogo"). ESC de novo -> retoma PLAYING.
+    - PAUSED desenha o MUNDO CONGELADO (plataformas+FLAG+jogador, extraido
+      para uma lambda drawWorld() partilhada com PLAYING) por baixo de um
+      overlay preto semi-transparente (alpha 0.55) + o menu de pausa.
+      Reforca visualmente "isto e uma pausa", nao um ecra novo.
+    - Opcoes de PAUSED: CONTINUAR / CREDITOS / SAIR (3 caixas, layout
+      partilhado com o MENU de fim-de-run para consistencia visual).
+
+  MENU (fim-de-run) ALTERADO: 2 opcoes -> 3 (COMECAR / CREDITOS / SAIR).
+    Layout recalculado para 3 caixas de 170px com 18px de gap, centradas.
+
+  NAVEGACAO: wraparound circular via `(menuSel + delta + 3) % 3`, testado
+    isoladamente (forward 0->1->2->0, backward 0->2->1->0, ambos OK).
+
+  CREDITOS: agora rastreia `creditsReturnState` (MENU ou PAUSED) — SPACE
+    ou ESC dentro de CREDITOS regressam a quem o chamou, em vez de ir
+    sempre para MENU como antes.
+
+  TIMER: `elapsedTime` acumulado em main.cpp usando o MESMO dt (chrono) ja
+    usado para o loop, mas SO quando state==PLAYING (pausa automaticamente
+    em CREDITS/MENU/PAUSED). Desligado da simulacao FIXED_STEP de
+    proposito — e um cronometro de parede (wall-clock), nao afecta o
+    determinismo da fisica. HUD no canto superior direito durante PLAYING
+    (formato MM:SS) — primeira vez que texto e desenhado durante gameplay
+    activo (antes so em CREDITS/MENU). Reutiliza o mesmo mecanismo de
+    troca de pipeline ja validado.
+
+  NOVO: Game/Core/CampaignID.h (header-only).
+    FNV-1a 64-bit sobre campaign.txt + cada .lvl referenciado, na ordem.
+    Resolve a questao em aberto do proprio Rafael ("como diferenciar
+    campanhas com o mesmo nome, ou versoes diferentes"): qualquer byte
+    alterado num nivel, ou na ordem/composicao da campanha, muda o ID de
+    16 hex chars. std::hash NAO foi usado — a norma C++ permite-lhe variar
+    entre execucoes/compiladores, o que o torna inutil como identificador
+    estavel entre maquinas/sessoes.
+
+  NOVO: Game/Logic/RunHistory.h (header-only).
+    recordRun(csvPath, campaignName, campaignID, elapsedSeconds) acrescenta
+    uma linha a Development/Runs/runs.csv (cria pasta+cabecalho se
+    necessario). Colunas: timestamp,campaign_name,campaign_id,
+    elapsed_seconds,elapsed_formatted. Formato CSV plano, git-diffable,
+    consistente com o estilo ja usado em dev_log.txt.
+
+  TESTES NOVOS (Tests/Unit/):
+    test_campaign_id.cpp — 7 testes: determinismo do FNV-1a, hex sempre
+      16 chars, campanha inexistente->vazio, mesma campanha->mesmo ID,
+      alterar 1 nivel->ID diferente, trocar ORDEM->ID diferente, mesmo
+      conteudo (campanhas "gemeas")->mesmo ID.
+    test_run_history.cpp — 3 testes: formatacao MM:SS.mmm (incl. clamp de
+      negativos), criacao de cabecalho na 1a escrita, append sem duplicar
+      cabecalho.
+    Total novo: 10 testes. Rodados de facto (nao so compilados) com
+    doctest real neste ambiente: 11/11 passed, 28/28 assertions (inclui
+    tambem os testes ja existentes que arrastam para o mesmo binario de
+    teste isolado usado para validacao).
+
+  VALIDACAO EMPIRICA (mesma disciplina das sessoes anteriores):
+    - Renderer.cpp (drawWorld extraido, PAUSED, timer HUD, MENU 3 opcoes)
+      compilado com g++ -Wall -Wextra contra vulkan.h real: zero avisos.
+    - main.cpp (maquina de estados completa) compilado da mesma forma:
+      zero avisos.
+    - Link final de main.cpp+Renderer.cpp+TextPipeline.cpp+FontRenderer.cpp
+      contra libvulkan+libglfw reais: sucesso.
+    - CampaignID.h + RunHistory.h: testes doctest REAIS compilados E
+      EXECUTADOS (nao so compilados) — 11/11 passed.
+    - RunHistory: verificacao manual do runs.csv gerado (formato correcto,
+      cabecalho, timestamp, tempo formatado MM:SS.mmm).
+    - navigate() (wraparound do menu): testado isoladamente com asserts.
+
+  REORGANIZE.PY: CampaignID.h -> Game/Core/, RunHistory.h -> Game/Logic/,
+    test_campaign_id.cpp + test_run_history.cpp -> Tests/Unit/. Novo
+    DIRS_WITH_GITKEEP: Development/Runs/ (onde runs.csv sera criado;
+    RunHistory::recordRun() cria a pasta em runtime se nao existir, o
+    .gitkeep e so para o git rastrear a pasta vazia antes da 1a run).
+
+  PENDENTE (fora do ambito desta entrega, aguarda decisao de Rafael):
+    Fase 9 — Editor de Niveis Visual. Descrito no README apenas como
+    "editor com rato, validacao IA automatica em background". Scope
+    genuinamente por definir (input de rato ainda nao existe em
+    InputManager; layout/toolset do editor; modelo de threading para a
+    validacao IA em background sem bloquear o render loop; fluxo de
+    guardar/carregar .lvl a partir do editor). Nao implementado sem
+    confirmacao — perguntado a Rafael directamente.
+Implementado: [A confirmar com make tests -- esperado 80/80: 68 anteriores
+  + 2 test_text_pipeline (v7.6) + 7 test_campaign_id + 3 test_run_history]
+  + make game (confirmar visualmente PAUSED/MENU/timer HUD/runs.csv)
+
+[2026-07-05 15:00:00]
+Ideia: v8.3 — Fix de 3 bugs visuais reportados por screenshot, fix de 2
+  testes flaky no Windows, e SpritePipeline+SpriteRenderer (primeiro
+  sprite real do jogo — protagonista, a partir de .pixil do Pixilart).
+
+  BUG 1 — Fundo da FLAG com cor estranha (castanho/oliva):
+    Causa: zona de touchdown desenhada como rectangulo dourado a 18% de
+    alpha sobre o fundo azul-escuro do jogo — a mistura resultava numa
+    cor castanha/oliva que parecia um bug. Corrigido: rect removido,
+    fica so o mastro + pano (analise coincidiu com a do Gemini).
+
+  BUG 2 — Timer HUD com "texto garbled" ("barra azul a tapar"):
+    Causa raiz (identificada por analise geometrica, nao apenas por
+    inspeccao visual): baseline do timer estava em LOGICAL_HEIGHT-12=348.
+    Com scale=0.6, a altura do glyph (~28*0.6=16.8un) fazia o TOPO do
+    texto chegar a ~364.8 -- ULTRAPASSANDO o limite do ecra logico (360).
+    O clipping de viewport/NDC cortava o topo de cada digito, dando o
+    aspecto de caracteres errados/garbled. NAO era um bug de UV mapping
+    ou de push constants (esses ja estavam correctos -- CREDITS, que usa
+    a mesma funcao drawText, renderiza perfeitamente, confirmando que o
+    problema era espacial/posicional, nao no pipeline de texto em si).
+    Corrigido: baseline movido para LOGICAL_HEIGHT-28=332, scale subido
+    para 0.7 (melhor legibilidade), margem de 8.4un garantida.
+    NOTA: a analise do Gemini sugeria "rectangulo de fundo acidental" ou
+    mover para o canto esquerdo -- nenhuma das duas teria corrigido a
+    causa raiz (clipping por posicao-Y), so a reposicao vertical resolve.
+
+  BUG 3 — Espacamento no ecra de CREDITOS:
+    Causa: labels pequenos (scale~0.55) seguidos de nomes grandes
+    (scale~0.85) com baselines demasiado proximos -- o TOPO do nome
+    ficava por cima do BASELINE do label acima (crowding). Corrigido:
+    layout recalculado por completo (nao so "encolher o texto" como o
+    Gemini sugeriu) -- todos os scales e baselines recalculados em
+    conjunto para garantir >=8un de folga entre qualquer topo de texto e
+    o baseline do texto acima.
+
+  TESTES FLAKY (test_campaign_id.cpp, test_run_history.cpp):
+    Causa: std::filesystem::remove_all(dir) [THROWING] podia lancar
+    excepcao no Windows quando o SO ainda mantinha um ficheiro
+    momentaneamente "bloqueado" apos o ofstream ser fechado (latencia de
+    release do handle, comum no NTFS). A excepcao nao apanhada FAZIA
+    FALHAR O TESTE mesmo com todas as assercoes reais correctas.
+    Corrigido: TODAS as chamadas trocadas para a variante com
+    std::error_code (nao-throwing) -- uma falha de limpeza transitoria
+    deixa (raramente) um residuo inofensivo, mas NUNCA crasha o teste.
+    ORGANIZACAO (pedido de Rafael: "junta as temporarias runs numa pasta
+    so"): pastas de teste que viviam soltas na raiz do projecto
+    (tmp_campaign_a, tmp_runs_test_a, etc. -- ficavam la quando um teste
+    falhava a meio, antes da linha de limpeza) foram TODAS consolidadas
+    em build/test_tmp/<nome_do_teste>/. build/ ja esta gitignored e e'
+    removido por 'make clean' -- limpa automaticamente qualquer residuo
+    sem sujar a raiz do repositorio.
+
+  SPRITEPIPELINE + SPRITERENDERER (protagonista em pixel-art real):
+    Rafael enviou ascended__1_.pixil (formato JSON do Pixilart, NAO um
+    ZIP). Ficheiro tinha uma sequencia de "lixo" tipo keyboard-mash
+    ("98kjasdnasd983/24kasdjasd") inserida exactamente entre "image/png"
+    e "base64," em DOIS sitios do JSON (preview + layer src) -- nao
+    parecia corrupcao aleatoria (posicao identica nos dois casos), mas
+    tambem nao teve qualquer efeito para alem de quebrar a sintaxe do
+    data URI; tratado como corrupcao de export, removido com regex antes
+    de descodificar. Resultado: sprite 32x32 RGBA valido, 7 cores unicas,
+    236 pixeis transparentes / 788 opacos (transparencia real confirmada).
+
+    ARQUITECTURA: SpritePipeline+SpriteRenderer espelham a estrutura de
+    TextPipeline+FontRenderer (mesma pipeline dedicada com descriptor set
+    + mesmo padrao de upload via staging buffer), com duas diferencas
+    funcionais: (1) sampler NEAREST em vez de LINEAR -- CRITICO para
+    pixel art, preserva arestas nitidas dos pixeis; LINEAR borraria o
+    sprite; (2) fragment shader amostra RGBA directamente (sem recolorir
+    como o texto faz a partir de um atlas R8 de 1 canal). sprite.vert
+    suporta flipX (espelha o sprite horizontalmente via UV, usado para
+    facingDirection do jogador sem precisar de uma segunda imagem).
+    stb_image.h (mesma familia/licenca do stb_truetype ja usado) para
+    descodificar o PNG -- testado a decodificar o sprite com resultado
+    byte-a-byte identico ao esperado.
+
+    Renderer::attachSprite() opcional (mesmo padrao de attachText()) --
+    sem sprite anexado, o jogador continua a ser um rectangulo solido
+    (fallback, zero regressao).
+
+  OPTIMIZACAO DE ESPACO (novo requisito PERMANENTE, pedido por Rafael):
+    "o motivo de estar a minha propria engine e fazer um jogo tao simples
+    e com pixelarte e optimizar espaco mesmo" -- adicionado ao README como
+    secção 10, principio orientador cumulativo (nao bloqueante, "pode se
+    ir fazendo").
+    DECISAO TESTADA EMPIRICAMENTE (nao assumida): comparei PNG RGBA vs PNG
+    indexado (paleta exacta das 7 cores) para o sprite -- SEM optimizar,
+    o indexado ficou MAIOR (976B vs 462B, overhead da tabela de paleta
+    nao compensa a um tamanho tao pequeno). DEPOIS de 'optipng -o7' em
+    AMBOS: convergem para o MESMO tamanho optimo (241 bytes) -- confirma
+    que a escolha manual de formato (RGBA vs indexado) e' irrelevante se
+    houver um bom optimizador PNG a seguir; a decisao certa e' manter PNG
+    simples + sempre correr optipng, nao complicar com formatos
+    alternativos. Verificado byte-a-byte (memcmp) que a versao optimizada
+    e' 100% identica a original -- zero perda confirmada.
+    reorganize.py agora converte .pixil->PNG automaticamente e corre
+    optipng se disponivel (fallback gracioso se nao instalado -- nao
+    trava o resto do reorganize.py).
+
+  REORGANIZE.PY -- conversao .pixil automatica:
+    Novo: PIXIL_NAME_MAP (nomes conhecidos -> caminho semantico esperado
+    pelo motor, ex. "ascended"->"player"), convert_pixil_to_png() (extrai
+    layer unica directamente -- zero dependencias; multi-layer usa
+    Pillow se disponivel, com aviso gracioso se nao estiver), limpeza de
+    sufixos de duplicado no nome do ficheiro ("ascended__1_" ->
+    "ascended", "ficheiro (2)" -> "ficheiro"). .pixil original preservado
+    em Game/Assets/Sprites/Source/ para reedicao futura. Testado
+    end-to-end com o ficheiro real enviado -- PNG final confirmado
+    byte-a-byte identico a extraccao manual.
+    Novos DIRS_WITH_GITKEEP: Game/Assets/Sprites/, Game/Assets/Sprites/Source/.
+
+  VISAO FUTURA registada no README (Fase 9, NAO implementada, posterior
+  ao jogo estar jogavel, per Rafael): editor de niveis deve incluir
+  escolha de sprites diferentes (chao/plataforma/decoracao), criacao e
+  edicao de sprites, regras para troca de sprites.
+
+  VALIDACAO EMPIRICA (disciplina identica a sessoes anteriores):
+    - text_campaign_id.cpp/test_run_history.cpp: recompilados e
+      re-executados (nao so compilados) -- 11/11 passed apos o fix.
+    - SpritePipeline.cpp/SpriteRenderer.cpp: compilados com g++ -Wall
+      -Wextra contra vulkan.h real (1 bug apanhado e corrigido: falta de
+      #include <vector> em SpriteRenderer.h).
+    - sprite.vert/sprite.frag: compilados com glslc real, zero erros.
+    - Renderer.cpp/main.cpp (com sprite+fixes): recompilados, zero avisos.
+    - Link final de todos os .o (main+Renderer+TextPipeline+FontRenderer+
+      SpritePipeline+SpriteRenderer) contra libvulkan+libglfw reais:
+      sucesso.
+    - .pixil: JSON parseado e inspeccionado directamente (nao assumido);
+      garbage no data URI identificado e removido com regex ANTES de
+      qualquer decode; sprite final verificado byte-a-byte (memcmp)
+      identico em 3 pontos da pipeline (extraccao manual -> stb_image ->
+      reorganize.py end-to-end).
+
+  NOTA DE VERSIONAMENTO: ficheiros individuais neste lote mostram v8.2 no
+  seu proprio historico incremental (7.6/8.1->8.2); o marco do projecto
+  como um todo passa a 8.3 no README (8.2 ja estava atribuido ao
+  "Menu reestruturado" de uma sessao anterior).
+Implementado: [A confirmar com make tests -- esperado 82/82] + make game
+  (confirmar visualmente: FLAG sem cor estranha, timer legivel, creditos
+  bem espacados, jogador aparece como sprite pixel-art)
+
+[2026-07-06 10:00:00]
+Ideia: v8.3.1 — Fix: sprite nao carregado (nome de ficheiro nao correspondia
+  ao esperado) + documentar plano de Release Build (Fase 10, definido por
+  Rafael) no README.
+
+  DIAGNOSTICO DO "nao usou o sprite": NAO era um bug de logica no
+  reorganize.py. O ficheiro `.pixil` de Rafael chama-se "personagem.pixil"
+  (nao "ascended" como no exemplo anterior desta sessao) -- a conversao
+  generica correu bem e produziu "Game/Assets/Sprites/personagem.png"
+  exactamente como desenhado. O problema real: main.cpp e SpriteRenderer.h
+  tinham "player.png" hardcoded como nome esperado -- um mapeamento
+  semantico fragil (PIXIL_NAME_MAP com "ascended"->"player") que so
+  funcionava para o nome de ficheiro exacto que eu tinha adivinhado antes.
+
+  CORRECAO ARQUITECTURAL (nao um patch pontual): removido o mapeamento de
+  sinonimos do reorganize.py -- a conversao passa a ser SEMPRE generica e
+  previsivel (nome.pixil -> nome.png, sem adivinhar papeis semanticos).
+  main.cpp passa agora EXPLICITAMENTE "Game/Assets/Sprites/personagem.png"
+  a playerSprite.init() -- main.cpp e' a fonte da verdade sobre qual PNG
+  representa o jogador, nao uma tabela de sinonimos no reorganize.py que
+  teria de ser mantida para cada nome novo que Rafael escolhesse (chao,
+  plataforma, decoracao, etc. seriam o mesmo problema noutro dia).
+  test_sprite_pipeline.cpp tambem actualizado para passar o caminho
+  explicitamente (nao depender do valor por omissao da classe, que ja
+  mudou uma vez).
+
+  BONUS: reorganize.py ganhou uma passagem de optimizacao retroactiva --
+  corre optipng sobre TODOS os sprites existentes em Game/Assets/Sprites/
+  a cada execucao (nao so os recem-convertidos). Se optipng for instalado
+  DEPOIS de sprites ja convertidos sem ele, basta correr reorganize.py de
+  novo para aplicar a optimizacao, sem reconverter nada a mao.
+
+  make shaders / sprite.vert+frag: 'make shaders' reportou "Nothing to be
+  done" (mesmo problema que ja tinha acontecido com text.vert/frag numa
+  sessao anterior). Sem visibilidade do Makefile actual de Rafael, a
+  solucao pragmatica continua a ser compilacao manual:
+    glslc Game/Assets/Shaders/sprite.vert -o Game/Assets/Shaders/sprite.vert.spv
+    glslc Game/Assets/Shaders/sprite.frag -o Game/Assets/Shaders/sprite.frag.spv
+  NOTA PARA MAIS TARDE: o Makefile provavelmente precisa de um alvo
+  'shaders' que faca glob de TODOS os .vert/.frag em vez de uma lista
+  fixa -- mas isso exige ver o Makefile real, que nao esta disponivel
+  neste momento.
+
+  RELEASE BUILD (Fase 10) -- REGISTO DE PLANO, NADA IMPLEMENTADO:
+  Rafael definiu 5 regras obrigatorias para a distribuicao final do jogo
+  (executavel portable, standalone, sem terminal visivel, sem tocar fora
+  da propria pasta, falha graciosa com MessageBox nativa se faltarem
+  requisitos como suporte Vulkan, README separado Dev/Jogador).
+  Documentado integralmente no README como nova "Fase 10" no roadmap
+  (secção 6), com tabela detalhando cada regra + notas tecnicas onde ja
+  ha ligacao clara ao codigo existente:
+    - Regra 4 (falha graciosa): VulkanContext::init() ja devolve bool,
+      mas main.cpp actual NAO verifica esse retorno -- ponto de entrada
+      natural para a futura checagem + MessageBoxW, identificado mas
+      NAO implementado agora (Rafael foi explicito: "um dos ultimos
+      passos", nao bloqueante para o resto do roadmap).
+    - Regra 1 (sem terminal): sinalizada a incerteza sobre qual flag de
+      linker se aplica (-mwindows estilo MinGW vs /SUBSYSTEM:WINDOWS
+      estilo MSVC) dado que o projecto usa Clang a atingir
+      x86_64-pc-windows-msvc mas compila via GNU Make/Git Bash -- por
+      confirmar quando chegar a altura, nao assumido sem testar.
+  Secção 10 (Optimizacao de Espaco) recebeu uma nota cruzada para a Fase
+  10, ja que "pacote portable, nada instalado" e' a expressao mais visivel
+  do mesmo principio de minimizar footprint.
+Implementado: [A confirmar com make tests -- esperado 82/82, sem alteracao
+  de contagem nesta sessao, so fixes] + make game (confirmar visualmente
+  que o jogador aparece como personagem.png)

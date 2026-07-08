@@ -21,25 +21,37 @@ ASCENDENDO/
 │   └── tasks.json                     ← atalhos de build no VS Code
 ├── Game/
 │   ├── Core/
-│   │   └── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física)
+│   │   ├── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física)
+│   │   └── CampaignID.h               ← ID determinístico (FNV-1a) p/ diferenciar campanhas
 │   ├── Graphics/                      ← motor gráfico Vulkan
 │   │   ├── VulkanContext.h/.cpp
 │   │   ├── Window.h/.cpp              ← janela GLFW
 │   │   ├── Swapchain.h/.cpp
 │   │   ├── RenderPass.h/.cpp
-│   │   ├── Renderer.h/.cpp            ← drawFrame(Player, Camera, Level*)
+│   │   ├── Renderer.h/.cpp            ← drawFrame(Player,Camera,Level*,State); attachText()
 │   │   ├── Camera.h/.cpp              ← projeção world→NDC, tracking vertical
-│   │   └── Pipeline.h/.cpp            ← shaders SPIR-V + viewport dinâmico
+│   │   ├── Pipeline.h/.cpp            ← shaders SPIR-V + viewport dinâmico (retângulos)
+│   │   ├── TextPipeline.h/.cpp        ← pipeline dedicada p/ texto (descriptor set + sampler)
+│   │   ├── FontRenderer.h/.cpp        ← baking stb_truetype + atlas GPU (texto TTF real)
+│   │   └── BitmapFont.h               ← fallback 5×5 (usado se TTF indisponível)
 │   ├── Logic/                         ← motor de jogo
 │   │   ├── InputManager.h/.cpp
 │   │   ├── Physics.h/.cpp             ← Vec2, AABB, Fixed Timestep 60Hz
 │   │   ├── Player.h/.cpp              ← Commitment Jump (60°), bloqueio aéreo
 │   │   ├── Level.h/.cpp               ← plataformas + resolveCollision + streaming
-│   │   └── ReplayManager.h/.cpp       ← save states + replay determinístico
+│   │   ├── ReplayManager.h/.cpp       ← save states + replay determinístico
+│   │   └── RunHistory.h               ← regista runs completas (Development/Runs/runs.csv)
 │   └── Assets/
 │       ├── Shaders/
-│       │   ├── base.vert / base.frag  ← GLSL (push constants)
+│       │   ├── base.vert / base.frag  ← GLSL retângulos sólidos (push constants)
+│       │   ├── text.vert / text.frag  ← GLSL texto (UV + atlas sampler)
 │       │   └── *.spv                  ← compilados por glslc [build artifact]
+│       ├── Fonts/
+│       │   └── UIFont.ttf             ← fonte TTF (Orbitron, OFL — substituível)
+│       ├── Sprites/
+│       │   ├── player.png             ← sprite do protagonista (de .pixil, optimizado optipng)
+│       │   └── Source/
+│       │       └── *.pixil            ← originais Pixilart (preservados p/ reedição)
 │       └── Levels/
 │           ├── campaign.txt           ← lista ordenada de niveis da campanha activa
 │           ├── inicio.lvl             ┐
@@ -50,6 +62,8 @@ ASCENDENDO/
 ├── Development/
 │   ├── dev_log.txt                    ← diário append-only
 │   ├── project_structure.txt          ← mapa de arquitectura (auto-gerado)
+│   ├── Runs/
+│   │   └── runs.csv                   ← historico de runs completas (gerado em runtime)
 │   ├── AI_Validation/
 │   │   ├── ai_validator.py            ← validador BFS (--campaign bloqueia pre-push)
 │   │   └── sim/                       ← simulador Python fiel ao motor C++
@@ -71,16 +85,20 @@ ASCENDENDO/
 │   │   ├── test_replay.cpp
 │   │   ├── test_camera.cpp
 │   │   ├── test_level.cpp             ← 16 test cases (Level + appendFromFile)
-│   │   └── test_campaign.cpp          ← chama ai_validator --campaign via system()
+│   │   ├── test_campaign.cpp          ← chama ai_validator --campaign via system()
+│   │   ├── test_campaign_id.cpp       ← 7 testes (CampaignID: determinismo, sensibilidade)
+│   │   └── test_run_history.cpp       ← 3 testes (RunHistory: formatação, CSV append)
 │   └── Integration/
 │       ├── test_vulkan_init.cpp
 │       ├── test_window.cpp
 │       ├── test_swapchain.cpp
 │       ├── test_render_pass.cpp
 │       ├── test_renderer.cpp
-│       └── test_pipeline.cpp
+│       ├── test_pipeline.cpp
+│       └── test_text_pipeline.cpp     ← TextPipeline + FontRenderer (2 testes)
 ├── external/
 │   ├── doctest/doctest.h              ← framework de testes header-only v2.5.0
+│   ├── stb/stb_truetype.h             ← baking de fontes TTF (header-only, MIT)
 │   └── glfw/ (include/ + lib-vc2022/)
 ├── scripts/
 │   ├── pre-commit.sh                  ← bloqueia commits com testes a falhar
@@ -109,6 +127,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 | Biblioteca | Versão | Localização | Justificação |
 |---|---|---|---|
 | [doctest](https://github.com/doctest/doctest) | 2.5.0 | `external/doctest/` | Header-only, zero overhead, MIT |
+| [stb_truetype](https://github.com/nothings/stb) | single-header | `external/stb/` | Baking de fontes TTF para atlas, MIT/Public Domain |
 | [GLFW](https://www.glfw.org/) | 3.4 | `external/glfw/` | Windowing Vulkan cross-platform, zlib |
 | Vulkan SDK | 1.4.x | sistema (`VULKAN_SDK`) | API gráfica principal + `glslc` para shaders |
 
@@ -120,7 +139,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-push**: valida a campanha completa com `ai_validator.py --campaign`.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
-- **Testes confirmados**: **68/68** (v7.4) — 67 testes de motor + `test_campaign`.
+- **Testes confirmados**: **82/82** (v8.2) — 80 anteriores + 2 `test_sprite_pipeline` (SpritePipeline + SpriteRenderer).
 
 ---
 
@@ -169,12 +188,52 @@ Shaders GLSL → SPIR-V, `Pipeline` Vulkan (viewport/scissor dinâmicos),
 - 7.1 Refactoring config-driven — `PLAYER_WIDTH`, inércia natural, `physics::collides()`
 - 7.2 Debug HUD — `[SPACE] Força: XX%` no terminal durante a carga
 - 7.3 Fix crítico — chunks padronizados; spawn corrigido; LOGICAL_WIDTH/HEIGHT trocados nos validadores Python corrigidos
-- 7.4 ✅ **Níveis gerados por simulação** — `levelgen.py` com `ascending_x_at()` (guard contra colisão lateral na subida, 100% robustez ±8%/±10px); `test_campaign.cpp` integra `ai_validator` no ciclo doctest; fixes Windows (Unicode, duplicate symbol)
+- 7.4 Níveis gerados por simulação — `levelgen.py` com `ascending_x_at()` (guard contra colisão lateral na subida, 100% robustez ±8%/±10px); `test_campaign.cpp` integra `ai_validator` no ciclo doctest; fixes Windows (Unicode, duplicate symbol)
+- 7.5 GameState (PLAYING/CREDITS/MENU) — FLAG visual (mastro+pano+zona de touchdown), pedestal sólido sob a FLAG, ecrã de créditos, menu A/D+ESPAÇO, spawn corrigido (acima da 1ª plataforma)
 
-**Fase 8: UI e Polishing** *(planeada)*
+**Fase 8: UI e Polishing** ✅
+- 8.1 ✅ **Texto TTF real** — `TextPipeline` (pipeline Vulkan dedicada, descriptor set + sampler) + `FontRenderer` (baking via `stb_truetype`, atlas R8_UNORM na GPU). Substitui o `BitmapFont` pixelado em CREDITS/MENU (mantido como fallback automático). Fonte actual: Orbitron (OFL), facilmente substituível.
+- 8.2 ✅ **Menu reestruturado** — `GameState::PAUSED` (ESC pausa sem terminar a run, mundo congelado visível por baixo de overlay+menu), botão SAIR em ambos os menus (fim-de-run e pausa), CRÉDITOS acessível dos dois (regressa a quem chamou), timer HUD (pausa fora de PLAYING), registo de runs (`Development/Runs/runs.csv`) com ID determinístico de campanha (`CampaignID.h`, FNV-1a)
+- 8.3 ✅ **Fixes visuais + Sprites** — FLAG sem zona de touchdown (cor estranha), timer HUD corrigido (clipping no topo do ecrã dava aspecto de texto garbled), espaçamento de CREDITOS recalculado, testes flaky corrigidos (`remove_all` throwing→não-throwing, pastas de teste consolidadas em `build/test_tmp/`). `SpritePipeline`+`SpriteRenderer` (jogador em pixel-art via `.pixil`→PNG automático no `reorganize.py`, optimizado com `optipng`)
 
-**Fase 9: Editor de Níveis Visual** *(planeada)*
-Editor com rato, validação IA automática em background, dificuldade por nível/campanha.
+**Fase 9: Editor de Níveis Visual** *(planeada — scope por definir, ver nota abaixo)*
+Editor com rato, validação IA automática em background, dificuldade por nível/campanha. Descrito ainda apenas em linha única — falta especificar: input de rato (não existe em `InputManager`), layout/toolset, modelo de threading para a validação IA sem bloquear o render loop, fluxo de guardar/carregar `.lvl`. **Adicionado (v8.2)**: deve também incluir escolha de sprites diferentes (chão/plataforma/decoração), criação/edição de sprites, e regras para troca de sprites — confirmado por Rafael como parte desta fase, mas explicitamente **posterior ao jogo estar jogável** (não bloqueante para o resto do roadmap).
+
+**Fase 10: Distribuição — "Release Build"** *(planeada — um dos últimos passos, definido por Rafael em v8.3)*
+
+O jogo final deve ser um executável **portable e standalone**: o jogador corre-o com um duplo-clique, sem terminal visível, sem instalação, sem tocar em nada fora da sua própria pasta. Cinco regras obrigatórias, definidas antes de qualquer implementação:
+
+| # | Regra | Notas técnicas |
+|---|---|---|
+| 1 | **Sem terminal** — o `.exe` corre como aplicação gráfica nativa, nunca abre uma janela de consola | Precisa de indicar ao *linker* que o subsistema é `WINDOWS`, não `CONSOLE`. A flag exacta depende do modo como o Clang está a invocar o *linker* neste projecto (`Target: x86_64-pc-windows-msvc` no stack actual): `-mwindows` é a flag GNU/MinGW clássica; para um *link* em modo MSVC pode ser antes `-Wl,/SUBSYSTEM:WINDOWS`. **Por confirmar qual se aplica quando chegar a altura** — não assumir já qual funciona sem testar. |
+| 2 | **Pacote portable (sandboxing total)** — tudo contido na própria pasta, zero efeitos fora dela | Sem instalador, sem escrever fora da pasta do jogo. |
+| 3 | **Paths relativos e locais** — nunca tocar em `AppData`, `Documentos`, ou no Registo do Windows | `Development/Runs/runs.csv` já usa caminho relativo — compatível com esta regra tal como está. Rever qualquer código futuro (save states, configurações) para a mesma disciplina. |
+| 4 | **Falha graciosa + requisitos** — sem downloads automáticos para o jogador; se o hardware não tiver os requisitos (ex: sem suporte Vulkan), mostrar uma caixa de diálogo nativa e fechar de forma limpa | Ponto de entrada natural: `VulkanContext::init()` já devolve `bool` em caso de falha, mas o `main.cpp` actual **não verifica esse valor de retorno** — é aqui que a checagem e o `MessageBoxW` (Windows) entram. Precisa de compilação condicional (`#ifdef _WIN32`) para não partir o build Linux. Mensagem sugerida por Rafael: *"Desculpe, não dá para rodar o projeto sem os requisitos necessários."* Qualquer download obrigatório em contexto de programador (SDKs, dependências) exige consentimento explícito — nunca automático. |
+| 5 | **README reestruturado** — secções claramente separadas "Para Desenvolvedores" vs "Para Jogadores" | A experiência do jogador final (consentimento, natureza *standalone*, como descarregar/correr sem instalações extra) fica isolada das instruções de build actuais (que continuam a assumir Clang/Vulkan SDK/GLFW — irrelevantes para quem só quer jogar). |
+
+Nenhuma destas regras está implementada — este é o registo do plano, a implementar quando o jogo estiver funcionalmente completo.
+
+---
+
+## 6.1 Planos Futuros (ideias por aprovar)
+
+Ideias levantadas por Rafael. As da secção "Menu e navegação" e "Timer e runs" abaixo foram **implementadas na v8.1** (ver Fase 8.2 acima) — mantidas aqui como registo histórico da decisão. A secção "Fase 9" continua **por especificar**.
+
+**Menu e navegação — ✅ implementado (v8.1):**
+- ~~Botão "Sair"~~ → implementado em ambos os menus (fim-de-run e pausa)
+- ~~Menu de pausa via ESC~~ → `GameState::PAUSED`, distinto do menu de fim-de-run, com opções próprias (CONTINUAR/CRÉDITOS/SAIR)
+- ~~Botão "Créditos" dentro do(s) menu(s)~~ → implementado, com retorno ao estado que chamou (`creditsReturnState`)
+- Ainda por fazer (não imediato): o botão "Começar" evolui para um selector de campanhas (ver Fase 9)
+
+**Timer e runs — ✅ implementado (v8.1):**
+- ~~Cronómetro que pausa automaticamente~~ → `elapsedTime` só acumula em `PLAYING`
+- ~~Registo de runs completadas~~ → `Development/Runs/runs.csv` (timestamp, campanha, ID, tempo)
+- ~~Questão em aberto: diferenciar campanhas~~ → resolvida com `CampaignID.h` (FNV-1a 64-bit sobre `campaign.txt` + `.lvl`s). Decisão tomada sem confirmação prévia de Rafael — sinalizar se preferir outra abordagem.
+
+**Fase 9 — Editor de Níveis Visual (por especificar):**
+- Nenhum detalhe de design ainda confirmado. Perguntas em aberto antes de implementar: como colocar/redimensionar plataformas com o rato; como mostrar feedback de validação (cor por cima da plataforma? painel lateral?); a validação corre a cada solta do rato ou só ao guardar; guarda directamente para `.lvl` ou para um formato intermédio.
+
+Ver secção 6 acima para o roadmap completo do que está de facto construído.
 
 ---
 
@@ -237,6 +296,10 @@ make tests -j8
 
 # Compilar shaders GLSL → SPIR-V
 make shaders
+# Se 'make shaders' nao apanhar text.vert/text.frag automaticamente
+# (dependendo do padrao glob do Makefile), compilar manualmente:
+glslc Game/Assets/Shaders/text.vert -o Game/Assets/Shaders/text.vert.spv
+glslc Game/Assets/Shaders/text.frag -o Game/Assets/Shaders/text.frag.spv
 ```
 
 ### 8.4 Ciclo TDD
@@ -273,7 +336,7 @@ python reorganize.py
 vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 ```
 
-**Versão actual: 7.4**
+**Versão actual: 8.3** (ficheiros individuais podem mostrar v8.2 — o seu próprio incremento local; ver histórico de cada um)
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -281,18 +344,52 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
-| Renderer.h/.cpp | v6.2b | drawFrame(Player, Camera, Level*) |
+| Renderer.h/.cpp | v8.2 | attachSprite(), fix FLAG/timer/creditos |
+| TextPipeline.h/.cpp | v7.6 | pipeline dedicada p/ texto, descriptor set |
+| FontRenderer.h/.cpp | v7.6 | baking stb_truetype + atlas GPU R8_UNORM |
+| SpritePipeline.h/.cpp | v8.2 | NOVO — pipeline dedicada p/ sprites, sampler NEAREST |
+| SpriteRenderer.h/.cpp | v8.2 | NOVO — carga PNG via stb_image, upload GPU |
+| BitmapFont.h | v7.5 | fallback (usado se TTF nao disponivel) |
+| CampaignID.h | v8.1 | FNV-1a determinístico p/ ID de campanha |
+| RunHistory.h | v8.1 | regista runs em Development/Runs/runs.csv |
 | Camera.h/.cpp | v6.4 | follow() tracking vertical Lerp |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
-| Config.h | v7.2 | PLAYER_WIDTH=16, MIN_JUMP=250, MAX_JUMP=600 |
+| Config.h | v7.5 | + cores FLAG, CREDITS, MENU |
 | InputManager.h/.cpp | v3.3 | injectRawState() para replay |
 | Physics.h/.cpp | v7.1/v7.2 | config-driven, collides() static |
 | Player.h/.cpp | v7.1/v7.2 | config-driven, inércia natural |
 | Level.h/.cpp | v7.2 | appendFromFile, chunk padronizado a LOGICAL_HEIGHT |
 | ReplayManager.h/.cpp | v3.3 | save states + replay |
-| base.vert/base.frag | v5.1 | shaders GLSL |
-| main.cpp | v7.3 | spawn Y=40, campaign streaming |
+| base.vert/base.frag | v5.1 | shaders GLSL (retângulos sólidos) |
+| text.vert/text.frag | v7.6 | shaders GLSL dedicados a texto (UV+sampler) |
+| sprite.vert/sprite.frag | v8.2 | NOVO — shaders GLSL p/ sprites (UV+flipX+tint) |
+| main.cpp | v8.2 | + SpritePipeline/SpriteRenderer |
 | ai_validator.py | v7.4 | ASCII-safe (fix Windows cp1252) |
 | levelgen.py | v7.4 | ascending_x_at(), clearance 40px, 100% robustez |
 | test_campaign.cpp | v7.4 | doctest → system(ai_validator --campaign) |
-| reorganize.py | v7.4 | routing por campaign.txt (Unused/NaoValidados) |
+| test_text_pipeline.cpp | v7.6 | 2 testes (TextPipeline + FontRenderer) |
+| test_sprite_pipeline.cpp | v8.2 | NOVO — 2 testes (SpritePipeline + SpriteRenderer) |
+| test_campaign_id.cpp | v8.2 | fix: remove_all throwing → nao-throwing |
+| test_run_history.cpp | v8.2 | fix: idem; pastas de teste em build/test_tmp/ |
+| reorganize.py | v8.2 | + conversão automática .pixil → PNG (optipng) |
+
+---
+
+## 10. Optimização de Espaço (requisito permanente)
+
+**Princípio orientador do projecto** (Rafael, v8.2): o motivo de existir uma engine própria em vez de usar Unity/Godot/etc., e de o jogo usar pixel-art simples, é precisamente **otimizar espaço** — tanto em tempo de desenvolvimento como, principalmente, em footprint em disco/memória do jogo final. Este é um requisito **permanente e cumulativo**: cada nova funcionalidade deve ser avaliada também por este critério, não só pela funcionalidade em si. Pode ser feito incrementalmente ("pode se ir fazendo") — não é bloqueante para outras entregas.
+
+**O que já está em prática:**
+- **Sprites**: `.pixil` → PNG, sempre passado por `optipng -o7` automaticamente no `reorganize.py` (lossless — verificado byte-a-byte com stb_image antes/depois). Não se usa formato indexado (PNG8) manualmente: testado empiricamente que um bom optimizador PNG (`optipng`) já encontra a codificação óptima sozinho, tornando a escolha manual de formato desnecessária.
+- **Fontes**: um único atlas TTF (stb_truetype) em vez de múltiplas imagens de texto pré-renderizadas.
+- **Níveis**: ficheiros `.lvl` de texto simples (não binários), comprimem excelentemente em git.
+
+**Por fazer / considerar (incremental, sem prioridade fixa):**
+- Ver também **Fase 10 (Distribuição / Release Build)** na secção 6 — o pacote portable final é, em última análise, a expressão mais visível deste princípio: tudo contido, nada desperdiçado, nada instalado.
+- Verificar se `optipng` está disponível no ambiente de build de Rafael (Windows) — se não, documentar instalação (`choco install optipng` ou binário directo).
+- À medida que houver mais sprites (chão, plataformas, decoração), considerar um **atlas único** (spritesheet) em vez de uma textura por sprite — reduz overhead de binds/descriptor sets e pode comprimir melhor em conjunto do que sprites individuais.
+- Avaliar se os `.spv` (shaders compilados) valem a pena ser versionados no git ou gerados sempre no build (actualmente versionados; ficheiros pequenos, benefício de espaço improvável de compensar a perda de reprodutibilidade imediata).
+- Quando o editor de níveis (Fase 9) existir, garantir que a interface de escolha de sprites não introduz duplicação de assets (reutilizar o mesmo PNG para múltiplas instâncias no nível, nunca copiar).
+
+---
+
