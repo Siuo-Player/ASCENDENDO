@@ -59,3 +59,6 @@ venv/
 *.bak
 
 # dev_log.txt NÃO está aqui — é rastreado pelo git (append-only, imutável)
+
+# Pastas temporarias de testes (nunca devem ser commitadas)
+/tmp_*
