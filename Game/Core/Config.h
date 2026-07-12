@@ -2,7 +2,13 @@
 // =============================================================================
 //  Game/Core/Config.h
 //
-//  @version 7.2
+//  @version 9.1
+//  @history
+//    v7.2 — PLAYER_* config-driven, cores base
+//    v9.1 — EDITOR_GRID_SNAP (Fase 9.4: snap da grelha do Editor de Niveis).
+//            Valor unico e centralizado para ser trivial de ajustar durante
+//            testes -- Rafael pediu para comecar com 4 (grelha fina) em vez
+//            dos 16 originalmente propostos (= PLAYER_WIDTH/HEIGHT).
 // =============================================================================
 
 namespace config {
@@ -53,4 +59,12 @@ namespace config {
     constexpr float CLEAR_MENU_R        = 0.03f;
     constexpr float CLEAR_MENU_G        = 0.03f;
     constexpr float CLEAR_MENU_B        = 0.06f;
+
+    // ─── Editor de Níveis (Fase 9) ────────────────────────────────────────────
+    // Tamanho da célula de snap, em pixeis logicos. Toda a colocacao/arrasto
+    // de plataformas no editor arredonda para o multiplo mais proximo deste
+    // valor. Unico ponto de alteracao -- testar outro valor e' so mudar aqui.
+    // Valor inicial pedido por Rafael para testes: 4 (grelha fina). Candidato
+    // futuro: 16 (= PLAYER_WIDTH/HEIGHT), a confirmar depois dos testes.
+    constexpr float EDITOR_GRID_SNAP    = 4.0f;
 }

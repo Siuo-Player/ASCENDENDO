@@ -31,6 +31,10 @@ MOVES = [
     # Core
     ("Config.h",                "Game/Core/Config.h"),
     ("CampaignID.h",             "Game/Core/CampaignID.h"),
+    ("GameAction.h",             "Game/Core/GameAction.h"),
+    ("GameAction.cpp",           "Game/Core/GameAction.cpp"),
+    ("KeyBindings.h",            "Game/Core/KeyBindings.h"),
+    ("KeyBindings.cpp",          "Game/Core/KeyBindings.cpp"),
 
     # Testes Unitarios
     ("test_placeholder.cpp",    "Tests/Unit/test_placeholder.cpp"),
@@ -44,6 +48,8 @@ MOVES = [
     ("test_campaign.cpp",       "Tests/Unit/test_campaign.cpp"),
     ("test_campaign_id.cpp",    "Tests/Unit/test_campaign_id.cpp"),
     ("test_run_history.cpp",    "Tests/Unit/test_run_history.cpp"),
+    ("test_game_action.cpp",    "Tests/Unit/test_game_action.cpp"),
+    ("test_keybindings.cpp",    "Tests/Unit/test_keybindings.cpp"),
 
     # Testes de Integracao
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),
@@ -123,7 +129,7 @@ DIRS_WITH_GITKEEP = [
     "Game/Assets/Levels", "Game/Assets/Levels/NaoValidados", "Game/Assets/Levels/Unused",
     "Game/Logic",
     "Development/LevelEditor", "Development/AI_Validation", "Development/AI_Validation/sim",
-    "Development/Runs",
+    "Development/Runs", "Development/Settings",
     "Tests/Unit", "Tests/Integration", "Tests/System",
     "Tests/Regression", "Tests/Acceptance",
     "external/doctest", "external/stb", "scripts",

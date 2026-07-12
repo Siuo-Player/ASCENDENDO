@@ -21,8 +21,10 @@ ASCENDENDO/
 │   └── tasks.json                     ← atalhos de build no VS Code
 ├── Game/
 │   ├── Core/
-│   │   ├── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física)
-│   │   └── CampaignID.h               ← ID determinístico (FNV-1a) p/ diferenciar campanhas
+│   │   ├── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física, EDITOR_GRID_SNAP)
+│   │   ├── CampaignID.h               ← ID determinístico (FNV-1a) p/ diferenciar campanhas
+│   │   ├── GameAction.h/.cpp          ← acções lógicas (MoveLeft, Pause, Quit, ...), independentes de tecla
+│   │   └── KeyBindings.h/.cpp         ← GameAction → tecla(s) físicas, persistência em controls.cfg
 │   ├── Graphics/                      ← motor gráfico Vulkan
 │   │   ├── VulkanContext.h/.cpp
 │   │   ├── Window.h/.cpp              ← janela GLFW
@@ -49,7 +51,7 @@ ASCENDENDO/
 │       ├── Fonts/
 │       │   └── UIFont.ttf             ← fonte TTF (Orbitron, OFL — substituível)
 │       ├── Sprites/
-│       │   ├── player.png             ← sprite do protagonista (de .pixil, optimizado optipng)
+│       │   ├── personagem.png         ← sprite do protagonista (de .pixil, optimizado optipng)
 │       │   └── Source/
 │       │       └── *.pixil            ← originais Pixilart (preservados p/ reedição)
 │       └── Levels/
@@ -64,6 +66,8 @@ ASCENDENDO/
 │   ├── project_structure.txt          ← mapa de arquitectura (auto-gerado)
 │   ├── Runs/
 │   │   └── runs.csv                   ← historico de runs completas (gerado em runtime)
+│   ├── Settings/
+│   │   └── controls.cfg               ← teclas reatribuídas (gerado por uma futura UI CONTROLS; se ausente, usa defaults)
 │   ├── AI_Validation/
 │   │   ├── ai_validator.py            ← validador BFS (--campaign bloqueia pre-push)
 │   │   └── sim/                       ← simulador Python fiel ao motor C++
@@ -87,7 +91,9 @@ ASCENDENDO/
 │   │   ├── test_level.cpp             ← 16 test cases (Level + appendFromFile)
 │   │   ├── test_campaign.cpp          ← chama ai_validator --campaign via system()
 │   │   ├── test_campaign_id.cpp       ← 7 testes (CampaignID: determinismo, sensibilidade)
-│   │   └── test_run_history.cpp       ← 3 testes (RunHistory: formatação, CSV append)
+│   │   ├── test_run_history.cpp       ← 3 testes (RunHistory: formatação, CSV append)
+│   │   ├── test_game_action.cpp       ← 8 testes (GameAction: tabela de acções, round-trip)
+│   │   └── test_keybindings.cpp       ← 21 testes (KeyBindings: defaults, persistência, InputManager real)
 │   └── Integration/
 │       ├── test_vulkan_init.cpp
 │       ├── test_window.cpp
@@ -128,6 +134,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 |---|---|---|---|
 | [doctest](https://github.com/doctest/doctest) | 2.5.0 | `external/doctest/` | Header-only, zero overhead, MIT |
 | [stb_truetype](https://github.com/nothings/stb) | single-header | `external/stb/` | Baking de fontes TTF para atlas, MIT/Public Domain |
+| [stb_image](https://github.com/nothings/stb) | single-header | `external/stb/` | Descodificação de PNG para sprites, MIT/Public Domain |
 | [GLFW](https://www.glfw.org/) | 3.4 | `external/glfw/` | Windowing Vulkan cross-platform, zlib |
 | Vulkan SDK | 1.4.x | sistema (`VULKAN_SDK`) | API gráfica principal + `glslc` para shaders |
 
@@ -139,7 +146,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-push**: valida a campanha completa com `ai_validator.py --campaign`.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
-- **Testes confirmados**: **82/82** (v8.2) — 80 anteriores + 2 `test_sprite_pipeline` (SpritePipeline + SpriteRenderer).
+- **Testes confirmados**: **81/81** (v8.3.1, confirmado por execução real — commit `05f86e2`), 274 assertions. **+29 testes / +211 assertions** (`test_game_action.cpp` + `test_keybindings.cpp`, Fase 9.1) — total 110 test cases, 485 assertions. Corrida real de Rafael (`make tests-verbose -j8`, Windows/Clang22): **485/485 assertions passaram**; 109/110 test cases passaram, 1 falhou por excepção não apanhada (não por assertion errada) — `std::ifstream` não fechado antes de `std::filesystem::remove()` em `test_keybindings.cpp`, só se manifesta no Windows (POSIX permite; Win32 não). Corrigido em v9.1a — **a confirmar 110/110 no próximo `make tests-verbose`**.
 
 ---
 
@@ -196,8 +203,18 @@ Shaders GLSL → SPIR-V, `Pipeline` Vulkan (viewport/scissor dinâmicos),
 - 8.2 ✅ **Menu reestruturado** — `GameState::PAUSED` (ESC pausa sem terminar a run, mundo congelado visível por baixo de overlay+menu), botão SAIR em ambos os menus (fim-de-run e pausa), CRÉDITOS acessível dos dois (regressa a quem chamou), timer HUD (pausa fora de PLAYING), registo de runs (`Development/Runs/runs.csv`) com ID determinístico de campanha (`CampaignID.h`, FNV-1a)
 - 8.3 ✅ **Fixes visuais + Sprites** — FLAG sem zona de touchdown (cor estranha), timer HUD corrigido (clipping no topo do ecrã dava aspecto de texto garbled), espaçamento de CREDITOS recalculado, testes flaky corrigidos (`remove_all` throwing→não-throwing, pastas de teste consolidadas em `build/test_tmp/`). `SpritePipeline`+`SpriteRenderer` (jogador em pixel-art via `.pixil`→PNG automático no `reorganize.py`, optimizado com `optipng`)
 
-**Fase 9: Editor de Níveis Visual** *(planeada — scope por definir, ver nota abaixo)*
-Editor com rato, validação IA automática em background, dificuldade por nível/campanha. Descrito ainda apenas em linha única — falta especificar: input de rato (não existe em `InputManager`), layout/toolset, modelo de threading para a validação IA sem bloquear o render loop, fluxo de guardar/carregar `.lvl`. **Adicionado (v8.2)**: deve também incluir escolha de sprites diferentes (chão/plataforma/decoração), criação/edição de sprites, e regras para troca de sprites — confirmado por Rafael como parte desta fase, mas explicitamente **posterior ao jogo estar jogável** (não bloqueante para o resto do roadmap).
+**Fase 9: Editor de Níveis Visual** *(em progresso — scope confirmado com Rafael, ver detalhe abaixo)*
+Editor corre **dentro do próprio motor** (novo `GameState::EDITOR`, não uma ferramenta à parte) — decisão explícita de Rafael: "é uma parte essencial do jogo". Scope dividido em 6 sub-fases:
+- 9.1 🔄 **Sistema de Configuração de Controlos** — `GameAction` (9 acções lógicas) + `KeyBindings` (mapeamento reatribuível, várias teclas por acção, `Development/Settings/controls.cfg`). Pause/UIConfirm/UILeft/UIRight ligados a `main.cpp`; nova acção Quit (default `Q`) sai directamente do PAUSED/MENU sem precisar navegar até "Sair". **29 testes novos, 211 assertions, verificados nesta sessão** (ver secção 4). **Pendente**: ecrã CONTROLS visual (listar + remapear "prime uma tecla" — precisa do rato, 9.2), e ligar MoveLeft/MoveRight/Jump ao gameplay real (exige tocar `Player.cpp`, testado e estável — aguarda confirmação explícita antes de mexer).
+- 9.2 **Rato** — `InputManager` ganha posição do cursor + botões (mesmo padrão de injecção de eventos testável sem GLFW já usado para teclado); MENU/PAUSED/futuro CONTROLS passam a aceitar clique.
+- 9.3 **Estado EDITOR: infraestrutura e acesso** — câmara livre (sem física; `Player`/`PhysicsWorld` desligados), grelha de fundo desenhada com a pipeline de sólidos existente, acesso por tecla dedicada (via `KeyBindings`) *e* opção no MENU (para quem esquecer a tecla).
+- 9.4 **Manipulação de entidades** — plataformas (colocar/mover/apagar, snap ao `EDITOR_GRID_SNAP` de `Config.h`, actualmente 4px para testes, candidato futuro 16px); spawn (Y sempre fixo no chão do 1º nível, X editável mas travado dentro dos limites seguros da própria plataforma); FLAG (**uma por campanha, não por nível** — só editável no nível que ocupar a última posição em `campaign.txt`).
+- 9.5 **Guardar + Validar (assíncrono)** — grava `.lvl` no formato já usado por `Level::appendFromFile`; validação (`ai_validator.py`) corre em thread separada com barra de progresso e tempo estimado; o utilizador pode sair do editor enquanto corre, resultado chega depois como notificação.
+- 9.6 **Gestão de campanha no editor** — lista de níveis arrastável (estilo *playlist*) dentro do próprio editor; reescreve apenas `campaign.txt` — não move ficheiros entre `Levels/`/`Unused/`/`NaoValidados/`, isso continua a cargo do `reorganize.py`.
+
+**Nota v8.2 ainda pendente de encaixar numa sub-fase**: escolha de sprites diferentes (chão/plataforma/decoração), criação/edição de sprites, regras para troca de sprites — confirmado por Rafael como parte da Fase 9, mas ainda sem sub-fase própria atribuída.
+
+**Ideia registada para o futuro, não aprovada nem escopada**: partilha de campanhas/níveis/runs entre máquinas ("multiplayer" no sentido de dados partilhados, não jogo em tempo real) — ver secção 6.1.
 
 **Fase 10: Distribuição — "Release Build"** *(planeada — um dos últimos passos, definido por Rafael em v8.3)*
 
@@ -217,7 +234,7 @@ Nenhuma destas regras está implementada — este é o registo do plano, a imple
 
 ## 6.1 Planos Futuros (ideias por aprovar)
 
-Ideias levantadas por Rafael. As da secção "Menu e navegação" e "Timer e runs" abaixo foram **implementadas na v8.1** (ver Fase 8.2 acima) — mantidas aqui como registo histórico da decisão. A secção "Fase 9" continua **por especificar**.
+Ideias levantadas por Rafael. As da secção "Menu e navegação" e "Timer e runs" abaixo foram **implementadas na v8.1** (ver Fase 8.2 acima) — mantidas aqui como registo histórico da decisão. A secção "Fase 9" tem agora scope confirmado (ver Fase 9 na secção 6 acima); mantém-se aqui só a ideia de partilha entre máquinas, ainda por aprovar.
 
 **Menu e navegação — ✅ implementado (v8.1):**
 - ~~Botão "Sair"~~ → implementado em ambos os menus (fim-de-run e pausa)
@@ -230,8 +247,10 @@ Ideias levantadas por Rafael. As da secção "Menu e navegação" e "Timer e run
 - ~~Registo de runs completadas~~ → `Development/Runs/runs.csv` (timestamp, campanha, ID, tempo)
 - ~~Questão em aberto: diferenciar campanhas~~ → resolvida com `CampaignID.h` (FNV-1a 64-bit sobre `campaign.txt` + `.lvl`s). Decisão tomada sem confirmação prévia de Rafael — sinalizar se preferir outra abordagem.
 
-**Fase 9 — Editor de Níveis Visual (por especificar):**
-- Nenhum detalhe de design ainda confirmado. Perguntas em aberto antes de implementar: como colocar/redimensionar plataformas com o rato; como mostrar feedback de validação (cor por cima da plataforma? painel lateral?); a validação corre a cada solta do rato ou só ao guardar; guarda directamente para `.lvl` ou para um formato intermédio.
+**Fase 9 — Editor de Níveis Visual: scope confirmado.** Ver secção 6 acima (9.1 a 9.6) para o detalhe completo — deixou de estar por especificar.
+
+**Partilha de campanhas/níveis/runs entre máquinas — ideia registada, NÃO aprovada nem escopada:**
+Rafael levantou a possibilidade de, no futuro, permitir partilhar campanhas/níveis/runs entre jogadores diferentes ("multiplayer" no sentido de dados partilhados — não jogo em tempo real). Explicitamente **decidível mais tarde**, sem scope nem implementação nesta fase. Nota técnica para quando for retomado: `CampaignID.h` já foi desenhado com isto em mente (hash determinístico FNV-1a, independente de máquina — ao contrário de `std::hash`) e os `.lvl` são texto simples portável, por isso a arquitectura actual não fecha esta porta. Cuidado a ter no Editor (Fase 9) para não a fechar sem querer: evitar paths absolutos ou identificadores dependentes da máquina local nos ficheiros gerados.
 
 Ver secção 6 acima para o roadmap completo do que está de facto construído.
 
@@ -336,7 +355,7 @@ python reorganize.py
 vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 ```
 
-**Versão actual: 8.3** (ficheiros individuais podem mostrar v8.2 — o seu próprio incremento local; ver histórico de cada um)
+**Versão actual: 9.1** (ficheiros individuais podem mostrar v8.2 ou anterior — o seu próprio incremento local; ver histórico de cada um)
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -352,10 +371,12 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | BitmapFont.h | v7.5 | fallback (usado se TTF nao disponivel) |
 | CampaignID.h | v8.1 | FNV-1a determinístico p/ ID de campanha |
 | RunHistory.h | v8.1 | regista runs em Development/Runs/runs.csv |
+| GameAction.h/.cpp | v9.1 | NOVO — 9 acções lógicas, nome PT + serializado |
+| KeyBindings.h/.cpp | v9.1 | NOVO — GameAction→tecla(s), persistência em controls.cfg |
 | Camera.h/.cpp | v6.4 | follow() tracking vertical Lerp |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
-| Config.h | v7.5 | + cores FLAG, CREDITS, MENU |
-| InputManager.h/.cpp | v3.3 | injectRawState() para replay |
+| Config.h | v9.1 | + EDITOR_GRID_SNAP (Fase 9.4, actualmente 4px) |
+| InputManager.h/.cpp | v9.1 | + Key::E, Key::Q (defaults de OpenEditor/Quit); isLeft/isRight/isJump inalterados |
 | Physics.h/.cpp | v7.1/v7.2 | config-driven, collides() static |
 | Player.h/.cpp | v7.1/v7.2 | config-driven, inércia natural |
 | Level.h/.cpp | v7.2 | appendFromFile, chunk padronizado a LOGICAL_HEIGHT |
@@ -363,7 +384,7 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | base.vert/base.frag | v5.1 | shaders GLSL (retângulos sólidos) |
 | text.vert/text.frag | v7.6 | shaders GLSL dedicados a texto (UV+sampler) |
 | sprite.vert/sprite.frag | v8.2 | NOVO — shaders GLSL p/ sprites (UV+flipX+tint) |
-| main.cpp | v8.2 | + SpritePipeline/SpriteRenderer |
+| main.cpp | v9.1 | Pause/UIConfirm/UILeft/UIRight/Quit via KeyBindings |
 | ai_validator.py | v7.4 | ASCII-safe (fix Windows cp1252) |
 | levelgen.py | v7.4 | ascending_x_at(), clearance 40px, 100% robustez |
 | test_campaign.cpp | v7.4 | doctest → system(ai_validator --campaign) |
@@ -371,7 +392,9 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | test_sprite_pipeline.cpp | v8.2 | NOVO — 2 testes (SpritePipeline + SpriteRenderer) |
 | test_campaign_id.cpp | v8.2 | fix: remove_all throwing → nao-throwing |
 | test_run_history.cpp | v8.2 | fix: idem; pastas de teste em build/test_tmp/ |
-| reorganize.py | v8.2 | + conversão automática .pixil → PNG (optipng) |
+| test_game_action.cpp | v9.1 | NOVO — 8 testes (tabela de acções, round-trip) |
+| test_keybindings.cpp | v9.1a | NOVO — 21 testes; v9.1a fix: ifstream nao fechado antes de remove() (so' falhava no Windows) |
+| reorganize.py | v9.1 | + rotas GameAction/KeyBindings + pasta Development/Settings/ |
 
 ---
 

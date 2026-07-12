@@ -916,3 +916,125 @@ Ideia: v8.3.1 — Fix: sprite nao carregado (nome de ficheiro nao correspondia
 Implementado: [A confirmar com make tests -- esperado 82/82, sem alteracao
   de contagem nesta sessao, so fixes] + make game (confirmar visualmente
   que o jogador aparece como personagem.png)
+
+[2026-07-11 22:30:00]
+Ideia: v9.1 — Fase 9.1: Sistema de Configuracao de Controlos (GameAction + KeyBindings).
+  Objectivo: substituir os `input.isKeyJustPressed(Key::X)` hardcoded em
+  main.cpp por uma camada logica de accoes, reatribuivel e persistivel, e
+  abrir caminho para o ecra CONTROLS (lista + remapeamento) e para a tecla
+  dedicada do Editor de Niveis (Fase 9.3).
+  GameAction.h/.cpp (Game/Core/): enum com 9 accoes (MoveLeft, MoveRight,
+    Jump, Pause, UIConfirm, UILeft, UIRight, OpenEditor, Quit) + nome PT
+    (UI) e nome serializado estavel (ficheiro de config), com conversao
+    reversivel nos dois sentidos.
+  KeyBindings.h/.cpp (Game/Core/): mapeia GameAction -> vector<int> (varias
+    teclas por accao, para nao perder o A+LEFT/D+RIGHT que isLeft()/
+    isRight() ja suportam). Persistencia em texto simples
+    (Development/Settings/controls.cfg, formato ACCAO=TECLA1,TECLA2).
+    Fallback numerico para qualquer codigo GLFW sem nome na tabela.
+    Adaptadores isActionHeld/isActionJustPressed/isActionJustReleased
+    fazem OR entre as teclas associadas, consultando o InputManager real.
+Implementado: 29 testes novos (test_game_action.cpp: 8, test_keybindings.cpp:
+  21) | 211 assertions | 100% a passar -- compilados e corridos de verdade
+  na sandbox com clang++ 18 (Ubuntu) contra InputManager.h/.cpp REAIS
+  (pedidos e recebidos do Rafael nesta sessao), nao assumidos.
+
+  DESCOBERTA IMPORTANTE: logic::Key NAO e' um enum -- e' um namespace de
+  `constexpr int` (codigos GLFW directos: SPACE=32, A=65, etc.), e todos os
+  metodos de InputManager (isKeyDown, isKeyJustPressed, isKeyJustReleased)
+  recebem `int`, nao um tipo customizado. A suposicao inicial de trabalho
+  (enum class) teria produzido uma KeyBindings incompativel -- so nao
+  aconteceu porque o ficheiro real foi pedido e lido antes de escrever
+  qualquer coisa que dependesse dele. KeyBindings.h documenta isto.
+
+  Key::E (69) e Key::Q (81) adicionados ao namespace Key em InputManager.h
+  -- adicao pura (nenhum valor/assinatura existente alterado), sao os
+  defaults de OpenEditor e Quit, accoes que nao tinham tecla nomeada antes.
+  Confirmado que Physics.cpp/Player.cpp/Level.cpp/ReplayManager.cpp (todos
+  incluem InputManager.h) continuam a compilar sem alteracoes.
+
+  main.cpp (v9.1): Pause/UIConfirm/UILeft/UIRight deixam de verificar
+  Key::ESCAPE/LEFT/RIGHT/SPACE directamente -- passam por
+  core::isActionJustPressed(bindings, input, GameAction::X). Nova accao
+  Quit (default Q) sai do jogo directamente a partir de PAUSED/MENU, sem
+  precisar navegar ate "Sair" + confirmar. bindings.loadFromFile(
+  "Development/Settings/controls.cfg") na iniciacao, com o mesmo fallback
+  gracioso ja usado para a fonte TTF/sprite (ficheiro ausente -> defaults,
+  identicos ao comportamento anterior a esta sessao). Variavel local
+  `escPressed` renomeada para `pausePressed` (deixou de ser literalmente
+  "ESC" assim que se tornou reatribuivel).
+
+  AMBITO DELIBERADAMENTE LIMITADO: MoveLeft/MoveRight/Jump existem na
+  tabela de accoes (para o futuro ecra CONTROLS listar tudo) mas NAO estao
+  ligadas ao gameplay real ainda -- Player.cpp continua a chamar
+  input.isLeft()/isRight()/isKeyDown(Key::SPACE) directamente (metodos
+  hardcoded dentro do proprio InputManager). Ligar estas tres a
+  KeyBindings exige tocar em Player.cpp, ficheiro testado e estavel --
+  fica pendente de confirmacao explicita antes de mexer.
+
+  VALIDACAO EMPIRICA (alem da compilacao isolada): main.cpp completo
+  compila (clang++ -c, headers Vulkan/GLFW reais instalados via apt) E o
+  motor INTEIRO liga sem erros (main.cpp + 11 ficheiros Graphics/*.cpp + 4
+  Logic/*.cpp + GameAction.cpp + KeyBindings.cpp, contra libvulkan e
+  libglfw3 reais do sistema) -- binario ELF de 548KB produzido. Nao corre
+  aqui (sem GPU/display na sandbox Linux, e o alvo real e' Windows/Clang22/
+  MSVC-ABI, ambiente diferente), mas a validacao sintactica e de simbolos
+  cobre o ficheiro inteiro, nao so o excerto alterado.
+
+  reorganize.py: rotas novas para GameAction.h/.cpp, KeyBindings.h/.cpp,
+  test_game_action.cpp, test_keybindings.cpp + pasta Development/Settings/
+  (onde controls.cfg vai ficar, gerado por uma futura UI CONTROLS -- por
+  agora so o .gitkeep). Testado de verdade: replica minima da raiz com os
+  6 ficheiros novos, reorganize.py corrido, confirmados todos nos destinos
+  correctos.
+
+  Config.h: EDITOR_GRID_SNAP = 4.0f adicionado (Fase 9.4 -- pedido
+  explicito para testar grelha fina antes de decidir entre 4 e 16). Nao
+  consumido ainda por nada; um so ponto de mudanca quando o Editor
+  precisar dele.
+
+  PENDENTE (nao implementado nesta sessao):
+    - Ecra CONTROLS (listar + remapear "prime uma tecla") -- precisa de
+      rato (Fase 9.2) e wiring ao Renderer/TextPipeline.
+    - Ligar MoveLeft/MoveRight/Jump a KeyBindings (exige tocar Player.cpp,
+      pendente de confirmacao).
+    - GameAction::OpenEditor nao e' consumido em lado nenhum ainda --
+      GameState::EDITOR so existe a partir da Fase 9.3.
+    - README.md: NAO actualizado nesta entrada. Pedido o ficheiro actual
+      a Rafael antes de o tocar -- este dev_log regista que uma sessao
+      anterior ja adicionou a Fase 10 ao README (nao visivel nesta
+      janela), e reescrever a partir da copia desactualizada disponivel
+      aqui apagaria esse trabalho. Fica para assim que o ficheiro chegar.
+
+[2026-07-12 10:00:00]
+Ideia: v9.1a — Fix: test_keybindings.cpp falha no Windows (exception no remove()).
+  Rafael correu `make tests-verbose -j8 > Tests/log_testes.txt 2>&1` no ambiente
+  real (Windows/Clang22) -- 109/110 test cases, 485/485 assertions. O unico
+  test case a falhar nao tinha NENHUMA assertion falhada; a falha era uma
+  excecao nao apanhada, sinal classico de um problema de ambiente e nao de
+  logica: "test_keybindings.cpp(221): ERROR: test case THREW exception:
+  remove: The process cannot access the file because it is being used by
+  another process."
+Implementado: Causa localizada por inspeccao directa da linha 221 (TEST_CASE
+  "saveToFile: grava todas as ALL_ACTIONS, uma linha cada"): um
+  `std::ifstream f(path)` era aberto para reler o ficheiro gravado, lido via
+  `std::getline` num ciclo, mas NUNCA fechado explicitamente antes do
+  `std::filesystem::remove(path)` no fim do mesmo TEST_CASE.
+  No Linux (onde este ficheiro foi validado antes de entregar) isto passa
+  despercebido -- POSIX permite apagar um ficheiro com um handle ainda
+  aberto (unlink nao bloqueia). No Windows, a implementacao por omissao de
+  ifstream nao abre com FILE_SHARE_DELETE, por isso remove() falha com
+  "used by another process" enquanto o handle existir.
+  Fix: `f.close()` explicito a seguir ao ciclo de leitura, antes do
+  `CHECK` e do `remove()`. Auditados TODOS os outros std::ifstream/
+  std::ofstream deste ficheiro (grep directo) -- os restantes 3 ja fechavam
+  explicitamente antes de qualquer remove(); este era o unico caso.
+  Recompilado e re-corrido no Linux (29/29, 211/211 -- inalterado, como
+  esperado, ja que o Linux nunca teve o bug). A confirmacao real fica para
+  o proximo `make tests-verbose` no ambiente Windows do Rafael.
+  LICAO: ao escrever testes que abrem um ficheiro para leitura/escrita e
+  depois o removem na mesma funcao/scope, fechar SEMPRE o stream
+  explicitamente antes do remove() -- o sandbox Linux usado para validar
+  antes de entregar nao apanha esta classe de bug, so o ambiente Windows
+  real o revela. Mesma familia de problema ja visto antes em
+  test_campaign_id.cpp/test_run_history.cpp (remove_all a lancar).

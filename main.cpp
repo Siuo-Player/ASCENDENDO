@@ -1,7 +1,7 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 8.1
+//  @version 9.1
 //  @history
 //    v7.1  — Campaign streaming + nivel nativo
 //    v7.5  — GameState (PLAYING / CREDITS / MENU), FLAG visual,
@@ -19,6 +19,16 @@
 //             pixel-art via Game/Assets/Sprites/personagem.png, gerado a
 //             partir do .pixil pelo reorganize.py). Fallback gracioso
 //             para rectangulo solido se o PNG nao existir.
+//    v9.1  — KeyBindings (Fase 9.1): Pause/UIConfirm/UILeft/UIRight/Quit
+//             deixam de verificar Key::X directamente e passam por
+//             core::isActionJustPressed(bindings, input, GameAction::X).
+//             Nova accao Quit (default Key::Q) sai do jogo directamente a
+//             partir de PAUSED/MENU, sem precisar navegar ate "Sair".
+//             Carrega Development/Settings/controls.cfg se existir; senao
+//             usa os defaults (identicos ao comportamento anterior a este
+//             sistema existir). MoveLeft/MoveRight/Jump NAO estao ligados
+//             ainda -- Player.cpp continua a usar isLeft()/isRight()/
+//             isKeyDown(Key::SPACE) directamente (ver nota em KeyBindings.h).
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -38,6 +48,8 @@
 #include "Game/Logic/RunHistory.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
+#include "Game/Core/GameAction.h"
+#include "Game/Core/KeyBindings.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -54,6 +66,7 @@ using namespace logic;
 static const std::string CAMPAIGN_NAME = "Campanha Principal";
 static const std::string LEVELS_DIR    = "Game/Assets/Levels";
 static const std::string RUNS_CSV_PATH = "Development/Runs/runs.csv";
+static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg";
 
 int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
@@ -76,6 +89,7 @@ int main() {
         SpriteRenderer playerSprite;
         Renderer      renderer;
         InputManager  input;
+        core::KeyBindings bindings;
 
         if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) return -1;
 
@@ -117,6 +131,17 @@ int main() {
         }
 
         input.registerWithWindow(win.handle());
+
+        // Controlos: se Development/Settings/controls.cfg existir, usa-o;
+        // senao mantem os defaults (identicos ao comportamento do jogo
+        // antes deste sistema existir). Mesmo padrao de falha graciosa
+        // usado para a fonte TTF e o sprite do jogador.
+        if (bindings.loadFromFile(CONTROLS_CFG_PATH)) {
+            std::cout << "[ASCENDENDO] Controlos carregados de " << CONTROLS_CFG_PATH << ".\n";
+        } else {
+            std::cout << "[ASCENDENDO] " << CONTROLS_CFG_PATH
+                      << " nao encontrado -- a usar controlos por omissao.\n";
+        }
 
         // ── Carregar lista de niveis da campanha ──────────────────────────────
         std::vector<std::string> campaign;
@@ -194,13 +219,13 @@ int main() {
             input.beginFrame();
             win.pollEvents();
 
-            bool escPressed = input.isKeyJustPressed(Key::ESCAPE);
+            bool pausePressed = core::isActionJustPressed(bindings, input, core::GameAction::Pause);
 
             // ── Logica por estado ─────────────────────────────────────────────
             if (state == GameState::PLAYING) {
                 elapsedTime += dt; // timer so avanca em gameplay activo
 
-                if (escPressed) {
+                if (pausePressed) {
                     state   = GameState::PAUSED;
                     menuSel = 0;
                     glfwSetWindowTitle(win.handle(),
@@ -253,16 +278,21 @@ int main() {
                 }
 
             } else if (state == GameState::PAUSED) {
-                if (escPressed) {
-                    // ESC de novo: retoma o jogo (timer continua de onde ficou —
-                    // nao foi incrementado enquanto estava em PAUSED).
+                if (pausePressed) {
+                    // ESC (ou a tecla actualmente ligada a Pause) de novo:
+                    // retoma o jogo (timer continua de onde ficou — nao foi
+                    // incrementado enquanto estava em PAUSED).
                     state = GameState::PLAYING;
                     glfwSetWindowTitle(win.handle(), "ASCENDENDO");
                 } else {
-                    if (input.isKeyJustPressed(Key::LEFT))  navigate(-1);
-                    if (input.isKeyJustPressed(Key::RIGHT)) navigate(+1);
+                    // Quit tem tecla propria (default Q) -- sai directamente
+                    // sem precisar navegar ate "Sair" + confirmar.
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
-                    if (input.isKeyJustPressed(Key::SPACE)) {
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
+
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm)) {
                         if (menuSel == 0) {           // CONTINUAR
                             state = GameState::PLAYING;
                             glfwSetWindowTitle(win.handle(), "ASCENDENDO");
@@ -276,8 +306,8 @@ int main() {
                 }
 
             } else if (state == GameState::CREDITS) {
-                // SPACE ou ESC regressam ao estado que chamou os creditos.
-                if (input.isKeyJustPressed(Key::SPACE) || escPressed) {
+                // SPACE (UIConfirm) ou Pause regressam ao estado que chamou os creditos.
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || pausePressed) {
                     state   = creditsReturnState;
                     menuSel = 0;
                     if (state == GameState::MENU) {
@@ -290,12 +320,14 @@ int main() {
                 }
 
             } else if (state == GameState::MENU) {
-                // ESC no menu de fim-de-run nao faz nada especial (nao ha
-                // gameplay para retomar — usar SAIR explicitamente).
-                if (input.isKeyJustPressed(Key::LEFT))  navigate(-1);
-                if (input.isKeyJustPressed(Key::RIGHT)) navigate(+1);
+                // Pause no menu de fim-de-run nao faz nada especial (nao ha
+                // gameplay para retomar — usar Quit ou SAIR explicitamente).
+                if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
-                if (input.isKeyJustPressed(Key::SPACE)) {
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
+
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm)) {
                     if (menuSel == 0) {           // COMECAR
                         resetGame();
                     } else if (menuSel == 1) {    // CREDITOS

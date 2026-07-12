@@ -1,50 +1,4 @@
-[CC ] Tests/test_runner.cpp
-[CC ] Tests/Unit/test_camera.cpp
-[CC ] Tests/Unit/test_campaign.cpp
-[CC ] Tests/Unit/test_campaign_id.cpp
-[CC ] Tests/Unit/test_input.cpp
-[CC ] Tests/Unit/test_placeholder.cpp
-[CC ] Tests/Unit/test_level.cpp
-[CC ] Tests/Unit/test_physics.cpp
-[CC ] Tests/Unit/test_run_history.cpp
-[CC ] Tests/Unit/test_replay.cpp
-[CC ] Tests/Unit/test_player.cpp
-[CC ] Tests/Unit/test_vulkan_context.cpp
-[CC ] Tests/Integration/test_render_pass.cpp
-[CC ] Tests/Integration/test_pipeline.cpp
-[CC ] Tests/Integration/test_renderer.cpp
-[CC ] Tests/Integration/test_sprite_pipeline.cpp
-[CC ] Tests/Integration/test_swapchain.cpp
-[CC ] Tests/Integration/test_vulkan_init.cpp
-[CC ] Tests/Integration/test_window.cpp
-[CC ] Game/Graphics/Camera.cpp
-[CC ] Game/Graphics/Pipeline.cpp
-[CC ] Game/Graphics/FontRenderer.cpp
-[CC ] Game/Graphics/RenderPass.cpp
-[CC ] Game/Graphics/SpritePipeline.cpp
-[CC ] Game/Graphics/Renderer.cpp
-[CC ] Game/Graphics/SpriteRenderer.cpp
-[CC ] Game/Graphics/Swapchain.cpp
-[CC ] Game/Graphics/TextPipeline.cpp
-In file included from Game/Graphics/SpriteRenderer.cpp:21:
-external\stb/stb_image.h:732:12: warning: unused function 'stbi__cpuid3' [-Wunused-function]
-  732 | static int stbi__cpuid3(void)
-      |            ^~~~~~~~~~~~
-external\stb/stb_image.h:1070:12: warning: unused function 'stbi__addints_valid' [-Wunused-function]
- 1070 | static int stbi__addints_valid(int a, int b)
-      |            ^~~~~~~~~~~~~~~~~~~
-external\stb/stb_image.h:1078:12: warning: unused function 'stbi__mul2shorts_valid' [-Wunused-function]
- 1078 | static int stbi__mul2shorts_valid(int a, int b)
-      |            ^~~~~~~~~~~~~~~~~~~~~~
-[CC ] Game/Graphics/VulkanContext.cpp
-[CC ] Game/Graphics/Window.cpp
-3 warnings generated.
-[CC ] Game/Logic/InputManager.cpp
-[CC ] Game/Logic/Level.cpp
-[CC ] Game/Logic/Physics.cpp
-[CC ] Game/Logic/Player.cpp
-[CC ] Game/Logic/ReplayManager.cpp
-[LIB] libgame.a
+[CC ] Tests/Unit/test_keybindings.cpp
 [LNK] tests.exe
 
   ===========================================
@@ -547,6 +501,394 @@ Tests/Unit/test_campaign_id.cpp(148): SUCCESS: CHECK( computeCampaignID(dirA) ==
   values: CHECK( fc90e052c6bf7620 == fc90e052c6bf7620 )
 
 ===============================================================================
+Tests/Unit/test_game_action.cpp(20):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  ALL_ACTIONS tem exactamente ACTION_COUNT entradas
+
+Tests/Unit/test_game_action.cpp(21): SUCCESS: CHECK( sizeof(ALL_ACTIONS) / sizeof(ALL_ACTIONS[0]) == ACTION_COUNT ) is correct!
+  values: CHECK( 9 == 9 )
+
+Tests/Unit/test_game_action.cpp(22): SUCCESS: CHECK( ACTION_COUNT > 0 ) is correct!
+  values: CHECK( 9 >  0 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(25):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  todas as acoes em ALL_ACTIONS sao unicas
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(29): SUCCESS: CHECK( seen.count(v) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(32): SUCCESS: CHECK( seen.size() == ACTION_COUNT ) is correct!
+  values: CHECK( 9 == 9 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(35):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionDisplayName: nenhuma accao devolve o fallback '?'
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 14 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 13 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 6 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 5 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 9 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 14 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 14 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 12 >  0 )
+
+Tests/Unit/test_game_action.cpp(38): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(39): SUCCESS: CHECK( std::strcmp(name, "?") != 0 ) is correct!
+  values: CHECK( 1 != 0 )
+
+Tests/Unit/test_game_action.cpp(40): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 12 >  0 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(44):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionSerializedName: nenhuma accao devolve o fallback 'Unknown'
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 8 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 9 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 4 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 5 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 9 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 6 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 7 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 10 >  0 )
+
+Tests/Unit/test_game_action.cpp(47): SUCCESS: REQUIRE( name != nullptr ) is correct!
+  values: REQUIRE( 1 != nullptr )
+
+Tests/Unit/test_game_action.cpp(48): SUCCESS: CHECK( std::strcmp(name, "Unknown") != 0 ) is correct!
+  values: CHECK( -1 != 0 )
+
+Tests/Unit/test_game_action.cpp(49): SUCCESS: CHECK( std::strlen(name) > 0 ) is correct!
+  values: CHECK( 4 >  0 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(53):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionSerializedName: nomes sao unicos e sem espacos (formato controls.cfg)
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(57): SUCCESS: CHECK( name.find(' ') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(58): SUCCESS: CHECK( name.find('=') == std::string::npos ) is correct!
+  values: CHECK( 18446744073709551615 == 18446744073709551615 )
+
+Tests/Unit/test_game_action.cpp(59): SUCCESS: CHECK( seen.count(name) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(64):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionFromSerializedName: round-trip para todas as acoes
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 2 == 2 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 3 == 3 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 4 == 4 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 5 == 5 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 6 == 6 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 7 == 7 )
+
+Tests/Unit/test_game_action.cpp(68): SUCCESS: REQUIRE( actionFromSerializedName(serialized, parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_game_action.cpp(69): SUCCESS: CHECK( parsed == a ) is correct!
+  values: CHECK( 8 == 8 )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(73):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionFromSerializedName: nome desconhecido devolve false
+
+Tests/Unit/test_game_action.cpp(75): SUCCESS: CHECK( actionFromSerializedName("NaoExiste", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_game_action.cpp(76): SUCCESS: CHECK( actionFromSerializedName("", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_game_action.cpp(77): SUCCESS: CHECK( actionFromSerializedName(nullptr, parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_game_action.cpp(80):
+TEST SUITE: Fase 9.1 — GameAction
+TEST CASE:  actionFromSerializedName: case-sensitive (por desenho)
+
+Tests/Unit/test_game_action.cpp(84): SUCCESS: CHECK( actionFromSerializedName("moveleft", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_game_action.cpp(85): SUCCESS: CHECK( actionFromSerializedName("MOVELEFT", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
 Tests/Unit/test_input.cpp(16):
 TEST SUITE: InputManager
 TEST CASE:  tecla premida: isKeyDown e isKeyJustPressed
@@ -640,6 +982,396 @@ Tests/Unit/test_input.cpp(84): SUCCESS: CHECK( input.isKeyDown(Key::D) == true )
 
 Tests/Unit/test_input.cpp(85): SUCCESS: CHECK( input.isKeyJustPressed(Key::D) == false ) is correct!
   values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(30):
+TEST SUITE: Fase 9.1 — KeyBindings: defaults
+TEST CASE:  construtor preenche todas as acoes com pelo menos 1 tecla
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(33): SUCCESS: CHECK( kb.keysFor(a).empty() == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(37):
+TEST SUITE: Fase 9.1 — KeyBindings: defaults
+TEST CASE:  defaults espelham o comportamento actual do jogo
+
+Tests/Unit/test_keybindings.cpp(41): SUCCESS: CHECK( kb.keysFor(GameAction::MoveLeft) == std::vector<int>{Key::A, Key::LEFT} ) is correct!
+  values: CHECK( {65, 263} == {65, 263} )
+
+Tests/Unit/test_keybindings.cpp(42): SUCCESS: CHECK( kb.keysFor(GameAction::MoveRight) == std::vector<int>{Key::D, Key::RIGHT} ) is correct!
+  values: CHECK( {68, 262} == {68, 262} )
+
+Tests/Unit/test_keybindings.cpp(43): SUCCESS: CHECK( kb.keysFor(GameAction::Jump) == std::vector<int>{Key::SPACE} ) is correct!
+  values: CHECK( {32} == {32} )
+
+Tests/Unit/test_keybindings.cpp(46): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::ESCAPE} ) is correct!
+  values: CHECK( {256} == {256} )
+
+Tests/Unit/test_keybindings.cpp(47): SUCCESS: CHECK( kb.keysFor(GameAction::UIConfirm) == std::vector<int>{Key::SPACE} ) is correct!
+  values: CHECK( {32} == {32} )
+
+Tests/Unit/test_keybindings.cpp(48): SUCCESS: CHECK( kb.keysFor(GameAction::UILeft) == std::vector<int>{Key::LEFT} ) is correct!
+  values: CHECK( {263} == {263} )
+
+Tests/Unit/test_keybindings.cpp(49): SUCCESS: CHECK( kb.keysFor(GameAction::UIRight) == std::vector<int>{Key::RIGHT} ) is correct!
+  values: CHECK( {262} == {262} )
+
+Tests/Unit/test_keybindings.cpp(52): SUCCESS: CHECK( kb.keysFor(GameAction::OpenEditor) == std::vector<int>{Key::E} ) is correct!
+  values: CHECK( {69} == {69} )
+
+Tests/Unit/test_keybindings.cpp(53): SUCCESS: CHECK( kb.keysFor(GameAction::Quit) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(59):
+TEST SUITE: Fase 9.1 — KeyBindings: rebind / reset
+TEST CASE:  rebind substitui TODAS as teclas da accao por uma unica
+
+Tests/Unit/test_keybindings.cpp(61): SUCCESS: REQUIRE( kb.keysFor(GameAction::MoveLeft).size() == 2 ) is correct!
+  values: REQUIRE( 2 == 2 )
+
+Tests/Unit/test_keybindings.cpp(65): SUCCESS: CHECK( kb.keysFor(GameAction::MoveLeft) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(68):
+TEST SUITE: Fase 9.1 — KeyBindings: rebind / reset
+TEST CASE:  rebind nao afecta outras acoes
+
+Tests/Unit/test_keybindings.cpp(72): SUCCESS: CHECK( kb.keysFor(GameAction::Quit) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(75):
+TEST SUITE: Fase 9.1 — KeyBindings: rebind / reset
+TEST CASE:  resetToDefault restaura so' a accao pedida
+
+Tests/Unit/test_keybindings.cpp(82): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::ESCAPE} ) is correct!
+  values: CHECK( {256} == {256} )
+
+Tests/Unit/test_keybindings.cpp(83): SUCCESS: CHECK( kb.keysFor(GameAction::Quit) == std::vector<int>{Key::ESCAPE} ) is correct!
+  values: CHECK( {256} == {256} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(86):
+TEST SUITE: Fase 9.1 — KeyBindings: rebind / reset
+TEST CASE:  resetAllToDefaults restaura tudo
+
+Tests/Unit/test_keybindings.cpp(94): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::ESCAPE} ) is correct!
+  values: CHECK( {256} == {256} )
+
+Tests/Unit/test_keybindings.cpp(95): SUCCESS: CHECK( kb.keysFor(GameAction::Quit) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+Tests/Unit/test_keybindings.cpp(96): SUCCESS: CHECK( kb.keysFor(GameAction::UILeft) == std::vector<int>{Key::LEFT} ) is correct!
+  values: CHECK( {263} == {263} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(102):
+TEST SUITE: Fase 9.1 — KeyBindings: nome <-> tecla
+TEST CASE:  keyToString: teclas conhecidas devolvem nome legivel
+
+Tests/Unit/test_keybindings.cpp(103): SUCCESS: CHECK( keyToString(Key::SPACE) == "SPACE" ) is correct!
+  values: CHECK( SPACE == SPACE )
+
+Tests/Unit/test_keybindings.cpp(104): SUCCESS: CHECK( keyToString(Key::ESCAPE) == "ESCAPE" ) is correct!
+  values: CHECK( ESCAPE == ESCAPE )
+
+Tests/Unit/test_keybindings.cpp(105): SUCCESS: CHECK( keyToString(Key::LEFT) == "LEFT" ) is correct!
+  values: CHECK( LEFT == LEFT )
+
+Tests/Unit/test_keybindings.cpp(106): SUCCESS: CHECK( keyToString(Key::E) == "E" ) is correct!
+  values: CHECK( E == E )
+
+Tests/Unit/test_keybindings.cpp(107): SUCCESS: CHECK( keyToString(Key::Q) == "Q" ) is correct!
+  values: CHECK( Q == Q )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(110):
+TEST SUITE: Fase 9.1 — KeyBindings: nome <-> tecla
+TEST CASE:  keyToString: tecla desconhecida cai para o codigo numerico
+
+Tests/Unit/test_keybindings.cpp(111): SUCCESS: CHECK( keyToString(301) == "301" ) is correct!
+  values: CHECK( 301 == 301 )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(114):
+TEST SUITE: Fase 9.1 — KeyBindings: nome <-> tecla
+TEST CASE:  stringToKey: round-trip para todas as teclas nomeadas
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 263 == 263 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 262 == 262 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 265 == 265 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 264 == 264 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 65 == 65 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 68 == 68 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 87 == 87 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 83 == 83 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 69 == 69 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 81 == 81 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 32 == 32 )
+
+Tests/Unit/test_keybindings.cpp(120): SUCCESS: REQUIRE( stringToKey(keyToString(key), parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(121): SUCCESS: CHECK( parsed == key ) is correct!
+  values: CHECK( 256 == 256 )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(125):
+TEST SUITE: Fase 9.1 — KeyBindings: nome <-> tecla
+TEST CASE:  stringToKey: fallback numerico para codigos sem nome
+
+Tests/Unit/test_keybindings.cpp(127): SUCCESS: REQUIRE( stringToKey("301", parsed) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(128): SUCCESS: CHECK( parsed == 301 ) is correct!
+  values: CHECK( 301 == 301 )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(131):
+TEST SUITE: Fase 9.1 — KeyBindings: nome <-> tecla
+TEST CASE:  stringToKey: string invalida devolve false
+
+Tests/Unit/test_keybindings.cpp(133): SUCCESS: CHECK( stringToKey("", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(134): SUCCESS: CHECK( stringToKey("NaoExiste", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(135): SUCCESS: CHECK( stringToKey("12X", parsed) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(141):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  saveToFile + loadFromFile: round-trip completo
+
+Tests/Unit/test_keybindings.cpp(149): SUCCESS: REQUIRE( original.saveToFile(path) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(152): SUCCESS: REQUIRE( loaded.loadFromFile(path) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {65, 263} == {65, 263} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {68, 262} == {68, 262} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {32} == {32} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {81} == {81} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {32} == {32} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {263} == {263} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {262} == {262} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {87} == {87} )
+
+Tests/Unit/test_keybindings.cpp(155): SUCCESS: CHECK( loaded.keysFor(a) == original.keysFor(a) ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(161):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  loadFromFile: ficheiro inexistente devolve false e nao mexe nos bindings
+
+Tests/Unit/test_keybindings.cpp(167): SUCCESS: CHECK( ok == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(168): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(171):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  loadFromFile: accoes desconhecidas no ficheiro sao ignoradas (forward-compat)
+
+Tests/Unit/test_keybindings.cpp(182): SUCCESS: CHECK( ok == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(183): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(188):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  loadFromFile: accao ausente do ficheiro mantem o default
+
+Tests/Unit/test_keybindings.cpp(197): SUCCESS: CHECK( ok == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(198): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+Tests/Unit/test_keybindings.cpp(199): SUCCESS: CHECK( kb.keysFor(GameAction::Quit) == std::vector<int>{Key::Q} ) is correct!
+  values: CHECK( {81} == {81} )
+
+Tests/Unit/test_keybindings.cpp(200): SUCCESS: CHECK( kb.keysFor(GameAction::UILeft) == std::vector<int>{Key::LEFT} ) is correct!
+  values: CHECK( {263} == {263} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(205):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  loadFromFile: linha com tecla invalida e' ignorada, mantem default
+
+Tests/Unit/test_keybindings.cpp(215): SUCCESS: CHECK( ok == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(216): SUCCESS: CHECK( kb.keysFor(GameAction::Pause) == std::vector<int>{Key::ESCAPE} ) is correct!
+  values: CHECK( {256} == {256} )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(221):
+TEST SUITE: Fase 9.1 — KeyBindings: persistência (ficheiro real)
+TEST CASE:  saveToFile: grava todas as ALL_ACTIONS, uma linha cada
+
+Tests/Unit/test_keybindings.cpp(226): SUCCESS: REQUIRE( kb.saveToFile(path) == true ) is correct!
+  values: REQUIRE( true == true )
+
+Tests/Unit/test_keybindings.cpp(229): SUCCESS: REQUIRE( f.is_open() ) is correct!
+  values: REQUIRE( true )
+
+Tests/Unit/test_keybindings.cpp(240): SUCCESS: CHECK( nonCommentLines == (int)ACTION_COUNT ) is correct!
+  values: CHECK( 9 == 9 )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(248):
+TEST SUITE: Fase 9.1 — KeyBindings: adaptadores para InputManager (integracao real)
+TEST CASE:  isActionJustPressed: SPACE aciona UIConfirm e Jump (ambos default=SPACE)
+
+Tests/Unit/test_keybindings.cpp(255): SUCCESS: CHECK( isActionJustPressed(kb, input, GameAction::UIConfirm) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(256): SUCCESS: CHECK( isActionJustPressed(kb, input, GameAction::Jump) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(257): SUCCESS: CHECK( isActionJustPressed(kb, input, GameAction::Pause) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(260):
+TEST SUITE: Fase 9.1 — KeyBindings: adaptadores para InputManager (integracao real)
+TEST CASE:  isActionHeld: A ou LEFT accionam MoveLeft (OR entre teclas)
+
+Tests/Unit/test_keybindings.cpp(266): SUCCESS: CHECK( isActionHeld(kb, input, GameAction::MoveLeft) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(271): SUCCESS: CHECK( isActionHeld(kb, input, GameAction::MoveLeft) == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(274):
+TEST SUITE: Fase 9.1 — KeyBindings: adaptadores para InputManager (integracao real)
+TEST CASE:  isActionJustReleased: reflecte apenas o frame do release
+
+Tests/Unit/test_keybindings.cpp(280): SUCCESS: CHECK( isActionJustReleased(kb, input, GameAction::Pause) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(284): SUCCESS: CHECK( isActionJustReleased(kb, input, GameAction::Pause) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_keybindings.cpp(287): SUCCESS: CHECK( isActionJustReleased(kb, input, GameAction::Pause) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_keybindings.cpp(290):
+TEST SUITE: Fase 9.1 — KeyBindings: adaptadores para InputManager (integracao real)
+TEST CASE:  rebind muda qual tecla fisica aciona a accao
+
+Tests/Unit/test_keybindings.cpp(297): SUCCESS: CHECK( isActionJustPressed(kb, input, GameAction::Pause) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_keybindings.cpp(301): SUCCESS: CHECK( isActionJustPressed(kb, input, GameAction::Pause) == true ) is correct!
+  values: CHECK( true == true )
 
 ===============================================================================
 Tests/Unit/test_level.cpp(43):
@@ -1319,7 +2051,7 @@ Tests/Unit/test_vulkan_context.cpp(77): SUCCESS: CHECK( ctx.isInitialized() ) is
   values: CHECK( true )
 
 ===============================================================================
-[doctest] test cases:  81 |  81 passed | 0 failed | 0 skipped
-[doctest] assertions: 274 | 274 passed | 0 failed |
+[doctest] test cases: 110 | 110 passed | 0 failed | 0 skipped
+[doctest] assertions: 485 | 485 passed | 0 failed |
 [doctest] Status: SUCCESS!
 

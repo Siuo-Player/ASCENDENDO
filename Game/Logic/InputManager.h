@@ -2,10 +2,14 @@
 // =============================================================================
 //  Game/Logic/InputManager.h
 //
-//  @version 3.3
+//  @version 9.1
 //  @history
 //    v3.1 — criado (key states: down, justPressed, justReleased; callbacks GLFW)
 //    v3.3 — injectRawState() adicionado para simulação e reprodução de replays
+//    v9.1 — Key::E, Key::Q adicionados (defaults de GameAction::OpenEditor e
+//            GameAction::Quit em KeyBindings.h). Puramente aditivo -- nenhum
+//            valor/assinatura existente foi alterado; isLeft()/isRight()/
+//            isJump() continuam identicos.
 // =============================================================================
 
 #include <unordered_map>
@@ -23,6 +27,8 @@ namespace Key {
     constexpr int D      = 68;
     constexpr int W      = 87;
     constexpr int S      = 83;
+    constexpr int E      = 69;   // v9.1: default de GameAction::OpenEditor
+    constexpr int Q      = 81;   // v9.1: default de GameAction::Quit
     constexpr int SPACE  = 32;
     constexpr int ESCAPE = 256;
 }
