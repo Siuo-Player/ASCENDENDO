@@ -35,6 +35,8 @@ MOVES = [
     ("GameAction.cpp",           "Game/Core/GameAction.cpp"),
     ("KeyBindings.h",            "Game/Core/KeyBindings.h"),
     ("KeyBindings.cpp",          "Game/Core/KeyBindings.cpp"),
+    ("Viewport.h",               "Game/Core/Viewport.h"),
+    ("Viewport.cpp",             "Game/Core/Viewport.cpp"),
 
     # Testes Unitarios
     ("test_placeholder.cpp",    "Tests/Unit/test_placeholder.cpp"),
@@ -50,6 +52,8 @@ MOVES = [
     ("test_run_history.cpp",    "Tests/Unit/test_run_history.cpp"),
     ("test_game_action.cpp",    "Tests/Unit/test_game_action.cpp"),
     ("test_keybindings.cpp",    "Tests/Unit/test_keybindings.cpp"),
+    ("test_viewport.cpp",       "Tests/Unit/test_viewport.cpp"),
+    ("test_input_mouse.cpp",    "Tests/Unit/test_input_mouse.cpp"),
 
     # Testes de Integracao
     ("test_vulkan_init.cpp",    "Tests/Integration/test_vulkan_init.cpp"),

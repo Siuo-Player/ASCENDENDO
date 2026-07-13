@@ -1,4 +1,57 @@
+[CC ] Tests/Unit/test_campaign.cpp
+[CC ] Tests/test_runner.cpp
+[CC ] Tests/Unit/test_campaign_id.cpp
+[CC ] Tests/Unit/test_camera.cpp
+[CC ] Tests/Unit/test_input.cpp
+[CC ] Tests/Unit/test_game_action.cpp
 [CC ] Tests/Unit/test_keybindings.cpp
+[CC ] Tests/Unit/test_input_mouse.cpp
+[CC ] Tests/Unit/test_level.cpp
+[CC ] Tests/Unit/test_physics.cpp
+[CC ] Tests/Unit/test_placeholder.cpp
+[CC ] Tests/Unit/test_player.cpp
+[CC ] Tests/Unit/test_replay.cpp
+[CC ] Tests/Unit/test_run_history.cpp
+[CC ] Tests/Unit/test_viewport.cpp
+[CC ] Tests/Unit/test_vulkan_context.cpp
+[CC ] Tests/Integration/test_pipeline.cpp
+[CC ] Tests/Integration/test_render_pass.cpp
+[CC ] Tests/Integration/test_renderer.cpp
+[CC ] Tests/Integration/test_sprite_pipeline.cpp
+[CC ] Tests/Integration/test_swapchain.cpp
+[CC ] Tests/Integration/test_vulkan_init.cpp
+[CC ] Tests/Integration/test_window.cpp
+[CC ] Game/Core/GameAction.cpp
+[CC ] Game/Core/KeyBindings.cpp
+[CC ] Game/Core/Viewport.cpp
+[CC ] Game/Graphics/Camera.cpp
+[CC ] Game/Graphics/FontRenderer.cpp
+[CC ] Game/Graphics/Pipeline.cpp
+[CC ] Game/Graphics/RenderPass.cpp
+[CC ] Game/Graphics/Renderer.cpp
+[CC ] Game/Graphics/SpritePipeline.cpp
+[CC ] Game/Graphics/SpriteRenderer.cpp
+[CC ] Game/Graphics/Swapchain.cpp
+[CC ] Game/Graphics/TextPipeline.cpp
+In file included from Game/Graphics/SpriteRenderer.cpp:21:
+external\stb/stb_image.h:732:12: warning: unused function 'stbi__cpuid3' [-Wunused-function]
+  732 | static int stbi__cpuid3(void)
+      |            ^~~~~~~~~~~~
+external\stb/stb_image.h:1070:12: warning: unused function 'stbi__addints_valid' [-Wunused-function]
+ 1070 | static int stbi__addints_valid(int a, int b)
+      |            ^~~~~~~~~~~~~~~~~~~
+external\stb/stb_image.h:1078:12: warning: unused function 'stbi__mul2shorts_valid' [-Wunused-function]
+ 1078 | static int stbi__mul2shorts_valid(int a, int b)
+      |            ^~~~~~~~~~~~~~~~~~~~~~
+[CC ] Game/Graphics/VulkanContext.cpp
+3 warnings generated.
+[CC ] Game/Graphics/Window.cpp
+[CC ] Game/Logic/InputManager.cpp
+[CC ] Game/Logic/Level.cpp
+[CC ] Game/Logic/Physics.cpp
+[CC ] Game/Logic/Player.cpp
+[CC ] Game/Logic/ReplayManager.cpp
+[LIB] libgame.a
 [LNK] tests.exe
 
   ===========================================
@@ -984,6 +1037,117 @@ Tests/Unit/test_input.cpp(85): SUCCESS: CHECK( input.isKeyJustPressed(Key::D) ==
   values: CHECK( false == false )
 
 ===============================================================================
+Tests/Unit/test_input_mouse.cpp(21):
+TEST SUITE: Fase 9.2 — InputManager: botoes de rato
+TEST CASE:  isMouseButtonDown reflecte PRESS/RELEASE
+
+Tests/Unit/test_input_mouse.cpp(24): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input_mouse.cpp(27): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::LEFT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input_mouse.cpp(31): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(34):
+TEST SUITE: Fase 9.2 — InputManager: botoes de rato
+TEST CASE:  isMouseButtonJustPressed so' e' verdade no frame do PRESS
+
+Tests/Unit/test_input_mouse.cpp(38): SUCCESS: CHECK( input.isMouseButtonJustPressed(MouseButton::LEFT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input_mouse.cpp(42): SUCCESS: CHECK( input.isMouseButtonJustPressed(MouseButton::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input_mouse.cpp(43): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::LEFT) == true ) is correct!
+  values: CHECK( true == true )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(46):
+TEST SUITE: Fase 9.2 — InputManager: botoes de rato
+TEST CASE:  isMouseButtonJustReleased so' e' verdade no frame do RELEASE
+
+Tests/Unit/test_input_mouse.cpp(50): SUCCESS: CHECK( input.isMouseButtonJustReleased(MouseButton::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input_mouse.cpp(54): SUCCESS: CHECK( input.isMouseButtonJustReleased(MouseButton::LEFT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input_mouse.cpp(57): SUCCESS: CHECK( input.isMouseButtonJustReleased(MouseButton::LEFT) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(60):
+TEST SUITE: Fase 9.2 — InputManager: botoes de rato
+TEST CASE:  botoes LEFT/RIGHT/MIDDLE sao independentes entre si
+
+Tests/Unit/test_input_mouse.cpp(65): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::LEFT) == true ) is correct!
+  values: CHECK( true == true )
+
+Tests/Unit/test_input_mouse.cpp(66): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::RIGHT) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input_mouse.cpp(67): SUCCESS: CHECK( input.isMouseButtonDown(MouseButton::MIDDLE) == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(70):
+TEST SUITE: Fase 9.2 — InputManager: botoes de rato
+TEST CASE:  codigos de botao de rato nao colidem com codigos de tecla
+
+Tests/Unit/test_input_mouse.cpp(77): SUCCESS: CHECK( input.isKeyDown(Key::A) == false ) is correct!
+  values: CHECK( false == false )
+
+Tests/Unit/test_input_mouse.cpp(78): SUCCESS: CHECK( input.isLeft() == false ) is correct!
+  values: CHECK( false == false )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(84):
+TEST SUITE: Fase 9.2 — InputManager: posicao do cursor
+TEST CASE:  valor inicial e' (0,0)
+
+Tests/Unit/test_input_mouse.cpp(86): SUCCESS: CHECK( input.cursorX() == doctest::Approx(0.0) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_input_mouse.cpp(87): SUCCESS: CHECK( input.cursorY() == doctest::Approx(0.0) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(90):
+TEST SUITE: Fase 9.2 — InputManager: posicao do cursor
+TEST CASE:  onCursorPosEvent actualiza a posicao
+
+Tests/Unit/test_input_mouse.cpp(93): SUCCESS: CHECK( input.cursorX() == doctest::Approx(123.5) ) is correct!
+  values: CHECK( 123.5 == Approx( 123.5 ) )
+
+Tests/Unit/test_input_mouse.cpp(94): SUCCESS: CHECK( input.cursorY() == doctest::Approx(456.75) ) is correct!
+  values: CHECK( 456.75 == Approx( 456.75 ) )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(97):
+TEST SUITE: Fase 9.2 — InputManager: posicao do cursor
+TEST CASE:  posicao do cursor NAO e' limpa por beginFrame() -- e' continua, nao um evento
+
+Tests/Unit/test_input_mouse.cpp(102): SUCCESS: CHECK( input.cursorX() == doctest::Approx(200.0) ) is correct!
+  values: CHECK( 200 == Approx( 200 ) )
+
+Tests/Unit/test_input_mouse.cpp(103): SUCCESS: CHECK( input.cursorY() == doctest::Approx(300.0) ) is correct!
+  values: CHECK( 300 == Approx( 300 ) )
+
+===============================================================================
+Tests/Unit/test_input_mouse.cpp(106):
+TEST SUITE: Fase 9.2 — InputManager: posicao do cursor
+TEST CASE:  injectCursorPos funciona tal como onCursorPosEvent (mocks/testes)
+
+Tests/Unit/test_input_mouse.cpp(109): SUCCESS: CHECK( input.cursorX() == doctest::Approx(50.0) ) is correct!
+  values: CHECK( 50 == Approx( 50 ) )
+
+Tests/Unit/test_input_mouse.cpp(110): SUCCESS: CHECK( input.cursorY() == doctest::Approx(75.0) ) is correct!
+  values: CHECK( 75 == Approx( 75 ) )
+
+===============================================================================
 Tests/Unit/test_keybindings.cpp(30):
 TEST SUITE: Fase 9.1 — KeyBindings: defaults
 TEST CASE:  construtor preenche todas as acoes com pelo menos 1 tecla
@@ -1958,6 +2122,188 @@ Tests/Unit/test_run_history.cpp(81): SUCCESS: CHECK( headerCount == 1 ) is corre
   values: CHECK( 1 == 1 )
 
 ===============================================================================
+Tests/Unit/test_viewport.cpp(20):
+TEST SUITE: Fase 9.2 — Viewport: computeLetterbox
+TEST CASE:  janela com o mesmo racio do alvo -- sem barras
+
+Tests/Unit/test_viewport.cpp(23): SUCCESS: CHECK( r.offsetX == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(24): SUCCESS: CHECK( r.offsetY == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(25): SUCCESS: CHECK( r.width == 1280 ) is correct!
+  values: CHECK( 1280 == 1280 )
+
+Tests/Unit/test_viewport.cpp(26): SUCCESS: CHECK( r.height == 720 ) is correct!
+  values: CHECK( 720 == 720 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(29):
+TEST SUITE: Fase 9.2 — Viewport: computeLetterbox
+TEST CASE:  janela mais larga que o alvo -- pillarbox (barras verticais)
+
+Tests/Unit/test_viewport.cpp(32): SUCCESS: CHECK( r.height == 1080 ) is correct!
+  values: CHECK( 1080 == 1080 )
+
+Tests/Unit/test_viewport.cpp(33): SUCCESS: CHECK( r.width == 1920 ) is correct!
+  values: CHECK( 1920 == 1920 )
+
+Tests/Unit/test_viewport.cpp(34): SUCCESS: CHECK( r.offsetY == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(35): SUCCESS: CHECK( r.offsetX == 320 ) is correct!
+  values: CHECK( 320 == 320 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(38):
+TEST SUITE: Fase 9.2 — Viewport: computeLetterbox
+TEST CASE:  janela mais alta que o alvo -- letterbox (barras horizontais)
+
+Tests/Unit/test_viewport.cpp(41): SUCCESS: CHECK( r.width == 1080 ) is correct!
+  values: CHECK( 1080 == 1080 )
+
+Tests/Unit/test_viewport.cpp(42): SUCCESS: CHECK( r.height == 607 ) is correct!
+  values: CHECK( 607 == 607 )
+
+Tests/Unit/test_viewport.cpp(43): SUCCESS: CHECK( r.offsetX == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(44): SUCCESS: CHECK( r.offsetY == 656 ) is correct!
+  values: CHECK( 656 == 656 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(47):
+TEST SUITE: Fase 9.2 — Viewport: computeLetterbox
+TEST CASE:  dimensoes invalidas devolvem rectangulo vazio, sem crash
+
+Tests/Unit/test_viewport.cpp(49): SUCCESS: CHECK( r1.width == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(51): SUCCESS: CHECK( r2.width == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(57):
+TEST SUITE: Fase 9.2 — Viewport: windowToLogical
+TEST CASE:  janela sem barras: cantos e centro mapeiam correctamente (Y invertido)
+
+Tests/Unit/test_viewport.cpp(62): SUCCESS: CHECK( topLeft.x == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_viewport.cpp(63): SUCCESS: CHECK( topLeft.y == doctest::Approx(config::LOGICAL_HEIGHT) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+Tests/Unit/test_viewport.cpp(68): SUCCESS: CHECK( bottomRight.x == doctest::Approx(config::LOGICAL_WIDTH) ) is correct!
+  values: CHECK( 640 == Approx( 640 ) )
+
+Tests/Unit/test_viewport.cpp(69): SUCCESS: CHECK( bottomRight.y == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_viewport.cpp(73): SUCCESS: CHECK( center.x == doctest::Approx(config::LOGICAL_WIDTH / 2.0f) ) is correct!
+  values: CHECK( 320 == Approx( 320 ) )
+
+Tests/Unit/test_viewport.cpp(74): SUCCESS: CHECK( center.y == doctest::Approx(config::LOGICAL_HEIGHT / 2.0f) ) is correct!
+  values: CHECK( 180 == Approx( 180 ) )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(77):
+TEST SUITE: Fase 9.2 — Viewport: windowToLogical
+TEST CASE:  clique dentro da barra de pillarbox cai fora do intervalo logico (sem clamp)
+
+Tests/Unit/test_viewport.cpp(81): SUCCESS: CHECK( p.x < 0.0f ) is correct!
+  values: CHECK( -73.3333 <  0 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(84):
+TEST SUITE: Fase 9.2 — Viewport: windowToLogical
+TEST CASE:  clique no canto superior-esquerdo do viewport (dentro da barra) mapeia para logico (0, LOGICAL_HEIGHT)
+
+Tests/Unit/test_viewport.cpp(88): SUCCESS: CHECK( p.x == doctest::Approx(0.0f) ) is correct!
+  values: CHECK( 0 == Approx( 0 ) )
+
+Tests/Unit/test_viewport.cpp(89): SUCCESS: CHECK( p.y == doctest::Approx(config::LOGICAL_HEIGHT) ) is correct!
+  values: CHECK( 360 == Approx( 360 ) )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(98):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  boxX() calcula as 3 posicoes esperadas
+
+Tests/Unit/test_viewport.cpp(99): SUCCESS: CHECK( MenuBoxLayout::boxX(0, config::LOGICAL_WIDTH) == doctest::Approx(47.0f) ) is correct!
+  values: CHECK( 47 == Approx( 47 ) )
+
+Tests/Unit/test_viewport.cpp(100): SUCCESS: CHECK( MenuBoxLayout::boxX(1, config::LOGICAL_WIDTH) == doctest::Approx(235.0f) ) is correct!
+  values: CHECK( 235 == Approx( 235 ) )
+
+Tests/Unit/test_viewport.cpp(101): SUCCESS: CHECK( MenuBoxLayout::boxX(2, config::LOGICAL_WIDTH) == doctest::Approx(423.0f) ) is correct!
+  values: CHECK( 423 == Approx( 423 ) )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(104):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  pontos dentro de cada caixa devolvem o indice correcto
+
+Tests/Unit/test_viewport.cpp(105): SUCCESS: CHECK( hitTestMenuBox(100.0f, 180.0f, config::LOGICAL_WIDTH) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(106): SUCCESS: CHECK( hitTestMenuBox(300.0f, 180.0f, config::LOGICAL_WIDTH) == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Unit/test_viewport.cpp(107): SUCCESS: CHECK( hitTestMenuBox(500.0f, 180.0f, config::LOGICAL_WIDTH) == 2 ) is correct!
+  values: CHECK( 2 == 2 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(110):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  pontos no gap entre caixas devolvem -1
+
+Tests/Unit/test_viewport.cpp(111): SUCCESS: CHECK( hitTestMenuBox(225.0f, 180.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+Tests/Unit/test_viewport.cpp(112): SUCCESS: CHECK( hitTestMenuBox(413.0f, 180.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(115):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  pontos fora do intervalo Y das caixas devolvem -1
+
+Tests/Unit/test_viewport.cpp(116): SUCCESS: CHECK( hitTestMenuBox(300.0f, 100.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+Tests/Unit/test_viewport.cpp(117): SUCCESS: CHECK( hitTestMenuBox(300.0f, 250.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(120):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  pontos a esquerda/direita de todas as caixas devolvem -1
+
+Tests/Unit/test_viewport.cpp(121): SUCCESS: CHECK( hitTestMenuBox(10.0f, 180.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+Tests/Unit/test_viewport.cpp(122): SUCCESS: CHECK( hitTestMenuBox(620.0f, 180.0f, config::LOGICAL_WIDTH) == -1 ) is correct!
+  values: CHECK( -1 == -1 )
+
+===============================================================================
+Tests/Unit/test_viewport.cpp(125):
+TEST SUITE: Fase 9.2 — Viewport: hitTestMenuBox
+TEST CASE:  limites exactos das caixas sao inclusivos
+
+Tests/Unit/test_viewport.cpp(126): SUCCESS: CHECK( hitTestMenuBox(47.0f, 180.0f, config::LOGICAL_WIDTH) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(127): SUCCESS: CHECK( hitTestMenuBox(217.0f, 180.0f, config::LOGICAL_WIDTH) == 0 ) is correct!
+  values: CHECK( 0 == 0 )
+
+Tests/Unit/test_viewport.cpp(128): SUCCESS: CHECK( hitTestMenuBox(300.0f, 150.0f, config::LOGICAL_WIDTH) == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+Tests/Unit/test_viewport.cpp(129): SUCCESS: CHECK( hitTestMenuBox(300.0f, 212.0f, config::LOGICAL_WIDTH) == 1 ) is correct!
+  values: CHECK( 1 == 1 )
+
+===============================================================================
 Tests/Unit/test_vulkan_context.cpp(15):
 TEST SUITE: VulkanContext
 TEST CASE:  init() devolve handles Vulkan validos
@@ -2051,7 +2397,7 @@ Tests/Unit/test_vulkan_context.cpp(77): SUCCESS: CHECK( ctx.isInitialized() ) is
   values: CHECK( true )
 
 ===============================================================================
-[doctest] test cases: 110 | 110 passed | 0 failed | 0 skipped
-[doctest] assertions: 485 | 485 passed | 0 failed |
+[doctest] test cases: 132 | 132 passed | 0 failed | 0 skipped
+[doctest] assertions: 546 | 546 passed | 0 failed |
 [doctest] Status: SUCCESS!
 

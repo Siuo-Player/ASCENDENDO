@@ -1038,3 +1038,74 @@ Implementado: Causa localizada por inspeccao directa da linha 221 (TEST_CASE
   antes de entregar nao apanha esta classe de bug, so o ambiente Windows
   real o revela. Mesma familia de problema ja visto antes em
   test_campaign_id.cpp/test_run_history.cpp (remove_all a lancar).
+
+[2026-07-13 15:00:00]
+Ideia: v9.2 — Fase 9.2: Rato (InputManager + conversao de coordenadas + MENU/PAUSED clicaveis).
+  Objectivo: InputManager ganha posicao do cursor + botoes (mesmo padrao
+  current/justDown/justUp ja usado para teclado), e MENU/PAUSED passam a
+  aceitar clique esquerdo nas 3 caixas -- confirmado por Rafael: "aproveita
+  para adicionar rato ao menu (e ser interativo)".
+  InputManager.h/.cpp: MouseButton::LEFT/RIGHT/MIDDLE (namespace, mesma
+    filosofia de Key::), onMouseButtonEvent/onCursorPosEvent + callbacks
+    GLFW (glfwSetMouseButtonCallback/glfwSetCursorPosCallback), buffers
+    SEPARADOS dos de teclado (m_mouseCurrent/...) -- zero risco de colisao
+    de codigos entre tecla e botao. beginFrame() agora tambem limpa os
+    buffers de rato. injectCursorPos() para testes/mocks. Tudo aditivo --
+    nenhum metodo/campo existente alterado.
+  Viewport.h/.cpp (Game/Core/, NOVO): windowToLogical() converte cursor
+    (pixeis de janela, Y-baixo) para espaco logico do motor (Y-cima,
+    mesma convencao de Level::addPlatform). Formula EXTRAIDA por leitura
+    directa de Renderer::recordCommandBuffer (linhas ~169-184) -- mesmo
+    calculo de letterbox, mesma inversao de Y que base.vert ja faz para
+    UI sem camara. hitTestMenuBox() + MenuBoxLayout: geometria das 3
+    caixas (BOX_W=170, BOX_H=62, BOX_Y=150, GAP=18) tambem extraida por
+    leitura directa de Renderer.cpp -- confirmado que PAUSED e MENU usam
+    EXACTAMENTE os mesmos valores entre si, por isso um unico hit-test
+    serve os dois estados.
+Implementado: 22 testes novos (test_viewport.cpp: 15, test_input_mouse.cpp:
+  7) | 61 assertions | 100% a passar -- compilados e corridos de verdade.
+  Total combinado desde a Fase 9.1: 51 test cases, 272 assertions.
+
+  DECISAO DELIBERADA: Renderer.cpp NAO foi tocado. O calculo de letterbox
+  e a geometria das caixas continuam inline la dentro (e ja duplicados
+  entre si -- PAUSED e MENU tinham cada um a sua copia antes desta sessao).
+  Viewport.h/.cpp e' uma TERCEIRA copia dos mesmos valores, comentada a
+  apontar exactamente para onde manter em sincronia se Renderer.cpp mudar.
+  Preferi nao refactorizar codigo grafico estavel sem confirmacao explicita
+  -- se quiseres unificar as 3 copias numa fonte unica (Renderer.cpp passa
+  a chamar Viewport::computeLetterbox() em vez de calcular inline), e' um
+  follow-up pequeno e facil de aprovar depois.
+
+  main.cpp (v9.2): novo lambda clickedMenuBox() (junto a navigate()) --
+  devolve o indice da caixa sob o cursor se o botao esquerdo acabou de ser
+  premido, ou -1. PAUSED e MENU: clique numa caixa faz menuSel=indice E
+  entra no mesmo bloco de UIConfirm na mesma frame (comportamento standard
+  de botao -- nao precisa de um segundo clique/tecla para confirmar).
+  CREDITS continua so' por teclado (nao pedido explicitamente; extensao
+  trivial se for preciso).
+
+  test_input_mouse.cpp criado como ficheiro NOVO em vez de estender
+  test_input.cpp -- este ultimo nunca foi partilhado nesta sessao, e
+  editar um ficheiro que nao vi arriscava sobrepor/perder testes reais.
+
+  VALIDACAO EMPIRICA: main.cpp compila isolado (clang++ -c, headers
+  Vulkan/GLFW reais) E o motor INTEIRO liga sem erros (main.cpp + 11
+  Graphics/*.cpp + 4 Logic/*.cpp + GameAction/KeyBindings/Viewport.cpp,
+  contra libvulkan/libglfw3 reais) -- binario de 549KB. Confirmados
+  tambem, individualmente, que Physics/Player/Level/ReplayManager.cpp
+  continuam a compilar sem alteracoes apos o InputManager.h crescer.
+
+  reorganize.py: rotas novas para Viewport.h/.cpp, test_viewport.cpp,
+  test_input_mouse.cpp. Testado de verdade (replica minima da raiz,
+  ficheiros nos destinos correctos).
+
+  PENDENTE (nao implementado nesta sessao):
+    - CREDITS nao aceita clique (so' teclado) -- nao pedido, facil de
+      adicionar se for preciso.
+    - Ecra CONTROLS (Fase 9.1 pendente) pode agora usar o mesmo
+      clickedMenuBox()/hitTestMenuBox() assim que existir uma lista de
+      accoes em vez de 3 caixas fixas -- hitTestMenuBox() esta escrito
+      para MenuBoxLayout::COUNT=3 especificamente; generalizar para N
+      linhas fica para quando o ecra CONTROLS for implementado.
+    - MoveLeft/MoveRight/Jump continuam por ligar a Player.cpp (mesma
+      nota da Fase 9.1, ainda pendente de confirmacao).

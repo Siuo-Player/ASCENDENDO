@@ -24,7 +24,8 @@ ASCENDENDO/
 │   │   ├── Config.h                   ← constantes globais (LOGICAL_WIDTH/HEIGHT, física, EDITOR_GRID_SNAP)
 │   │   ├── CampaignID.h               ← ID determinístico (FNV-1a) p/ diferenciar campanhas
 │   │   ├── GameAction.h/.cpp          ← acções lógicas (MoveLeft, Pause, Quit, ...), independentes de tecla
-│   │   └── KeyBindings.h/.cpp         ← GameAction → tecla(s) físicas, persistência em controls.cfg
+│   │   ├── KeyBindings.h/.cpp         ← GameAction → tecla(s) físicas, persistência em controls.cfg
+│   │   └── Viewport.h/.cpp            ← janela→espaço lógico (letterbox), hit-test das caixas de MENU/PAUSED
 │   ├── Graphics/                      ← motor gráfico Vulkan
 │   │   ├── VulkanContext.h/.cpp
 │   │   ├── Window.h/.cpp              ← janela GLFW
@@ -93,7 +94,9 @@ ASCENDENDO/
 │   │   ├── test_campaign_id.cpp       ← 7 testes (CampaignID: determinismo, sensibilidade)
 │   │   ├── test_run_history.cpp       ← 3 testes (RunHistory: formatação, CSV append)
 │   │   ├── test_game_action.cpp       ← 8 testes (GameAction: tabela de acções, round-trip)
-│   │   └── test_keybindings.cpp       ← 21 testes (KeyBindings: defaults, persistência, InputManager real)
+│   │   ├── test_keybindings.cpp       ← 21 testes (KeyBindings: defaults, persistência, InputManager real)
+│   │   ├── test_viewport.cpp          ← 15 testes (letterbox, conversão de coordenadas, hit-test de menu)
+│   │   └── test_input_mouse.cpp       ← 7 testes (botões de rato + cursor, InputManager real)
 │   └── Integration/
 │       ├── test_vulkan_init.cpp
 │       ├── test_window.cpp
@@ -146,7 +149,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-push**: valida a campanha completa com `ai_validator.py --campaign`.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
-- **Testes confirmados**: **81/81** (v8.3.1, confirmado por execução real — commit `05f86e2`), 274 assertions. **+29 testes / +211 assertions** (`test_game_action.cpp` + `test_keybindings.cpp`, Fase 9.1) — total 110 test cases, 485 assertions. Corrida real de Rafael (`make tests-verbose -j8`, Windows/Clang22): **485/485 assertions passaram**; 109/110 test cases passaram, 1 falhou por excepção não apanhada (não por assertion errada) — `std::ifstream` não fechado antes de `std::filesystem::remove()` em `test_keybindings.cpp`, só se manifesta no Windows (POSIX permite; Win32 não). Corrigido em v9.1a — **a confirmar 110/110 no próximo `make tests-verbose`**.
+- **Testes confirmados**: **110/110** (Fase 9.1, confirmado por execução real de Rafael — `make tests-verbose -j8`, Windows/Clang22, commit `fe8f924`), 485 assertions. **+22 testes / +61 assertions** (`test_viewport.cpp` + `test_input_mouse.cpp`, Fase 9.2) verificados nesta sessão — compilados e corridos a sério, motor inteiro ligado com sucesso contra Vulkan/GLFW reais. Total **esperado 132/132, 546 assertions** — a confirmar no próximo `make tests-verbose`.
 
 ---
 
@@ -205,8 +208,8 @@ Shaders GLSL → SPIR-V, `Pipeline` Vulkan (viewport/scissor dinâmicos),
 
 **Fase 9: Editor de Níveis Visual** *(em progresso — scope confirmado com Rafael, ver detalhe abaixo)*
 Editor corre **dentro do próprio motor** (novo `GameState::EDITOR`, não uma ferramenta à parte) — decisão explícita de Rafael: "é uma parte essencial do jogo". Scope dividido em 6 sub-fases:
-- 9.1 🔄 **Sistema de Configuração de Controlos** — `GameAction` (9 acções lógicas) + `KeyBindings` (mapeamento reatribuível, várias teclas por acção, `Development/Settings/controls.cfg`). Pause/UIConfirm/UILeft/UIRight ligados a `main.cpp`; nova acção Quit (default `Q`) sai directamente do PAUSED/MENU sem precisar navegar até "Sair". **29 testes novos, 211 assertions, verificados nesta sessão** (ver secção 4). **Pendente**: ecrã CONTROLS visual (listar + remapear "prime uma tecla" — precisa do rato, 9.2), e ligar MoveLeft/MoveRight/Jump ao gameplay real (exige tocar `Player.cpp`, testado e estável — aguarda confirmação explícita antes de mexer).
-- 9.2 **Rato** — `InputManager` ganha posição do cursor + botões (mesmo padrão de injecção de eventos testável sem GLFW já usado para teclado); MENU/PAUSED/futuro CONTROLS passam a aceitar clique.
+- 9.1 ✅ **Sistema de Configuração de Controlos** — `GameAction` (9 acções lógicas) + `KeyBindings` (mapeamento reatribuível, várias teclas por acção, `Development/Settings/controls.cfg`). Pause/UIConfirm/UILeft/UIRight ligados a `main.cpp`; nova acção Quit (default `Q`) sai directamente do PAUSED/MENU sem precisar navegar até "Sair". **Confirmado por execução real** (110/110, 485 assertions, commit `fe8f924`). **Pendente**: ecrã CONTROLS visual (listar + remapear "prime uma tecla"), e ligar MoveLeft/MoveRight/Jump ao gameplay real (exige tocar `Player.cpp`, testado e estável — aguarda confirmação explícita antes de mexer).
+- 9.2 ✅ **Rato** — `InputManager` ganha posição do cursor + botões (`MouseButton::LEFT/RIGHT/MIDDLE`, mesmo padrão de injecção de eventos testável sem GLFW já usado para teclado). `Viewport.h/.cpp` (novo): conversão janela→espaço lógico com letterbox (espelha `Renderer.cpp`) + hit-test das 3 caixas de menu. **MENU e PAUSED já aceitam clique** — seleciona e confirma na mesma acção, como um botão normal. **22 testes novos, 61 assertions, verificados nesta sessão** (ver secção 4). **Nota para o futuro CONTROLS**: `hitTestMenuBox()` está escrito para exactamente 3 caixas fixas — generalizar para uma lista de N acções fica para quando esse ecrã for implementado.
 - 9.3 **Estado EDITOR: infraestrutura e acesso** — câmara livre (sem física; `Player`/`PhysicsWorld` desligados), grelha de fundo desenhada com a pipeline de sólidos existente, acesso por tecla dedicada (via `KeyBindings`) *e* opção no MENU (para quem esquecer a tecla).
 - 9.4 **Manipulação de entidades** — plataformas (colocar/mover/apagar, snap ao `EDITOR_GRID_SNAP` de `Config.h`, actualmente 4px para testes, candidato futuro 16px); spawn (Y sempre fixo no chão do 1º nível, X editável mas travado dentro dos limites seguros da própria plataforma); FLAG (**uma por campanha, não por nível** — só editável no nível que ocupar a última posição em `campaign.txt`).
 - 9.5 **Guardar + Validar (assíncrono)** — grava `.lvl` no formato já usado por `Level::appendFromFile`; validação (`ai_validator.py`) corre em thread separada com barra de progresso e tempo estimado; o utilizador pode sair do editor enquanto corre, resultado chega depois como notificação.
@@ -355,7 +358,7 @@ python reorganize.py
 vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 ```
 
-**Versão actual: 9.1** (ficheiros individuais podem mostrar v8.2 ou anterior — o seu próprio incremento local; ver histórico de cada um)
+**Versão actual: 9.2** (ficheiros individuais podem mostrar versões anteriores — o seu próprio incremento local; ver histórico de cada um)
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -372,11 +375,12 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | CampaignID.h | v8.1 | FNV-1a determinístico p/ ID de campanha |
 | RunHistory.h | v8.1 | regista runs em Development/Runs/runs.csv |
 | GameAction.h/.cpp | v9.1 | NOVO — 9 acções lógicas, nome PT + serializado |
-| KeyBindings.h/.cpp | v9.1 | NOVO — GameAction→tecla(s), persistência em controls.cfg |
+| KeyBindings.h/.cpp | v9.1a | GameAction→tecla(s), persistência em controls.cfg |
+| Viewport.h/.cpp | v9.2 | NOVO — letterbox + hit-test de menu (espelha Renderer.cpp) |
 | Camera.h/.cpp | v6.4 | follow() tracking vertical Lerp |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
 | Config.h | v9.1 | + EDITOR_GRID_SNAP (Fase 9.4, actualmente 4px) |
-| InputManager.h/.cpp | v9.1 | + Key::E, Key::Q (defaults de OpenEditor/Quit); isLeft/isRight/isJump inalterados |
+| InputManager.h/.cpp | v9.2 | + Key::E/Q (9.1); + MouseButton/cursor (9.2). isLeft/isRight/isJump inalterados |
 | Physics.h/.cpp | v7.1/v7.2 | config-driven, collides() static |
 | Player.h/.cpp | v7.1/v7.2 | config-driven, inércia natural |
 | Level.h/.cpp | v7.2 | appendFromFile, chunk padronizado a LOGICAL_HEIGHT |
@@ -384,7 +388,7 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | base.vert/base.frag | v5.1 | shaders GLSL (retângulos sólidos) |
 | text.vert/text.frag | v7.6 | shaders GLSL dedicados a texto (UV+sampler) |
 | sprite.vert/sprite.frag | v8.2 | NOVO — shaders GLSL p/ sprites (UV+flipX+tint) |
-| main.cpp | v9.1 | Pause/UIConfirm/UILeft/UIRight/Quit via KeyBindings |
+| main.cpp | v9.2 | + clique em PAUSED/MENU (clickedMenuBox); Pause/UIConfirm/UILeft/UIRight/Quit via KeyBindings |
 | ai_validator.py | v7.4 | ASCII-safe (fix Windows cp1252) |
 | levelgen.py | v7.4 | ascending_x_at(), clearance 40px, 100% robustez |
 | test_campaign.cpp | v7.4 | doctest → system(ai_validator --campaign) |
@@ -394,7 +398,9 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | test_run_history.cpp | v8.2 | fix: idem; pastas de teste em build/test_tmp/ |
 | test_game_action.cpp | v9.1 | NOVO — 8 testes (tabela de acções, round-trip) |
 | test_keybindings.cpp | v9.1a | NOVO — 21 testes; v9.1a fix: ifstream nao fechado antes de remove() (so' falhava no Windows) |
-| reorganize.py | v9.1 | + rotas GameAction/KeyBindings + pasta Development/Settings/ |
+| test_viewport.cpp | v9.2 | NOVO — 15 testes (letterbox, coordenadas, hit-test) |
+| test_input_mouse.cpp | v9.2 | NOVO — 7 testes (rato no InputManager); ficheiro separado de test_input.cpp de propósito |
+| reorganize.py | v9.2 | + rotas Viewport.h/.cpp, test_viewport.cpp, test_input_mouse.cpp |
 
 ---
 

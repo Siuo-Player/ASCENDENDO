@@ -1,7 +1,7 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 9.1
+//  @version 9.2
 //  @history
 //    v7.1  — Campaign streaming + nivel nativo
 //    v7.5  — GameState (PLAYING / CREDITS / MENU), FLAG visual,
@@ -29,6 +29,12 @@
 //             sistema existir). MoveLeft/MoveRight/Jump NAO estao ligados
 //             ainda -- Player.cpp continua a usar isLeft()/isRight()/
 //             isKeyDown(Key::SPACE) directamente (ver nota em KeyBindings.h).
+//    v9.2  — Rato (Fase 9.2): PAUSED e MENU aceitam clique esquerdo nas 3
+//             caixas (clickedMenuBox(), Core/Viewport.h) -- clique
+//             seleciona E confirma na mesma accao, tal como um botao
+//             normal. Geometria das caixas espelha EXACTAMENTE as
+//             constantes inline em Renderer.cpp (nao foi tocado). CREDITS
+//             continua so' por teclado (nao pedido; facil de estender).
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -50,6 +56,7 @@
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/GameAction.h"
 #include "Game/Core/KeyBindings.h"
+#include "Game/Core/Viewport.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -205,6 +212,20 @@ int main() {
             menuSel = (menuSel + delta + 3) % 3;
         };
 
+        // Fase 9.2: indice da caixa de MENU/PAUSED sob o cursor, SE o botao
+        // esquerdo acabou de ser premido neste frame; -1 caso contrario (sem
+        // clique, ou clique fora de qualquer caixa). PAUSED e MENU usam a
+        // MESMA geometria (MenuBoxLayout — ver Core/Viewport.h), por isso um
+        // unico helper serve os dois estados.
+        auto clickedMenuBox = [&]() -> int {
+            if (!input.isMouseButtonJustPressed(MouseButton::LEFT)) return -1;
+            core::LogicalPoint pt = core::windowToLogical(
+                input.cursorX(), input.cursorY(),
+                (int32_t)win.width(), (int32_t)win.height(),
+                config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
+            return core::hitTestMenuBox(pt.x, pt.y, config::LOGICAL_WIDTH);
+        };
+
         // Arranque inicial
         resetGame();
 
@@ -289,10 +310,16 @@ int main() {
                     // sem precisar navegar ate "Sair" + confirmar.
                     if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
+                    // Fase 9.2: clique esquerdo numa caixa selecciona-a E
+                    // confirma na mesma accao (comportamento standard de
+                    // botao -- nao precisa de um segundo clique/tecla).
+                    int clickedPaused = clickedMenuBox();
+                    if (clickedPaused >= 0) menuSel = clickedPaused;
+
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
 
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm)) {
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
                         if (menuSel == 0) {           // CONTINUAR
                             state = GameState::PLAYING;
                             glfwSetWindowTitle(win.handle(), "ASCENDENDO");
@@ -324,10 +351,14 @@ int main() {
                 // gameplay para retomar — usar Quit ou SAIR explicitamente).
                 if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
+                // Fase 9.2: mesma logica de clique-seleciona-e-confirma do PAUSED.
+                int clickedMenu = clickedMenuBox();
+                if (clickedMenu >= 0) menuSel = clickedMenu;
+
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
 
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm)) {
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
                     if (menuSel == 0) {           // COMECAR
                         resetGame();
                     } else if (menuSel == 1) {    // CREDITOS
