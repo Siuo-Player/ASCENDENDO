@@ -1158,3 +1158,13 @@ Implementado: Causa raiz identificada por leitura do proprio log de build:
   compiladas em momentos diferentes. Antes deste fix, qualquer mudanca
   destas exigia `make clean` manual para ser segura; a partir de agora,
   o proprio `make` trata disso.
+
+[2026-07-13 18:00:00]
+Ideia: v9.2a — Confirmacao final apos fix do Makefile.
+Implementado: `make clean && make tests-verbose -j8` corrido por Rafael com
+  o Makefile corrigido (-MMD -MP). Resultado: 132/132 test cases, 546/546
+  assertions, SUCCESS. Bate certo exactamente com o numero previsto (Fase
+  9.1: 110 + Fase 9.2: 22 = 132; 485+61=546). SIGSEGV de test_input.cpp
+  confirmado resolvido -- nao voltou a ocorrer numa build limpa com o fix
+  de dependencias de headers em vigor. Fase 9.1 e 9.2 dao-se por fechadas
+  e confirmadas em execucao real.
