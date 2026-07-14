@@ -33,7 +33,21 @@ else
 endif
 
 # ── Flags de Compilação ───────────────────────────────────────────────────────
-CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter
+# -MMD -MP: gera ficheiros .d (dependencias) ao lado de cada .o, listando os
+# headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema --
+# essa e' a diferenca entre -MMD e -MD). -MP acrescenta alvos "phony" para
+# cada header, para nao rebentar se um header for apagado/renomeado.
+# Sem isto, `make` so' olha para a data do .cpp -- se um header amplamente
+# incluido mudar (ex: InputManager.h ganhar um membro novo), os .cpp que o
+# incluem mas nao foram eles proprios editados NAO sao recompilados, e o
+# link mistura .o antigos com .o novos incompativeis a nivel de ABI
+# (sizeof/layout da classe diferente entre unidades de traducao) -- gera
+# comportamento indefinido, tipicamente um crash (SIGSEGV) algures no uso
+# do objecto, nao um erro de compilacao. Foi exactamente isto que aconteceu
+# quando InputManager ganhou membros novos (rato, Fase 9.2): InputManager.cpp
+# foi recompilado, test_input.cpp nao, o link produziu um binario com duas
+# nocoes diferentes do tamanho de InputManager, e SIGSEGV em beginFrame().
+CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
 
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
 ifeq ($(PLATFORM),linux)
@@ -99,6 +113,12 @@ GAME_MAIN_OBJ := $(BUILD_DIR)/main.o
 GAME_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_SRCS))
 TEST_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS))
 
+# ── Dependencias de headers (gerados por -MMD -MP, ver nota acima) ────────────
+# "-include" (com hifen) em vez de "include": nao falha se os .d ainda nao
+# existirem (primeiro build, ou apos um `make clean`).
+DEPS := $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d) $(GAME_MAIN_OBJ:.o=.d)
+-include $(DEPS)
+
 # ── Binários ──────────────────────────────────────────────────────────────────
 GAME_LIB  := $(BUILD_DIR)/libgame.a
 GAME_BIN  := $(BUILD_DIR)/game$(EXE_EXT)
@@ -126,7 +146,7 @@ $(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
 shaders: $(SHADER_OBJS)
 
 # ── Targets Principais ────────────────────────────────────────────────────────
-.PHONY: all game tests tests-verbose clean help
+.PHONY: all game tests tests-verbose tests-fast clean help
 
 all: help
 

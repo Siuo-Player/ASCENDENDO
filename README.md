@@ -150,6 +150,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
 - **Testes confirmados**: **110/110** (Fase 9.1, confirmado por execução real de Rafael — `make tests-verbose -j8`, Windows/Clang22, commit `fe8f924`), 485 assertions. **+22 testes / +61 assertions** (`test_viewport.cpp` + `test_input_mouse.cpp`, Fase 9.2) verificados nesta sessão — compilados e corridos a sério, motor inteiro ligado com sucesso contra Vulkan/GLFW reais. Total **esperado 132/132, 546 assertions** — a confirmar no próximo `make tests-verbose`.
+- **Fix crítico de infraestrutura (v9.2a)**: o `Makefile` não rastreava dependências de headers — mudar `InputManager.h` sem tocar nos `.cpp` que o incluem podia deixar objectos compilados com layouts de classe incompatíveis entre si (ABI mismatch), causando `SIGSEGV`. Corrigido com `-MMD -MP` + inclusão dos `.d` gerados. `make clean` deixa de ser necessário sempre que um header widely-included mudar.
 
 ---
 
@@ -401,6 +402,7 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | test_viewport.cpp | v9.2 | NOVO — 15 testes (letterbox, coordenadas, hit-test) |
 | test_input_mouse.cpp | v9.2 | NOVO — 7 testes (rato no InputManager); ficheiro separado de test_input.cpp de propósito |
 | reorganize.py | v9.2 | + rotas Viewport.h/.cpp, test_viewport.cpp, test_input_mouse.cpp |
+| Makefile | v9.2a | FIX critico: -MMD -MP (dependencia de headers) -- ver secção 4 e dev_log |
 
 ---
 

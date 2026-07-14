@@ -1,17 +1,17 @@
-[CC ] Tests/Unit/test_campaign.cpp
-[CC ] Tests/test_runner.cpp
-[CC ] Tests/Unit/test_campaign_id.cpp
-[CC ] Tests/Unit/test_camera.cpp
-[CC ] Tests/Unit/test_input.cpp
 [CC ] Tests/Unit/test_game_action.cpp
-[CC ] Tests/Unit/test_keybindings.cpp
+[CC ] Tests/test_runner.cpp
+[CC ] Tests/Unit/test_camera.cpp
+[CC ] Tests/Unit/test_campaign_id.cpp
+[CC ] Tests/Unit/test_campaign.cpp
 [CC ] Tests/Unit/test_input_mouse.cpp
+[CC ] Tests/Unit/test_keybindings.cpp
+[CC ] Tests/Unit/test_input.cpp
 [CC ] Tests/Unit/test_level.cpp
 [CC ] Tests/Unit/test_physics.cpp
 [CC ] Tests/Unit/test_placeholder.cpp
 [CC ] Tests/Unit/test_player.cpp
-[CC ] Tests/Unit/test_replay.cpp
 [CC ] Tests/Unit/test_run_history.cpp
+[CC ] Tests/Unit/test_replay.cpp
 [CC ] Tests/Unit/test_viewport.cpp
 [CC ] Tests/Unit/test_vulkan_context.cpp
 [CC ] Tests/Integration/test_pipeline.cpp
@@ -33,6 +33,9 @@
 [CC ] Game/Graphics/SpriteRenderer.cpp
 [CC ] Game/Graphics/Swapchain.cpp
 [CC ] Game/Graphics/TextPipeline.cpp
+[CC ] Game/Graphics/VulkanContext.cpp
+[CC ] Game/Graphics/Window.cpp
+[CC ] Game/Logic/InputManager.cpp
 In file included from Game/Graphics/SpriteRenderer.cpp:21:
 external\stb/stb_image.h:732:12: warning: unused function 'stbi__cpuid3' [-Wunused-function]
   732 | static int stbi__cpuid3(void)
@@ -43,11 +46,8 @@ external\stb/stb_image.h:1070:12: warning: unused function 'stbi__addints_valid'
 external\stb/stb_image.h:1078:12: warning: unused function 'stbi__mul2shorts_valid' [-Wunused-function]
  1078 | static int stbi__mul2shorts_valid(int a, int b)
       |            ^~~~~~~~~~~~~~~~~~~~~~
-[CC ] Game/Graphics/VulkanContext.cpp
-3 warnings generated.
-[CC ] Game/Graphics/Window.cpp
-[CC ] Game/Logic/InputManager.cpp
 [CC ] Game/Logic/Level.cpp
+3 warnings generated.
 [CC ] Game/Logic/Physics.cpp
 [CC ] Game/Logic/Player.cpp
 [CC ] Game/Logic/ReplayManager.cpp
