@@ -1,7 +1,7 @@
 // =============================================================================
 //  Game/Core/KeyBindings.cpp
 //
-//  @version 9.1
+//  @version 9.3
 // =============================================================================
 #include "Core/KeyBindings.h"
 #include "Logic/InputManager.h"
@@ -36,6 +36,8 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::UIRight,    { Key::RIGHT } },
         { GameAction::OpenEditor, { Key::E } },
         { GameAction::Quit,       { Key::Q } },
+        { GameAction::EditorPanUp,   { Key::W } },
+        { GameAction::EditorPanDown, { Key::S } },
     };
 }
 

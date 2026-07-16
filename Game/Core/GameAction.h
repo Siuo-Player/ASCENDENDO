@@ -2,9 +2,10 @@
 // =============================================================================
 //  Game/Core/GameAction.h
 //
-//  @version 9.1
+//  @version 9.3
 //  @history
 //    v9.1 — criado. Fase 9.1: Sistema de Configuracao de Controlos.
+//    v9.3 — EditorPanUp/EditorPanDown (Fase 9.3: camara livre do editor).
 //
 //  Acoes logicas do jogo, independentes de tecla fisica. KeyBindings.h faz a
 //  ponte entre uma GameAction e a(s) tecla(s) fisica(s) (logic::Key) que a
@@ -26,6 +27,8 @@ enum class GameAction {
     UIRight,     // navega opcao seguinte em menus
     OpenEditor,  // abre o Editor de Niveis (Fase 9.3) a partir de MENU/PAUSED
     Quit,        // sai do jogo (equivalente a seleccionar "Sair")
+    EditorPanUp,   // pan vertical da camara livre do editor (Fase 9.3)
+    EditorPanDown, // idem, sentido inverso
 };
 
 // Todas as acoes, para iterar (ex: desenhar a lista no ecra CONTROLS).
@@ -33,6 +36,7 @@ inline constexpr GameAction ALL_ACTIONS[] = {
     GameAction::MoveLeft, GameAction::MoveRight, GameAction::Jump,
     GameAction::Pause,    GameAction::UIConfirm,  GameAction::UILeft,
     GameAction::UIRight,  GameAction::OpenEditor, GameAction::Quit,
+    GameAction::EditorPanUp, GameAction::EditorPanDown,
 };
 inline constexpr std::size_t ACTION_COUNT = sizeof(ALL_ACTIONS) / sizeof(ALL_ACTIONS[0]);
 

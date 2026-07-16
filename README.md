@@ -149,7 +149,7 @@ Nenhuma dependência é adicionada sem justificação no `dev_log.txt` e sem ped
 - **Pre-push**: valida a campanha completa com `ai_validator.py --campaign`.
 - **TDD**: testes escritos na fase "Ideia", antes da implementação.
 - **Imutabilidade**: testes antigos nunca são alterados para acomodar código novo.
-- **Testes confirmados**: **132/132** (Fases 9.1+9.2, confirmado por execução real de Rafael — `make clean && make tests-verbose -j8`, Windows/Clang22), **546/546 assertions**. Inclui o fix crítico do Makefile (v9.2a, ver nota abaixo) — sem ele, esta contagem não seria estável entre builds.
+- **Testes confirmados**: **132/132** (Fases 9.1+9.2, confirmado por execução real de Rafael — `make clean && make tests-verbose -j8`, Windows/Clang22), **546/546 assertions**. Inclui o fix crítico do Makefile (v9.2a, ver nota abaixo) — sem ele, esta contagem não seria estável entre builds. **Fase 9.3**: +3 testes / +42 assertions (generalização de `hitTestMenuBox`/`MenuBoxLayout` para N caixas, com os valores da v9.2 reconfirmados matematicamente, não descartados) — total **esperado 135/135, 588 assertions**, a confirmar no próximo `make tests-verbose`.
 - **Fix crítico de infraestrutura (v9.2a)**: o `Makefile` não rastreava dependências de headers — mudar `InputManager.h` sem tocar nos `.cpp` que o incluem podia deixar objectos compilados com layouts de classe incompatíveis entre si (ABI mismatch), causando `SIGSEGV`. Corrigido com `-MMD -MP` + inclusão dos `.d` gerados. `make clean` deixa de ser necessário sempre que um header widely-included mudar.
 
 ---
@@ -211,7 +211,7 @@ Shaders GLSL → SPIR-V, `Pipeline` Vulkan (viewport/scissor dinâmicos),
 Editor corre **dentro do próprio motor** (novo `GameState::EDITOR`, não uma ferramenta à parte) — decisão explícita de Rafael: "é uma parte essencial do jogo". Scope dividido em 6 sub-fases:
 - 9.1 ✅ **Sistema de Configuração de Controlos** — `GameAction` (9 acções lógicas) + `KeyBindings` (mapeamento reatribuível, várias teclas por acção, `Development/Settings/controls.cfg`). Pause/UIConfirm/UILeft/UIRight ligados a `main.cpp`; nova acção Quit (default `Q`) sai directamente do PAUSED/MENU sem precisar navegar até "Sair". **Confirmado por execução real** (110/110, 485 assertions, commit `fe8f924`). **Pendente**: ecrã CONTROLS visual (listar + remapear "prime uma tecla"), e ligar MoveLeft/MoveRight/Jump ao gameplay real (exige tocar `Player.cpp`, testado e estável — aguarda confirmação explícita antes de mexer).
 - 9.2 ✅ **Rato** — `InputManager` ganha posição do cursor + botões (`MouseButton::LEFT/RIGHT/MIDDLE`, mesmo padrão de injecção de eventos testável sem GLFW já usado para teclado). `Viewport.h/.cpp` (novo): conversão janela→espaço lógico com letterbox (espelha `Renderer.cpp`) + hit-test das 3 caixas de menu. **MENU e PAUSED já aceitam clique** — seleciona e confirma na mesma acção, como um botão normal. **22 testes novos, 61 assertions, verificados nesta sessão** (ver secção 4). **Nota para o futuro CONTROLS**: `hitTestMenuBox()` está escrito para exactamente 3 caixas fixas — generalizar para uma lista de N acções fica para quando esse ecrã for implementado.
-- 9.3 **Estado EDITOR: infraestrutura e acesso** — câmara livre (sem física; `Player`/`PhysicsWorld` desligados), grelha de fundo desenhada com a pipeline de sólidos existente, acesso por tecla dedicada (via `KeyBindings`) *e* opção no MENU (para quem esquecer a tecla).
+- 9.3 ✅ **Estado EDITOR: infraestrutura e acesso** — `GameState::EDITOR` novo. Câmara livre: `MoveLeft`/`MoveRight` (reaproveitados, primeiro consumidor real) + novos `EditorPanUp`/`EditorPanDown` (default W/S) deslocam `camera.position` directamente, sem física (`Player`/`PhysicsWorld` simplesmente não são chamados neste estado). Grelha de fundo (espaçamento `EDITOR_GRID_VISUAL_SPACING`, independente do `EDITOR_GRID_SNAP` de colocação) desenhada com a pipeline de sólidos existente, culled à volta da câmara. Acesso duplo — tecla dedicada (`OpenEditor`, `E`) **e** opção visível no MENU (agora com 4 caixas em vez de 3; `MenuBoxLayout`/`hitTestMenuBox` generalizados para N caixas, PAUSED matematicamente inalterado). ESC volta a MENU. **Pendente de confirmação visual** (largura das caixas do MENU, escala do texto reduzida) — não consigo renderizar para verificar.
 - 9.4 **Manipulação de entidades** — plataformas (colocar/mover/apagar, snap ao `EDITOR_GRID_SNAP` de `Config.h`, actualmente 4px para testes, candidato futuro 16px); spawn (Y sempre fixo no chão do 1º nível, X editável mas travado dentro dos limites seguros da própria plataforma); FLAG (**uma por campanha, não por nível** — só editável no nível que ocupar a última posição em `campaign.txt`).
 - 9.5 **Guardar + Validar (assíncrono)** — grava `.lvl` no formato já usado por `Level::appendFromFile`; validação (`ai_validator.py`) corre em thread separada com barra de progresso e tempo estimado; o utilizador pode sair do editor enquanto corre, resultado chega depois como notificação.
 - 9.6 **Gestão de campanha no editor** — lista de níveis arrastável (estilo *playlist*) dentro do próprio editor; reescreve apenas `campaign.txt` — não move ficheiros entre `Levels/`/`Unused/`/`NaoValidados/`, isso continua a cargo do `reorganize.py`.
@@ -359,7 +359,7 @@ python reorganize.py
 vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 ```
 
-**Versão actual: 9.2** (ficheiros individuais podem mostrar versões anteriores — o seu próprio incremento local; ver histórico de cada um)
+**Versão actual: 9.3** (ficheiros individuais podem mostrar versões anteriores — o seu próprio incremento local; ver histórico de cada um)
 
 | Ficheiro | Versão | Notas |
 |---|---|---|
@@ -367,7 +367,7 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | Window.h/.cpp | v2.3 | |
 | Swapchain.h/.cpp | v2.40 | |
 | RenderPass.h/.cpp | v2.5 | |
-| Renderer.h/.cpp | v8.2 | attachSprite(), fix FLAG/timer/creditos |
+| Renderer.h/.cpp | v9.3 | + GameState::EDITOR (grelha+HUD); MENU/PAUSED usam MenuBoxLayout partilhado |
 | TextPipeline.h/.cpp | v7.6 | pipeline dedicada p/ texto, descriptor set |
 | FontRenderer.h/.cpp | v7.6 | baking stb_truetype + atlas GPU R8_UNORM |
 | SpritePipeline.h/.cpp | v8.2 | NOVO — pipeline dedicada p/ sprites, sampler NEAREST |
@@ -375,12 +375,12 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | BitmapFont.h | v7.5 | fallback (usado se TTF nao disponivel) |
 | CampaignID.h | v8.1 | FNV-1a determinístico p/ ID de campanha |
 | RunHistory.h | v8.1 | regista runs em Development/Runs/runs.csv |
-| GameAction.h/.cpp | v9.1 | NOVO — 9 acções lógicas, nome PT + serializado |
-| KeyBindings.h/.cpp | v9.1a | GameAction→tecla(s), persistência em controls.cfg |
-| Viewport.h/.cpp | v9.2 | NOVO — letterbox + hit-test de menu (espelha Renderer.cpp) |
+| GameAction.h/.cpp | v9.3 | 11 acções (era 9) — + EditorPanUp/EditorPanDown |
+| KeyBindings.h/.cpp | v9.3 | + defaults W/S para EditorPanUp/EditorPanDown |
+| Viewport.h/.cpp | v9.3 | MenuBoxLayout/hitTestMenuBox generalizados p/ N caixas (era fixo em 3) |
 | Camera.h/.cpp | v6.4 | follow() tracking vertical Lerp |
 | Pipeline.h/.cpp | v5.1 | shaders SPIR-V + viewport dinâmico |
-| Config.h | v9.1 | + EDITOR_GRID_SNAP (Fase 9.4, actualmente 4px) |
+| Config.h | v9.3 | + EDITOR_GRID_VISUAL_SPACING, EDITOR_CAMERA_PAN_SPEED, CLEAR_EDITOR_* |
 | InputManager.h/.cpp | v9.2 | + Key::E/Q (9.1); + MouseButton/cursor (9.2). isLeft/isRight/isJump inalterados |
 | Physics.h/.cpp | v7.1/v7.2 | config-driven, collides() static |
 | Player.h/.cpp | v7.1/v7.2 | config-driven, inércia natural |
@@ -389,7 +389,7 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | base.vert/base.frag | v5.1 | shaders GLSL (retângulos sólidos) |
 | text.vert/text.frag | v7.6 | shaders GLSL dedicados a texto (UV+sampler) |
 | sprite.vert/sprite.frag | v8.2 | NOVO — shaders GLSL p/ sprites (UV+flipX+tint) |
-| main.cpp | v9.2 | + clique em PAUSED/MENU (clickedMenuBox); Pause/UIConfirm/UILeft/UIRight/Quit via KeyBindings |
+| main.cpp | v9.3 | + GameState::EDITOR (pan livre, acesso duplo tecla+menu) |
 | ai_validator.py | v7.4 | ASCII-safe (fix Windows cp1252) |
 | levelgen.py | v7.4 | ascending_x_at(), clearance 40px, 100% robustez |
 | test_campaign.cpp | v7.4 | doctest → system(ai_validator --campaign) |
@@ -398,8 +398,8 @@ vX.Y[Z]  →  X = fase principal  |  .Y = sub-passo  |  Z = fix incremental
 | test_campaign_id.cpp | v8.2 | fix: remove_all throwing → nao-throwing |
 | test_run_history.cpp | v8.2 | fix: idem; pastas de teste em build/test_tmp/ |
 | test_game_action.cpp | v9.1 | NOVO — 8 testes (tabela de acções, round-trip) |
-| test_keybindings.cpp | v9.1a | NOVO — 21 testes; v9.1a fix: ifstream nao fechado antes de remove() (so' falhava no Windows) |
-| test_viewport.cpp | v9.2 | NOVO — 15 testes (letterbox, coordenadas, hit-test) |
+| test_keybindings.cpp | v9.3 | 21→23 testes; + defaults EditorPanUp/EditorPanDown |
+| test_viewport.cpp | v9.3 | Reescrito p/ N caixas; count=3 reconfirmado = v9.2, count=4 novo |
 | test_input_mouse.cpp | v9.2 | NOVO — 7 testes (rato no InputManager); ficheiro separado de test_input.cpp de propósito |
 | reorganize.py | v9.2 | + rotas Viewport.h/.cpp, test_viewport.cpp, test_input_mouse.cpp |
 | Makefile | v9.2a | FIX critico: -MMD -MP (dependencia de headers) -- ver secção 4 e dev_log |

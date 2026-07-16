@@ -1109,3 +1109,139 @@ Implementado: 22 testes novos (test_viewport.cpp: 15, test_input_mouse.cpp:
       linhas fica para quando o ecra CONTROLS for implementado.
     - MoveLeft/MoveRight/Jump continuam por ligar a Player.cpp (mesma
       nota da Fase 9.1, ainda pendente de confirmacao).
+
+[2026-07-13 17:30:00]
+Ideia: v9.2a — Fix CRITICO de infraestrutura: Makefile nao rastreava dependencias de headers.
+  Rafael correu `make tests-verbose -j8 > Tests/log_testes.txt 2>&1` apos a
+  Fase 9.2 -- SIGSEGV em test_input.cpp(34) ("beginFrame limpa justPressed e
+  justReleased..."), logo a seguir a um CHECK que passou. 37/38 test cases,
+  94 "skipped" (consequencia do crash a meio da execucao, nao de um filtro).
+Implementado: Causa raiz identificada por leitura do proprio log de build:
+  "[CC ] Game/Logic/InputManager.cpp" aparece, mas "[CC ] Tests/Unit/
+  test_input.cpp" NAO aparece -- ou seja, test_input.cpp usou um .o
+  ANTIGO da build anterior, compilado contra a versao de InputManager.h
+  de ANTES da Fase 9.2 (sem m_mouseCurrent/m_mouseJustDown/m_mouseJustUp/
+  m_cursorX/m_cursorY). InputManager.cpp foi recompilado contra a versao
+  NOVA (com esses membros). O binario final ligou objectos com duas nocoes
+  diferentes de sizeof(InputManager) -- ODR violation classico. O
+  beginFrame() novo tenta fazer .clear() em m_mouseJustDown/m_mouseJustUp,
+  que nao existem no objecto que test_input.cpp alocou (mais pequeno) ->
+  acesso fora dos limites -> SIGSEGV.
+  Porque so' apareceu agora: a Fase 9.1 tambem tocou InputManager.h
+  (Key::E, Key::Q), mas eram CONSTANTES DE NAMESPACE, nao membros da
+  classe -- nao mudam sizeof(InputManager), por isso nao ha incompatibilidade
+  de ABI possivel. A Fase 9.2 foi a primeira vez que um membro de classe
+  foi adicionado, e' por isso que so' agora rebentou.
+  RAIZ: a regra generica `$(BUILD_DIR)/%.o: %.cpp` do Makefile so' depende
+  do proprio .cpp -- nunca dos headers que ele inclui. `make` nao tinha
+  como saber que test_input.cpp precisava de recompilar so' porque
+  InputManager.h mudou.
+  FIX: `-MMD -MP` adicionado a CXXFLAGS_BASE (gera um ficheiro .d ao lado
+  de cada .o, listando os headers do projecto de que depende) + `-include
+  $(DEPS)` no Makefile (faz o make ler esses .d e tratar headers como
+  dependencias de verdade). Validado empiricamente em dois niveis: (1)
+  exemplo isolado minimo, confirmando que tocar so' num header dispara
+  recompilacao do .cpp dependente; (2) replica real com GameAction/
+  KeyBindings/Viewport/InputManager/Physics/Player/Level/ReplayManager e
+  os 4 ficheiros de teste desta sessao -- 51/51, 272/272 -- e depois
+  simulando exactamente o cenario da Fase 9.2 (adicionar um membro a
+  InputManager.h sem tocar em nenhum .cpp): confirmado que Player.cpp,
+  ReplayManager.cpp, InputManager.cpp e os testes relevantes recompilam
+  todos correctamente na proxima `make`, sem `make clean` manual.
+  Desbloqueio imediato para Rafael: `make clean` (forca tudo a recompilar
+  de raiz, resolve o sintoma agora). Este fix resolve a CAUSA -- nunca
+  mais devia ser preciso `make clean` so' por causa de um header ter
+  mudado.
+  LICAO (grave-se ao lado da de test_keybindings v9.1a): headers amplamente
+  incluidos que ganham/perdem MEMBROS DE CLASSE (nao apenas constantes)
+  sao o caso de risco real para ABI mismatch entre unidades de traducao
+  compiladas em momentos diferentes. Antes deste fix, qualquer mudanca
+  destas exigia `make clean` manual para ser segura; a partir de agora,
+  o proprio `make` trata disso.
+
+[2026-07-13 18:00:00]
+Ideia: v9.2a — Confirmacao final apos fix do Makefile.
+Implementado: `make clean && make tests-verbose -j8` corrido por Rafael com
+  o Makefile corrigido (-MMD -MP). Resultado: 132/132 test cases, 546/546
+  assertions, SUCCESS. Bate certo exactamente com o numero previsto (Fase
+  9.1: 110 + Fase 9.2: 22 = 132; 485+61=546). SIGSEGV de test_input.cpp
+  confirmado resolvido -- nao voltou a ocorrer numa build limpa com o fix
+  de dependencias de headers em vigor. Fase 9.1 e 9.2 dao-se por fechadas
+  e confirmadas em execucao real.
+
+[2026-07-15 20:00:00]
+Ideia: v9.3 — Fase 9.3: Estado EDITOR (infra-estrutura + acesso).
+  Objectivo: GameState::EDITOR navegavel -- camara livre (sem fisica),
+  grelha de fundo para referencia visual, acesso por tecla dedicada E
+  opcao visivel no MENU (os dois, confirmado por Rafael). Decisoes de
+  design tomadas nesta sessao (comunicadas antes de implementar):
+    - MoveLeft/MoveRight (ja existentes, nunca consumidos ate agora)
+      reaproveitados para o pan horizontal do editor; EditorPanUp/
+      EditorPanDown (novos, default W/S) para o vertical.
+    - EDITOR_GRID_VISUAL_SPACING (32px) criado SEPARADO de
+      EDITOR_GRID_SNAP (4px, snap de colocacao real, Fase 9.4) -- desenhar
+      uma linha a cada celula de snap seria ruido visual (160 linhas
+      verticais a 4px), nao "nocao de escala".
+    - MENU ganha uma 4a caixa ("Editor"). Generalizado hitTestMenuBox/
+      MenuBoxLayout da Fase 9.2 (estava fixo em 3) para aceitar `count`.
+    - ESC (GameAction::Pause) sai do editor para MENU -- assumido por
+      necessidade (o estado nao tinha saida nenhuma sem isto), nao pedido
+      explicitamente mas comportamento obvio dado o resto do jogo.
+Implementado: Config.h: +EDITOR_GRID_VISUAL_SPACING, +EDITOR_CAMERA_PAN_SPEED
+  (400px/s, mais rapido que o jogador de proposito), +CLEAR_EDITOR_R/G/B.
+  GameAction.h/.cpp: +EditorPanUp, +EditorPanDown (ALL_ACTIONS/ACTION_COUNT
+  agora 11, era 9). KeyBindings.cpp: defaults W/S para as novas accoes.
+
+  Viewport.h/.cpp: MenuBoxLayout/hitTestMenuBox generalizados para N
+  caixas -- boxWidth(count, logicalWidth) calcula a largura que cabe
+  `count` caixas com um tecto de 170px (MAX_BOX_W, o valor fixo anterior).
+  Verificado por CALCULO antes de tocar em Renderer.cpp que count=3
+  reproduz EXACTAMENTE os valores da v9.2 (170px, box0=[47,217] etc) --
+  zero risco de regressao visual em PAUSED. count=4 (MENU): 146.5px por
+  caixa, box0=[0,146.5]...box3=[493.5,640] (toca as bordas do ecra --
+  Rafael deve confirmar visualmente se fica bem, nao consigo renderizar
+  aqui). test_viewport.cpp reescrito para a nova assinatura -- os valores
+  antigos foram RECONFIRMADOS como parte da reescrita, nao descartados.
+
+  Renderer.cpp (v9.3, TOCADO -- decisao deliberada, nao evitavel: o
+  proprio pedido exige um ramo novo de renderizacao):
+    - PAUSED e MENU deixam de ter cada um a sua copia inline da geometria
+      (bW/bH/bY/gap) -- passam a chamar core::MenuBoxLayout::boxWidth()/
+      boxX() (Core/Viewport.h). Resolve a duplicacao que a v9.2 tinha
+      deliberadamente deixado por resolver (ver dev_log dessa sessao).
+      PAUSED fica matematicamente identico (verificado acima); so' a
+      FONTE dos numeros mudou, nao os numeros.
+    - MENU: 4a caixa "EDITOR", texto a 0.43/1.55 (era 0.5/1.8) -- reduzido
+      proporcionalmente a` largura da caixa ter encolhido (170->146.5),
+      estimativa nao verificada visualmente.
+    - Novo ramo GameState::EDITOR: grelha de fundo (culled a` volta da
+      camara em ambos os eixos -- custo por frame nao cresce com o
+      tamanho da campanha) + label "EDITOR DE NIVEIS" + dica de teclas.
+  main.cpp (v9.3): navigate()/clickedMenuBox() ganham parametro `count`
+  (PAUSED passa 3, MENU passa 4). MENU: acesso ao editor por
+  GameAction::OpenEditor (tecla E, directo) OU seleccionar+confirmar a
+  caixa "Editor" (os dois, nao um OU outro). Novo bloco GameState::EDITOR:
+  ESC volta a MENU; A/D/W/S (via isActionHeld, movimento continuo)
+  deslocam camera.position directamente, sem chamar world.advance()/
+  player.update()/level.resolveCollision() -- fisica desligada por
+  simplesmente nao estar no caminho de execucao deste estado.
+
+  VALIDACAO EMPIRICA: Renderer.cpp e main.cpp compilam isolados (clang++
+  -c, headers Vulkan/GLFW reais) E o motor INTEIRO liga sem erros (mesma
+  bateria de ficheiros das sessoes anteriores + as alteracoes desta) --
+  binario de 554KB. Confirmados tambem Physics/Player/Level/ReplayManager/
+  Camera.cpp inalterados a compilar sem problemas. 54/54 test cases,
+  314/314 assertions.
+
+  SEM ficheiros novos nesta sessao (so modificacoes) -- reorganize.py
+  nao precisou de nenhuma rota nova.
+
+  PENDENTE (nao implementado nesta sessao):
+    - Fase 9.4: colocacao/edicao real de plataformas, spawn, FLAG por
+      campanha (nao por nivel), snap ao EDITOR_GRID_SNAP.
+    - Confirmacao visual de Rafael: caixas do MENU a tocar as bordas do
+      ecra em count=4 (matematicamente correcto, esteticamente por
+      confirmar); escala de texto reduzida nas 4 caixas (idem).
+    - MoveLeft/MoveRight/Jump continuam por ligar a Player.cpp para
+      gameplay real (nota repetida desde a Fase 9.1 -- MoveLeft/MoveRight
+      agora TEM um consumidor real, mas so' no EDITOR, nao em PLAYING).

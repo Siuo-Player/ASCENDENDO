@@ -51,6 +51,8 @@ TEST_SUITE("Fase 9.1 — KeyBindings: defaults") {
         // Novas (Fase 9)
         CHECK(kb.keysFor(GameAction::OpenEditor) == std::vector<int>{Key::E});
         CHECK(kb.keysFor(GameAction::Quit)       == std::vector<int>{Key::Q});
+        CHECK(kb.keysFor(GameAction::EditorPanUp)   == std::vector<int>{Key::W});
+        CHECK(kb.keysFor(GameAction::EditorPanDown) == std::vector<int>{Key::S});
     }
 }
 

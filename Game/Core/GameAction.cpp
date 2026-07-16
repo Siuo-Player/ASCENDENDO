@@ -19,6 +19,8 @@ const char* actionDisplayName(GameAction action) {
         case GameAction::UIRight:    return "Menu: Seguinte";
         case GameAction::OpenEditor: return "Abrir Editor";
         case GameAction::Quit:       return "Sair do Jogo";
+        case GameAction::EditorPanUp:   return "Editor: Deslocar Cima";
+        case GameAction::EditorPanDown: return "Editor: Deslocar Baixo";
     }
     return "?";
 }
@@ -34,6 +36,8 @@ const char* actionSerializedName(GameAction action) {
         case GameAction::UIRight:    return "UIRight";
         case GameAction::OpenEditor: return "OpenEditor";
         case GameAction::Quit:       return "Quit";
+        case GameAction::EditorPanUp:   return "EditorPanUp";
+        case GameAction::EditorPanDown: return "EditorPanDown";
     }
     return "Unknown";
 }

@@ -1,7 +1,7 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  @version 9.2
+//  @version 9.3
 //  @history
 //    v7.1  — Campaign streaming + nivel nativo
 //    v7.5  — GameState (PLAYING / CREDITS / MENU), FLAG visual,
@@ -35,6 +35,15 @@
 //             normal. Geometria das caixas espelha EXACTAMENTE as
 //             constantes inline em Renderer.cpp (nao foi tocado). CREDITS
 //             continua so' por teclado (nao pedido; facil de estender).
+//    v9.3  — GameState::EDITOR (Fase 9.3): infra-estrutura + acesso.
+//             navigate()/clickedMenuBox() generalizados por `count` (MENU
+//             passa a ter 4 opcoes -- ganhou EDITOR -- PAUSED continua com
+//             3). Acesso duplo: tecla dedicada (OpenEditor, default E) OU
+//             opcao visivel no menu -- os dois, como pedido. Dentro do
+//             EDITOR: camara livre (MoveLeft/MoveRight para X, novos
+//             EditorPanUp/EditorPanDown para Y -- W/S por omissao), sem
+//             fisica (Player/PhysicsWorld simplesmente nao sao chamados
+//             neste estado). ESC (Pause) regressa a MENU.
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -206,24 +215,24 @@ int main() {
             glfwSetWindowTitle(win.handle(), "ASCENDENDO");
         };
 
-        // Navegacao com wraparound circular (0->1->2->0 e vice-versa) —
-        // usada tanto por MENU (fim-de-run) como por PAUSED (3 opcoes cada).
-        auto navigate = [&](int delta) {
-            menuSel = (menuSel + delta + 3) % 3;
+        // Navegacao com wraparound circular -- PAUSED chama navigate(d,3),
+        // MENU chama navigate(d,4) desde a Fase 9.3 (ganhou "EDITOR").
+        auto navigate = [&](int delta, int count) {
+            menuSel = (menuSel + delta + count) % count;
         };
 
         // Fase 9.2: indice da caixa de MENU/PAUSED sob o cursor, SE o botao
         // esquerdo acabou de ser premido neste frame; -1 caso contrario (sem
         // clique, ou clique fora de qualquer caixa). PAUSED e MENU usam a
-        // MESMA geometria (MenuBoxLayout — ver Core/Viewport.h), por isso um
-        // unico helper serve os dois estados.
-        auto clickedMenuBox = [&]() -> int {
+        // MESMA geometria base (MenuBoxLayout — ver Core/Viewport.h), com
+        // `count` diferente cada um desde a Fase 9.3.
+        auto clickedMenuBox = [&](int count) -> int {
             if (!input.isMouseButtonJustPressed(MouseButton::LEFT)) return -1;
             core::LogicalPoint pt = core::windowToLogical(
                 input.cursorX(), input.cursorY(),
                 (int32_t)win.width(), (int32_t)win.height(),
                 config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
-            return core::hitTestMenuBox(pt.x, pt.y, config::LOGICAL_WIDTH);
+            return core::hitTestMenuBox(pt.x, pt.y, count, config::LOGICAL_WIDTH);
         };
 
         // Arranque inicial
@@ -313,11 +322,11 @@ int main() {
                     // Fase 9.2: clique esquerdo numa caixa selecciona-a E
                     // confirma na mesma accao (comportamento standard de
                     // botao -- nao precisa de um segundo clique/tecla).
-                    int clickedPaused = clickedMenuBox();
+                    int clickedPaused = clickedMenuBox(3);
                     if (clickedPaused >= 0) menuSel = clickedPaused;
 
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1, 3);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 3);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
                         if (menuSel == 0) {           // CONTINUAR
@@ -351,22 +360,63 @@ int main() {
                 // gameplay para retomar — usar Quit ou SAIR explicitamente).
                 if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
+                // Fase 9.3: acesso ao editor tanto por tecla dedicada (E,
+                // directo, para quem sabe o atalho) como pela opcao visivel
+                // no menu (abaixo, para quem a esquecer) -- os dois pedidos
+                // explicitamente, nao um OU outro.
+                if (core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor)) {
+                    camera  = gfx::Camera{};
+                    state   = GameState::EDITOR;
+                    menuSel = 0;
+                    glfwSetWindowTitle(win.handle(),
+                        "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
+                } else {
+
                 // Fase 9.2: mesma logica de clique-seleciona-e-confirma do PAUSED.
-                int clickedMenu = clickedMenuBox();
+                // Fase 9.3: MENU passa a ter 4 opcoes (ganhou EDITOR).
+                int clickedMenu = clickedMenuBox(4);
                 if (clickedMenu >= 0) menuSel = clickedMenu;
 
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1);
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1);
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1, 4);
+                if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
 
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
                     if (menuSel == 0) {           // COMECAR
                         resetGame();
-                    } else if (menuSel == 1) {    // CREDITOS
+                    } else if (menuSel == 1) {    // EDITOR (Fase 9.3)
+                        camera  = gfx::Camera{};  // ponto de partida previsivel (0,0)
+                        state   = GameState::EDITOR;
+                        menuSel = 0;
+                        glfwSetWindowTitle(win.handle(),
+                            "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
+                    } else if (menuSel == 2) {    // CREDITOS
                         creditsReturnState = GameState::MENU;
                         state = GameState::CREDITS;
                     } else {                        // SAIR
                         break;
                     }
+                }
+                }
+
+            } else if (state == GameState::EDITOR) {
+                // Fase 9.3: infra-estrutura + acesso. Camara livre (sem
+                // fisica -- Player/PhysicsWorld nao avancam neste estado,
+                // simplesmente nao sao chamados aqui). ESC (Pause) regressa
+                // a MENU. Colocacao de entidades fica para a Fase 9.4.
+                if (core::isActionJustPressed(bindings, input, core::GameAction::Pause)) {
+                    state   = GameState::MENU;
+                    menuSel = 0;
+                    glfwSetWindowTitle(win.handle(),
+                        "ASCENDENDO | A/D navegar  ESPACO confirmar");
+                } else {
+                    float dx = 0.0f, dy = 0.0f;
+                    if (core::isActionHeld(bindings, input, core::GameAction::MoveLeft))     dx -= 1.0f;
+                    if (core::isActionHeld(bindings, input, core::GameAction::MoveRight))    dx += 1.0f;
+                    if (core::isActionHeld(bindings, input, core::GameAction::EditorPanUp))   dy += 1.0f;
+                    if (core::isActionHeld(bindings, input, core::GameAction::EditorPanDown)) dy -= 1.0f;
+
+                    camera.position.x += dx * config::EDITOR_CAMERA_PAN_SPEED * dt;
+                    camera.position.y += dy * config::EDITOR_CAMERA_PAN_SPEED * dt;
                 }
             }
 

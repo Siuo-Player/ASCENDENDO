@@ -2,7 +2,7 @@
 // =============================================================================
 //  Game/Graphics/Renderer.h
 //
-//  @version 8.2
+//  @version 9.3
 //  @history
 //    v5.3  — drawFrame recebe Player + Camera
 //    v6.2b — drawFrame aceita Level* opcional; plataformas antes do jogador
@@ -15,6 +15,8 @@
 //    v8.2  — attachSprite(): liga SpritePipeline+SpriteRenderer (jogador
 //             desenhado como pixel-art em vez de rectangulo solido).
 //             Opcional — sem isto, mantem o rectangulo (fallback).
+//    v9.3  — GameState::EDITOR (Fase 9.3): camara livre + grelha de fundo.
+//             Sem Player/Level -- desenha so' grelha + HUD minimo.
 // =============================================================================
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -33,7 +35,11 @@ namespace gfx {
 // CREDITS: FLAG tocada (fim de campanha) OU "Creditos" a partir de
 //          MENU/PAUSED. Regressa ao estado que o chamou.
 // MENU:    ecra de fim-de-run, mostrado apos os creditos de vitoria.
-enum class GameState { PLAYING, PAUSED, CREDITS, MENU };
+// EDITOR:  Editor de Niveis (Fase 9). Camara livre (sem fisica, Player/
+//          PhysicsWorld nao avancam), grelha de fundo para referencia
+//          visual. Acessivel a partir de MENU (tecla dedicada ou opcao
+//          visivel); ESC regressa a MENU.
+enum class GameState { PLAYING, PAUSED, CREDITS, MENU, EDITOR };
 
 class VulkanContext;
 class Swapchain;

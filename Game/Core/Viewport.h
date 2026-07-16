@@ -2,9 +2,18 @@
 // =============================================================================
 //  Game/Core/Viewport.h
 //
-//  @version 9.2
+//  @version 9.3
 //  @history
 //    v9.2 — criado. Fase 9.2: suporte a rato.
+//    v9.3 — MenuBoxLayout/hitTestMenuBox generalizados para N caixas
+//            (ate' entao fixo em 3). Motivo: MENU ganhou uma 4a opcao
+//            ("Editor", Fase 9.3), PAUSED continua com 3 -- a largura da
+//            caixa passa a ser CALCULADA a partir de `count`, com um tecto
+//            de MAX_BOX_W=170 (o valor antigo, fixo). Para count=3 isto
+//            reproduz EXACTAMENTE a geometria anterior (170px, verificado
+//            por calculo: (640-2*18)/3=201.3 > 170 -> fica no tecto de
+//            170); para count=4 encolhe automaticamente para caber
+//            (640-3*18)/4=146.5px, sem alterar PAUSED em nada.
 //
 //  Duas responsabilidades, ambas puramente matematicas (sem Vulkan/GLFW):
 //
@@ -26,14 +35,16 @@
 //     Se o calculo de Renderer.cpp mudar (ex: TARGET_ASPECT deixar de vir
 //     de Config.h), este ficheiro tem de ser actualizado a par.
 //
-//  2. hitTestMenuBox(): dado um ponto logico, devolve qual das 3 caixas de
-//     MENU/PAUSED foi atingida (ou -1). Geometria (BOX_W/H/Y/GAP) espelha
-//     EXACTAMENTE as constantes inline em Renderer.cpp -- PAUSED e MENU
-//     usam os mesmos valores entre si (confirmado por leitura directa do
-//     ficheiro), por isso uma unica geometria serve os dois estados.
+//  2. hitTestMenuBox(): dado um ponto logico, devolve qual das N caixas de
+//     MENU/PAUSED foi atingida (ou -1). A partir da v9.3, Renderer.cpp
+//     TAMBEM usa MenuBoxLayout::boxX()/boxWidth() directamente (deixou de
+//     ter a sua propria copia inline destes valores) -- fonte unica de
+//     verdade entre desenho e hit-test, resolvendo a duplicacao que a
+//     v9.2 tinha deliberadamente deixado por resolver.
 // =============================================================================
 
 #include <cstdint>
+#include <algorithm>
 
 namespace core {
 
@@ -67,23 +78,27 @@ LogicalPoint windowToLogical(double windowX, double windowY,
                              int32_t windowWidth, int32_t windowHeight,
                              float logicalWidth, float logicalHeight);
 
-// ── Hit-test do MENU/PAUSED (3 caixas horizontais) ───────────────────────────
+// ── Hit-test do MENU/PAUSED (N caixas horizontais) ───────────────────────────
 
 struct MenuBoxLayout {
-    static constexpr float BOX_W = 170.0f;
-    static constexpr float BOX_H = 62.0f;
-    static constexpr float BOX_Y = 150.0f;
-    static constexpr float GAP   = 18.0f;
-    static constexpr int   COUNT = 3;
+    static constexpr float BOX_H    = 62.0f;
+    static constexpr float BOX_Y    = 150.0f;
+    static constexpr float GAP      = 18.0f;
+    static constexpr float MAX_BOX_W = 170.0f; // largura quando ha' espaco de sobra (ex: 3 caixas)
 
-    // X da caixa `index` (0..COUNT-1), para um ecra de largura logicalWidth
-    // centrado nele (mesma formula de boxX() em Renderer.cpp).
-    static float boxX(int index, float logicalWidth);
+    // Largura de cada caixa para `count` caixas caberem em `logicalWidth`
+    // (com GAP entre elas), sem exceder MAX_BOX_W. Para count=3/logicalWidth
+    // =640 isto da' exactamente 170 (o valor fixo anterior); para count=4
+    // encolhe para caber.
+    static float boxWidth(int count, float logicalWidth);
+
+    // X da caixa `index` (0..count-1), centrado em logicalWidth.
+    static float boxX(int index, int count, float logicalWidth);
 };
 
-// Indice da caixa (0..MenuBoxLayout::COUNT-1) sob o ponto logico dado, ou -1
-// se nenhuma caixa foi atingida. logicalY segue Y-para-cima (BOX_Y e' a
-// base da caixa, tal como addPlatform(x,y,w,h)).
-int hitTestMenuBox(float logicalX, float logicalY, float logicalWidth);
+// Indice da caixa (0..count-1) sob o ponto logico dado, ou -1 se nenhuma
+// caixa foi atingida. logicalY segue Y-para-cima (BOX_Y e' a base da
+// caixa, tal como addPlatform(x,y,w,h)).
+int hitTestMenuBox(float logicalX, float logicalY, int count, float logicalWidth);
 
 } // namespace core

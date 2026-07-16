@@ -1,7 +1,7 @@
 // =============================================================================
 //  Game/Graphics/Renderer.cpp
 //
-//  @version 8.2
+//  @version 9.3
 //  @history
 //    v5.2  — drawFrame(Player, Camera)
 //    v6.2b — plataformas desenhadas antes do jogador
@@ -19,6 +19,16 @@
 //             pouco espaco entre si). attachSprite(): jogador desenhado
 //             como pixel-art (SpriteRenderer) com flip conforme
 //             facingDirection; fallback para rectangulo solido.
+//    v9.3  — GameState::EDITOR: grelha de fundo (Core/Viewport.h::
+//             MenuBoxLayout tambem usado para calcular a grelha? nao --
+//             so' para PAUSED/MENU; a grelha usa EDITOR_GRID_VISUAL_SPACING
+//             directamente). PAUSED e MENU deixam de ter cada um a sua
+//             copia inline da geometria das caixas -- passam a chamar
+//             core::MenuBoxLayout::boxWidth()/boxX() (Core/Viewport.h),
+//             resolvendo a duplicacao ja assinalada no dev_log da Fase
+//             9.2. MENU ganha uma 4a caixa ("Editor"). Verificado por
+//             calculo que count=3 (PAUSED) reproduz EXACTAMENTE os
+//             valores anteriores (170px) -- zero alteracao visual ali.
 // =============================================================================
 #include "Graphics/Renderer.h"
 #include "Graphics/VulkanContext.h"
@@ -34,8 +44,10 @@
 #include "Graphics/Camera.h"
 #include "Graphics/BitmapFont.h"   // fallback (usado se attachText() nao for chamado)
 #include "Core/Config.h"
+#include "Core/Viewport.h"        // MenuBoxLayout (Fase 9.3: fonte unica com o hit-test)
 #include <string>
 #include <cstdio>
+#include <cmath>
 
 namespace gfx {
 
@@ -151,6 +163,8 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
         clearColor.color = {{config::CLEAR_CREDITS_R, config::CLEAR_CREDITS_G, config::CLEAR_CREDITS_B, 1.0f}};
     else if (state == GameState::MENU)
         clearColor.color = {{config::CLEAR_MENU_R, config::CLEAR_MENU_G, config::CLEAR_MENU_B, 1.0f}};
+    else if (state == GameState::EDITOR)
+        clearColor.color = {{config::CLEAR_EDITOR_R, config::CLEAR_EDITOR_G, config::CLEAR_EDITOR_B, 1.0f}};
     else
         clearColor.color = {{0.05f, 0.05f, 0.15f, 1.0f}};
 
@@ -350,13 +364,18 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
         drawRect(0.0f, 0.0f, config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT,
                  0.0f, 0.0f, 0.0f, 0.55f);
 
+        // Geometria via core::MenuBoxLayout (Fase 9.3) -- fonte unica com o
+        // hit-test de main.cpp. Para count=3 reproduz EXACTAMENTE os
+        // valores fixos anteriores (170px) -- confirmado por calculo antes
+        // de aplicar esta mudanca (ver historico do ficheiro).
+        const int   PAUSED_COUNT = 3;
         const float CX = config::LOGICAL_WIDTH / 2.0f;
-        const float bW = 170.0f, bH = 62.0f, bY = 150.0f, gap = 18.0f;
-        const float totalW = bW*3.0f + gap*2.0f;
-        const float startX = CX - totalW/2.0f;
+        const float bW = core::MenuBoxLayout::boxWidth(PAUSED_COUNT, config::LOGICAL_WIDTH);
+        const float bH = core::MenuBoxLayout::BOX_H;
+        const float bY = core::MenuBoxLayout::BOX_Y;
         const char* labels[3] = { "CONTINUAR", "CREDITOS", "SAIR" };
 
-        auto boxX = [&](int i) { return startX + i*(bW+gap); };
+        auto boxX = [&](int i) { return core::MenuBoxLayout::boxX(i, PAUSED_COUNT, config::LOGICAL_WIDTH); };
 
         if (m_font && m_textPipeline) {
             drawRect(60.0f, 245.0f, 520.0f, 2.0f, 0.35f, 0.35f, 0.45f);
@@ -470,17 +489,21 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
     // =========================================================================
         const float CX = config::LOGICAL_WIDTH / 2.0f;
 
-        // Mesma geometria de 3 caixas usada em PAUSED (consistencia visual).
-        const float bW = 170.0f, bH = 62.0f, bY = 150.0f, gap = 18.0f;
-        const float totalW = bW*3.0f + gap*2.0f;
-        const float startX = CX - totalW/2.0f;
-        const char* labels[3] = { "COMECAR", "CREDITOS", "SAIR" };
-        auto boxX = [&](int i) { return startX + i*(bW+gap); };
+        // Fase 9.3: 4 caixas (era 3) -- ganhou "EDITOR". Geometria via
+        // core::MenuBoxLayout (mesma fonte que PAUSED e o hit-test de
+        // main.cpp) -- a largura encolhe automaticamente de 170 para
+        // 146.5px para 4 caberem, PAUSED (count=3) fica inalterado.
+        const int   MENU_COUNT = 4;
+        const float bW = core::MenuBoxLayout::boxWidth(MENU_COUNT, config::LOGICAL_WIDTH);
+        const float bH = core::MenuBoxLayout::BOX_H;
+        const float bY = core::MenuBoxLayout::BOX_Y;
+        const char* labels[4] = { "COMECAR", "EDITOR", "CREDITOS", "SAIR" };
+        auto boxX = [&](int i) { return core::MenuBoxLayout::boxX(i, MENU_COUNT, config::LOGICAL_WIDTH); };
 
         if (m_font && m_textPipeline) {
             drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
 
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < MENU_COUNT; ++i) {
                 bool sel = (menuSel == i);
                 float lr = sel ? 1.0f : 0.22f, lg = sel ? 0.85f : 0.22f, lb = sel ? 0.10f : 0.28f;
                 drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
@@ -496,11 +519,16 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
             m_font->drawTextCentered(cmd, m_textPipeline->layout(), "ASCENDENDO",
                                      CX, 300.0f, 1.6f, 0.95f, 0.80f, 0.10f, 1.0f);
 
-            for (int i = 0; i < 3; ++i) {
+            // Escala de texto reduzida (0.5 -> 0.43, proporcional a 146.5/170)
+            // porque as caixas encolheram para caberem as 4 -- "CREDITOS" (8
+            // caracteres) e' o rotulo mais longo, o que mais aperta. Estimativa
+            // proporcional, nao verificada visualmente (sem GPU na sandbox) --
+            // ajustar aqui se overflow real no teu ecra.
+            for (int i = 0; i < MENU_COUNT; ++i) {
                 bool sel = (menuSel == i);
                 float lr = sel ? 1.0f : 0.55f, lg = sel ? 0.85f : 0.55f, lb = sel ? 0.10f : 0.62f;
                 m_font->drawTextCentered(cmd, m_textPipeline->layout(), labels[i],
-                                         boxX(i) + bW/2.0f, bY + bH/2.0f - 6.5f, 0.5f, lr, lg, lb, 1.0f);
+                                         boxX(i) + bW/2.0f, bY + bH/2.0f - 6.5f, 0.43f, lr, lg, lb, 1.0f);
             }
 
             m_font->drawTextCentered(cmd, m_textPipeline->layout(),
@@ -514,7 +542,7 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
             drawTextC("ASCENDENDO", CX, 300.0f, 5.0f, 0.95f, 0.80f, 0.10f);
             drawRect(60.0f, 287.0f, 520.0f, 2.0f, 0.28f, 0.28f, 0.38f);
 
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < MENU_COUNT; ++i) {
                 bool sel = (menuSel == i);
                 float lr = sel ? 1.0f : 0.22f, lg = sel ? 0.85f : 0.22f, lb = sel ? 0.10f : 0.28f;
                 drawRect(boxX(i), bY, bW, bH, lr*0.15f, lg*0.15f, lb*0.12f);
@@ -522,11 +550,54 @@ bool Renderer::recordCommandBuffer(VkCommandBuffer cmd, uint32_t imageIndex,
                 drawRect(boxX(i),          bY+bH-2, bW, 2.0f, lr, lg, lb);
                 drawRect(boxX(i),          bY,  2.0f, bH, lr, lg, lb);
                 drawRect(boxX(i)+bW-2.0f,  bY,  2.0f, bH, lr, lg, lb);
-                drawTextC(labels[i], boxX(i)+bW/2.0f, bY+bH/2.0f-6.0f, 1.8f, lr, lg, lb);
+                drawTextC(labels[i], boxX(i)+bW/2.0f, bY+bH/2.0f-6.0f, 1.55f, lr, lg, lb);
             }
 
             drawTextC("A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
                       CX, 80.0f, 2.0f, 0.30f, 0.30f, 0.42f);
+        }
+
+    // =========================================================================
+    } else if (state == GameState::EDITOR) {
+    // =========================================================================
+        // Grelha de fundo (referencia visual, Fase 9.3). Espacamento FIXO
+        // (EDITOR_GRID_VISUAL_SPACING) -- deliberadamente independente de
+        // EDITOR_GRID_SNAP (o snap de colocacao, Fase 9.4), que pode ser
+        // muito mais fino (4px actualmente) do que faz sentido desenhar.
+        const float spacing   = config::EDITOR_GRID_VISUAL_SPACING;
+        const float thickness = 1.0f;
+        const float gR = 0.24f, gG = 0.24f, gB = 0.30f;
+
+        // Verticais: cobrem [camera.x, camera.x+LOGICAL_WIDTH], alinhadas
+        // ao multiplo de `spacing` mais proximo por baixo da camara.
+        float startX = std::floor(camera.position.x / spacing) * spacing;
+        for (float x = startX; x <= camera.position.x + config::LOGICAL_WIDTH + spacing; x += spacing) {
+            drawRect(x - thickness/2.0f, camera.position.y,
+                     thickness, config::LOGICAL_HEIGHT, gR, gG, gB, 1.0f, &camera);
+        }
+
+        // Horizontais: idem em Y -- ambos os eixos culled a volta da
+        // camara, por isso o custo por frame nao cresce com o tamanho da
+        // campanha, so' com o que esta' visivel.
+        float startY = std::floor(camera.position.y / spacing) * spacing;
+        for (float y = startY; y <= camera.position.y + config::LOGICAL_HEIGHT + spacing; y += spacing) {
+            drawRect(camera.position.x, y - thickness/2.0f,
+                     config::LOGICAL_WIDTH, thickness, gR, gG, gB, 1.0f, &camera);
+        }
+
+        const float CX = config::LOGICAL_WIDTH / 2.0f;
+        if (m_font && m_textPipeline) {
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_textPipeline->handle());
+            m_font->bind(cmd, m_textPipeline->layout());
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(), "EDITOR DE NIVEIS",
+                                     CX, 330.0f, 0.55f, 0.75f, 0.80f, 0.85f, 1.0f);
+            m_font->drawTextCentered(cmd, m_textPipeline->layout(),
+                                     "A/D/W/S DESLOCAR CAMARA   ESC SAIR",
+                                     CX, 30.0f, 0.40f, 0.45f, 0.48f, 0.52f, 1.0f);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->handle());
+        } else {
+            drawTextC("EDITOR DE NIVEIS", CX, 330.0f, 2.0f, 0.75f, 0.80f, 0.85f);
+            drawTextC("A/D/W/S DESLOCAR CAMARA  ESC SAIR", CX, 30.0f, 1.2f, 0.45f, 0.48f, 0.52f);
         }
     }
 

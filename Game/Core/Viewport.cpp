@@ -1,7 +1,7 @@
 // =============================================================================
 //  Game/Core/Viewport.cpp
 //
-//  @version 9.2
+//  @version 9.3
 // =============================================================================
 #include "Core/Viewport.h"
 
@@ -46,20 +46,30 @@ LogicalPoint windowToLogical(double windowX, double windowY,
     return p;
 }
 
-float MenuBoxLayout::boxX(int index, float logicalWidth) {
-    float cx      = logicalWidth / 2.0f;
-    float totalW  = BOX_W * MenuBoxLayout::COUNT + GAP * (MenuBoxLayout::COUNT - 1);
-    float startX  = cx - totalW / 2.0f;
-    return startX + index * (BOX_W + GAP);
+float MenuBoxLayout::boxWidth(int count, float logicalWidth) {
+    if (count <= 0) return 0.0f;
+    float totalGaps  = GAP * (count - 1);
+    float available  = logicalWidth - totalGaps;
+    float w          = available / (float)count;
+    return std::min(w, MAX_BOX_W);
 }
 
-int hitTestMenuBox(float logicalX, float logicalY, float logicalWidth) {
+float MenuBoxLayout::boxX(int index, int count, float logicalWidth) {
+    float bW      = boxWidth(count, logicalWidth);
+    float totalW  = bW * count + GAP * (count - 1);
+    float cx      = logicalWidth / 2.0f;
+    float startX  = cx - totalW / 2.0f;
+    return startX + index * (bW + GAP);
+}
+
+int hitTestMenuBox(float logicalX, float logicalY, int count, float logicalWidth) {
     if (logicalY < MenuBoxLayout::BOX_Y || logicalY > MenuBoxLayout::BOX_Y + MenuBoxLayout::BOX_H)
         return -1;
 
-    for (int i = 0; i < MenuBoxLayout::COUNT; ++i) {
-        float x0 = MenuBoxLayout::boxX(i, logicalWidth);
-        float x1 = x0 + MenuBoxLayout::BOX_W;
+    float bW = MenuBoxLayout::boxWidth(count, logicalWidth);
+    for (int i = 0; i < count; ++i) {
+        float x0 = MenuBoxLayout::boxX(i, count, logicalWidth);
+        float x1 = x0 + bW;
         if (logicalX >= x0 && logicalX <= x1) return i;
     }
     return -1;

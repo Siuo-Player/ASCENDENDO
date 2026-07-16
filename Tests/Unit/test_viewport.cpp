@@ -1,9 +1,12 @@
 // =============================================================================
 //  Tests/Unit/test_viewport.cpp
 //
-//  @version 9.2
+//  @version 9.3
 //  @history
 //    v9.2 — criado (Fase 9.2: suporte a rato)
+//    v9.3 — hitTestMenuBox/MenuBoxLayout generalizados para N caixas;
+//           count=3 reconfirmado identico a v9.2, count=4 adicionado
+//           (Fase 9.3: MENU ganha a opcao "Editor").
 //
 //  SEM dependencias de GPU/GLFW -- pura matematica, com valores de
 //  referencia calculados a mao a partir da MESMA formula usada em
@@ -90,42 +93,65 @@ TEST_SUITE("Fase 9.2 — Viewport: windowToLogical") {
     }
 }
 
-TEST_SUITE("Fase 9.2 — Viewport: hitTestMenuBox") {
-    // Geometria de referencia (calculada a mao a partir de MenuBoxLayout,
-    // para LOGICAL_WIDTH=640): box0 x=[47,217], box1 x=[235,405], box2 x=[423,593],
-    // todas y=[150,212].
+TEST_SUITE("Fase 9.2/9.3 — Viewport: hitTestMenuBox") {
+    // v9.3: MenuBoxLayout generalizado para N caixas (antes fixo em 3).
+    // Valores de referencia calculados a mao a partir da formula em
+    // MenuBoxLayout::boxWidth/boxX, para LOGICAL_WIDTH=640:
+    //   count=3 (PAUSED, inalterado): box0=[47,217] box1=[235,405] box2=[423,593], largura 170
+    //   count=4 (MENU, novo Fase 9.3): box0=[0,146.5] box1=[164.5,311] box2=[329,475.5] box3=[493.5,640], largura 146.5
 
-    TEST_CASE("boxX() calcula as 3 posicoes esperadas") {
-        CHECK(MenuBoxLayout::boxX(0, config::LOGICAL_WIDTH) == doctest::Approx(47.0f));
-        CHECK(MenuBoxLayout::boxX(1, config::LOGICAL_WIDTH) == doctest::Approx(235.0f));
-        CHECK(MenuBoxLayout::boxX(2, config::LOGICAL_WIDTH) == doctest::Approx(423.0f));
+    TEST_CASE("count=3: boxWidth e boxX reproduzem EXACTAMENTE os valores da v9.2 (sem regressao no PAUSED)") {
+        CHECK(MenuBoxLayout::boxWidth(3, config::LOGICAL_WIDTH) == doctest::Approx(170.0f));
+        CHECK(MenuBoxLayout::boxX(0, 3, config::LOGICAL_WIDTH) == doctest::Approx(47.0f));
+        CHECK(MenuBoxLayout::boxX(1, 3, config::LOGICAL_WIDTH) == doctest::Approx(235.0f));
+        CHECK(MenuBoxLayout::boxX(2, 3, config::LOGICAL_WIDTH) == doctest::Approx(423.0f));
     }
 
-    TEST_CASE("pontos dentro de cada caixa devolvem o indice correcto") {
-        CHECK(hitTestMenuBox(100.0f, 180.0f, config::LOGICAL_WIDTH) == 0);
-        CHECK(hitTestMenuBox(300.0f, 180.0f, config::LOGICAL_WIDTH) == 1);
-        CHECK(hitTestMenuBox(500.0f, 180.0f, config::LOGICAL_WIDTH) == 2);
+    TEST_CASE("count=3: pontos dentro de cada caixa devolvem o indice correcto") {
+        CHECK(hitTestMenuBox(100.0f, 180.0f, 3, config::LOGICAL_WIDTH) == 0);
+        CHECK(hitTestMenuBox(300.0f, 180.0f, 3, config::LOGICAL_WIDTH) == 1);
+        CHECK(hitTestMenuBox(500.0f, 180.0f, 3, config::LOGICAL_WIDTH) == 2);
     }
 
-    TEST_CASE("pontos no gap entre caixas devolvem -1") {
-        CHECK(hitTestMenuBox(225.0f, 180.0f, config::LOGICAL_WIDTH) == -1); // entre box0 e box1
-        CHECK(hitTestMenuBox(413.0f, 180.0f, config::LOGICAL_WIDTH) == -1); // entre box1 e box2
+    TEST_CASE("count=3: pontos no gap entre caixas devolvem -1") {
+        CHECK(hitTestMenuBox(225.0f, 180.0f, 3, config::LOGICAL_WIDTH) == -1);
+        CHECK(hitTestMenuBox(413.0f, 180.0f, 3, config::LOGICAL_WIDTH) == -1);
     }
 
-    TEST_CASE("pontos fora do intervalo Y das caixas devolvem -1") {
-        CHECK(hitTestMenuBox(300.0f, 100.0f, config::LOGICAL_WIDTH) == -1); // abaixo
-        CHECK(hitTestMenuBox(300.0f, 250.0f, config::LOGICAL_WIDTH) == -1); // acima
+    TEST_CASE("count=3: pontos fora do intervalo Y ou lateralmente fora devolvem -1") {
+        CHECK(hitTestMenuBox(300.0f, 100.0f, 3, config::LOGICAL_WIDTH) == -1);
+        CHECK(hitTestMenuBox(300.0f, 250.0f, 3, config::LOGICAL_WIDTH) == -1);
+        CHECK(hitTestMenuBox(10.0f,  180.0f, 3, config::LOGICAL_WIDTH) == -1);
+        CHECK(hitTestMenuBox(620.0f, 180.0f, 3, config::LOGICAL_WIDTH) == -1);
     }
 
-    TEST_CASE("pontos a esquerda/direita de todas as caixas devolvem -1") {
-        CHECK(hitTestMenuBox(10.0f,  180.0f, config::LOGICAL_WIDTH) == -1);
-        CHECK(hitTestMenuBox(620.0f, 180.0f, config::LOGICAL_WIDTH) == -1);
+    TEST_CASE("count=3: limites exactos das caixas sao inclusivos") {
+        CHECK(hitTestMenuBox(47.0f,  180.0f, 3, config::LOGICAL_WIDTH) == 0);
+        CHECK(hitTestMenuBox(217.0f, 180.0f, 3, config::LOGICAL_WIDTH) == 0);
+        CHECK(hitTestMenuBox(300.0f, 150.0f, 3, config::LOGICAL_WIDTH) == 1);
+        CHECK(hitTestMenuBox(300.0f, 212.0f, 3, config::LOGICAL_WIDTH) == 1);
     }
 
-    TEST_CASE("limites exactos das caixas sao inclusivos") {
-        CHECK(hitTestMenuBox(47.0f,  180.0f, config::LOGICAL_WIDTH) == 0); // borda esquerda box0
-        CHECK(hitTestMenuBox(217.0f, 180.0f, config::LOGICAL_WIDTH) == 0); // borda direita box0
-        CHECK(hitTestMenuBox(300.0f, 150.0f, config::LOGICAL_WIDTH) == 1); // borda inferior (BOX_Y)
-        CHECK(hitTestMenuBox(300.0f, 212.0f, config::LOGICAL_WIDTH) == 1); // borda superior (BOX_Y+BOX_H)
+    TEST_CASE("count=4 (MENU, Fase 9.3): boxWidth encolhe para caber, boxX calcula as 4 posicoes") {
+        CHECK(MenuBoxLayout::boxWidth(4, config::LOGICAL_WIDTH) == doctest::Approx(146.5f));
+        CHECK(MenuBoxLayout::boxX(0, 4, config::LOGICAL_WIDTH) == doctest::Approx(0.0f));
+        CHECK(MenuBoxLayout::boxX(1, 4, config::LOGICAL_WIDTH) == doctest::Approx(164.5f));
+        CHECK(MenuBoxLayout::boxX(2, 4, config::LOGICAL_WIDTH) == doctest::Approx(329.0f));
+        CHECK(MenuBoxLayout::boxX(3, 4, config::LOGICAL_WIDTH) == doctest::Approx(493.5f));
+    }
+
+    TEST_CASE("count=4: pontos dentro de cada uma das 4 caixas devolvem o indice correcto") {
+        CHECK(hitTestMenuBox(50.0f,  180.0f, 4, config::LOGICAL_WIDTH) == 0);
+        CHECK(hitTestMenuBox(200.0f, 180.0f, 4, config::LOGICAL_WIDTH) == 1);
+        CHECK(hitTestMenuBox(400.0f, 180.0f, 4, config::LOGICAL_WIDTH) == 2);
+        CHECK(hitTestMenuBox(600.0f, 180.0f, 4, config::LOGICAL_WIDTH) == 3);
+    }
+
+    TEST_CASE("count=4: gap entre caixas continua a devolver -1") {
+        CHECK(hitTestMenuBox(155.0f, 180.0f, 4, config::LOGICAL_WIDTH) == -1); // entre box0 e box1
+    }
+
+    TEST_CASE("count invalido (<=0) nao rebenta -- boxWidth devolve 0") {
+        CHECK(MenuBoxLayout::boxWidth(0, config::LOGICAL_WIDTH) == doctest::Approx(0.0f));
     }
 }
