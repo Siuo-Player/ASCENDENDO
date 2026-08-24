@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Linux / Clang / C++20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain and native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang make pkg-config libvulkan-dev libglfw3-dev glslc
+
+      - name: Build and run tests
+        run: make clean && make tests-verbose -j2
+
+      - name: Validate active campaign levels
+        run: python3 Development/AI_Validation/ai_validator.py
