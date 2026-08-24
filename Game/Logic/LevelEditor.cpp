@@ -26,6 +26,11 @@ float floorToGrid(float value) {
     const float grid = config::EDITOR_GRID_SNAP;
     return std::floor(value / grid) * grid;
 }
+
+bool hasMinimumSize(const AABB& rect) {
+    return rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
+           rect.height() >= config::EDITOR_GRID_SNAP - EPS;
+}
 }
 
 LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
@@ -64,9 +69,7 @@ bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
 }
 
 bool LevelEditorDocument::validPlatform(const AABB& rect) const {
-    if (!insideLogicalBounds(rect)) return false;
-    return rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
-           rect.height() >= config::EDITOR_GRID_SNAP - EPS;
+    return insideLogicalBounds(rect) && hasMinimumSize(rect);
 }
 
 bool LevelEditorDocument::addPlatform(const AABB& requested,
@@ -74,7 +77,7 @@ bool LevelEditorDocument::addPlatform(const AABB& requested,
     // Uma operação que começa fora do canvas é inválida mesmo que o snap
     // posterior pudesse trazê-la de volta para dentro. A UI, portanto,
     // pode simplesmente não oferecer esse estado ao utilizador.
-    if (!insideLogicalBounds(requested)) return false;
+    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
 
     const AABB rect = snap(requested);
     if (!validPlatform(rect)) return false;
@@ -93,7 +96,7 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
         requestedMin,
         { requestedMin.x + old.width(), requestedMin.y + old.height() },
     };
-    if (!insideLogicalBounds(requested)) return false;
+    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
 
     const Vec2 newMin = snap(requestedMin);
     const AABB moved = {
@@ -125,14 +128,12 @@ bool LevelEditorDocument::setSpawnX(float requestedX) {
 }
 
 bool LevelEditorDocument::validFlag(const AABB& rect) const {
-    return insideLogicalBounds(rect) &&
-           rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
-           rect.height() >= config::EDITOR_GRID_SNAP - EPS;
+    return insideLogicalBounds(rect) && hasMinimumSize(rect);
 }
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
     if (!m_finalCampaignLevel) return false;
-    if (!insideLogicalBounds(requested)) return false;
+    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
 
     const AABB rect = snap(requested);
     if (!validFlag(rect)) return false;
