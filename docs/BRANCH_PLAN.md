@@ -30,34 +30,18 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 - Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
 - Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
 - Testes unitários de input → controller → documento e de geometria do preview.
-- `docs/ARCHITECTURE.md` atualizado com a arquitetura alvo.
-- `docs/TECH_DEBT.md` criado com problemas classificados por prioridade.
-- `docs/ROADMAP.md` reordenado com um gate de consolidação arquitetural antes do save/import.
+- `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
+- `docs/TECH_DEBT.md` criado com dívida técnica classificada e critérios de saída.
+- `docs/ROADMAP.md` revisto para introduzir o Gate 9.4.5 antes de Save/Import.
 
 ## Pendente nesta tranche
 
-1. Passar `EditorSession`/`EditorPreview` para o renderer sem fazer o renderer conhecer a lógica do editor.
-2. Renderizar plataformas editáveis, seleção e preview no espaço world/camera atual.
+1. Passar um snapshot de renderização do editor para o renderer.
+2. Renderizar plataformas editáveis, seleção e preview no espaço de mundo.
 3. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
 4. Fazer o renderer respeitar o mesmo canvas/grid usado pelo hit-test.
 5. Validar visualmente o fluxo real no jogo.
 6. Atualizar documentação final e fechar a PR.
-
-## Próximo gate depois desta branch
-
-Depois de integrar a PR desta tranche, a próxima branch deve ser dedicada ao **Gate 9.4.5 — Consolidação arquitetural antes de Save**. Deve começar a partir do `main` pós-merge e cobrir apenas dívida técnica prioritária:
-
-- extrair máquina de estados/aplicação do `main.cpp`;
-- introduzir `RenderSnapshot`;
-- migrar `Player` para `GameAction`/`KeyBindings`;
-- limitar recuperação do fixed timestep;
-- iniciar/consolidar `LevelData` comum;
-- resolver paths de runtime independentes do current working directory;
-- validar graphics/present queues Vulkan;
-- Windows CI + game build + ASan/UBSan;
-- property tests e limpeza técnica apropriada.
-
-Não misturar este gate com save/import/share.
 
 ## Decisões de UX herdadas
 
@@ -83,9 +67,9 @@ Não misturar este gate com save/import/share.
 - biblioteca online/site;
 - networking/WebSockets;
 - campanha/playlist 9.6;
-- consolidação arquitetural 9.4.5;
 - sistema final de sprites/atlas do editor;
-- empacotamento final do EXE release.
+- empacotamento final do EXE release;
+- Gate 9.4.5 de consolidação arquitetural.
 
 ## Critério de conclusão
 
