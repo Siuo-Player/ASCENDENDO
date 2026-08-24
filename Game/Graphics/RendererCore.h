@@ -2,9 +2,8 @@
 // =============================================================================
 // Game/Graphics/RendererCore.h
 //
-// Novo núcleo de rendering durante a migração do Renderer monolítico.
-// Responsabilidade única: ciclo de vida dos recursos Vulkan e gravação/submissão
-// de um frame através de passes independentes.
+// Núcleo de frame Vulkan durante a migração do Renderer monolítico.
+// Não conhece Player, Level, UI ou editor.
 // =============================================================================
 
 #include <vulkan/vulkan.h>
@@ -30,11 +29,12 @@ public:
     void cleanup();
 
     bool beginFrame(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+    bool beginRenderPass(VkCommandBuffer commandBuffer, uint32_t imageIndex,
+                         float clearR, float clearG, float clearB);
+    bool endRenderPass(VkCommandBuffer commandBuffer);
     bool submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-    VkCommandBuffer commandBuffer(uint32_t imageIndex) const;
     VkExtent2D swapchainExtent() const;
-
     bool isInitialized() const { return m_initialized; }
 
 private:
