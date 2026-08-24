@@ -1,8 +1,5 @@
 // =============================================================================
 // Game/Graphics/RendererCore.cpp
-//
-// Novo núcleo de frame Vulkan. Este ficheiro não conhece Player, Level, menus
-// ou editor; apenas possui recursos/frame lifecycle e submit/present.
 // =============================================================================
 #include "Graphics/RendererCore.h"
 #include "Graphics/VulkanContext.h"
@@ -24,38 +21,35 @@ bool RendererCore::init(VulkanContext* ctx, Swapchain* swapchain,
     m_renderPass = renderPass;
     m_pipeline = pipeline;
 
-    if (!createFramebuffers()) return false;
-    if (!createCommandPool()) return false;
-    if (!allocateCommandBuffers()) return false;
-    if (!createSyncObjects()) return false;
+    if (!createFramebuffers() || !createCommandPool() ||
+        !allocateCommandBuffers() || !createSyncObjects()) {
+        cleanup();
+        return false;
+    }
 
     m_initialized = true;
     return true;
 }
 
 void RendererCore::cleanup() {
-    if (!m_initialized) return;
+    if (!m_ctx) return;
 
     VkDevice device = m_ctx->device();
     vkDeviceWaitIdle(device);
 
     for (VkFramebuffer framebuffer : m_framebuffers) {
-        vkDestroyFramebuffer(device, framebuffer, nullptr);
+        if (framebuffer) vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
     m_framebuffers.clear();
 
-    if (m_inFlightFence) {
-        vkDestroyFence(device, m_inFlightFence, nullptr);
-    }
+    if (m_inFlightFence) vkDestroyFence(device, m_inFlightFence, nullptr);
     if (m_renderFinishedSemaphore) {
         vkDestroySemaphore(device, m_renderFinishedSemaphore, nullptr);
     }
     if (m_imageAvailableSemaphore) {
         vkDestroySemaphore(device, m_imageAvailableSemaphore, nullptr);
     }
-    if (m_commandPool) {
-        vkDestroyCommandPool(device, m_commandPool, nullptr);
-    }
+    if (m_commandPool) vkDestroyCommandPool(device, m_commandPool, nullptr);
 
     m_commandBuffers.clear();
     m_inFlightFence = VK_NULL_HANDLE;
@@ -77,31 +71,52 @@ bool RendererCore::beginFrame(VkCommandBuffer& commandBuffer, uint32_t& imageInd
         return false;
     }
 
-    VkResult result = vkAcquireNextImageKHR(
-        device,
-        m_swapchain->handle(),
-        UINT64_MAX,
-        m_imageAvailableSemaphore,
-        VK_NULL_HANDLE,
-        &imageIndex);
+    const VkResult result = vkAcquireNextImageKHR(
+        device, m_swapchain->handle(), UINT64_MAX,
+        m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) return false;
 
-    if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        return false;
-    }
-
-    if (vkResetFences(device, 1, &m_inFlightFence) != VK_SUCCESS) {
-        return false;
-    }
-    if (vkResetCommandBuffer(m_commandBuffers[imageIndex], 0) != VK_SUCCESS) {
-        return false;
-    }
+    if (vkResetFences(device, 1, &m_inFlightFence) != VK_SUCCESS) return false;
+    if (imageIndex >= m_commandBuffers.size()) return false;
+    if (vkResetCommandBuffer(m_commandBuffers[imageIndex], 0) != VK_SUCCESS) return false;
 
     commandBuffer = m_commandBuffers[imageIndex];
     return true;
 }
 
+bool RendererCore::beginRenderPass(VkCommandBuffer commandBuffer, uint32_t imageIndex,
+                                   float clearR, float clearG, float clearB) {
+    if (!m_initialized || commandBuffer == VK_NULL_HANDLE ||
+        imageIndex >= m_framebuffers.size()) return false;
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) return false;
+
+    VkClearValue clearValue{};
+    clearValue.color = {{clearR, clearG, clearB, 1.0f}};
+
+    VkRenderPassBeginInfo renderPassInfo{};
+    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    renderPassInfo.renderPass = m_renderPass->handle();
+    renderPassInfo.framebuffer = m_framebuffers[imageIndex];
+    renderPassInfo.renderArea.offset = {0, 0};
+    renderPassInfo.renderArea.extent = m_swapchain->extent();
+    renderPassInfo.clearValueCount = 1;
+    renderPassInfo.pClearValues = &clearValue;
+
+    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    return true;
+}
+
+bool RendererCore::endRenderPass(VkCommandBuffer commandBuffer) {
+    if (!m_initialized || commandBuffer == VK_NULL_HANDLE) return false;
+    vkCmdEndRenderPass(commandBuffer);
+    return vkEndCommandBuffer(commandBuffer) == VK_SUCCESS;
+}
+
 bool RendererCore::submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-    if (!m_initialized) return false;
+    if (!m_initialized || commandBuffer == VK_NULL_HANDLE) return false;
 
     VkPipelineStageFlags waitStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     VkSubmitInfo submitInfo{};
@@ -127,13 +142,8 @@ bool RendererCore::submitFrame(VkCommandBuffer commandBuffer, uint32_t imageInde
     presentInfo.pSwapchains = &swapchain;
     presentInfo.pImageIndices = &imageIndex;
 
-    VkResult result = vkQueuePresentKHR(m_ctx->graphicsQueue(), &presentInfo);
+    const VkResult result = vkQueuePresentKHR(m_ctx->graphicsQueue(), &presentInfo);
     return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
-}
-
-VkCommandBuffer RendererCore::commandBuffer(uint32_t imageIndex) const {
-    if (imageIndex >= m_commandBuffers.size()) return VK_NULL_HANDLE;
-    return m_commandBuffers[imageIndex];
 }
 
 VkExtent2D RendererCore::swapchainExtent() const {
@@ -177,8 +187,7 @@ bool RendererCore::allocateCommandBuffers() {
     info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     info.commandBufferCount = static_cast<uint32_t>(m_commandBuffers.size());
 
-    return vkAllocateCommandBuffers(
-               m_ctx->device(), &info, m_commandBuffers.data()) == VK_SUCCESS;
+    return vkAllocateCommandBuffers(m_ctx->device(), &info, m_commandBuffers.data()) == VK_SUCCESS;
 }
 
 bool RendererCore::createSyncObjects() {
@@ -190,9 +199,16 @@ bool RendererCore::createSyncObjects() {
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkDevice device = m_ctx->device();
-    return vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) == VK_SUCCESS
-        && vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) == VK_SUCCESS
-        && vkCreateFence(device, &fenceInfo, nullptr, &m_inFlightFence) == VK_SUCCESS;
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS) {
+        return false;
+    }
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) != VK_SUCCESS) {
+        return false;
+    }
+    if (vkCreateFence(device, &fenceInfo, nullptr, &m_inFlightFence) != VK_SUCCESS) {
+        return false;
+    }
+    return true;
 }
 
 } // namespace gfx
