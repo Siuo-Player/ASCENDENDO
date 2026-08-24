@@ -54,6 +54,26 @@ EditorPreview EditorSession::preview() const {
     return result;
 }
 
+EditorRenderSnapshot EditorSession::renderSnapshot() const {
+    EditorRenderSnapshot snapshot;
+    snapshot.platforms.reserve(m_document.platformCount());
+    for (const auto& platform : m_document.platforms())
+        snapshot.platforms.push_back(platform.bounds);
+
+    snapshot.hasSelection = m_controller.hasSelection();
+    snapshot.selectedIndex = snapshot.hasSelection
+        ? m_controller.selectedIndex()
+        : static_cast<std::size_t>(-1);
+    snapshot.cursorWorld = m_cursor.world;
+    snapshot.tool = m_controller.toolMode();
+    snapshot.sizePreset = m_controller.sizePreset();
+
+    const EditorPreview p = preview();
+    snapshot.previewVisible = p.visible;
+    snapshot.previewBounds = p.bounds;
+    return snapshot;
+}
+
 void EditorSession::updateCursor(const InputManager& input,
                                  const gfx::Camera& camera,
                                  int32_t windowWidth,
