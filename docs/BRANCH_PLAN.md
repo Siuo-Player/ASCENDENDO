@@ -21,17 +21,24 @@ O plano da branch anterior (`feat/9-4-editor-ui-integration`) fica **concluído*
 
 Ligar o modelo determinístico do editor à UI/renderização real do jogo, mantendo a interação baseada em grid e estados claros, sem duplicar a lógica de edição entre input e renderer.
 
-## Plano desta branch
+## Implementado até agora
 
-1. Integrar `LevelEditorDocument` e `EditorInteractionController` no estado `EDITOR` real.
-2. Desenhar plataformas/editáveis existentes usando o mesmo espaço lógico do jogo.
-3. Implementar cursor de editor e preview do preset ativo.
-4. Implementar feedback visual de STAMP, DRAG, seleção e movimento.
-5. Integrar mouse e key bindings sem criar conflitos com o estado normal do jogo.
-6. Garantir que cliques fora da grid/canvas válida são ignorados ou recusados.
-7. Adicionar testes de integração para input→controller→document e regressões de viewport.
-8. Validar manualmente a experiência com o jogo real antes do merge.
-9. Atualizar documentação e abrir PR.
+- `EditorSession` para orquestrar `InputManager`, `Camera`, `KeyBindings` e `EditorInteractionController`.
+- `G` alterna entre `STAMP` e `DRAG` como ferramenta persistente.
+- `[` / `]` alteram `SMALL` / `MEDIUM` / `LARGE`, começando em `MEDIUM`.
+- Clique esquerdo cria ou move; clique direito cancela; `Delete`/`Backspace` apaga a seleção.
+- Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
+- Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
+- Testes unitários de input → controller → documento e de geometria do preview.
+
+## Pendente nesta tranche
+
+1. Passar o `EditorSession`/`EditorPreview` para o renderer.
+2. Renderizar plataformas editáveis, seleção e preview no espaço world/camera atual.
+3. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
+4. Fazer o renderer respeitar o mesmo canvas/grid usado pelo hit-test.
+5. Validar visualmente o fluxo real no jogo.
+6. Atualizar documentação final e fechar a PR.
 
 ## Decisões de UX herdadas
 
