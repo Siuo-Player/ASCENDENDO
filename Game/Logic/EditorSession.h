@@ -16,6 +16,12 @@
 
 namespace logic {
 
+struct EditorPreview {
+    bool visible = false;
+    AABB bounds{};
+    EditorToolMode tool = EditorToolMode::STAMP;
+};
+
 class EditorSession {
 public:
     explicit EditorSession(bool finalCampaignLevel,
@@ -32,6 +38,9 @@ public:
     EditorCursor cursor() const { return m_cursor; }
     EditorMouseMode mouseMode() const { return m_controller.mode(); }
     EditorSizePreset sizePreset() const { return m_controller.sizePreset(); }
+    EditorToolMode toolMode() const { return m_controller.toolMode(); }
+
+    EditorPreview preview() const;
 
     // Atualiza input e interação do editor para um frame.
     void update(const InputManager& input,
