@@ -16,15 +16,17 @@ ifeq ($(OS),Windows_NT)
     PLATFORM := windows
     EXE_EXT  := .exe
     SHELL    := cmd.exe
-    RUN_TEST := $(TEST_BIN)
+    RUN_TEST = $(TEST_BIN)
     CAT_FILE := type
+    FAIL_CMD := exit /b 1
     RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
     MKDIR_ONE = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
 else
     PLATFORM := linux
     EXE_EXT  :=
-    RUN_TEST := ./$(TEST_BIN)
+    RUN_TEST = ./$(TEST_BIN)
     CAT_FILE := cat
+    FAIL_CMD := exit 1
     RM_BUILD = rm -rf "$(BUILD_DIR)"
     MKDIR_ONE = mkdir -p "$(1)"
 endif
@@ -34,7 +36,7 @@ CXX := clang++
 
 # ar compatível com objetos Clang:
 #   Linux   → ar do sistema
-#   Windows → llvm-ar (incluído com LLVM; se não estiver em PATH, usa ar)
+#   Windows → llvm-ar (incluído com LLVM)
 ifeq ($(PLATFORM),windows)
     AR := llvm-ar
 else
@@ -162,7 +164,7 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
@@ -172,7 +174,7 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
@@ -182,7 +184,7 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
