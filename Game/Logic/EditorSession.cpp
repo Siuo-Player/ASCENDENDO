@@ -6,6 +6,16 @@
 
 namespace logic {
 
+namespace {
+
+bool insideEditorCanvas(const AABB& bounds) {
+    return bounds.min.x >= 0.0f && bounds.min.y >= 0.0f &&
+           bounds.max.x <= config::LOGICAL_WIDTH &&
+           bounds.max.y <= config::LOGICAL_HEIGHT;
+}
+
+}
+
 EditorSession::EditorSession(bool finalCampaignLevel, const AABB& initialGround)
     : m_document(finalCampaignLevel, initialGround),
       m_controller(m_document) {}
@@ -16,29 +26,30 @@ EditorPreview EditorSession::preview() const {
 
     if (m_controller.hasSelection() &&
         m_controller.mode() == EditorMouseMode::MOVING) {
-        result.visible = true;
-        result.bounds = m_document.platforms()[m_controller.selectedIndex()].bounds;
+        const AABB bounds = m_document.platforms()[m_controller.selectedIndex()].bounds;
+        result.visible = insideEditorCanvas(bounds);
+        result.bounds = bounds;
         return result;
     }
 
     if (m_controller.toolMode() == EditorToolMode::STAMP) {
         const Vec2 size = LevelEditorDocument::presetSize(m_controller.sizePreset());
-        result.visible = true;
         result.bounds = {
             {m_cursor.world.x - size.x * 0.5f, m_cursor.world.y - size.y * 0.5f},
             {m_cursor.world.x + size.x * 0.5f, m_cursor.world.y + size.y * 0.5f},
         };
+        result.visible = insideEditorCanvas(result.bounds);
         return result;
     }
 
     if (m_leftDragActive && m_controller.mode() == EditorMouseMode::NONE) {
-        result.visible = true;
         result.bounds = {
             {std::min(m_pressedWorld.x, m_cursor.world.x),
              std::min(m_pressedWorld.y, m_cursor.world.y)},
             {std::max(m_pressedWorld.x, m_cursor.world.x),
              std::max(m_pressedWorld.y, m_cursor.world.y)},
         };
+        result.visible = insideEditorCanvas(result.bounds);
     }
     return result;
 }
