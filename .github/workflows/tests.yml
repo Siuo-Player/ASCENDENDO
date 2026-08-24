@@ -27,4 +27,4 @@ jobs:
         run: make clean && make tests-verbose -j2
 
       - name: Validate active campaign levels
-        run: python3 Development/AI_Validation/ai_validator.py
+        run: python3 Development/AI_Validation/ai_validator.py --campaign
