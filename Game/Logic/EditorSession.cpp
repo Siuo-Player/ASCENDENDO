@@ -1,4 +1,5 @@
 #include "Logic/EditorSession.h"
+#include "Core/Config.h"
 #include "Core/Viewport.h"
 
 namespace logic {
@@ -20,18 +21,8 @@ void EditorSession::updateCursor(const InputManager& input,
 
 void EditorSession::updateKeyboard(const InputManager& input,
                                    const core::KeyBindings& bindings) {
-    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorToggleMode)) {
-        auto next = m_controller.mode() == EditorMouseMode::DRAGGING
-            ? EditorMouseMode::STAMPING
-            : (m_controller.mode() == EditorMouseMode::STAMPING
-                ? EditorMouseMode::DRAGGING
-                : EditorMouseMode::STAMPING);
-        (void)next;
-        m_controller.clearSelection();
-        // Tool mode itself is selected by the interaction start. The toggle
-        // is represented by a tiny synthetic state change through presets:
-        // no extra policy is placed in the document.
-    }
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorToggleMode))
+        m_controller.toggleToolMode();
 
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSizeDown)) {
         switch (m_controller.sizePreset()) {
@@ -67,23 +58,36 @@ void EditorSession::updateMouse(const InputManager& input) {
 
     if (leftPressed) {
         m_pressedWorld = m_cursor.world;
+
+        // Existing platform: dragging it always means movement, independent
+        // of the creation tool. Empty space follows the current tool.
         if (m_controller.beginMove(m_cursor.world)) {
             m_leftDragActive = true;
             return;
         }
 
-        // A normal click creates the currently selected medium/small/large
-        // platform through the controller's deterministic stamp operation.
-        m_controller.stampAt(m_cursor.world);
+        if (m_controller.toolMode() == EditorToolMode::STAMP) {
+            m_controller.stampAt(m_cursor.world);
+            return;
+        }
+
+        // DRAG creation starts in empty space and materializes on release.
+        m_leftDragActive = true;
+        m_controller.clearSelection();
         return;
     }
 
-    if (leftHeld && m_leftDragActive)
+    if (leftHeld && m_leftDragActive &&
+        m_controller.mode() == EditorMouseMode::MOVING)
         m_controller.updateMove(m_cursor.world);
 
     if (leftReleased && m_leftDragActive) {
-        m_controller.updateMove(m_cursor.world);
-        m_controller.endMove();
+        if (m_controller.mode() == EditorMouseMode::MOVING) {
+            m_controller.updateMove(m_cursor.world);
+            m_controller.endMove();
+        } else if (m_controller.toolMode() == EditorToolMode::DRAG) {
+            m_controller.dragFromTo(m_pressedWorld, m_cursor.world);
+        }
         m_leftDragActive = false;
     }
 }
