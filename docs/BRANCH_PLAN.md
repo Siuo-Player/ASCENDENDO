@@ -1,48 +1,59 @@
 # Plano da branch atual
 
-**Branch:** `docs/release-and-map-sharing`
+**Branch:** `feat/9-4-editor-ui-v2`
 
-**Base:** `main` após integração da PR #4 (`38406c5`).
+**Base:** `main` após integração das PRs #4 (`38406c5`) e #5 (`1971da2`).
 
 ## Estado herdado — concluído
 
 - Fases 1–8.
 - 9.1–9.3.
-- bootstrap GLFW/Vulkan e cleanup parcial.
+- bootstrap GLFW/Vulkan e cleanup de falhas parciais.
 - documentação técnica inicial.
 - 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
+- requisito de produto: EXE portable Windows x64, offline-first, import/export e futura biblioteca online com validação local obrigatória.
 
-## Motivo desta branch
+O plano da branch anterior de documentação de release/partilha fica **concluído**.
 
-Nova decisão de produto: o resultado final deve ser um EXE portable para Windows x64 suportado, enquanto mapas podem ser partilhados localmente e através de uma futura biblioteca online.
+## Objetivo desta branch
 
-## Implementado nesta branch
+Ligar o `LevelEditorDocument` testado à UI real do `GameState::EDITOR`.
 
-- `docs/ROADMAP.md` atualizado com o objetivo de release portable;
-- fluxo offline-first explicitado;
-- regra de que o EXE é a autoridade final para validar mapas importados/descarregados;
-- `docs/MAP_SHARING.md` com import/export, site de mapas e decisão de não introduzir WebSockets sem necessidade concreta;
-- `docs/RELEASE.md` com requisitos de distribuição, hardware, assets, paths, diagnóstico e testes de release.
+### Ordem interna
 
-## Decisões de produto registadas
-
-- mapa pode ser enviado diretamente como pacote;
-- editor terá `Importar` e `Exportar/Partilhar`;
-- site pode hospedar upload/download e metadados;
-- conectividade é opcional para gameplay;
-- HTTP(S) é suficiente para a primeira biblioteca online;
-- WebSockets/WebRTC/etc. só entram se existir uma funcionalidade bidirecional em tempo real que realmente os exija;
-- máquinas sem Vulkan adequado não são suportadas, mas devem receber erro gracioso;
-- objetivo de hardware: o mais fraco possível dentro dos requisitos Vulkan do jogo.
+1. Renderizar plataformas, spawn, FLAG e estado selecionado.
+2. Converter cursor de janela para espaço lógico e depois para mundo/editor.
+3. Hit-test das entidades.
+4. STAMP por clique, usando preset MEDIUM por defeito.
+5. DRAG para criação de retângulos.
+6. Seleção e movimento de entidades existentes.
+7. Apagar por botão direito e por `Delete`/`Backspace`.
+8. Feedback visual de ferramenta, preset e entidade selecionada.
+9. Manter todas as restrições já implementadas pelo modelo determinístico.
 
 ## Não entra nesta branch
 
-- implementação do site;
-- networking no EXE;
-- implementação do pacote de mapas;
-- release build;
-- UI do editor.
+- save/serialização;
+- validação assíncrona;
+- import/export de pacotes;
+- biblioteca online/site;
+- networking;
+- campanha/playlist 9.6;
+- sistema final de sprites do editor.
+
+## Critérios de aceitação
+
+- o nível em edição é visível dentro do editor;
+- clique em vazio cria no grid quando em STAMP;
+- drag cria uma área quantizada quando em DRAG;
+- clicar numa entidade seleciona-a em vez de duplicá-la;
+- arrastar entidade move-a dentro dos bounds;
+- botão direito apaga a entidade alvo;
+- `Delete` e `Backspace` fazem a mesma ação;
+- spawn e FLAG respeitam as invariantes da camada lógica;
+- não aparecem posições inválidas como resultado de uma operação aceite;
+- não há dependência de Vulkan nos testes da lógica.
 
 ## Próxima branch
 
-Depois desta documentação ser integrada, abrir uma branch nova para a UI da 9.4. A primeira tarefa é renderizar o `LevelEditorDocument` dentro de `GameState::EDITOR` e ligar mouse/window-to-logical/hit-testing ao modelo. Depois entram STAMP/DRAG, seleção, mover e apagar.
+Depois de integrar esta branch, criar uma nova branch dedicada a save/serialização + validação assíncrona (9.5). A documentação deverá então marcar a UI 9.4 como concluída e substituir este plano pelo plano de save/validation.
