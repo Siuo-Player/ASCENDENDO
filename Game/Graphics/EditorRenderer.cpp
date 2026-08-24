@@ -10,6 +10,7 @@
 #include "Core/Config.h"
 
 #include <cstdio>
+#include <cmath>
 
 namespace gfx {
 
@@ -29,12 +30,40 @@ void drawEditorText(VkCommandBuffer cmd, TextPipeline* pipeline, FontRenderer* f
 void EditorRenderer::draw(VkCommandBuffer cmd,
                           const Pipeline& shapePipeline,
                           const ShapeRenderer& shapes,
+                          const Camera& camera,
                           const logic::EditorRenderSnapshot& snapshot,
                           TextPipeline* textPipeline,
                           FontRenderer* font) const {
     if (cmd == VK_NULL_HANDLE || !shapePipeline.isInitialized()) return;
 
     shapes.bind(cmd, shapePipeline);
+
+    // Grelha visual: mesma origem espacial da câmera do editor e custo cullado.
+    const float spacing = config::EDITOR_GRID_VISUAL_SPACING;
+    const float thickness = 1.0f;
+    const float gridR = 0.24f;
+    const float gridG = 0.24f;
+    const float gridB = 0.30f;
+
+    const float startX = std::floor(camera.position.x / spacing) * spacing;
+    for (float x = startX;
+         x <= camera.position.x + config::LOGICAL_WIDTH + spacing;
+         x += spacing) {
+        shapes.drawRect(cmd, shapePipeline,
+                        x - thickness * 0.5f, camera.position.y,
+                        thickness, config::LOGICAL_HEIGHT,
+                        gridR, gridG, gridB, 1.0f, &camera);
+    }
+
+    const float startY = std::floor(camera.position.y / spacing) * spacing;
+    for (float y = startY;
+         y <= camera.position.y + config::LOGICAL_HEIGHT + spacing;
+         y += spacing) {
+        shapes.drawRect(cmd, shapePipeline,
+                        camera.position.x, y - thickness * 0.5f,
+                        config::LOGICAL_WIDTH, thickness,
+                        gridR, gridG, gridB, 1.0f, &camera);
+    }
 
     for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
         const logic::AABB& platform = snapshot.platforms[i];
@@ -47,14 +76,18 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         platform.min.x, platform.min.y,
                         platform.width(), platform.height(),
-                        r, g, b, selected ? 1.0f : 0.92f);
+                        r, g, b, selected ? 1.0f : 0.92f, &camera);
 
         if (selected) {
             constexpr float border = 2.0f;
             shapes.drawRect(cmd, shapePipeline,
                             platform.min.x, platform.max.y - border,
                             platform.width(), border,
-                            1.0f, 0.88f, 0.12f);
+                            1.0f, 0.88f, 0.12f, 1.0f, &camera);
+            shapes.drawRect(cmd, shapePipeline,
+                            platform.min.x, platform.min.y,
+                            platform.width(), border,
+                            1.0f, 0.88f, 0.12f, 1.0f, &camera);
         }
     }
 
@@ -63,7 +96,7 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         preview.min.x, preview.min.y,
                         preview.width(), preview.height(),
-                        0.35f, 0.85f, 1.0f, 0.32f);
+                        0.35f, 0.85f, 1.0f, 0.32f, &camera);
     }
 
     constexpr float cursorHalf = 5.0f;
@@ -72,12 +105,12 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                     snapshot.cursorWorld.x - cursorHalf,
                     snapshot.cursorWorld.y - cursorThickness * 0.5f,
                     cursorHalf * 2.0f, cursorThickness,
-                    0.85f, 0.90f, 1.0f, 0.75f);
+                    0.85f, 0.90f, 1.0f, 0.75f, &camera);
     shapes.drawRect(cmd, shapePipeline,
                     snapshot.cursorWorld.x - cursorThickness * 0.5f,
                     snapshot.cursorWorld.y - cursorHalf,
                     cursorThickness, cursorHalf * 2.0f,
-                    0.85f, 0.90f, 1.0f, 0.75f);
+                    0.85f, 0.90f, 1.0f, 0.75f, &camera);
 
     shapes.bind(cmd, shapePipeline);
 
