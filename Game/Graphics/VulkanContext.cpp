@@ -17,17 +17,24 @@ bool VulkanContext::init(bool enableValidationLayers,
     if (m_initialized) return true;
 
     if (!createInstance(enableValidationLayers, instanceExtensions)) return false;
-    if (!selectPhysicalDevice())                                      return false;
-    if (!createLogicalDevice(enableValidationLayers))                 return false;
+    if (!selectPhysicalDevice()) {
+        shutdown();
+        return false;
+    }
+    if (!createLogicalDevice(enableValidationLayers)) {
+        shutdown();
+        return false;
+    }
 
     m_initialized = true;
     return true;
 }
 
 void VulkanContext::shutdown() {
-    if (!m_initialized) return;
-
-    destroySurface();  // surface ANTES do device e instance
+    // `init()` pode falhar depois de criar Instance/Device, antes de
+    // m_initialized passar a true. O cleanup tem de funcionar também nesse
+    // estado parcial; caso contrário o destrutor deixa recursos Vulkan vivos.
+    destroySurface();
 
     if (m_device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(m_device);
