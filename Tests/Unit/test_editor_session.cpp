@@ -37,6 +37,37 @@ TEST_CASE("STAMP cria plataforma media no clique vazio") {
     CHECK(session.controller().hasSelection());
 }
 
+TEST_CASE("STAMP preview usa o preset medio e respeita o canvas") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+    gfx::Camera camera;
+
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    session.update(input, bindings, camera, 640, 360);
+
+    const auto preview = session.preview();
+    REQUIRE(preview.visible);
+    CHECK(preview.tool == logic::EditorToolMode::STAMP);
+    CHECK(preview.bounds.width() == doctest::Approx(128.0f));
+    CHECK(preview.bounds.height() == doctest::Approx(20.0f));
+}
+
+TEST_CASE("preview desaparece fora do canvas valido") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+    gfx::Camera camera;
+    camera.position = {400.0f, 0.0f};
+
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    session.update(input, bindings, camera, 640, 360);
+
+    CHECK_FALSE(session.preview().visible);
+}
+
 TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     logic::EditorSession session(false);
     logic::InputManager input;
@@ -53,6 +84,8 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     input.injectCursorPos(100.0, 200.0); // world (100,160)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
+
+    CHECK(session.preview().visible);
 
     input.beginFrame();
     input.injectCursorPos(196.0, 136.0); // world (196,224)
