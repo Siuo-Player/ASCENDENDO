@@ -33,6 +33,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 | Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato |
 | Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária |
 | Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste |
+| Source size | ficheiros de código demasiado grandes dificultam revisão e alterações seguras | aviso aos 30 KiB; subdividir por responsabilidade antes de 36 KiB | nenhum ficheiro C/C++ > 36 KiB; componentes centrais devem evitar a zona de aviso |
 
 ## P2 — qualidade, cobertura e performance
 
@@ -68,6 +69,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 7. O EXE é a autoridade final de validação de mapas.
 8. O current working directory não é uma dependência do runtime.
 9. O CI testa o produto que será distribuído, não apenas os testes unitários.
+10. Ficheiros C/C++ devem permanecer abaixo de 36 KiB; a partir de 30 KiB não devem receber novas responsabilidades sem um plano de subdivisão.
 
 ## Portões do roadmap
 
