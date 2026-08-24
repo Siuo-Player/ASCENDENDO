@@ -99,6 +99,26 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(224.0f));
 }
 
+TEST_CASE("render snapshot expoe apenas dados graficos") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+    gfx::Camera camera;
+
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, camera, 640, 360);
+
+    const auto snapshot = session.renderSnapshot();
+    REQUIRE(snapshot.platforms.size() == 1);
+    CHECK(snapshot.hasSelection == true);
+    CHECK(snapshot.selectedIndex == 0);
+    CHECK(snapshot.tool == logic::EditorToolMode::STAMP);
+    CHECK(snapshot.sizePreset == logic::EditorSizePreset::MEDIUM);
+    CHECK(snapshot.platforms[0].bounds.width() == doctest::Approx(128.0f));
+}
+
 TEST_CASE("DELETE apaga a selecao atual") {
     logic::EditorSession session(false);
     logic::InputManager input;
