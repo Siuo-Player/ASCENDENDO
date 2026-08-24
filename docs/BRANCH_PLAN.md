@@ -13,21 +13,27 @@
 - PR #1: bootstrap GLFW/Vulkan e cleanup de falhas parciais.
 - PR #3: documentação técnica, contrato de níveis, design do editor, testes e workflow.
 
-O plano da branch anterior de documentação fica, portanto, **concluído**.
+O plano da branch anterior de documentação fica concluído.
 
-## Objetivo desta branch
+## Objetivo desta branch — concluído
 
-Construir a camada determinística da 9.4 antes de ligar interação gráfica:
+Construir a camada determinística da 9.4 antes de ligar interação gráfica.
 
-1. introduzir um documento de nível editável em memória;
-2. separar entidades editáveis das estruturas de física/render já existentes;
-3. implementar snap ao `EDITOR_GRID_SNAP`;
-4. implementar bounds/validação de colocação;
-5. suportar operações primitivas de adicionar/mover/remover plataforma;
-6. definir spawn e FLAG como entidades/regras especiais;
-7. cobrir a lógica com testes unitários sem Vulkan.
+### Implementado
 
-## Não entra nesta branch
+- `LevelEditorDocument` em `Game/Logic/LevelEditor.*`;
+- plataformas em memória com adicionar/mover/remover;
+- snap único baseado em `config::EDITOR_GRID_SNAP`;
+- rejeição de pedidos fora do canvas antes do snap;
+- rejeição de dimensões inválidas;
+- spawn com Y fixo no topo do chão inicial e X limitado à faixa segura do player;
+- FLAG condicionada ao nível final da campanha;
+- presets de tamanho pequeno/médio/grande;
+- `GameAction`/`KeyBindings` para STAMP/DRAG, tamanho e apagar;
+- nomes persistidos das novas teclas (`G`, `[`, `]`, `DELETE`, `BACKSPACE`);
+- testes unitários do documento e dos bindings sem Vulkan.
+
+## Não entrou nesta branch — deliberado
 
 - UI de clique/arrasto no `Renderer`;
 - gravação para disco;
@@ -37,14 +43,8 @@ Construir a camada determinística da 9.4 antes de ligar interação gráfica:
 
 ## Critérios de aceitação
 
-- uma coordenada nunca fica fora do espaço legal depois de uma operação do editor;
-- snap é determinístico e centralizado em `Config.h`;
-- mover uma entidade não altera outra entidade;
-- remover é determinístico;
-- o spawn só aceita X dentro da faixa segura do primeiro chão;
-- FLAG só pode ser representada no último nível da campanha;
-- as regras são testáveis sem abrir uma janela ou inicializar Vulkan.
+Todos os critérios da tranche foram implementados na camada determinística. A execução completa de `make tests-verbose -j8` não foi possível neste ambiente porque o checkout remoto não pôde ser clonado por falta de resolução de rede; por isso o estado da PR deve continuar a indicar que a validação local em Windows/Clang é necessária.
 
-## Próximo passo
+## Próxima branch
 
-Depois de esta branch ser integrada, abrir uma branch nova para a UI da 9.4 sobre o modelo já testado: STAMP/DRAG, seleção, mover, apagar e bindings.
+A próxima branch deve começar a UI da 9.4 sobre este modelo testado: STAMP/DRAG, seleção, mover, apagar e bindings. A primeira tarefa deve ser renderizar o documento editável dentro do `EDITOR` e ligar `windowToLogical()` + snap + hit-testing ao modelo, sem introduzir save/async validation ainda.
