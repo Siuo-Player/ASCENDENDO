@@ -18,7 +18,7 @@ O plano da branch anterior (`feat/9-4-editor-ui-v2`) fica **concluído**.
 
 ## Objetivo desta branch
 
-Integrar a lógica do editor no runtime e, antes disso, garantir que a infraestrutura de build/testes funciona de forma consistente no Windows e no CI.
+Garantir que a infraestrutura de build/testes funciona de forma consistente no Windows e no CI, e fechar as correções de robustez encontradas antes da integração visual do editor.
 
 ## Implementado até agora nesta branch
 
@@ -27,29 +27,29 @@ Integrar a lógica do editor no runtime e, antes disso, garantir que a infraestr
 - targets `tests`, `tests-fast` e `tests-verbose` sem depender de `./`/`cat` no Windows;
 - separação dos comandos de execução/leitura/erro por plataforma;
 - GitHub Actions para compilar e executar os testes em Ubuntu;
-- GitHub Actions para validar toda a campanha ativa com `ai_validator.py --campaign`.
+- execução headless dos testes gráficos através de Xvfb + Mesa Vulkan software;
+- GitHub Actions para validar toda a campanha ativa com `ai_validator.py --campaign`;
+- remoção de warning morto no `EditorInteractionController`;
+- remoção dos logs locais gerados do repositório.
 
-## Resultado da validação local conhecida
+## Resultado da validação conhecida
 
-A primeira execução local encontrou corretamente o bug da plataforma mínima (`3x2` aceite indevidamente). Depois da correção, a execução seguinte ainda não passou porque o Makefile antigo usava comandos POSIX (`./`, `cat`, `mkdir -p`, `rm -rf`) sob o shell Windows. Esta branch substitui essas receitas por variantes conscientes da plataforma.
+A primeira execução local encontrou corretamente o bug da plataforma mínima (`3x2` aceite indevidamente). Depois da correção, uma execução local ainda não passou porque o Makefile antigo usava comandos POSIX (`./`, `cat`, `mkdir -p`, `rm -rf`) sob o shell Windows.
 
-A validação final dos testes desta correção deve ser feita pelo GitHub Actions e, opcionalmente, por uma execução local Windows.
+A primeira execução CI compilou todo o projeto e confirmou os testes da nova camada do editor, mas falhou nos testes gráficos/Vulkan porque o runner Ubuntu não tinha display nem ambiente Vulkan headless configurado. O workflow foi então atualizado para usar Xvfb e Mesa software.
+
+A nova execução CI desta correção está a ser validada agora. O merge depende de um resultado verde real.
 
 ## Ordem interna restante
 
 1. Confirmar CI verde para build + testes + validação da campanha.
-2. Integrar `LevelEditorDocument` ao `GameState::EDITOR`.
-3. Renderizar plataformas, spawn, FLAG e estado selecionado.
-4. Ligar eventos reais do `InputManager` ao controller.
-5. STAMP por clique, preset MEDIUM por defeito.
-6. DRAG com preview quantizado.
-7. Seleção e movimento.
-8. Apagar por botão direito e `Delete`/`Backspace`.
-9. Feedback visual de ferramenta, preset e seleção.
-10. Atualizar documentação da 9.4 e preparar merge.
+2. Rever warnings restantes que pertençam ao código do projeto.
+3. Atualizar documentação final da tranche e critérios de aceitação.
+4. Merge desta tranche.
 
 ## Não entra nesta branch
 
+- integração visual completa do editor;
 - save/serialização;
 - validação assíncrona do editor;
 - import/export de pacotes;
@@ -58,20 +58,6 @@ A validação final dos testes desta correção deve ser feita pelo GitHub Actio
 - campanha/playlist 9.6;
 - sistema final de sprites do editor.
 
-## Critérios de aceitação da branch completa
-
-- CI verde nos testes;
-- o nível em edição é visível dentro do editor;
-- clique em vazio cria no grid quando em STAMP;
-- drag cria uma área quantizada quando em DRAG;
-- clicar numa entidade seleciona-a em vez de duplicá-la;
-- arrastar entidade move-a dentro dos bounds;
-- botão direito apaga a entidade alvo;
-- `Delete` e `Backspace` fazem a mesma ação;
-- spawn e FLAG respeitam as invariantes da camada lógica;
-- não aparecem posições inválidas como resultado de uma operação aceite;
-- testes da lógica permanecem independentes de Vulkan.
-
 ## Próxima branch após esta
 
-Depois de a integração da UI 9.4 estar concluída e integrada, criar uma nova branch para **9.5 — save/serialização + validação assíncrona**. A documentação deverá marcar 9.4 como concluída e substituir este plano pelo plano de save/validation.
+Depois de esta tranche ser integrada, criar uma branch nova dedicada à **integração visual da 9.4**: renderização de entidades, cursor/preview, STAMP, DRAG, seleção, movimento, botão direito e feedback visual. O `docs/BRANCH_PLAN.md` dessa nova branch deve substituir este plano e marcar esta tranche como concluída.
