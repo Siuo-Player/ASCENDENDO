@@ -12,6 +12,8 @@
 #include "Logic/EditorInteraction.h"
 #include "Logic/InputManager.h"
 
+#include <cstdint>
+
 namespace logic {
 
 class EditorSession {
