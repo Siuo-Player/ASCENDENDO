@@ -5,13 +5,13 @@
 
 namespace {
 void frameInput(logic::InputManager& input,
-                int mouseButton = -1,
+                int keyOrMouse = -1,
                 int action = logic::Action::RELEASE,
                 double x = 320.0,
                 double y = 180.0) {
     input.beginFrame();
     input.injectCursorPos(x, y);
-    if (mouseButton >= 0) input.onMouseButtonEvent(mouseButton, action);
+    if (keyOrMouse >= 0) input.onMouseButtonEvent(keyOrMouse, action);
 }
 }
 
@@ -37,7 +37,9 @@ TEST_CASE("STAMP cria plataforma media no clique vazio") {
     core::KeyBindings bindings;
     gfx::Camera camera;
 
-    frameInput(input, logic::MouseButton::LEFT, logic::Action::PRESS, 320.0, 180.0);
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
@@ -52,20 +54,28 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     core::KeyBindings bindings;
     gfx::Camera camera;
 
-    frameInput(input, logic::Key::G, logic::Action::PRESS, 320.0, 180.0);
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onKeyEvent(logic::Key::G, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
     CHECK(session.controller().toolMode() == logic::EditorToolMode::DRAG);
 
-    frameInput(input, logic::MouseButton::LEFT, logic::Action::PRESS, 100.0, 200.0);
+    input.beginFrame();
+    input.injectCursorPos(100.0, 200.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
-    frameInput(input, logic::MouseButton::LEFT, logic::Action::RELEASE, 196.0, 232.0);
+
+    input.beginFrame();
+    input.injectCursorPos(196.0, 200.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
     session.update(input, bindings, camera, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(128.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(160.0f));
     CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(196.0f));
-    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(232.0f));
+    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(160.0f));
+    CHECK(session.document().platforms()[0].bounds.height() == doctest::Approx(0.0f));
 }
 
 TEST_CASE("DELETE apaga a selecao atual") {
@@ -74,11 +84,15 @@ TEST_CASE("DELETE apaga a selecao atual") {
     core::KeyBindings bindings;
     gfx::Camera camera;
 
-    frameInput(input, logic::MouseButton::LEFT, logic::Action::PRESS, 320.0, 180.0);
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
     REQUIRE(session.document().platformCount() == 1);
 
-    frameInput(input, logic::Key::DELETE_KEY, logic::Action::PRESS, 320.0, 180.0);
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onKeyEvent(logic::Key::DELETE_KEY, logic::Action::PRESS);
     session.update(input, bindings, camera, 640, 360);
 
     CHECK(session.document().platformCount() == 0);
