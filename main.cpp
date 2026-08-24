@@ -61,6 +61,7 @@
 #include "Game/Logic/Physics.h"
 #include "Game/Logic/Level.h"
 #include "Game/Logic/RunHistory.h"
+#include "Game/Logic/EditorSession.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/GameAction.h"
@@ -77,8 +78,6 @@
 using namespace gfx;
 using namespace logic;
 
-// Nome de campanha para o registo de runs. Fixo por agora — passara a ser
-// dinamico quando existir seleccao de multiplas campanhas (Fase 9).
 static const std::string CAMPAIGN_NAME = "Campanha Principal";
 static const std::string LEVELS_DIR    = "Game/Assets/Levels";
 static const std::string RUNS_CSV_PATH = "Development/Runs/runs.csv";
@@ -94,8 +93,6 @@ int main() {
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
-    // Nao assumir que existe monitor primario: ambientes sem monitor/WM
-    // (remote desktop, CI, algumas VMs) podem devolver nullptr.
     const int screenWidth  = mode ? mode->width  : 1280;
     const int screenHeight = mode ? mode->height : 720;
     if (!mode) {
@@ -135,8 +132,6 @@ int main() {
         }
         if (!ctx.createSurface(surface)) {
             std::cerr << "[ERRO] Nao foi possivel associar a surface Vulkan ao contexto.\n";
-            // Se createSurface() falhar, o handle ainda nao e propriedade do
-            // contexto; evitar tentar usa-lo com uma swapchain inexistente.
             return -1;
         }
 
@@ -157,9 +152,6 @@ int main() {
             return -1;
         }
 
-        // Texto TTF real (CREDITS/MENU/PAUSED + timer HUD em PLAYING). Falha
-        // graciosamente: se os shaders text.*.spv ou o .ttf nao existirem,
-        // o jogo continua com o fallback BitmapFont.
         if (textPipeline.init(&ctx, &swapchain, &renderPass) &&
             font.init(&ctx, textPipeline.descriptorSetLayout())) {
             renderer.attachText(&textPipeline, &font);
@@ -168,11 +160,6 @@ int main() {
             std::cout << "[ASCENDENDO] Fonte TTF nao disponivel -- a usar BitmapFont (fallback).\n";
         }
 
-        // Sprite do jogador (pixel-art). Nome do ficheiro explicito aqui —
-        // main.cpp e' a fonte da verdade sobre qual PNG representa o
-        // jogador, sem depender de reorganize.py adivinhar isso a partir
-        // do nome que Rafael der ao .pixil. Falha graciosamente: se o PNG
-        // nao existir, o jogador continua a ser desenhado como rectangulo.
         if (spritePipeline.init(&ctx, &swapchain, &renderPass) &&
             playerSprite.init(&ctx, spritePipeline.descriptorSetLayout(),
                               "Game/Assets/Sprites/personagem.png")) {
@@ -185,10 +172,6 @@ int main() {
 
         input.registerWithWindow(win.handle());
 
-        // Controlos: se Development/Settings/controls.cfg existir, usa-o;
-        // senao mantem os defaults (identicos ao comportamento do jogo
-        // antes deste sistema existir). Mesmo padrao de falha graciosa
-        // usado para a fonte TTF e o sprite do jogador.
         if (bindings.loadFromFile(CONTROLS_CFG_PATH)) {
             std::cout << "[ASCENDENDO] Controlos carregados de " << CONTROLS_CFG_PATH << ".\n";
         } else {
@@ -196,7 +179,6 @@ int main() {
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
-        // ── Carregar lista de niveis da campanha ──────────────────────────────
         std::vector<std::string> campaign;
         {
             std::ifstream f(LEVELS_DIR + "/campaign.txt");
@@ -208,28 +190,23 @@ int main() {
             }
         }
 
-        // ID deterministico da campanha actual (muda se qualquer .lvl ou a
-        // ordem/composicao de campaign.txt mudar). Calculado uma vez — os
-        // ficheiros nao mudam a meio de uma execucao.
         std::string campaignID = core::computeCampaignID(LEVELS_DIR);
         std::cout << "[ASCENDENDO] Campaign ID: "
                   << (campaignID.empty() ? "(indisponivel)" : campaignID) << "\n";
 
-        // ── Estado do nivel ───────────────────────────────────────────────────
         Level        level;
         PhysicsWorld world;
         Camera       camera;
         Player       player;
+        EditorSession editorSession(campaign.size() <= 1);
         int          currentLevelIndex = 0;
         float        currentSpawnY     = 0.0f;
 
-        // ── Estado do jogo ────────────────────────────────────────────────────
         GameState state              = GameState::PLAYING;
         int       menuSel            = 0;
         float     elapsedTime        = 0.0f;
         GameState creditsReturnState = GameState::MENU;
 
-        // ── Funcao de reset / (re)inicio ─────────────────────────────────────
         auto resetGame = [&]() {
             player              = logic::Player{};
             player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f };
@@ -374,10 +351,11 @@ int main() {
 
                 if (core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor)) {
                     camera  = gfx::Camera{};
+                    editorSession.cancelInteraction();
                     state   = GameState::EDITOR;
                     menuSel = 0;
                     glfwSetWindowTitle(win.handle(),
-                        "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
+                        "ASCENDENDO | EDITOR | G alternar STAMP/DRAG  [/] tamanho  ESC sair");
                 } else {
                     int clickedMenu = clickedMenuBox(4);
                     if (clickedMenu >= 0) menuSel = clickedMenu;
@@ -390,10 +368,11 @@ int main() {
                             resetGame();
                         } else if (menuSel == 1) {
                             camera  = gfx::Camera{};
+                            editorSession.cancelInteraction();
                             state   = GameState::EDITOR;
                             menuSel = 0;
                             glfwSetWindowTitle(win.handle(),
-                                "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
+                                "ASCENDENDO | EDITOR | G alternar STAMP/DRAG  [/] tamanho  ESC sair");
                         } else if (menuSel == 2) {
                             creditsReturnState = GameState::MENU;
                             state = GameState::CREDITS;
@@ -404,7 +383,8 @@ int main() {
                 }
 
             } else if (state == GameState::EDITOR) {
-                if (core::isActionJustPressed(bindings, input, core::GameAction::Pause)) {
+                if (pausePressed) {
+                    editorSession.cancelInteraction();
                     state   = GameState::MENU;
                     menuSel = 0;
                     glfwSetWindowTitle(win.handle(),
@@ -418,6 +398,11 @@ int main() {
 
                     camera.position.x += dx * config::EDITOR_CAMERA_PAN_SPEED * dt;
                     camera.position.y += dy * config::EDITOR_CAMERA_PAN_SPEED * dt;
+                    if (camera.position.x < 0.0f) camera.position.x = 0.0f;
+                    if (camera.position.y < 0.0f) camera.position.y = 0.0f;
+
+                    editorSession.update(input, bindings, camera,
+                                        (int32_t)win.width(), (int32_t)win.height());
                 }
             }
 
