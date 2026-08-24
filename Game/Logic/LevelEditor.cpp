@@ -16,16 +16,26 @@ float snapScalar(float value) {
     const float grid = config::EDITOR_GRID_SNAP;
     return std::round(value / grid) * grid;
 }
+
+float ceilToGrid(float value) {
+    const float grid = config::EDITOR_GRID_SNAP;
+    return std::ceil(value / grid) * grid;
+}
+
+float floorToGrid(float value) {
+    const float grid = config::EDITOR_GRID_SNAP;
+    return std::floor(value / grid) * grid;
+}
 }
 
 LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
                                          const AABB& initialGround)
     : m_finalCampaignLevel(finalCampaignLevel),
       m_initialGround(initialGround) {
-    // O spawn ocupa o topo do chão inicial. O X máximo considera o tamanho
-    // completo do player para que o corpo nunca saia da plataforma.
-    m_spawnMinX = snapScalar(initialGround.min.x);
-    m_spawnMaxX = snapScalar(initialGround.max.x - config::PLAYER_WIDTH);
+    // O spawn ocupa o topo do chão inicial. Os limites são arredondados para
+    // dentro do chão, nunca para fora dele.
+    m_spawnMinX = ceilToGrid(initialGround.min.x);
+    m_spawnMaxX = floorToGrid(initialGround.max.x - config::PLAYER_WIDTH);
     if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
 
     m_spawnPosition = {
@@ -43,12 +53,7 @@ Vec2 LevelEditorDocument::snap(const Vec2& point) {
 }
 
 AABB LevelEditorDocument::snap(const AABB& rect) {
-    Vec2 min = snap(rect.min);
-    Vec2 max = snap(rect.max);
-
-    // Quantizar os dois limites preserva a intenção do rectângulo. Se a
-    // quantização colapsar uma dimensão, o rectângulo será rejeitado.
-    return { min, max };
+    return { snap(rect.min), snap(rect.max) };
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
@@ -66,6 +71,11 @@ bool LevelEditorDocument::validPlatform(const AABB& rect) const {
 
 bool LevelEditorDocument::addPlatform(const AABB& requested,
                                       std::size_t* createdIndex) {
+    // Uma operação que começa fora do canvas é inválida mesmo que o snap
+    // posterior pudesse trazê-la de volta para dentro. A UI, portanto,
+    // pode simplesmente não oferecer esse estado ao utilizador.
+    if (!insideLogicalBounds(requested)) return false;
+
     const AABB rect = snap(requested);
     if (!validPlatform(rect)) return false;
 
@@ -79,6 +89,12 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
     if (index >= m_platforms.size()) return false;
 
     const AABB old = m_platforms[index].bounds;
+    const AABB requested = {
+        requestedMin,
+        { requestedMin.x + old.width(), requestedMin.y + old.height() },
+    };
+    if (!insideLogicalBounds(requested)) return false;
+
     const Vec2 newMin = snap(requestedMin);
     const AABB moved = {
         newMin,
@@ -97,10 +113,12 @@ bool LevelEditorDocument::removePlatform(std::size_t index) {
 }
 
 bool LevelEditorDocument::setSpawnX(float requestedX) {
+    if (requestedX < m_spawnMinX - EPS || requestedX > m_spawnMaxX + EPS) return false;
+
     const float snappedX = snapScalar(requestedX);
     if (snappedX < m_spawnMinX - EPS || snappedX > m_spawnMaxX + EPS) return false;
 
-    m_spawnPosition.x = std::clamp(snappedX, m_spawnMinX, m_spawnMaxX);
+    m_spawnPosition.x = snappedX;
     // O Y nunca é controlado pelo utilizador.
     m_spawnPosition.y = snapScalar(m_initialGround.max.y);
     return true;
@@ -114,6 +132,8 @@ bool LevelEditorDocument::validFlag(const AABB& rect) const {
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
     if (!m_finalCampaignLevel) return false;
+    if (!insideLogicalBounds(requested)) return false;
+
     const AABB rect = snap(requested);
     if (!validFlag(rect)) return false;
     m_flag = rect;
@@ -121,7 +141,6 @@ bool LevelEditorDocument::setFlag(const AABB& requested) {
 }
 
 Vec2 LevelEditorDocument::presetSize(EditorSizePreset preset) {
-    // Tamanhos deliberadamente múltiplos do grid atual.
     switch (preset) {
         case EditorSizePreset::SMALL:  return { 64.0f, 16.0f };
         case EditorSizePreset::MEDIUM: return { 128.0f, 20.0f };
