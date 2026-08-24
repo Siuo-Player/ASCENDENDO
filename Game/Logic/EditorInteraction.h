@@ -53,6 +53,15 @@ public:
     void setSizePreset(EditorSizePreset preset) { m_sizePreset = preset; }
     EditorSizePreset sizePreset() const { return m_sizePreset; }
 
+    // Ferramenta persistente do editor. O G alterna entre STAMP e DRAG.
+    void setToolMode(EditorToolMode mode) { m_toolMode = mode; }
+    void toggleToolMode() {
+        m_toolMode = m_toolMode == EditorToolMode::STAMP
+            ? EditorToolMode::DRAG
+            : EditorToolMode::STAMP;
+    }
+    EditorToolMode toolMode() const { return m_toolMode; }
+
     EditorMouseMode mode() const { return m_mode; }
 
 private:
@@ -62,6 +71,7 @@ private:
     LevelEditorDocument& m_document;
     std::size_t          m_selected = npos();
     EditorMouseMode      m_mode = EditorMouseMode::NONE;
+    EditorToolMode       m_toolMode = EditorToolMode::STAMP;
     EditorSizePreset     m_sizePreset = EditorSizePreset::MEDIUM;
     float                m_moveOffsetX = 0.0f;
     float                m_moveOffsetY = 0.0f;
