@@ -28,20 +28,22 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 - `[` / `]` alteram `SMALL` / `MEDIUM` / `LARGE`, começando em `MEDIUM`.
 - Clique esquerdo cria ou move; clique direito cancela; `Delete`/`Backspace` apaga a seleção.
 - Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
+- `EditorRenderSnapshot` separa os dados de apresentação do documento de edição; o renderer não deve conhecer `LevelEditorDocument`.
 - Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
-- Testes unitários de input → controller → documento e de geometria do preview.
+- Testes unitários de input → controller → documento, geometria do preview e conteúdo do snapshot.
 - `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
 - `docs/TECH_DEBT.md` criado com dívida técnica classificada e critérios de saída.
 - `docs/ROADMAP.md` revisto para introduzir o Gate 9.4.5 antes de Save/Import.
 
 ## Pendente nesta tranche
 
-1. Passar um snapshot de renderização do editor para o renderer.
+1. Fazer `Renderer` consumir `EditorRenderSnapshot` sem voltar a acoplar-se ao documento.
 2. Renderizar plataformas editáveis, seleção e preview no espaço de mundo.
 3. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
-4. Fazer o renderer respeitar o mesmo canvas/grid usado pelo hit-test.
-5. Validar visualmente o fluxo real no jogo.
-6. Atualizar documentação final e fechar a PR.
+4. Fazer o renderer respeitar exatamente o mesmo canvas/grid usado pelo hit-test.
+5. Adicionar o HUD de ferramenta/tamanho sem sobrecarregar a tela.
+6. Validar visualmente o fluxo real no jogo.
+7. Atualizar documentação final e fechar a PR.
 
 ## Decisões de UX herdadas
 
