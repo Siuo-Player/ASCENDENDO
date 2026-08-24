@@ -1,7 +1,7 @@
 # ==============================================================================
 #  Vertical Precision Platformer — Makefile
 #  Compiler : clang++ (LLVM)  |  Standard : C++20
-#  Platforms: Windows (Git Bash / MSYS2) + Linux
+#  Platforms: Windows (Git Bash / MSYS2 / PowerShell + GNU Make) + Linux
 #
 #  Targets:
 #    make tests         — compila e executa testes (silencioso, mostra resumo)
@@ -15,9 +15,18 @@
 ifeq ($(OS),Windows_NT)
     PLATFORM := windows
     EXE_EXT  := .exe
+    SHELL    := cmd.exe
+    RUN_TEST := $(TEST_BIN)
+    CAT_FILE := type
+    RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
+    MKDIR_ONE = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
 else
     PLATFORM := linux
     EXE_EXT  :=
+    RUN_TEST := ./$(TEST_BIN)
+    CAT_FILE := cat
+    RM_BUILD = rm -rf "$(BUILD_DIR)"
+    MKDIR_ONE = mkdir -p "$(1)"
 endif
 
 # ── Toolchain ─────────────────────────────────────────────────────────────────
@@ -27,26 +36,14 @@ CXX := clang++
 #   Linux   → ar do sistema
 #   Windows → llvm-ar (incluído com LLVM; se não estiver em PATH, usa ar)
 ifeq ($(PLATFORM),windows)
-    AR := $(shell command -v llvm-ar > /dev/null 2>&1 && echo llvm-ar || echo ar)
+    AR := llvm-ar
 else
     AR := ar
 endif
 
 # ── Flags de Compilação ───────────────────────────────────────────────────────
 # -MMD -MP: gera ficheiros .d (dependencias) ao lado de cada .o, listando os
-# headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema --
-# essa e' a diferenca entre -MMD e -MD). -MP acrescenta alvos "phony" para
-# cada header, para nao rebentar se um header for apagado/renomeado.
-# Sem isto, `make` so' olha para a data do .cpp -- se um header amplamente
-# incluido mudar (ex: InputManager.h ganhar um membro novo), os .cpp que o
-# incluem mas nao foram eles proprios editados NAO sao recompilados, e o
-# link mistura .o antigos com .o novos incompativeis a nivel de ABI
-# (sizeof/layout da classe diferente entre unidades de traducao) -- gera
-# comportamento indefinido, tipicamente um crash (SIGSEGV) algures no uso
-# do objecto, nao um erro de compilacao. Foi exactamente isto que aconteceu
-# quando InputManager ganhou membros novos (rato, Fase 9.2): InputManager.cpp
-# foi recompilado, test_input.cpp nao, o link produziu um binario com duas
-# nocoes diferentes do tamanho de InputManager, e SIGSEGV em beginFrame().
+# headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema).
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
 
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
@@ -113,9 +110,7 @@ GAME_MAIN_OBJ := $(BUILD_DIR)/main.o
 GAME_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_SRCS))
 TEST_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS))
 
-# ── Dependencias de headers (gerados por -MMD -MP, ver nota acima) ────────────
-# "-include" (com hifen) em vez de "include": nao falha se os .d ainda nao
-# existirem (primeiro build, ou apos um `make clean`).
+# ── Dependencias de headers ───────────────────────────────────────────────────
 DEPS := $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d) $(GAME_MAIN_OBJ:.o=.d)
 -include $(DEPS)
 
@@ -167,8 +162,8 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) > build/test_results.txt || (cat build/test_results.txt; exit 1)
-	@cat build/test_results.txt
+	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
 ## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
@@ -177,8 +172,8 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || (cat build/test_results.txt; exit 1)
-	@cat build/test_results.txt
+	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
 ## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
@@ -187,10 +182,10 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@./$(TEST_BIN) --success > build/test_results.txt || (cat build/test_results.txt; exit 1)
-	@cat build/test_results.txt
+	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & exit /b 1 )
+	@$(CAT_FILE) build/test_results.txt
 	@echo ""
-    
+
 game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 	@echo "[OK ] Jogo compilado: $(GAME_BIN)"
 
@@ -198,13 +193,11 @@ game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 
 $(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) \
-            -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
 
 $(GAME_BIN): $(GAME_MAIN_OBJ) $(GAME_LIB) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) \
-            -o $@ $^ $(LDFLAGS_REL)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -o $@ $^ $(LDFLAGS_REL)
 
 $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 	@echo "[LIB] $(notdir $@)"
@@ -212,15 +205,15 @@ $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 
 # ── Regra de Compilação Genérica .cpp → .o ────────────────────────────────────
 $(BUILD_DIR)/%.o: %.cpp
-	@mkdir -p $(dir $@)
+	@$(call MKDIR_ONE,$(dir $@))
 	@echo "[CC ] $<"
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -c $< -o $@
 
 # ── Utilitários ───────────────────────────────────────────────────────────────
 $(BUILD_DIR):
-	@mkdir -p $(BUILD_DIR)
+	@$(call MKDIR_ONE,$(BUILD_DIR))
 
 clean:
 	@echo "[CLN] A remover $(BUILD_DIR)/..."
-	@rm -rf $(BUILD_DIR)
+	@$(RM_BUILD)
 	@echo "[CLN] Concluído."
