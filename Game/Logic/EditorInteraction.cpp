@@ -75,7 +75,6 @@ bool EditorInteractionController::updateMove(const Vec2& world) {
     if (!hasSelection() || m_mode != EditorMouseMode::MOVING)
         return false;
 
-    const AABB& b = m_document.platforms()[m_selected].bounds;
     const Vec2 requestedMin{
         world.x - m_moveOffsetX,
         world.y - m_moveOffsetY,
