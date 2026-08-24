@@ -28,8 +28,12 @@ Garantir que a infraestrutura de build/testes funciona de forma consistente no W
 - separação dos comandos de execução/leitura/erro por plataforma;
 - GitHub Actions para compilar e executar os testes em Ubuntu;
 - execução headless dos testes gráficos através de Xvfb + Mesa Vulkan software;
+- seleção explícita do ICD Vulkan de software `lavapipe` no CI para tornar o ambiente headless determinístico;
+- `vulkaninfo --summary` no CI para falhar cedo quando o driver Vulkan de software não estiver disponível;
+- execução do CI num display X virtual com resolução fixa;
 - GitHub Actions para validar toda a campanha ativa com `ai_validator.py --campaign`;
 - remoção de warning morto no `EditorInteractionController`;
+- correção da impressão de resultados de testes falhados no Makefile, mantendo-a síncrona;
 - remoção dos logs locais gerados do repositório.
 
 ## Resultado da validação conhecida
@@ -38,14 +42,15 @@ A primeira execução local encontrou corretamente o bug da plataforma mínima (
 
 A primeira execução CI compilou todo o projeto e confirmou os testes da nova camada do editor, mas falhou nos testes gráficos/Vulkan porque o runner Ubuntu não tinha display nem ambiente Vulkan headless configurado. O workflow foi então atualizado para usar Xvfb e Mesa software.
 
-A nova execução CI desta correção está a ser validada agora. O merge depende de um resultado verde real.
+A execução CI #8, com o ICD Vulkan de software explicitamente selecionado, terminou **com sucesso**. Está a ser feita uma nova execução após a última correção do Makefile, que não altera a lógica do jogo e serve para validar a tranche final com o estado exato da branch.
 
 ## Ordem interna restante
 
-1. Confirmar CI verde para build + testes + validação da campanha.
+1. Confirmar CI verde no estado final da branch.
 2. Rever warnings restantes que pertençam ao código do projeto.
 3. Atualizar documentação final da tranche e critérios de aceitação.
 4. Merge desta tranche.
+5. Criar a branch seguinte dedicada à integração visual da 9.4.
 
 ## Não entra nesta branch
 
