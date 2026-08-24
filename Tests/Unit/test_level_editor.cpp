@@ -10,7 +10,7 @@ TEST_SUITE("Fase 9.4 — LevelEditorDocument") {
 TEST_CASE("snap usa sempre o grid central") {
     CHECK(LevelEditorDocument::snap(0.0f) == doctest::Approx(0.0f));
     CHECK(LevelEditorDocument::snap(5.0f) == doctest::Approx(4.0f));
-    CHECK(LevelEditorDocument::snap(6.0f) == doctest::Approx(4.0f));
+    CHECK(LevelEditorDocument::snap(6.0f) == doctest::Approx(8.0f));
     CHECK(LevelEditorDocument::snap(7.0f) == doctest::Approx(8.0f));
 
     AABB r{{3.0f, 5.0f}, {131.0f, 27.0f}};
