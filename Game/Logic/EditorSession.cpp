@@ -2,11 +2,46 @@
 #include "Core/Config.h"
 #include "Core/Viewport.h"
 
+#include <algorithm>
+
 namespace logic {
 
 EditorSession::EditorSession(bool finalCampaignLevel, const AABB& initialGround)
     : m_document(finalCampaignLevel, initialGround),
       m_controller(m_document) {}
+
+EditorPreview EditorSession::preview() const {
+    EditorPreview result;
+    result.tool = m_controller.toolMode();
+
+    if (m_controller.hasSelection() &&
+        m_controller.mode() == EditorMouseMode::MOVING) {
+        result.visible = true;
+        result.bounds = m_document.platforms()[m_controller.selectedIndex()].bounds;
+        return result;
+    }
+
+    if (m_controller.toolMode() == EditorToolMode::STAMP) {
+        const Vec2 size = LevelEditorDocument::presetSize(m_controller.sizePreset());
+        result.visible = true;
+        result.bounds = {
+            {m_cursor.world.x - size.x * 0.5f, m_cursor.world.y - size.y * 0.5f},
+            {m_cursor.world.x + size.x * 0.5f, m_cursor.world.y + size.y * 0.5f},
+        };
+        return result;
+    }
+
+    if (m_leftDragActive && m_controller.mode() == EditorMouseMode::NONE) {
+        result.visible = true;
+        result.bounds = {
+            {std::min(m_pressedWorld.x, m_cursor.world.x),
+             std::min(m_pressedWorld.y, m_cursor.world.y)},
+            {std::max(m_pressedWorld.x, m_cursor.world.x),
+             std::max(m_pressedWorld.y, m_cursor.world.y)},
+        };
+    }
+    return result;
+}
 
 void EditorSession::updateCursor(const InputManager& input,
                                  const gfx::Camera& camera,
@@ -33,7 +68,7 @@ void EditorSession::updateKeyboard(const InputManager& input,
     }
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSizeUp)) {
         switch (m_controller.sizePreset()) {
-            case EditorSizePreset::SMALL: m_controller.setSizePreset(EditorSizePreset::MEDIUM); break;
+            case EditorSizePreset::SMALL: break;
             case EditorSizePreset::MEDIUM: m_controller.setSizePreset(EditorSizePreset::LARGE); break;
             case EditorSizePreset::LARGE: break;
         }
@@ -59,8 +94,6 @@ void EditorSession::updateMouse(const InputManager& input) {
     if (leftPressed) {
         m_pressedWorld = m_cursor.world;
 
-        // Existing platform: dragging it always means movement, independent
-        // of the creation tool. Empty space follows the current tool.
         if (m_controller.beginMove(m_cursor.world)) {
             m_leftDragActive = true;
             return;
@@ -71,7 +104,6 @@ void EditorSession::updateMouse(const InputManager& input) {
             return;
         }
 
-        // DRAG creation starts in empty space and materializes on release.
         m_leftDragActive = true;
         m_controller.clearSelection();
         return;
