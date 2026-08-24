@@ -32,18 +32,36 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 - Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
 - Testes unitários de input → controller → documento, geometria do preview e conteúdo do snapshot.
 - `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
-- `docs/TECH_DEBT.md` criado com dívida técnica classificada e critérios de saída.
-- `docs/ROADMAP.md` revisto para introduzir o Gate 9.4.5 antes de Save/Import.
+- `docs/TECH_DEBT.md` atualizado com a dívida técnica e a regra de tamanho de código.
+- `docs/CODE_SIZE.md` criado com a política de tamanho físico.
+- `Development/Tools/check_source_sizes.py` criado e ligado ao CI.
+- Regra oficial de código: `<30 KiB` normal, `30–36 KiB` warning, `>36 KiB` bloqueado.
+
+## Próxima subdivisão obrigatória
+
+`Game/Graphics/Renderer.cpp` está aproximadamente nos **34 KiB** e encontra-se na zona de aviso. Não deve receber novas responsabilidades.
+
+A divisão planejada é por responsabilidade:
+
+```text
+Renderer.cpp
+  → ciclo de vida, frame acquire/submit/present e coordenação
+RendererResources.cpp
+  → framebuffers, command pool/buffers e sync objects
+```
+
+A divisão deve preservar os mesmos símbolos/ownership e não alterar comportamento de rendering.
 
 ## Pendente nesta tranche
 
-1. Fazer `Renderer` consumir `EditorRenderSnapshot` sem voltar a acoplar-se ao documento.
-2. Renderizar plataformas editáveis, seleção e preview no espaço de mundo.
-3. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
-4. Fazer o renderer respeitar exatamente o mesmo canvas/grid usado pelo hit-test.
-5. Adicionar o HUD de ferramenta/tamanho sem sobrecarregar a tela.
-6. Validar visualmente o fluxo real no jogo.
-7. Atualizar documentação final e fechar a PR.
+1. Subdividir `Renderer.cpp` por responsabilidade conforme a regra `30/36 KiB`.
+2. Fazer `Renderer` consumir `EditorRenderSnapshot` sem voltar a acoplar-se ao documento.
+3. Renderizar plataformas editáveis, seleção e preview no espaço de mundo.
+4. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
+5. Fazer o renderer respeitar exatamente o mesmo canvas/grid usado pelo hit-test.
+6. Adicionar o HUD de ferramenta/tamanho sem sobrecarregar a tela.
+7. Validar visualmente o fluxo real no jogo.
+8. Atualizar documentação final e fechar a PR.
 
 ## Decisões de UX herdadas
 
@@ -61,6 +79,7 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 - Evitar duplicação de sprites/dados sempre que uma representação procedural ou atlas compacto for suficiente.
 - O jogo continua offline-first.
 - A futura importação/partilha de mapas deve validar novamente o conteúdo no EXE antes de permitir jogar.
+- Nenhum ficheiro C/C++ deve ultrapassar 36 KiB; a partir de 30 KiB não deve receber novas responsabilidades sem um plano de subdivisão.
 
 ## Não entra nesta branch
 
@@ -75,4 +94,4 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 
 ## Critério de conclusão
 
-A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, e quando os testes automatizados e uma validação manual do fluxo estiverem verdes.
+A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, quando os testes automatizados e uma validação manual do fluxo estiverem verdes, e quando o renderer tiver saído da zona de tamanho de aviso.
