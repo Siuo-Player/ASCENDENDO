@@ -27,6 +27,7 @@ jobs:
         run: xvfb-run -a make clean && xvfb-run -a make tests-verbose -j2
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
+          GALLIUM_DRIVER: "llvmpipe"
 
       - name: Validate active campaign levels
         run: python3 Development/AI_Validation/ai_validator.py --campaign
