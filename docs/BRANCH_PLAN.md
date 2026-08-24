@@ -1,50 +1,48 @@
 # Plano da branch atual
 
-**Branch:** `feat/9-4-model-grid-snap`
+**Branch:** `docs/release-and-map-sharing`
 
-**Base:** `main` após integração da documentação no PR #3 (`ce522c2`).
+**Base:** `main` após integração da PR #4 (`38406c5`).
 
 ## Estado herdado — concluído
 
-- Fases 1–8 do roadmap.
-- 9.1: `GameAction` + `KeyBindings`.
-- 9.2: input de rato + viewport lógico + menus clicáveis.
-- 9.3: `GameState::EDITOR`, câmera livre e grelha visual.
-- PR #1: bootstrap GLFW/Vulkan e cleanup de falhas parciais.
-- PR #3: documentação técnica, contrato de níveis, design do editor, testes e workflow.
+- Fases 1–8.
+- 9.1–9.3.
+- bootstrap GLFW/Vulkan e cleanup parcial.
+- documentação técnica inicial.
+- 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
 
-O plano da branch anterior de documentação fica concluído.
+## Motivo desta branch
 
-## Objetivo desta branch — concluído
+Nova decisão de produto: o resultado final deve ser um EXE portable para Windows x64 suportado, enquanto mapas podem ser partilhados localmente e através de uma futura biblioteca online.
 
-Construir a camada determinística da 9.4 antes de ligar interação gráfica.
+## Implementado nesta branch
 
-### Implementado
+- `docs/ROADMAP.md` atualizado com o objetivo de release portable;
+- fluxo offline-first explicitado;
+- regra de que o EXE é a autoridade final para validar mapas importados/descarregados;
+- `docs/MAP_SHARING.md` com import/export, site de mapas e decisão de não introduzir WebSockets sem necessidade concreta;
+- `docs/RELEASE.md` com requisitos de distribuição, hardware, assets, paths, diagnóstico e testes de release.
 
-- `LevelEditorDocument` em `Game/Logic/LevelEditor.*`;
-- plataformas em memória com adicionar/mover/remover;
-- snap único baseado em `config::EDITOR_GRID_SNAP`;
-- rejeição de pedidos fora do canvas antes do snap;
-- rejeição de dimensões inválidas;
-- spawn com Y fixo no topo do chão inicial e X limitado à faixa segura do player;
-- FLAG condicionada ao nível final da campanha;
-- presets de tamanho pequeno/médio/grande;
-- `GameAction`/`KeyBindings` para STAMP/DRAG, tamanho e apagar;
-- nomes persistidos das novas teclas (`G`, `[`, `]`, `DELETE`, `BACKSPACE`);
-- testes unitários do documento e dos bindings sem Vulkan.
+## Decisões de produto registadas
 
-## Não entrou nesta branch — deliberado
+- mapa pode ser enviado diretamente como pacote;
+- editor terá `Importar` e `Exportar/Partilhar`;
+- site pode hospedar upload/download e metadados;
+- conectividade é opcional para gameplay;
+- HTTP(S) é suficiente para a primeira biblioteca online;
+- WebSockets/WebRTC/etc. só entram se existir uma funcionalidade bidirecional em tempo real que realmente os exija;
+- máquinas sem Vulkan adequado não são suportadas, mas devem receber erro gracioso;
+- objetivo de hardware: o mais fraco possível dentro dos requisitos Vulkan do jogo.
 
-- UI de clique/arrasto no `Renderer`;
-- gravação para disco;
-- validação assíncrona;
-- playlist/campaign editor;
-- atlas/sistema final de sprites.
+## Não entra nesta branch
 
-## Critérios de aceitação
-
-Todos os critérios da tranche foram implementados na camada determinística. A execução completa de `make tests-verbose -j8` não foi possível neste ambiente porque o checkout remoto não pôde ser clonado por falta de resolução de rede; por isso o estado da PR deve continuar a indicar que a validação local em Windows/Clang é necessária.
+- implementação do site;
+- networking no EXE;
+- implementação do pacote de mapas;
+- release build;
+- UI do editor.
 
 ## Próxima branch
 
-A próxima branch deve começar a UI da 9.4 sobre este modelo testado: STAMP/DRAG, seleção, mover, apagar e bindings. A primeira tarefa deve ser renderizar o documento editável dentro do `EDITOR` e ligar `windowToLogical()` + snap + hit-testing ao modelo, sem introduzir save/async validation ainda.
+Depois desta documentação ser integrada, abrir uma branch nova para a UI da 9.4. A primeira tarefa é renderizar o `LevelEditorDocument` dentro de `GameState::EDITOR` e ligar mouse/window-to-logical/hit-testing ao modelo. Depois entram STAMP/DRAG, seleção, mover e apagar.
