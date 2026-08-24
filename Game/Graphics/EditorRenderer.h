@@ -11,6 +11,7 @@
 
 namespace gfx {
 
+class Camera;
 class Pipeline;
 class ShapeRenderer;
 class TextPipeline;
@@ -21,6 +22,7 @@ public:
     void draw(VkCommandBuffer cmd,
               const Pipeline& shapePipeline,
               const ShapeRenderer& shapes,
+              const Camera& camera,
               const logic::EditorRenderSnapshot& snapshot,
               TextPipeline* textPipeline = nullptr,
               FontRenderer* font = nullptr) const;
