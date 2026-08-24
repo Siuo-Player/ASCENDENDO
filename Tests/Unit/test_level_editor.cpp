@@ -1,6 +1,7 @@
 #include "doctest/doctest.h"
 #include "Logic/LevelEditor.h"
 #include "Core/Config.h"
+#include <cmath>
 
 using namespace logic;
 
