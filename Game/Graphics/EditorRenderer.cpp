@@ -9,6 +9,8 @@
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
+#include <cstdio>
+
 namespace gfx {
 
 namespace {
@@ -34,9 +36,8 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
 
     shapes.bind(cmd, shapePipeline);
 
-    // Conteúdo existente do documento.
     for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
-        const AABB& platform = snapshot.platforms[i];
+        const logic::AABB& platform = snapshot.platforms[i];
         const bool selected = snapshot.hasSelection && snapshot.selectedIndex == i;
 
         const float r = selected ? 0.95f : config::COLOR_PLATFORM_R;
@@ -57,16 +58,14 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         }
     }
 
-    // Preview só existe quando o modelo determinístico o considera válido.
     if (snapshot.previewVisible) {
-        const AABB& preview = snapshot.previewBounds;
+        const logic::AABB& preview = snapshot.previewBounds;
         shapes.drawRect(cmd, shapePipeline,
                         preview.min.x, preview.min.y,
                         preview.width(), preview.height(),
                         0.35f, 0.85f, 1.0f, 0.32f);
     }
 
-    // Cursor lógico no espaço de mundo: representação económica sem sprite.
     constexpr float cursorHalf = 5.0f;
     constexpr float cursorThickness = 1.0f;
     shapes.drawRect(cmd, shapePipeline,
@@ -80,7 +79,6 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                     cursorThickness, cursorHalf * 2.0f,
                     0.85f, 0.90f, 1.0f, 0.75f);
 
-    // Volta ao pipeline sólido antes do texto para o chamador poder continuar.
     shapes.bind(cmd, shapePipeline);
 
     if (textPipeline && font) {
@@ -94,6 +92,7 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         drawEditorText(cmd, textPipeline, font, hud,
                        16.0f, config::LOGICAL_HEIGHT - 26.0f,
                        0.48f, 0.86f, 0.90f, 0.95f, 0.95f);
+        shapes.bind(cmd, shapePipeline);
     }
 }
 
