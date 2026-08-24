@@ -32,7 +32,7 @@ class Camera;
 class RendererFacade {
 public:
     RendererFacade() = default;
-    ~RendererFacade() { cleanup(); }
+    ~RendererFacade();
 
     RendererFacade(const RendererFacade&) = delete;
     RendererFacade& operator=(const RendererFacade&) = delete;
@@ -60,6 +60,7 @@ private:
     WorldRenderer* m_world = nullptr;
     UiRenderer* m_ui = nullptr;
     EditorRenderer* m_editor = nullptr;
+    Pipeline* m_shapePipeline = nullptr;
 
     TextPipeline* m_textPipeline = nullptr;
     FontRenderer* m_font = nullptr;
