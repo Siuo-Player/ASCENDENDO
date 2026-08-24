@@ -35,12 +35,17 @@ TEST_CASE("plataforma e criada quantizada e dentro dos bounds") {
     CHECK(doc.platforms()[0].bounds.max.y == doctest::Approx(40.0f));
 }
 
-TEST_CASE("plataforma fora dos limites e rejeitada") {
+TEST_CASE("pedido de plataforma fora do canvas e rejeitado antes do snap") {
     LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
 
-    CHECK_FALSE(doc.addPlatform(AABB{{600,40},{700,60}}));
-    CHECK_FALSE(doc.addPlatform(AABB{{20,-4},{100,20}}));
-    CHECK_FALSE(doc.addPlatform(AABB{{0,0},{4,2}}));
+    CHECK_FALSE(doc.addPlatform(AABB{{-1,40},{63,56}}));
+    CHECK_FALSE(doc.addPlatform(AABB{{600,40},{641,56}}));
+    CHECK(doc.platformCount() == 0);
+}
+
+TEST_CASE("plataforma pequena demais e rejeitada") {
+    LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
+    CHECK_FALSE(doc.addPlatform(AABB{{0,0},{3,2}}));
     CHECK(doc.platformCount() == 0);
 }
 
@@ -55,6 +60,7 @@ TEST_CASE("mover plataforma preserva dimensoes e rejeita movimento invalido") {
     CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(120.0f));
 
     CHECK_FALSE(doc.movePlatform(0, {600,340}));
+    CHECK_FALSE(doc.movePlatform(0, {-1,120}));
     CHECK(doc.platforms()[0].bounds.min.x == doctest::Approx(300.0f));
 }
 
@@ -80,6 +86,7 @@ TEST_CASE("spawn tem Y fixo e X limitado a plataforma inicial") {
     CHECK(doc.spawnPosition().x == doctest::Approx(124.0f));
     CHECK(doc.spawnPosition().y == doctest::Approx(20.0f));
 
+    CHECK_FALSE(doc.setSpawnX(608.1f));
     CHECK_FALSE(doc.setSpawnX(800));
     CHECK(doc.spawnPosition().x == doctest::Approx(124.0f));
 }
@@ -97,6 +104,7 @@ TEST_CASE("FLAG só pode existir no último nível da campanha") {
     REQUIRE(finalLevel.flag() != nullptr);
     CHECK(finalLevel.flag()->min.x == doctest::Approx(400.0f));
 
+    CHECK_FALSE(finalLevel.setFlag(AABB{{630,300},{650,332}}));
     finalLevel.removeFlag();
     CHECK_FALSE(finalLevel.hasFlag());
 }
