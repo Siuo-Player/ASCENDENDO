@@ -43,7 +43,7 @@ else
     AR := ar
 endif
 
-# ── Flags de Compilação ───────────────────────────────────────────────────────
+# ── Flags de Compilação ────────────────────────────────────────────────────────
 # -MMD -MP: gera ficheiros .d (dependencias) ao lado de cada .o, listando os
 # headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema).
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
@@ -164,7 +164,7 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
+	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
@@ -174,7 +174,7 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
+	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
@@ -184,7 +184,7 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt & $(FAIL_CMD) )
+	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
 	@$(CAT_FILE) build/test_results.txt
 	@echo ""
 
