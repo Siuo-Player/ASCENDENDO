@@ -1,74 +1,245 @@
 # Arquitetura do ASCENDENDO
 
-## Visão geral
+## Objetivo
 
-O projeto é um jogo 2D C++20 com um motor pequeno e explícito construído sobre Vulkan + GLFW. A simulação usa fixed timestep de 60 Hz e a renderização é separada da lógica de jogo.
+O ASCENDENDO é um jogo 2D C++20 com um motor pequeno e específico do jogo construído sobre Vulkan + GLFW. A arquitetura deve privilegiar determinismo, baixo custo de runtime, testes sem GPU sempre que possível e uma release portátil Windows x64.
 
-A divisão principal é:
+O projeto é um **game framework específico do ASCENDENDO**, não uma engine genérica. Só se criam abstrações genéricas quando resolvem acoplamento real.
+
+## Direção arquitetural
 
 ```text
-main.cpp
-  ├── Core      → configuração, ações, bindings, viewport, campaign ID
-  ├── Logic     → input, física, jogador, níveis, replay, histórico
-  └── Graphics  → janela, Vulkan, swapchain, pipelines, renderer, câmera
+Application
+├── Runtime
+│   ├── GameStateMachine
+│   ├── Simulation
+│   │   ├── Physics
+│   │   ├── Player
+│   │   └── LevelRuntime
+│   ├── Campaign
+│   └── Replay / RunHistory
+│
+├── Editor
+│   ├── EditorSession
+│   ├── LevelData / LevelEditorDocument
+│   ├── EditorInteractionController
+│   └── Commands / UndoRedo
+│
+├── Presentation
+│   ├── RenderSnapshot
+│   ├── UI/HUD data
+│   └── Renderer / Vulkan
+│
+├── Core
+│   ├── ViewportTransform
+│   ├── Input / GameAction / KeyBindings
+│   ├── domain configuration
+│   └── Paths / asset resolution
+│
+└── Services
+    ├── Level IO / Validation
+    ├── Asset loading
+    └── Local user data
 ```
+
+A implementação atual ainda está parcialmente concentrada em `main.cpp` e `Renderer.cpp`. A consolidação destas fronteiras é uma tarefa explícita do roadmap e não deve ser adiada para depois de save/import/share.
 
 ## Fluxo por frame
 
-1. `InputManager::beginFrame()` limpa estados transitórios.
-2. GLFW entrega eventos de teclado/rato.
-3. `main.cpp` converte os eventos em ações através de `KeyBindings`.
-4. O estado do jogo decide a máquina de estados: `PLAYING`, `PAUSED`, `CREDITS`, `MENU` ou `EDITOR`.
-5. Em `PLAYING`, `PhysicsWorld::advance()` acumula tempo e determina quantos passos fixed-step devem correr.
-6. `Player::update()` aplica input e atualiza a física; `Level::resolveCollision()` resolve as plataformas.
-7. A câmera acompanha o jogador em gameplay ou é livre no editor.
-8. `Renderer::drawFrame()` grava comandos Vulkan e apresenta o frame.
+A direção pretendida é:
 
-## Responsabilidades
+```text
+GLFW / hardware
+      ↓
+InputManager
+      ↓
+GameAction / KeyBindings
+      ↓
+GameStateMachine / EditorSession
+      ↓
+Simulation / LevelData / EditorDocument
+      ↓
+RenderSnapshot
+      ↓
+Renderer
+      ↓
+Vulkan
+```
 
-### `Game/Core`
+O renderer não deve decidir regras de gameplay, editor ou campanha.
 
-- `Config.h`: invariantes globais e parâmetros de gameplay/editor.
-- `GameAction.*`: API lógica independente de teclas físicas.
-- `KeyBindings.*`: mapeamento e persistência das teclas.
-- `Viewport.*`: transformação window → logical space e hit-testing.
-- `CampaignID.h`: identificador determinístico de campanha.
+## `main.cpp` e estado da aplicação
 
-### `Game/Logic`
+`main.cpp` é atualmente o orquestrador e ainda contém inicialização Vulkan, campanha, física, máquina de estados, menus e editor. Isto é dívida técnica prioritária.
 
-- `InputManager`: estados current/justPressed/justReleased para teclado e rato.
-- `Physics`: `Vec2`, `AABB`, gravidade, fixed timestep e limites absolutos.
-- `Player`: Commitment Jump e movimento horizontal.
-- `Level`: representação das entidades jogáveis e colisões.
-- `ReplayManager`: save states/replay determinístico.
-- `RunHistory`: persistência de runs terminadas.
+A direção é extrair gradualmente:
 
-### `Game/Graphics`
+- `Application`: ciclo de vida e loop;
+- `GameStateMachine`: estados e transições;
+- `Simulation`: fixed timestep e ticks de gameplay;
+- `EditorSession`: estado/interação do editor;
+- `Renderer`: apresentação.
 
-- `VulkanContext`: instance, physical device, logical device, queue e surface.
-- `Window`: integração GLFW.
-- `Swapchain`/`RenderPass`: apresentação Vulkan.
-- `Pipeline`: desenho de geometria simples via push constants.
-- `TextPipeline`/`FontRenderer`: texto TTF em atlas.
-- `SpritePipeline`/`SpriteRenderer`: sprites reutilizáveis.
-- `Camera`: transformação de espaço do mundo.
-- `Renderer`: único ponto de gravação dos comandos gráficos por frame.
+A extração deve ser incremental e testada, não uma reescrita completa do motor.
 
-## Regras de dependência
+## Renderer e `RenderSnapshot`
 
-A lógica de jogo não deve conhecer detalhes de Vulkan. `Renderer` recebe estado e dados de `Logic` e converte-os em comandos gráficos.
+A API atual recebe diretamente `Player`, `Level`, `Camera`, `GameState`, seleção de menu e timer. Isso funciona, mas cria acoplamento entre presentation e runtime.
 
-`Game/Core` deve conter abstrações reutilizáveis e não deve depender de `Renderer`.
+A direção é introduzir um snapshot de renderização, por exemplo:
 
-`main.cpp` é atualmente o orquestrador. Uma futura refatoração pode extrair `GameApp`/`EditorController`, mas não deve ser feita durante a Fase 9.4 sem necessidade concreta.
+```cpp
+struct RenderSnapshot {
+    CameraRenderData camera;
+    std::vector<PlatformRenderData> platforms;
+    PlayerRenderData player;
+    HudRenderData hud;
+    MenuRenderData menu;
+    EditorRenderData editor;
+};
+```
 
-## Recursos e ownership
+O snapshot contém dados compactos e transitórios; não possui Vulkan resources nem lógica de jogo.
 
-Objetos Vulkan seguem RAII: o proprietário destrói o recurso no seu destrutor. Referências como `Renderer::m_ctx` e `Renderer::m_swapchain` não possuem os objetos; estes vivem em `main.cpp` por mais tempo.
+## Modelo comum de níveis
 
-Texturas e sprites devem ser partilhados por referência. Entidades de nível devem guardar dados compactos (geometria + IDs), não cópias de bytes de texturas.
+Runtime e editor devem convergir para um `LevelData` declarativo e independente de Vulkan/GLFW:
 
-## Máquina de estados
+```text
+.lvl / campaign source
+        ↓
+      LevelData
+      ├── Runtime view
+      └── Editor view
+```
+
+Isto evita que `Level` e `LevelEditorDocument` evoluam como dois modelos concorrentes do mesmo conteúdo.
+
+## Input
+
+O fluxo correto é único:
+
+```text
+hardware
+   ↓
+InputManager
+   ↓
+KeyBindings
+   ↓
+GameAction
+   ↓
+Gameplay / Editor
+```
+
+Gameplay não deve consultar `Key::SPACE`, `Key::A`, etc. diretamente. A dívida atual em `Player` deve ser removida antes de funcionalidades de input adicionais.
+
+## Tempo de simulação
+
+O fixed timestep de 60 Hz permanece. O sistema deve, porém, impedir uma recuperação ilimitada depois de um frame muito longo/minimização.
+
+Requisitos:
+
+- limite de passos de simulação por frame;
+- clamp de `dt` quando necessário;
+- nenhuma entrada `NaN`/`Inf` na simulação;
+- determinismo preservado para replay.
+
+## Física e colisão
+
+`Physics` deve possuir a política temporal e o estado físico; `Level` deve fornecer geometria/dados de nível, não concentrar decisões específicas de resposta física.
+
+A resolução atual baseada em penetration depth/velocidade é adequada ao jogo atual, mas deve ser tratada como uma implementação de gameplay, não como um resolvedor geométrico universal. Continuous collision detection só entra quando o design exigir velocidades/entidades que possam sofrer tunneling.
+
+## Vulkan
+
+A seleção de device/queues deve validar explicitamente:
+
+- graphics queue;
+- present queue;
+- `VK_KHR_swapchain`;
+- features obrigatórias;
+- surface formats/present modes/capabilities.
+
+Graphics e present podem coincidir ou ser queues diferentes.
+
+Wrappers Vulkan devem ser não-copiáveis e, quando necessário, movíveis com ownership claro.
+
+## Paths, assets e dados do utilizador
+
+Runtime não pode depender do current working directory.
+
+A resolução deve distinguir:
+
+```text
+install/executable root
+  → assets, shaders, fonts, levels do jogo
+
+user data root
+  → settings, runs, saves, mapas importados e temporários
+```
+
+Isto é requisito para a futura build portable.
+
+## Configuração
+
+`Config.h` é atualmente transversal demais. Novas constantes devem ser organizadas por domínio (`physics`, `render`, `window`, `editor`, `gameplay`). A migração pode ser incremental.
+
+## Editor
+
+A fronteira atual é a correta:
+
+```text
+InputManager
+    ↓
+EditorSession
+    ↓
+EditorInteractionController
+    ↓
+LevelEditorDocument / LevelData
+```
+
+Operações de edição devem evoluir para comandos transacionais:
+
+```text
+CreatePlatform
+MovePlatform
+ResizePlatform
+DeletePlatform
+        ↓
+undoStack / redoStack
+```
+
+Um drag completo deve ser uma operação lógica única.
+
+## Testes e CI
+
+A matriz mínima pretendida é:
+
+```text
+Linux normal tests
+Linux ASan/UBSan
+Linux headless Vulkan smoke
+Linux campaign validation
+Windows build + tests
+Windows game build/link
+```
+
+O número de assertions não é uma métrica suficiente; devem ser cobertas invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
+
+## Formatos e partilha futura
+
+O formato `.lvl` deve ter versão explícita antes de save/import público:
+
+```text
+VERSION 1
+...
+```
+
+Mapas devem permanecer declarativos, sem scripts, includes, paths arbitrários ou execução de código.
+
+A validação local do EXE é sempre a autoridade final antes de um mapa ser jogável.
+
+## Máquina de estados atual
 
 ```text
 PLAYING
@@ -85,7 +256,7 @@ MENU
    └── Credits → CREDITS → MENU
 
 EDITOR
-   └── Pause/ESC → MENU
+   └── ESC → MENU
 ```
 
-Durante `EDITOR`, a física do jogador não avança. O editor manipula um documento de nível e usa a mesma resolução lógica 640×360 e o mesmo grid de snap para produzir ficheiros que o motor consegue carregar diretamente.
+A futura extração para `GameStateMachine` deve manter estas transições e torná-las testáveis sem Vulkan.
