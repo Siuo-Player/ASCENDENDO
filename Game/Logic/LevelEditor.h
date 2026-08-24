@@ -8,6 +8,7 @@
 
 #include "Logic/Physics.h"
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 namespace logic {
@@ -70,13 +71,13 @@ private:
     bool validPlatform(const AABB& rect) const;
     bool validFlag(const AABB& rect) const;
 
-    bool                    m_finalCampaignLevel = false;
-    AABB                    m_initialGround{};
+    bool m_finalCampaignLevel = false;
+    AABB m_initialGround{};
     std::vector<EditorPlatform> m_platforms;
-    Vec2                    m_spawnPosition{};
-    float                   m_spawnMinX = 0.0f;
-    float                   m_spawnMaxX = 0.0f;
-    std::optional<AABB>     m_flag;
+    Vec2 m_spawnPosition{};
+    float m_spawnMinX = 0.0f;
+    float m_spawnMaxX = 0.0f;
+    std::optional<AABB> m_flag;
 };
 
 } // namespace logic
