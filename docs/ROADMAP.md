@@ -1,24 +1,24 @@
 # Roadmap de desenvolvimento
 
-## Estado no início desta documentação
+## Estado de referência
 
-`main` encontra-se no fim da infraestrutura da Fase 9.3.
+`main` contém o fim da tranche determinística da 9.4 (`38406c5`).
 
 Concluído:
 
 - Fases 1–8: motor, física, campanha, UI, texto TTF, sprites, replay/save e validação.
 - 9.1: `GameAction` + `KeyBindings`.
 - 9.2: rato + conversão window/logical + menus clicáveis.
-- 9.3: `GameState::EDITOR`, acesso por menu/tecla e câmera/grelha.
-- correção de bootstrap GLFW/Vulkan e cleanup de falhas parciais, integrada em `main` por PR #1.
+- 9.3: `GameState::EDITOR`, acesso por menu/tecla, câmera livre e grelha.
+- bootstrap GLFW/Vulkan robusto + cleanup de falhas parciais.
+- documentação técnica inicial.
+- 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
 
 ## Fase 9 — Editor de níveis
 
 ### 9.1 ✅ — Controlos
 
-Concluída. O sistema de intenção lógica existe e permite rebind/persistência.
-
-Pendente histórico: UI visual de CONTROLS e ligação das ações `MoveLeft/MoveRight/Jump` ao gameplay normal. Não bloqueará 9.4 se os bindings do editor forem independentes e corretamente testados.
+Concluída. Intenção lógica, rebind e persistência existem.
 
 ### 9.2 ✅ — Input de rato e viewport
 
@@ -26,63 +26,119 @@ Concluída. Cursor, botões, `windowToLogical()` e hit-test existem.
 
 ### 9.3 ✅ — Estado EDITOR
 
-Concluída. O editor abre dentro do jogo, tem câmera livre e grelha.
+Concluída. O editor abre dentro do jogo, com câmera livre e grelha.
 
-### 9.4 ▶ — Manipulação de entidades
+### 9.4 ▶ — Manipulação visual de entidades
 
-Objetivo atual:
+Tranche 1 concluída. Falta a integração visual/interativa:
 
-- documento editável em memória;
-- plataformas STAMP/DRAG;
-- preset pequeno/médio/grande;
+- STAMP + tamanho médio por defeito;
+- DRAG para criar dimensões;
+- presets pequeno/médio/grande;
 - seleção/movimento;
-- apagar por rato ou teclado;
-- snap obrigatório;
-- spawn restrito;
-- FLAG única da campanha no último nível;
-- testes unitários da camada editável.
-
-Default de interação: STAMP + tamanho médio.
+- apagar por rato e teclado;
+- indicador visual de ferramenta/modo/seleção;
+- renderização do documento editável dentro de `GameState::EDITOR`;
+- todas as operações espaciais continuam sujeitas ao snap e bounds já testados.
 
 ### 9.5 — Guardar + validar
 
-Depois de 9.4:
-
-- serializar o documento para o formato `.lvl` existente;
-- colocar níveis em construção/incorretos em `NaoValidados/`;
+- serializar o documento para `.lvl`;
+- preservar níveis em construção em `NaoValidados/`;
 - executar validação em background;
-- mostrar progresso/estado;
-- permitir sair do editor sem bloquear o jogo enquanto a validação termina;
-- publicar o resultado como notificação quando disponível.
+- permitir sair enquanto a validação corre;
+- notificar resultado;
+- **qualquer mapa importado ou descarregado da Internet tem de ser novamente validado pelo próprio EXE antes de poder ser jogado**;
+- um mapa só é marcado como jogável depois de a validação local passar.
 
 ### 9.6 — Editor de campanha
-
-Depois de 9.5:
 
 - lista de níveis em estilo playlist;
 - reordenar a campanha;
 - abrir um nível diretamente no `GameState::EDITOR` através de uma transição de estado;
-- persistir apenas a ordem em `campaign.txt`;
-- não mover ficheiros de `Levels`, `Unused` ou `NaoValidados`.
+- persistir apenas `campaign.txt`;
+- não mover automaticamente ficheiros entre `Levels`, `Unused` e `NaoValidados`.
 
-### Pós-9.6 — sprites do editor
+## Fase 11 — Partilha e biblioteca de mapas
 
-A gestão de sprites entra antes do Release Build se ainda for necessária para o conteúdo final. A política é partilha de recursos GPU e referências compactas por entidade, com atlas quando for benéfico.
+A conectividade deixa de ser uma ideia abstrata e passa a fazer parte do produto, mas como camada opcional: **o jogo base continua totalmente funcional offline**.
 
-### Fase 10 — Release Build
+### 11.1 — Export/import local
 
-Só depois da experiência de jogo/editor estar funcional:
+- botão **Exportar/Partilhar**;
+- botão **Importar mapa**;
+- pacote compacto para distribuição de mapas;
+- o pacote deve conter dados suficientes para reproduzir o mapa sem depender do repositório de desenvolvimento;
+- ao importar, o EXE extrai para uma área temporária/controlada, valida e só depois disponibiliza o mapa para jogar;
+- mapas inválidos nunca entram diretamente na campanha jogável.
 
-- executable portable;
-- sem consola para a versão final;
-- assets e DLLs na pasta local;
-- paths relativos;
-- mensagens de erro amigáveis;
-- documentação de jogador separada da documentação de desenvolvimento.
+### 11.2 — Biblioteca online
 
-## Ideias não aprovadas
+Site dedicado para:
 
-Partilha de campanhas/níveis/runs entre máquinas continua fora do roadmap ativo.
+- upload de mapas/pacotes;
+- download de mapas/pacotes;
+- páginas de mapas e metadados;
+- eventualmente contas, autores, favoritos, versões e pesquisa.
+
+A primeira versão pode ser simplesmente HTTP(S) com upload/download. **WebSockets não são requisito inicial.**
+
+### 11.3 — Partilha direta entre computadores
+
+Possibilidade futura, separada do site:
+
+- envio direto de um pacote entre dois computadores;
+- pode usar um canal temporário/servidor de rendezvous ou outro mecanismo simples;
+- só introduzir WebSockets/WebRTC/etc. quando existir uma necessidade concreta de comunicação bidirecional em tempo real.
+
+## Fase 12 — Release / Portable Build
+
+Objetivo final do projeto:
+
+> um executável Windows x64 que possa ser copiado para outro computador suportado e executado sem instalar o ambiente de desenvolvimento.
+
+Requisitos:
+
+- `.exe` standalone/portable;
+- assets e DLLs necessárias na própria pasta/distribuição;
+- sem consola visível na versão final;
+- sem paths absolutos;
+- sem escrever fora da pasta do jogo, salvo decisão explícita futura;
+- sem downloads obrigatórios para iniciar o jogo;
+- deteção amigável de requisitos ausentes;
+- tentar funcionar no hardware mais fraco que suporte corretamente o jogo/Vulkan;
+- usar Vulkan como requisito gráfico real, não prometer suporte a máquinas sem Vulkan.
+
+“Qualquer computador” significa, na prática, **qualquer Windows x64 dentro dos requisitos mínimos definidos pelo projeto**, e não qualquer PC existente.
+
+## Regra de segurança de mapas
+
+A autoridade final de jogabilidade é o executável do próprio jogo.
+
+Nem:
+
+- `reorganize.py`;
+- o servidor do site;
+- nem um campo `validated=true` enviado por outro computador
+
+pode substituir a validação local do EXE.
+
+Um mapa importado/descarregado segue sempre:
+
+```text
+pacote recebido
+   ↓
+extração controlada
+   ↓
+parsing
+   ↓
+validação local
+   ↓
+[ válido ] → biblioteca/local jogável
+[ inválido ] → NaoValidados / rejeitado
+```
+
+Isto permite que o servidor seja apenas uma fonte de distribuição e não uma autoridade de segurança/correcção.
 
 ## Regra de progressão
 
