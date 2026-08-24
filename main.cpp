@@ -87,38 +87,75 @@ static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg"
 int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
 
-    glfwInit();
-    GLFWmonitor*      primaryMonitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode          = glfwGetVideoMode(primaryMonitor);
-    int screenWidth  = mode->width;
-    int screenHeight = mode->height;
+    if (!glfwInit()) {
+        std::cerr << "[ERRO] GLFW nao conseguiu inicializar.\n";
+        return -1;
+    }
+
+    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
+    // Nao assumir que existe monitor primario: ambientes sem monitor/WM
+    // (remote desktop, CI, algumas VMs) podem devolver nullptr.
+    const int screenWidth  = mode ? mode->width  : 1280;
+    const int screenHeight = mode ? mode->height : 720;
+    if (!mode) {
+        std::cerr << "[AVISO] Nao foi possivel obter o monitor primario; a usar 1280x720.\n";
+    }
 
     {
-        Window        win;
-        VulkanContext ctx;
-        Swapchain     swapchain;
-        RenderPass    renderPass;
-        Pipeline      pipeline;
-        TextPipeline  textPipeline;
-        FontRenderer  font;
+        Window         win;
+        VulkanContext  ctx;
+        Swapchain      swapchain;
+        RenderPass     renderPass;
+        Pipeline       pipeline;
+        TextPipeline   textPipeline;
+        FontRenderer   font;
         SpritePipeline spritePipeline;
         SpriteRenderer playerSprite;
-        Renderer      renderer;
-        InputManager  input;
+        Renderer       renderer;
+        InputManager   input;
         core::KeyBindings bindings;
 
-        if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) return -1;
+        if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) {
+            std::cerr << "[ERRO] Nao foi possivel criar a janela GLFW.\n";
+            return -1;
+        }
 
         std::vector<const char*> exts;
         win.appendRequiredExtensions(exts);
-        ctx.init(false, exts);
+        if (!ctx.init(false, exts)) {
+            std::cerr << "[ERRO] Nao foi possivel inicializar Vulkan.\n";
+            return -1;
+        }
 
         VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
-        ctx.createSurface(surface);
-        swapchain.init(&ctx, &win);
-        renderPass.init(&ctx, &swapchain);
-        pipeline.init(&ctx, &swapchain, &renderPass);
-        renderer.init(&ctx, &swapchain, &renderPass, &pipeline);
+        if (surface == VK_NULL_HANDLE) {
+            std::cerr << "[ERRO] Nao foi possivel criar a surface Vulkan.\n";
+            return -1;
+        }
+        if (!ctx.createSurface(surface)) {
+            std::cerr << "[ERRO] Nao foi possivel associar a surface Vulkan ao contexto.\n";
+            // Se createSurface() falhar, o handle ainda nao e propriedade do
+            // contexto; evitar tentar usa-lo com uma swapchain inexistente.
+            return -1;
+        }
+
+        if (!swapchain.init(&ctx, &win)) {
+            std::cerr << "[ERRO] Nao foi possivel inicializar o swapchain Vulkan.\n";
+            return -1;
+        }
+        if (!renderPass.init(&ctx, &swapchain)) {
+            std::cerr << "[ERRO] Nao foi possivel criar o render pass Vulkan.\n";
+            return -1;
+        }
+        if (!pipeline.init(&ctx, &swapchain, &renderPass)) {
+            std::cerr << "[ERRO] Nao foi possivel criar a pipeline grafica.\n";
+            return -1;
+        }
+        if (!renderer.init(&ctx, &swapchain, &renderPass, &pipeline)) {
+            std::cerr << "[ERRO] Nao foi possivel inicializar o renderer.\n";
+            return -1;
+        }
 
         // Texto TTF real (CREDITS/MENU/PAUSED + timer HUD em PLAYING). Falha
         // graciosamente: se os shaders text.*.spv ou o .ttf nao existirem,
@@ -187,23 +224,22 @@ int main() {
         float        currentSpawnY     = 0.0f;
 
         // ── Estado do jogo ────────────────────────────────────────────────────
-        GameState state             = GameState::PLAYING;
-        int       menuSel           = 0;              // 0/1/2 conforme o menu activo
-        float     elapsedTime       = 0.0f;            // timer da run (pausa fora de PLAYING)
-        GameState creditsReturnState = GameState::MENU; // para onde voltar depois de CREDITS
+        GameState state              = GameState::PLAYING;
+        int       menuSel            = 0;
+        float     elapsedTime        = 0.0f;
+        GameState creditsReturnState = GameState::MENU;
 
         // ── Funcao de reset / (re)inicio ─────────────────────────────────────
         auto resetGame = [&]() {
-            player             = logic::Player{};
-            player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f }; // acima do chao (top=20)
-            camera             = gfx::Camera{};
-            world              = logic::PhysicsWorld{};
+            player              = logic::Player{};
+            player.body.position = { config::LOGICAL_WIDTH / 2.0f, 40.0f };
+            camera              = gfx::Camera{};
+            world               = logic::PhysicsWorld{};
             level.clear();
-            currentLevelIndex  = 0;
-            currentSpawnY      = 0.0f;
-            elapsedTime        = 0.0f;
+            currentLevelIndex   = 0;
+            currentSpawnY       = 0.0f;
+            elapsedTime         = 0.0f;
 
-            // Carregar primeiro chunk (inclui o chao full-width em inicio.lvl)
             if (!campaign.empty()) {
                 currentSpawnY = level.appendFromFile(
                     campaign[0], config::LOGICAL_WIDTH, 0.0f);
@@ -215,17 +251,10 @@ int main() {
             glfwSetWindowTitle(win.handle(), "ASCENDENDO");
         };
 
-        // Navegacao com wraparound circular -- PAUSED chama navigate(d,3),
-        // MENU chama navigate(d,4) desde a Fase 9.3 (ganhou "EDITOR").
         auto navigate = [&](int delta, int count) {
             menuSel = (menuSel + delta + count) % count;
         };
 
-        // Fase 9.2: indice da caixa de MENU/PAUSED sob o cursor, SE o botao
-        // esquerdo acabou de ser premido neste frame; -1 caso contrario (sem
-        // clique, ou clique fora de qualquer caixa). PAUSED e MENU usam a
-        // MESMA geometria base (MenuBoxLayout — ver Core/Viewport.h), com
-        // `count` diferente cada um desde a Fase 9.3.
         auto clickedMenuBox = [&](int count) -> int {
             if (!input.isMouseButtonJustPressed(MouseButton::LEFT)) return -1;
             core::LogicalPoint pt = core::windowToLogical(
@@ -235,7 +264,6 @@ int main() {
             return core::hitTestMenuBox(pt.x, pt.y, count, config::LOGICAL_WIDTH);
         };
 
-        // Arranque inicial
         resetGame();
 
         auto lastTime = std::chrono::high_resolution_clock::now();
@@ -251,9 +279,8 @@ int main() {
 
             bool pausePressed = core::isActionJustPressed(bindings, input, core::GameAction::Pause);
 
-            // ── Logica por estado ─────────────────────────────────────────────
             if (state == GameState::PLAYING) {
-                elapsedTime += dt; // timer so avanca em gameplay activo
+                elapsedTime += dt;
 
                 if (pausePressed) {
                     state   = GameState::PAUSED;
@@ -261,17 +288,14 @@ int main() {
                     glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  ESC continuar");
                 } else {
-                    // Fisica (Fixed Timestep)
                     int steps = world.advance(dt);
                     for (int i = 0; i < steps; ++i) {
                         player.update(input, world, config::FIXED_STEP);
                         level.resolveCollision(player.body);
                     }
 
-                    // Camera tracking
                     camera.follow(player.position(), dt);
 
-                    // Streaming: carregar proximo chunk quando o jogador se aproxima
                     if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
                         if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
                             currentSpawnY = level.appendFromFile(
@@ -281,7 +305,6 @@ int main() {
                         }
                     }
 
-                    // Detecao de FLAG (fim da campanha)
                     if (level.hasFlag &&
                         PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
 
@@ -309,19 +332,11 @@ int main() {
 
             } else if (state == GameState::PAUSED) {
                 if (pausePressed) {
-                    // ESC (ou a tecla actualmente ligada a Pause) de novo:
-                    // retoma o jogo (timer continua de onde ficou — nao foi
-                    // incrementado enquanto estava em PAUSED).
                     state = GameState::PLAYING;
                     glfwSetWindowTitle(win.handle(), "ASCENDENDO");
                 } else {
-                    // Quit tem tecla propria (default Q) -- sai directamente
-                    // sem precisar navegar ate "Sair" + confirmar.
                     if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
-                    // Fase 9.2: clique esquerdo numa caixa selecciona-a E
-                    // confirma na mesma accao (comportamento standard de
-                    // botao -- nao precisa de um segundo clique/tecla).
                     int clickedPaused = clickedMenuBox(3);
                     if (clickedPaused >= 0) menuSel = clickedPaused;
 
@@ -329,41 +344,34 @@ int main() {
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 3);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
-                        if (menuSel == 0) {           // CONTINUAR
+                        if (menuSel == 0) {
                             state = GameState::PLAYING;
                             glfwSetWindowTitle(win.handle(), "ASCENDENDO");
-                        } else if (menuSel == 1) {    // CREDITOS
+                        } else if (menuSel == 1) {
                             creditsReturnState = GameState::PAUSED;
                             state = GameState::CREDITS;
-                        } else {                        // SAIR
+                        } else {
                             break;
                         }
                     }
                 }
 
             } else if (state == GameState::CREDITS) {
-                // SPACE (UIConfirm) ou Pause regressam ao estado que chamou os creditos.
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || pausePressed) {
                     state   = creditsReturnState;
                     menuSel = 0;
                     if (state == GameState::MENU) {
                         glfwSetWindowTitle(win.handle(),
                             "ASCENDENDO | A/D navegar  ESPACO confirmar");
-                    } else { // PAUSED
+                    } else {
                         glfwSetWindowTitle(win.handle(),
                             "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  ESC continuar");
                     }
                 }
 
             } else if (state == GameState::MENU) {
-                // Pause no menu de fim-de-run nao faz nada especial (nao ha
-                // gameplay para retomar — usar Quit ou SAIR explicitamente).
                 if (core::isActionJustPressed(bindings, input, core::GameAction::Quit)) break;
 
-                // Fase 9.3: acesso ao editor tanto por tecla dedicada (E,
-                // directo, para quem sabe o atalho) como pela opcao visivel
-                // no menu (abaixo, para quem a esquecer) -- os dois pedidos
-                // explicitamente, nao um OU outro.
                 if (core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor)) {
                     camera  = gfx::Camera{};
                     state   = GameState::EDITOR;
@@ -371,38 +379,31 @@ int main() {
                     glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
                 } else {
+                    int clickedMenu = clickedMenuBox(4);
+                    if (clickedMenu >= 0) menuSel = clickedMenu;
 
-                // Fase 9.2: mesma logica de clique-seleciona-e-confirma do PAUSED.
-                // Fase 9.3: MENU passa a ter 4 opcoes (ganhou EDITOR).
-                int clickedMenu = clickedMenuBox(4);
-                if (clickedMenu >= 0) menuSel = clickedMenu;
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1, 4);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
 
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft))  navigate(-1, 4);
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
-
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
-                    if (menuSel == 0) {           // COMECAR
-                        resetGame();
-                    } else if (menuSel == 1) {    // EDITOR (Fase 9.3)
-                        camera  = gfx::Camera{};  // ponto de partida previsivel (0,0)
-                        state   = GameState::EDITOR;
-                        menuSel = 0;
-                        glfwSetWindowTitle(win.handle(),
-                            "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
-                    } else if (menuSel == 2) {    // CREDITOS
-                        creditsReturnState = GameState::MENU;
-                        state = GameState::CREDITS;
-                    } else {                        // SAIR
-                        break;
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
+                        if (menuSel == 0) {
+                            resetGame();
+                        } else if (menuSel == 1) {
+                            camera  = gfx::Camera{};
+                            state   = GameState::EDITOR;
+                            menuSel = 0;
+                            glfwSetWindowTitle(win.handle(),
+                                "ASCENDENDO | EDITOR | A/D/W/S deslocar  ESC sair");
+                        } else if (menuSel == 2) {
+                            creditsReturnState = GameState::MENU;
+                            state = GameState::CREDITS;
+                        } else {
+                            break;
+                        }
                     }
-                }
                 }
 
             } else if (state == GameState::EDITOR) {
-                // Fase 9.3: infra-estrutura + acesso. Camara livre (sem
-                // fisica -- Player/PhysicsWorld nao avancam neste estado,
-                // simplesmente nao sao chamados aqui). ESC (Pause) regressa
-                // a MENU. Colocacao de entidades fica para a Fase 9.4.
                 if (core::isActionJustPressed(bindings, input, core::GameAction::Pause)) {
                     state   = GameState::MENU;
                     menuSel = 0;
@@ -420,7 +421,6 @@ int main() {
                 }
             }
 
-            // ── Renderizacao ──────────────────────────────────────────────────
             if (!renderer.drawFrame(player, camera, &level, state, menuSel, elapsedTime))
                 break;
         }

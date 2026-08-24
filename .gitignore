@@ -57,6 +57,7 @@ venv/
 *.log
 *.tmp
 *.bak
+Tests/log_testes.txt
 
 # dev_log.txt NÃO está aqui — é rastreado pelo git (append-only, imutável)
 
