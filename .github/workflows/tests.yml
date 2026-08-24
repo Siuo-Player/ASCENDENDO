@@ -21,13 +21,28 @@ jobs:
       - name: Install toolchain and headless graphics dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers
+          sudo apt-get install -y clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
+
+      - name: Select deterministic Vulkan software driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -type f -name 'lvp_icd*.json' | head -n 1)"
+          test -n "$ICD"
+          echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          echo "Using Vulkan ICD: $ICD"
+          vulkaninfo --summary
 
       - name: Build and run tests in virtual X display
-        run: xvfb-run -a make clean && xvfb-run -a make tests-verbose -j2
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1280x720x24' make clean
+          xvfb-run -a -s '-screen 0 1280x720x24' make tests-verbose -j2
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
+          VK_LOADER_DEBUG: "error"
 
       - name: Validate active campaign levels
         run: python3 Development/AI_Validation/ai_validator.py --campaign
