@@ -7,12 +7,13 @@ O ASCENDENDO usa GitHub Actions para validar o projeto antes de integrar altera�
 `.github/workflows/tests.yml` executa em `ubuntu-latest`:
 
 1. checkout do repositório;
-2. instalação de Clang, GNU Make, Vulkan de desenvolvimento, GLFW, `glslc`, Xvfb e os drivers Vulkan Mesa;
-3. `make clean` e `make tests-verbose` dentro de um display X virtual;
-4. execução de Vulkan através do driver de software disponível no runner;
-5. `python3 Development/AI_Validation/ai_validator.py --campaign`.
+2. instalação de Clang, GNU Make, Vulkan de desenvolvimento, GLFW, `glslc`, Xvfb, `vulkan-tools` e os drivers Vulkan Mesa;
+3. seleção explícita do ICD Vulkan de software `lavapipe` (`lvp_icd*.json`), seguida de `vulkaninfo --summary`;
+4. `make clean` e `make tests-verbose` dentro de um display X virtual com resolução fixa;
+5. execução dos testes gráficos com Vulkan por software, sem depender de GPU física;
+6. execução de `python3 Development/AI_Validation/ai_validator.py --campaign`.
 
-O objetivo é que os testes gráficos também possam ser exercitados num runner sem GPU física, usando uma sessão gráfica virtual e um driver Vulkan de software.
+O objetivo é que os testes gráficos também possam ser exercitados num runner sem GPU física, usando uma sessão gráfica virtual e um driver Vulkan de software determinístico.
 
 Um PR para `main` só deve ser considerado pronto quando o workflow estiver verde.
 
