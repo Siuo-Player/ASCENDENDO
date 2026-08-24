@@ -1,0 +1,100 @@
+// =============================================================================
+// Game/Graphics/EditorRenderer.cpp
+// =============================================================================
+#include "Graphics/EditorRenderer.h"
+#include "Graphics/ShapeRenderer.h"
+#include "Graphics/Pipeline.h"
+#include "Graphics/TextPipeline.h"
+#include "Graphics/FontRenderer.h"
+#include "Graphics/Camera.h"
+#include "Core/Config.h"
+
+namespace gfx {
+
+namespace {
+
+void drawEditorText(VkCommandBuffer cmd, TextPipeline* pipeline, FontRenderer* font,
+                    const char* text, float x, float y, float scale,
+                    float r, float g, float b, float a) {
+    if (!pipeline || !font || !pipeline->isInitialized()) return;
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->handle());
+    font->bind(cmd, pipeline->layout());
+    font->drawText(cmd, pipeline->layout(), text, x, y, scale, r, g, b, a);
+}
+
+} // namespace
+
+void EditorRenderer::draw(VkCommandBuffer cmd,
+                          const Pipeline& shapePipeline,
+                          const ShapeRenderer& shapes,
+                          const logic::EditorRenderSnapshot& snapshot,
+                          TextPipeline* textPipeline,
+                          FontRenderer* font) const {
+    if (cmd == VK_NULL_HANDLE || !shapePipeline.isInitialized()) return;
+
+    shapes.bind(cmd, shapePipeline);
+
+    // Conteúdo existente do documento.
+    for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
+        const AABB& platform = snapshot.platforms[i];
+        const bool selected = snapshot.hasSelection && snapshot.selectedIndex == i;
+
+        const float r = selected ? 0.95f : config::COLOR_PLATFORM_R;
+        const float g = selected ? 0.78f : config::COLOR_PLATFORM_G;
+        const float b = selected ? 0.15f : config::COLOR_PLATFORM_B;
+
+        shapes.drawRect(cmd, shapePipeline,
+                        platform.min.x, platform.min.y,
+                        platform.width(), platform.height(),
+                        r, g, b, selected ? 1.0f : 0.92f);
+
+        if (selected) {
+            constexpr float border = 2.0f;
+            shapes.drawRect(cmd, shapePipeline,
+                            platform.min.x, platform.max.y - border,
+                            platform.width(), border,
+                            1.0f, 0.88f, 0.12f);
+        }
+    }
+
+    // Preview só existe quando o modelo determinístico o considera válido.
+    if (snapshot.previewVisible) {
+        const AABB& preview = snapshot.previewBounds;
+        shapes.drawRect(cmd, shapePipeline,
+                        preview.min.x, preview.min.y,
+                        preview.width(), preview.height(),
+                        0.35f, 0.85f, 1.0f, 0.32f);
+    }
+
+    // Cursor lógico no espaço de mundo: representação económica sem sprite.
+    constexpr float cursorHalf = 5.0f;
+    constexpr float cursorThickness = 1.0f;
+    shapes.drawRect(cmd, shapePipeline,
+                    snapshot.cursorWorld.x - cursorHalf,
+                    snapshot.cursorWorld.y - cursorThickness * 0.5f,
+                    cursorHalf * 2.0f, cursorThickness,
+                    0.85f, 0.90f, 1.0f, 0.75f);
+    shapes.drawRect(cmd, shapePipeline,
+                    snapshot.cursorWorld.x - cursorThickness * 0.5f,
+                    snapshot.cursorWorld.y - cursorHalf,
+                    cursorThickness, cursorHalf * 2.0f,
+                    0.85f, 0.90f, 1.0f, 0.75f);
+
+    // Volta ao pipeline sólido antes do texto para o chamador poder continuar.
+    shapes.bind(cmd, shapePipeline);
+
+    if (textPipeline && font) {
+        const char* tool = snapshot.tool == logic::EditorToolMode::STAMP ? "STAMP" : "DRAG";
+        const char* size = "MEDIUM";
+        if (snapshot.sizePreset == logic::EditorSizePreset::SMALL) size = "SMALL";
+        else if (snapshot.sizePreset == logic::EditorSizePreset::LARGE) size = "LARGE";
+
+        char hud[64];
+        std::snprintf(hud, sizeof(hud), "%s  %s", tool, size);
+        drawEditorText(cmd, textPipeline, font, hud,
+                       16.0f, config::LOGICAL_HEIGHT - 26.0f,
+                       0.48f, 0.86f, 0.90f, 0.95f, 0.95f);
+    }
+}
+
+} // namespace gfx
