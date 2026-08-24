@@ -1,23 +1,7 @@
 #pragma once
 // =============================================================================
 //  Game/Logic/InputManager.h
-//
-//  @version 9.2
-//  @history
-//    v3.1 — criado (key states: down, justPressed, justReleased; callbacks GLFW)
-//    v3.3 — injectRawState() adicionado para simulação e reprodução de replays
-//    v9.1 — Key::E, Key::Q adicionados (defaults de GameAction::OpenEditor e
-//            GameAction::Quit em KeyBindings.h). Puramente aditivo -- nenhum
-//            valor/assinatura existente foi alterado; isLeft()/isRight()/
-//            isJump() continuam identicos.
-//    v9.2 — Rato: posicao do cursor + botoes (MouseButton::LEFT/RIGHT/MIDDLE),
-//            mesmo padrao current/justDown/justUp ja usado para teclado, em
-//            mapas SEPARADOS (m_mouseCurrent/...) -- nao ha risco de colisao
-//            de codigos entre tecla e botao de rato. beginFrame() passa a
-//            limpar tambem os buffers de rato. Puramente aditivo -- nenhum
-//            metodo/campo existente foi alterado.
 // =============================================================================
-
 #include <unordered_map>
 
 struct GLFWwindow;
@@ -25,18 +9,23 @@ struct GLFWwindow;
 namespace logic {
 
 namespace Key {
-    constexpr int LEFT   = 263;
-    constexpr int RIGHT  = 262;
-    constexpr int UP     = 265;
-    constexpr int DOWN   = 264;
-    constexpr int A      = 65;
-    constexpr int D      = 68;
-    constexpr int W      = 87;
-    constexpr int S      = 83;
-    constexpr int E      = 69;   // v9.1: default de GameAction::OpenEditor
-    constexpr int Q      = 81;   // v9.1: default de GameAction::Quit
-    constexpr int SPACE  = 32;
-    constexpr int ESCAPE = 256;
+    constexpr int LEFT    = 263;
+    constexpr int RIGHT   = 262;
+    constexpr int UP      = 265;
+    constexpr int DOWN    = 264;
+    constexpr int A       = 65;
+    constexpr int D       = 68;
+    constexpr int W       = 87;
+    constexpr int S       = 83;
+    constexpr int E       = 69;
+    constexpr int Q       = 81;
+    constexpr int G       = 71;
+    constexpr int LBRACKET  = 91;
+    constexpr int RBRACKET  = 93;
+    constexpr int DELETE_KEY = 261;
+    constexpr int BACKSPACE  = 259;
+    constexpr int SPACE   = 32;
+    constexpr int ESCAPE  = 256;
 }
 
 namespace Action {
@@ -60,34 +49,24 @@ public:
     void onKeyEvent(int key, int action);
     void registerWithWindow(GLFWwindow* window);
 
-    bool isKeyDown(int key)         const;
-    bool isKeyJustPressed(int key)  const;
+    bool isKeyDown(int key) const;
+    bool isKeyJustPressed(int key) const;
     bool isKeyJustReleased(int key) const;
 
-    bool isLeft()  const;
+    bool isLeft() const;
     bool isRight() const;
-    bool isJump()  const;
+    bool isJump() const;
 
-    // Injeta estados lógicos puros diretamente nos buffers (essencial para Replay/Mocks)
     void injectRawState(bool left, bool right, bool jumpHeld, bool jumpPressed, bool jumpReleased);
 
-    // ── Rato (Fase 9.2) ──────────────────────────────────────────────────────
     void onMouseButtonEvent(int button, int action);
     void onCursorPosEvent(double x, double y);
-
-    bool isMouseButtonDown(int button)         const;
-    bool isMouseButtonJustPressed(int button)  const;
+    bool isMouseButtonDown(int button) const;
+    bool isMouseButtonJustPressed(int button) const;
     bool isMouseButtonJustReleased(int button) const;
 
-    // Posicao do cursor em coordenadas de JANELA (pixeis, Y para baixo,
-    // origem topo-esquerdo -- convencao GLFW crua). Conversao para espaco
-    // logico do motor fica em Core/Viewport.h (windowToLogical), chamada
-    // pelo utilizador com o tamanho actual da janela.
     double cursorX() const { return m_cursorX; }
     double cursorY() const { return m_cursorY; }
-
-    // Injecta posicao do cursor directamente (testes/mocks -- mesmo espirito
-    // de injectRawState).
     void injectCursorPos(double x, double y);
 
 private:
@@ -99,7 +78,6 @@ private:
     std::unordered_map<int, bool> m_current;
     std::unordered_map<int, bool> m_justDown;
     std::unordered_map<int, bool> m_justUp;
-
     std::unordered_map<int, bool> m_mouseCurrent;
     std::unordered_map<int, bool> m_mouseJustDown;
     std::unordered_map<int, bool> m_mouseJustUp;
