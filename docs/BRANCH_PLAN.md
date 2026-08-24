@@ -19,17 +19,27 @@ O plano da branch anterior de documentação de release/partilha fica **concluí
 
 Ligar o `LevelEditorDocument` testado à UI real do `GameState::EDITOR`.
 
-### Ordem interna
+### Implementado até agora nesta branch
+
+- núcleo `EditorInteractionController` separado de GLFW/Vulkan;
+- conversão determinística `logical cursor -> world` com o offset da `Camera`;
+- hit-test das plataformas com prioridade para a entidade mais recente;
+- STAMP com preset MEDIUM por defeito e suporte a SMALL/MEDIUM/LARGE;
+- DRAG com normalização dos cantos e delegação de snap/validação ao documento;
+- seleção e movimento preservando o offset do cursor;
+- apagar por alvo espacial, com correção do índice selecionado;
+- testes unitários do controller sem GPU.
+
+## Ordem interna restante
 
 1. Renderizar plataformas, spawn, FLAG e estado selecionado.
-2. Converter cursor de janela para espaço lógico e depois para mundo/editor.
-3. Hit-test das entidades.
-4. STAMP por clique, usando preset MEDIUM por defeito.
-5. DRAG para criação de retângulos.
-6. Seleção e movimento de entidades existentes.
-7. Apagar por botão direito e por `Delete`/`Backspace`.
-8. Feedback visual de ferramenta, preset e entidade selecionada.
-9. Manter todas as restrições já implementadas pelo modelo determinístico.
+2. Ligar eventos reais do `InputManager` ao controller.
+3. STAMP por clique, usando preset MEDIUM por defeito.
+4. DRAG para criação de retângulos com preview.
+5. Seleção e movimento de entidades existentes.
+6. Apagar por botão direito e por `Delete`/`Backspace`.
+7. Feedback visual de ferramenta, preset e entidade selecionada.
+8. Manter todas as restrições já implementadas pelo modelo determinístico.
 
 ## Não entra nesta branch
 
@@ -41,7 +51,7 @@ Ligar o `LevelEditorDocument` testado à UI real do `GameState::EDITOR`.
 - campanha/playlist 9.6;
 - sistema final de sprites do editor.
 
-## Critérios de aceitação
+## Critérios de aceitação da branch completa
 
 - o nível em edição é visível dentro do editor;
 - clique em vazio cria no grid quando em STAMP;
@@ -54,6 +64,6 @@ Ligar o `LevelEditorDocument` testado à UI real do `GameState::EDITOR`.
 - não aparecem posições inválidas como resultado de uma operação aceite;
 - não há dependência de Vulkan nos testes da lógica.
 
-## Próxima branch
+## Próxima branch após esta
 
-Depois de integrar esta branch, criar uma nova branch dedicada a save/serialização + validação assíncrona (9.5). A documentação deverá então marcar a UI 9.4 como concluída e substituir este plano pelo plano de save/validation.
+Depois de esta tranche/UI estar concluída e integrada, criar uma nova branch para **9.5 — save/serialização + validação assíncrona**. A documentação deverá marcar 9.4 como concluída e substituir este plano pelo plano de save/validation.
