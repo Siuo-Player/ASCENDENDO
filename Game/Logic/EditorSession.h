@@ -10,6 +10,7 @@
 #include "Core/KeyBindings.h"
 #include "Graphics/Camera.h"
 #include "Logic/EditorInteraction.h"
+#include "Logic/EditorRenderSnapshot.h"
 #include "Logic/InputManager.h"
 
 #include <cstdint>
@@ -41,6 +42,7 @@ public:
     EditorToolMode toolMode() const { return m_controller.toolMode(); }
 
     EditorPreview preview() const;
+    EditorRenderSnapshot renderSnapshot() const;
 
     // Atualiza input e interação do editor para um frame.
     void update(const InputManager& input,
