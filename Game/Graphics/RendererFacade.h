@@ -7,6 +7,7 @@
 // =============================================================================
 
 #include "Graphics/RenderState.h"
+#include "Graphics/GameState.h"
 
 #include <vulkan/vulkan.h>
 
