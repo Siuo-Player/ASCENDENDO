@@ -108,9 +108,9 @@ Antes de avançar para a implementação de nova funcionalidade ou para a contin
 │   └── revalidate CI
 │
 ├── C — source-size enforcement
-│   ├── document line-based policy
-│   ├── migrate checker from KiB to lines
-│   ├── include main.cpp
+│   ├── document byte/KiB policy
+│   ├── keep checker aligned with 30/36 KiB enforcement
+│   ├── decide explicitly whether main.cpp belongs in the checked roots
 │   └── validate warnings/errors
 │
 ├── D — modularity work packages
@@ -139,7 +139,7 @@ process protocol merged and reproducible
 + CI failures classified from evidence
 + source-size policy is implemented and validated
 + oversized/warning files have documented WPs and progress
-+ main.cpp decomposition follows architecture, not line-count gaming
++ main.cpp decomposition follows architecture, not metric gaming
 + tests validate each refactoring tranche
 + roadmap / architecture / debt reflect actual state
 + next RenderSnapshot block has no unresolved base-hardening contradiction
@@ -208,78 +208,6 @@ RendererFacade não necessita dos modelos de domínio para extrair dados de apre
 + documentação arquitetural atualizada
 ```
 
-## Novo eixo de investigação — Difficulty Architecture 🔬
-
-A investigação de 2025 introduziu uma distinção que não estava suficientemente explícita no roadmap: **validade física, dificuldade executiva/motora, desempenho observado e dificuldade percebida são camadas diferentes**.
-
-A evidência principal é Francillette et al. (2025), que apresenta um modelo automático de dificuldade executiva em platformers baseado em zonas de perigo estáticas e perigos dinâmicos. Esta evidência suporta a ideia de uma camada de análise sobre o nível, mas não autoriza copiar thresholds ou fórmulas diretamente para a física do ASCENDENDO.
-
-Uma dissertação de 2025 sobre adaptação de dificuldade em platformers procedurais reforça uma segunda separação: desempenho passado pode alimentar ajuste de dificuldade, mas a eficácia do modelo pode variar com experiência do jogador. Isto justifica adiar adaptive difficulty até existir instrumentação e player modelling suficientes.
-
-### Arquitetura conceptual futura
-
-```text
-collision geometry + deterministic physics
-                    ↓
-             physics validity
-                    ↓
-       motor/executive difficulty
-                    ↓
-          player performance
-                    ↓
-        perceived difficulty
-```
-
-### Consequência de engenharia
-
-A primeira implementação futura deve ser **análise/diagnóstico**, não adaptação automática. O analisador deve consumir representação do nível e resultados da simulação sem alterar silenciosamente a física ou o conteúdo authored.
-
-### WBS preliminar
-
-```text
-Difficulty Architecture
-├── D1 — difficulty evidence model
-│   ├── danger-zone representation
-│   ├── dynamic hazard representation quando aplicável
-│   └── mapping para métricas próprias do ASCENDENDO
-├── D2 — motor difficulty analysis
-│   ├── score por salto/secção
-│   ├── margem/risco
-│   └── relatório explicável
-├── D3 — performance telemetry
-│   ├── tentativas
-│   ├── sucesso/falha
-│   ├── tempo
-│   └── comportamento relevante
-├── D4 — player modelling
-│   ├── experiência/skill proxies
-│   ├── incerteza
-│   └── aprendizagem ao longo da campanha
-└── D5 — adaptive difficulty
-    └── apenas após validação das camadas anteriores
-```
-
-### Dependências
-
-```text
-D1/D2 dependem de física determinística + modelo de nível estáveis
-D3 depende de replay/telemetria com provenance suficiente
-D4 depende de D2 + D3
-D5 depende de D4 + validação com playtesting
-```
-
-### Não decidido ainda
-
-- fórmula final de dificuldade;
-- thresholds universais;
-- adaptação automática por morte/falha simples;
-- uso do modelo de feromonas do paper fora de hazards para os quais faça sentido;
-- equivalência entre score motor e dificuldade percebida.
-
-### Critério para autorizar implementação
-
-Antes de abrir D2 deve existir uma definição documentada de **quais variáveis do ASCENDENDO são observáveis, reproduzíveis e calibráveis**. Antes de abrir D4/D5 devem existir dados de jogadores suficientes para testar generalização e erro do modelo.
-
 ## Fase 9.7 — Level Editor UX
 
 Só depois de 9.6 verde.
@@ -333,9 +261,7 @@ Depois da infraestrutura ser confiável:
 - triggers/eventos;
 - decoração/identidade visual;
 - ferramentas de composição;
-- análise de dificuldade/ritmo em salto → secção → nível → campanha;
-- separação explícita entre validade física, dificuldade executiva, desempenho do jogador e experiência percebida;
-- eventual player modelling e adaptive difficulty apenas após validação das métricas.
+- análise de dificuldade/ritmo em salto → secção → nível → campanha.
 
 ## Fase 12 — Partilha local e web
 
