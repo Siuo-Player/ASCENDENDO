@@ -140,11 +140,12 @@ bool Swapchain::recreate() {
     VkDevice device = m_ctx->device();
     if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
 
+    // Swapchain image views must be destroyed before their parent swapchain.
+    destroyImageResources();
     if (m_swapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = VK_NULL_HANDLE;
     }
-    destroyImageResources();
     m_extent = {};
     m_imageFormat = {};
 
