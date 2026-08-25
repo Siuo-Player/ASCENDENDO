@@ -379,27 +379,9 @@ int main() {
                     if (state == GameState::PLAYING) setPlayingTitle(win.handle());
                     else setMenuTitle(win.handle());
                 } else {
-                    float dx = 0.0f;
-                    float dy = 0.0f;
-                    if (core::isActionHeld(bindings, input, core::GameAction::MoveLeft)) dx -= 1.0f;
-                    if (core::isActionHeld(bindings, input, core::GameAction::MoveRight)) dx += 1.0f;
-                    if (core::isActionHeld(bindings, input, core::GameAction::EditorPanUp)) dy += 1.0f;
-                    if (core::isActionHeld(bindings, input, core::GameAction::EditorPanDown)) dy -= 1.0f;
-
-                    camera.position.x += dx * config::EDITOR_CAMERA_PAN_SPEED * dt;
-                    camera.position.y += dy * config::EDITOR_CAMERA_PAN_SPEED * dt;
-                    if (camera.position.x < 0.0f) camera.position.x = 0.0f;
-                    if (camera.position.y < 0.0f) camera.position.y = 0.0f;
-
-                    editorSession.update(input, bindings, camera,
+                    editorSession.update(input, bindings,
                                         (int32_t)win.width(), (int32_t)win.height());
                 }
-            }
-
-            if (state == GameState::EDITOR || state == GameState::PLAYING ||
-                state == GameState::PAUSED || state == GameState::MENU ||
-                state == GameState::CREDITS) {
-                renderer.attachEditorSession(&editorSession);
             }
 
             if (!renderer.drawFrame(player, camera, &level, state, menuSel, elapsedTime)) {
