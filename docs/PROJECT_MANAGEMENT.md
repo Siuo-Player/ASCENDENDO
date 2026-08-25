@@ -2,18 +2,18 @@
 
 ## Objetivo
 
-Este documento define como o ASCENDENDO transforma arquitetura, roadmap e trabalho de implementação num sistema único de planeamento. A intenção não é introduzir burocracia pesada: é tornar explícitos **escopo, dependências, decisões, critérios de conclusão e riscos** que, de outro modo, ficariam dispersos por PRs, commits e conhecimento implícito.
+Este documento define como o ASCENDENDO transforma arquitetura, roadmap e trabalho de implementação num sistema único de planeamento.
 
-A abordagem baseia-se em quatro ideias:
+A política baseia-se em quatro princípios:
 
 1. decompor o projeto hierarquicamente em trabalho verificável;
-2. manter o planeamento deliberado e incremental;
+2. manter o planeamento deliberado, mas refinável;
 3. tornar dependências técnicas e de coordenação visíveis;
-4. tratar modularidade e dívida arquitetural como propriedades técnicas do sistema.
+4. tratar modularidade e dívida arquitetural como propriedades técnicas.
 
-## 1. WBS do ASCENDENDO
+## 1. WBS — Work Breakdown Structure
 
-A unidade de planeamento não deve ser apenas “uma feature” nem apenas “uma branch”. A decomposição operacional é:
+A unidade de planeamento não é apenas uma feature nem uma branch. A decomposição operacional é:
 
 ```text
 Projeto
@@ -26,18 +26,18 @@ Projeto
             └── critério de saída
 ```
 
-A **PR não substitui o WBS**. A PR é o mecanismo de integração/versionamento de um work package; o work package existe porque corresponde a um objetivo verificável do roadmap.
+A **PR não substitui o WBS**. Uma PR é o mecanismo de integração e versionamento de um work package; o work package existe porque corresponde a um objetivo verificável.
 
-Cada unidade deve ter, na medida adequada ao nível de incerteza:
+Cada unidade deve ter, ao nível adequado de detalhe:
 
 - resultado observável;
 - escopo incluído e excluído;
 - dependências conhecidas;
 - validação identificável;
 - critério de saída;
-- risco arquitetural relevante.
+- riscos relevantes.
 
-A decomposição pode ser refinada durante a execução. Não se deve congelar artificialmente detalhes que ainda são incertos, mas as interfaces e dependências que condicionam o trabalho próximo devem estar explícitas.
+A WBS pode ser refinada durante a execução. Não se devem congelar detalhes ainda incertos, mas interfaces e dependências que condicionam o trabalho próximo devem estar explícitas.
 
 ### Exemplo
 
@@ -52,13 +52,15 @@ ASCENDENDO
             └── CI validation
 ```
 
-## 2. Planeamento incremental, mas deliberado
+Tausworthe descreve a WBS precisamente como mecanismo de decomposição de engenharia em subprojetos, tarefas, subtarefas e work packages, ligando objetivos, recursos e atividades e permitindo acompanhar o progresso. citeturn760156search0turn760156search7
 
-O ASCENDENDO não deve escolher entre **Big Design Up Front** e evolução totalmente emergente. A política é:
+## 2. Planeamento deliberado + desenvolvimento incremental
+
+O ASCENDENDO não deve escolher entre Big Design Up Front e evolução totalmente emergente. A política é:
 
 > **planeamento deliberado + refinamento incremental + validação empírica**.
 
-O fluxo normal é:
+Fluxo normal:
 
 ```text
 problema
@@ -78,7 +80,7 @@ testes / profiling / validação
 atualização de arquitetura, dívida e roadmap
 ```
 
-Uma descoberta durante uma branch deve atualizar o planeamento antes de acumular código fora do escopo quando alterar materialmente:
+Uma descoberta deve atualizar o planeamento antes de acumular código fora do escopo quando alterar materialmente:
 
 - objetivo;
 - fronteira de subsistema;
@@ -87,21 +89,21 @@ Uma descoberta durante uma branch deve atualizar o planeamento antes de acumular
 - risco arquitetural;
 - ordem das fases.
 
-A arquitetura e a WBS devem evoluir em conjunto. Uma nova fronteira arquitetural pode criar, dividir ou eliminar work packages.
+A WBS e a arquitetura devem evoluir em conjunto.
 
 ## 3. Dependências como objetos de primeira classe
 
-No ASCENDENDO, “dependência” inclui mais do que `#include`, chamadas e bibliotecas.
+No ASCENDENDO, dependência inclui mais do que `#include`, chamadas e bibliotecas.
 
 | Tipo | Exemplo |
 |---|---|
 | Produto | Campaign Editor depende do Level Editor |
 | Técnica | `RendererFacade` depende de `RendererCore` e passes |
 | Dados | runtime e editor dependem de `LevelData` |
-| Validação | uma alteração de swapchain requer testes Vulkan |
-| Coordenação | alteração de uma interface afeta consumidores, testes e documentação |
+| Validação | alteração de swapchain exige testes Vulkan |
+| Coordenação | mudança de interface afeta consumidores, testes e documentação |
 
-Para cada work package com impacto externo, registar pelo menos:
+Para cada work package com impacto externo, registar:
 
 ```text
 Depende de:
@@ -112,33 +114,39 @@ Documentos afetados:
 Risco se a dependência mudar:
 ```
 
-O princípio operacional é:
+A investigação de Cataldo, Herbsleb e Carley mostra que modularização não representa por si só todas as dependências de trabalho; a eficácia depende da congruência entre necessidades de coordenação e coordenação efetivamente realizada. O estudo encontrou redução média de 32% no tempo de resolução de pedidos quando essa congruência era melhor. citeturn760156search36turn760156search5
+
+Portanto:
 
 > **uma dependência existente no código não está automaticamente gerida no processo.**
 
-Dependências críticas devem ser identificadas antes de paralelizar trabalho que possa entrar em conflito ou produzir integração tardia.
+## 4. Coordination awareness
 
-## 4. Coordenação e awareness
+Coordenação não é apenas comunicação. Em desenvolvimento de grande escala, problemas de comunicação, capacidade, cooperação e dependências distribuídas podem tornar a integração difícil; Begel e Nagappan estudaram este fenómeno numa organização da Microsoft com equipas e dependências distribuídas. citeturn760156search1
 
-Software de grande escala apresenta frequentemente uma diferença entre dependências técnicas e coordenação efetivamente realizada. Para o ASCENDENDO, isto significa que a informação sobre “quem depende de quê” deve estar disponível no nível de planeamento relevante, e não apenas implícita no código.
-
-Isto aplica-se mesmo num projeto individual: a futura coordenação pode ser entre branches, subsistemas, testes, ferramentas e decisões documentais, e não necessariamente entre pessoas.
-
-### Regra prática
-
-Quando uma mudança atravessa uma fronteira, verificar explicitamente:
+Quando uma alteração atravessa uma fronteira, verificar explicitamente:
 
 ```text
-interface → consumidores → testes → ferramentas → documentação → roadmap
+interface
+   ↓
+consumidores
+   ↓
+testes
+   ↓
+ferramentas
+   ↓
+documentação
+   ↓
+roadmap
 ```
 
-Investigação sobre **socio-technical congruence** mostra que coordenação eficaz depende de alinhar as atividades de coordenação com as necessidades criadas pelas dependências de trabalho; além disso, dependências lógicas podem ser mais relevantes para coordenação do que simples dependências de código. cite-not-applicable
+O ASCENDENDO aplica isto mesmo sendo um projeto individual: a “coordenação” pode ser entre branches, subsistemas, ferramentas, testes e documentos.
 
-No ASCENDENDO, isto traduz-se numa regra simples: analisar não apenas “que ficheiros importam”, mas também “que trabalho precisa de ser coordenado quando esta interface muda”.
+Além disso, trabalho posterior sobre coordenação mostra que dependências lógicas podem ser mais relevantes para determinar necessidades de coordenação do que dependências puramente sintáticas do código. citeturn760156search37
 
 ## 5. Arquitetura, modularidade e WBS
 
-A arquitetura não é apenas documentação visual. Ela determina a forma como o trabalho pode ser decomposto.
+A arquitetura não é apenas um diagrama. Ela condiciona a decomposição do trabalho:
 
 ```text
 Arquitetura
@@ -150,27 +158,25 @@ Branches / PRs
 Testes
 ```
 
-Uma fronteira mal definida pode produzir work packages grandes, com elevado coupling e baixa testabilidade. Uma decomposição artificial pode produzir adapters, interfaces e abstrações que apenas aumentam a superfície do sistema.
+Uma fronteira mal definida pode produzir work packages grandes, alto coupling e baixa testabilidade. Uma decomposição artificial pode produzir adapters e abstrações que apenas escondem o problema.
 
 Portanto:
 
 > **mais módulos ≠ melhor arquitetura**.
 
-A pergunta correta é se a fronteira:
+Uma fronteira é justificável quando:
 
 - reduz responsabilidades concentradas;
 - controla dependências relevantes;
 - melhora testabilidade;
 - permite evolução incremental;
-- reduz o custo de mudança sem introduzir complexidade gratuita.
-
-A modularidade técnica deve ser analisada juntamente com a realidade do trabalho. Uma fronteira pode reduzir coupling no código e, ainda assim, criar um pacote difícil de coordenar; o inverso também pode acontecer.
+- reduz custo de mudança sem introduzir complexidade gratuita.
 
 ## 6. Dívida arquitetural
 
-Uma decisão arquitetural subótima pode ser racional quando oferece um benefício imediato e possui condição clara de revisão. O problema surge quando a solução temporária se torna permanente sem reavaliação.
+Uma decisão subótima pode ser racional quando traz benefício imediato e tem condição clara de revisão. O problema é quando a solução temporária fica permanente sem reavaliação.
 
-No ASCENDENDO, uma decisão temporária deve registar:
+Registar:
 
 ```text
 Decisão
@@ -184,15 +190,13 @@ Exemplo:
 
 ```text
 RendererFacadeAdapter
-├── Motivo: migração incremental do renderer
+├── Motivo: migração incremental
 ├── Benefício: compatibilidade durante o cut-over
 ├── Custo: camada adicional temporária
-└── Remoção: todos os consumidores migrados para RendererFacade
+└── Remoção: todos os consumidores usam RendererFacade
 ```
 
-Isto transforma dívida arquitetural num objeto gerível, em vez de a tratar como simplesmente “código antigo”.
-
-## 7. Conhecimento arquitetural e documentação
+## 7. Conhecimento arquitetural
 
 A documentação deve preservar não apenas **o que existe**, mas também **porque existe**, quando essa razão condiciona múltiplos componentes ou fases.
 
@@ -203,13 +207,11 @@ Para decisões relevantes, guardar:
 - alternativas consideradas, quando útil;
 - consequências;
 - dependências;
-- critério de revisão ou remoção.
+- critério de revisão/removal.
 
-Estudos de Architectural Knowledge Management mostram que decisões, contexto e rationale tendem a permanecer tácitos ou a ficar desatualizados quando não existe uma prática explícita de captura. A literatura também trata decisões arquiteturais como entidades de primeira classe do processo. cite-not-applicable
+A investigação em Architectural Knowledge Management trata explicitamente design, decisões, contexto e rationale como conhecimento arquitetural; trabalhos empíricos mostram também que esse conhecimento frequentemente permanece tácito ou fica desatualizado quando não existe uma prática explícita de captura. citeturn760156search38turn196680search0turn196680search1turn196680search2
 
-Documentação normativa e documentação histórica devem ser distinguidas. O histórico pode permanecer útil como evidência; a documentação operacional deve refletir o estado atual.
-
-### Hierarquia documental operacional
+A documentação operacional do ASCENDENDO deve seguir esta hierarquia:
 
 ```text
 PRODUCT_DECISIONS.md
@@ -223,11 +225,9 @@ BRANCH_PLAN.md
 PR / testes / commits
 ```
 
-Uma mudança que contradiga um documento normativo deve atualizar primeiro esse documento ou ser explicitamente justificada no trabalho.
-
 ## 8. Definition of Ready
 
-Uma branch/work package está pronta para começar quando existem:
+Uma branch/work package está pronta quando existe:
 
 - objetivo explícito;
 - escopo incluído/excluído;
@@ -235,9 +235,9 @@ Uma branch/work package está pronta para começar quando existem:
 - dependências conhecidas;
 - estratégia de validação;
 - critério de saída;
-- riscos que mereçam acompanhamento.
+- riscos relevantes conhecidos.
 
-Não é necessário prever todos os detalhes da implementação. O objetivo é impedir trabalho ambíguo ou dependências importantes descobertas apenas na integração.
+Não é necessário prever todos os detalhes da implementação.
 
 ## 9. Definition of Done
 
@@ -245,7 +245,7 @@ Uma branch/work package só termina quando:
 
 - o escopo está implementado;
 - testes relevantes existem e passam;
-- falhas descobertas durante o desenvolvimento foram corrigidas ou registadas explicitamente;
+- falhas descobertas foram corrigidas ou registadas explicitamente;
 - documentação normativa está atualizada;
 - dependências alteradas foram revistas;
 - dívida criada foi classificada;
@@ -253,8 +253,6 @@ Uma branch/work package só termina quando:
 - a PR pode ser integrada sem trabalho essencial oculto.
 
 ## 10. Gates e progressão
-
-A progressão normal é:
 
 ```text
 work package
@@ -272,33 +270,28 @@ main atualizado
 novo work package
 ```
 
-Não iniciar um bloco dependente antes de integrar o bloco predecessor em `main`, exceto quando uma dependência paralela estiver deliberadamente planeada e documentada.
+Não iniciar um bloco dependente antes de integrar o predecessor em `main`, salvo dependência paralela explicitamente planeada.
 
-Uma fase pode avançar quando as dependências críticas anteriores estão:
+Uma fase pode avançar quando as dependências críticas anteriores estão fechadas ou explicitamente aceites como dívida com risco, condição de revisão e posição no roadmap.
 
-1. fechadas; ou
-2. explicitamente aceites como dívida, com risco, condição de revisão e lugar no roadmap.
+## 11. Métricas
 
-## 11. Métricas de processo
+Evitar métricas que incentivem produção artificial, como linhas alteradas ou número de commits.
 
-Evitar métricas que incentivem produção artificial, como linhas alteradas, número de commits ou número de branches.
-
-Métricas úteis para diagnóstico podem incluir:
+Métricas úteis para diagnóstico:
 
 - work packages concluídos segundo critérios de saída;
 - retrabalho estrutural após integração;
 - dependências descobertas tardiamente;
 - mudanças que atravessam muitas fronteiras;
-- defeitos introduzidos por alterações de fronteira;
+- defeitos associados a alterações de fronteira;
 - tendência da dívida arquitetural;
 - coupling/tamanho dos componentes críticos;
 - cobertura de invariantes e failure paths.
 
-As métricas servem para melhorar o sistema de desenvolvimento, não para criar um scoreboard.
+As métricas servem para melhorar o processo, não para criar um scoreboard.
 
 ## 12. WBS atual de alto nível
-
-A decomposição operacional corrente deve ser mantida em conjunto com o roadmap. O nível estratégico atual é:
 
 ```text
 ASCENDENDO
@@ -329,31 +322,31 @@ ASCENDENDO
     └── future online library
 ```
 
-Cada ramo acima deve ser refinado no momento em que entrar no próximo bloco do roadmap; não é necessário transformar o futuro inteiro em tarefas artificiais antes de existir informação suficiente.
+Cada ramo é refinado quando entra no próximo bloco do roadmap, em vez de transformar o futuro inteiro em tarefas artificiais.
 
 ## 13. Referências principais
 
 [1] R. C. Tausworthe, *The Work Breakdown Structure in Software Project Management*, Journal of Systems and Software 1 (1979), 181–186. DOI: 10.1016/0164-1212(79)90018-9. https://doi.org/10.1016/0164-1212(79)90018-9
 
-[2] A. Begel, N. Nagappan, *Coordination in Large-Scale Software Development: Helpful and Unhelpful Behaviors*, MSR-TR-2009-135, Microsoft Research, 2009. https://www.microsoft.com/en-us/research/publication/coordination-in-large-scale-software-development-helpful-and-unhelpful-behaviors/
+[2] A. Begel, N. Nagappan, *Coordination in Large-Scale Software Development: Helpful and Unhelpful Behaviors*, Microsoft Research Technical Report MSR-TR-2009-135 (2009). https://www.microsoft.com/en-us/research/publication/coordination-in-large-scale-software-development-helpful-and-unhelpful-behaviors/
 
-[3] M. Cataldo, J. D. Herbsleb, K. M. Carley, *Socio-technical congruence: a framework for assessing the impact of technical and work dependencies on software development productivity*, ESEM 2008, 2–11. DOI: 10.1145/1414004.1414008. https://doi.org/10.1145/1414004.1414008
+[3] M. Cataldo, J. D. Herbsleb, K. M. Carley, *Socio-technical congruence: a framework for assessing the impact of technical and work dependencies on software development productivity*, ESEM 2008. DOI: 10.1145/1414004.1414008. https://doi.org/10.1145/1414004.1414008
 
 [4] M. Cataldo, J. D. Herbsleb, *Coordination Breakdowns and Their Impact on Development Productivity and Software Failures*, IEEE Transactions on Software Engineering 39(3) (2013), 343–360. https://herbsleb.org/web-pubs/pdfs/Cataldo-Coordination-2013.pdf
 
-[5] S. Bick, K. Spohrer, R. Hoda, R. Scheerer, A. Heinzl, *Coordination challenges in large-scale software development: a case study of planning misalignment in hybrid settings*, IEEE TSE 44(10) (2018), 932–950. DOI: 10.1109/TSE.2017.2730870. https://doi.org/10.1109/TSE.2017.2730870
+[5] S. Bick et al., *Coordination challenges in large-scale software development: a case study of planning misalignment in hybrid settings*, IEEE TSE 44(10) (2018), 932–950. DOI: 10.1109/TSE.2017.2730870. https://doi.org/10.1109/TSE.2017.2730870
 
 [6] J. Yli-Huumo, A. Maglyas, K. Smolander, *How do software development teams manage technical debt? – An empirical study*, Journal of Systems and Software 120 (2016). DOI: 10.1016/j.jss.2016.05.018. https://doi.org/10.1016/j.jss.2016.05.018
 
 [7] *Investigating Architectural Technical Debt accumulation and refactoring over time: A multiple-case study*, Information and Software Technology 67 (2015), 237–253. DOI: 10.1016/j.infsof.2015.07.005. https://doi.org/10.1016/j.infsof.2015.07.005
 
-[8] P. Kruchten, P. Lago, H. van Vliet, T. Wolf, *Building up and Exploiting Architectural Knowledge*, WICSA 2005. DOI: 10.1109/WICSA.2005.19. https://doi.org/10.1109/WICSA.2005.19
+[8] P. Kruchten et al., *Building up and Exploiting Architectural Knowledge*, WICSA 2005. DOI: 10.1109/WICSA.2005.19. https://doi.org/10.1109/WICSA.2005.19
 
 [9] M. Ali Babar, I. Gorton, *Architecture Knowledge Management: Challenges, Approaches, and Tools*, ICSE 2007 Companion, 170–171. DOI: 10.1109/ICSECOMPANION.2007.20. https://doi.org/10.1109/ICSECOMPANION.2007.20
 
 [10] P. Kruchten et al., *Software Architecture Knowledge Management: Theory and Practice*, Springer (2009). https://link.springer.com/book/10.1007/978-3-642-02374-3
 
-[11] R. F. Capilla, P. Lago et al., *10 years of software architecture knowledge management: Practice and future*, Journal of Systems and Software 116 (2016), 191–205. DOI: 10.1016/j.jss.2015.08.054. https://doi.org/10.1016/j.jss.2015.08.054
+[11] R. F. Capilla et al., *10 years of software architecture knowledge management: Practice and future*, Journal of Systems and Software 116 (2016), 191–205. DOI: 10.1016/j.jss.2015.08.054. https://doi.org/10.1016/j.jss.2015.08.054
 
 [12] *Software architecture knowledge management approaches and their support for knowledge management activities: A systematic literature review*, Information and Software Technology. https://www.sciencedirect.com/science/article/pii/S0950584916301707
 
@@ -361,4 +354,4 @@ Cada ramo acima deve ser refinado no momento em que entrar no próximo bloco do 
 
 [14] C. R. B. de Souza, J. M. R. Costa, M. Cataldo, *Analyzing the scalability of coordination requirements of a distributed software project*, Journal of the Brazilian Computer Society 18 (2012), 201–211. https://link.springer.com/article/10.1007/s13173-012-0067-5
 
-[15] T. Dingsøyr et al., *Rethinking coordination in large-scale software development*, CHASE 2018, 91–92. DOI: 10.1145/3195836.3195850. https://doi.org/10.1145/3195836.3195850
+[15] T. Dingsøyr et al., *Rethinking coordination in large-scale software development*, CHASE 2018. DOI: 10.1145/3195836.3195850. https://doi.org/10.1145/3195836.3195850
