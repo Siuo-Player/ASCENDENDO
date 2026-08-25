@@ -4,6 +4,7 @@
 // =============================================================================
 
 #include "Graphics/RenderState.h"
+#include "Graphics/GameState.h"
 #include "Graphics/RenderSnapshot.h"
 #include "Logic/EditorRenderSnapshot.h"
 
@@ -45,6 +46,14 @@ public:
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
                    RenderState state,
+                   int menuSelection = 0,
+                   float elapsedSeconds = 0.0f);
+
+    // Transitional overload: keeps the application boundary source-compatible
+    // while GameState conversion is moved out of the renderer incrementally.
+    bool drawFrame(const RenderSnapshot& snapshot,
+                   const Camera& camera,
+                   GameState state,
                    int menuSelection = 0,
                    float elapsedSeconds = 0.0f);
 
