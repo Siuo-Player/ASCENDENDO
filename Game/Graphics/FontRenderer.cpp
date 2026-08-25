@@ -6,6 +6,7 @@
 // STB_TRUETYPE_IMPLEMENTATION deve existir apenas nesta translation unit.
 // =============================================================================
 #include "Graphics/FontRenderer.h"
+#include "Graphics/VulkanContext.h"
 #include "Graphics/TextPipeline.h"
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -15,10 +16,6 @@
 #include <iostream>
 
 namespace gfx {
-
-// -----------------------------------------------------------------------------
-// Baking (CPU, stb_truetype)
-// -----------------------------------------------------------------------------
 
 bool FontRenderer::loadAndBakeFont(const std::string& ttfPath, float pixelHeight,
                                     std::vector<uint8_t>& outAtlasPixels) {
@@ -62,10 +59,6 @@ bool FontRenderer::loadAndBakeFont(const std::string& ttfPath, float pixelHeight
     return true;
 }
 
-// -----------------------------------------------------------------------------
-// Ciclo de vida
-// -----------------------------------------------------------------------------
-
 bool FontRenderer::init(VulkanContext* ctx, VkDescriptorSetLayout descriptorSetLayout,
                         const std::string& ttfPath, float bakePixelHeight) {
     if (m_initialized) return true;
@@ -106,21 +99,11 @@ void FontRenderer::cleanup() {
     VkDevice device = m_ctx->device();
     vkDeviceWaitIdle(device);
 
-    if (m_descPool) {
-        vkDestroyDescriptorPool(device, m_descPool, nullptr);
-    }
-    if (m_sampler) {
-        vkDestroySampler(device, m_sampler, nullptr);
-    }
-    if (m_imageView) {
-        vkDestroyImageView(device, m_imageView, nullptr);
-    }
-    if (m_image) {
-        vkDestroyImage(device, m_image, nullptr);
-    }
-    if (m_imageMemory) {
-        vkFreeMemory(device, m_imageMemory, nullptr);
-    }
+    if (m_descPool) vkDestroyDescriptorPool(device, m_descPool, nullptr);
+    if (m_sampler) vkDestroySampler(device, m_sampler, nullptr);
+    if (m_imageView) vkDestroyImageView(device, m_imageView, nullptr);
+    if (m_image) vkDestroyImage(device, m_image, nullptr);
+    if (m_imageMemory) vkFreeMemory(device, m_imageMemory, nullptr);
 
     m_descPool = VK_NULL_HANDLE;
     m_sampler = VK_NULL_HANDLE;
@@ -131,10 +114,6 @@ void FontRenderer::cleanup() {
     m_initialized = false;
     m_ctx = nullptr;
 }
-
-// -----------------------------------------------------------------------------
-// Desenho
-// -----------------------------------------------------------------------------
 
 void FontRenderer::bind(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout) const {
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
