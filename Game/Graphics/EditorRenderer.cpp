@@ -9,6 +9,7 @@
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
+#include <cmath>
 #include <cstdio>
 
 namespace gfx {
@@ -78,9 +79,6 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                         1.0f, &fixedCamera);
     }
 
-    // Moldura física do canvas: deixa imediatamente visível onde o jogador
-    // pode existir. As operações do documento continuam a rejeitar qualquer
-    // plataforma fora destes limites antes do snap.
     constexpr float border = 3.0f;
     const float borderR = 0.75f;
     const float borderG = 0.75f;
