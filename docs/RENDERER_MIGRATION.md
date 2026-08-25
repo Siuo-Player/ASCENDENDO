@@ -2,27 +2,26 @@
 
 ## Objetivo
 
-Substituir gradualmente o `Game/Graphics/Renderer.cpp` monolítico por módulos pequenos, mantendo o renderer antigo como referência de comportamento durante a migração.
+Substituir gradualmente o `Game/Graphics/Renderer.cpp` monolítico por módulos pequenos, mantendo o renderer antigo como referência temporária de comportamento.
 
-A regra de tamanho para código é:
+Regra de tamanho para código:
 
-- < 30 KiB: normal;
-- 30–36 KiB: warning e evitar adicionar responsabilidade;
-- > 36 KiB: CI bloqueia e o ficheiro deve ser subdividido.
+- `< 30 KiB`: normal;
+- `30–36 KiB`: warning; evitar adicionar responsabilidade;
+- `> 36 KiB`: CI bloqueia e o ficheiro deve ser subdividido.
 
-A regra aplica-se apenas a ficheiros de código C/C++ dentro de `Game/` e `Tests/`. Documentação, dados, assets, logs e scripts não entram neste limite.
+Aplica-se apenas a código C/C++ em `Game/` e `Tests/`. Documentação, dados, assets, logs e scripts não entram neste limite.
 
 ## Estratégia
 
-Não refatorar o renderer antigo em massa. O novo renderer é construído em paralelo.
+O renderer antigo **não é refatorado em massa**. A nova stack foi construída em paralelo e cada estado é migrado individualmente.
 
 ```text
-Renderer antigo (referência)
+Renderer antigo (referência temporária)
         │
         ├── comparação de comportamento
-        │
         ▼
-Novo rendering stack
+Nova rendering stack
 
 RendererCore
     └── recursos Vulkan + acquire/submit/present + render pass
@@ -43,117 +42,76 @@ RendererFacade
     └── orquestração dos passes
 ```
 
-O renderer antigo continua no caminho de execução enquanto cada pass novo é comparado e validado.
-
-## Estado atual da construção paralela
+## Estado atual
 
 ### `RendererCore` ✅
 
-Construído de raiz com:
-
-- criação/destruição de framebuffers;
-- command pool e command buffers;
-- semáforos/fence;
-- acquire image;
-- begin/end render pass;
-- submit/present.
-
-Não conhece Player, Level, menus nem editor.
+Responsável por recursos e sincronização Vulkan, sem conhecer gameplay, editor ou UI.
 
 ### `ShapeRenderer` ✅
 
-Substitui conceitualmente o lambda `drawRect()` do renderer antigo. Centraliza `PushConstants`, resolução lógica e binding da pipeline sólida.
+Centraliza primitives, push constants, resolução lógica e binding da pipeline.
 
 ### `EditorRenderer` ✅
 
-Construído de raiz a partir do comportamento visual pretendido da secção `EDITOR`:
+Recebe `EditorRenderSnapshot` e desenha a tela fixa do Level Editor. Não recebe diretamente `LevelEditorDocument`.
 
-- grelha cullada pela câmera;
-- plataformas;
-- seleção;
-- preview válido;
-- cursor em cruz;
-- HUD de ferramenta/tamanho.
+### `WorldRenderer` ✅ estruturalmente
 
-Recebe `EditorRenderSnapshot`, não `LevelEditorDocument`.
+Encapsula plataformas, FLAG e Player/sprite.
 
-### `WorldRenderer` ✅
+### `UiRenderer` ✅ estruturalmente
 
-Construído a partir do comportamento de `drawWorld()`:
-
-- plataformas;
-- FLAG;
-- sprite do jogador;
-- fallback do jogador para retângulo.
-
-Não conhece GameState nem UI.
-
-### `UiRenderer` ✅
-
-Construído para separar:
-
-- timer;
-- PAUSED;
-- MENU;
-- CREDITS.
-
-A geometria das caixas usa a mesma `MenuBoxLayout` do hit-test.
+Encapsula timer, PAUSED, MENU e CREDITS.
 
 ### `RendererFacade` ✅ estruturalmente
 
-A fachada já orquestra `RendererCore + ShapeRenderer + WorldRenderer + UiRenderer + EditorRenderer` e possui `RenderState` próprio. Ainda **não é o renderer de produção**: primeiro precisamos validar paridade e depois substituir gradualmente o caminho antigo.
+Orquestra os passes e tem `RenderState` próprio.
 
-## Matriz de paridade
+### `RendererFacadeAdapter` ✅
 
-| Secção antiga | Novo módulo | Construção | Integração/paridade |
-|---|---|---:|---|
-| recursos/framebuffers/sync | `RendererCore` | ✅ | ⏳ CI/runtime |
-| viewport/render pass | `RendererCore` | ✅ | ⏳ CI/runtime |
-| `drawRect`/push constants | `ShapeRenderer` | ✅ | ⏳ CI |
-| bloco `EDITOR` | `EditorRenderer` | ✅ | ⏳ runtime |
-| `drawWorld` | `WorldRenderer` | ✅ | ⏳ runtime |
-| timer | `UiRenderer` | ✅ | ⏳ runtime |
-| PAUSED | `UiRenderer` | ✅ | ⏳ runtime |
-| MENU | `UiRenderer` | ✅ | ⏳ runtime |
-| CREDITS | `UiRenderer` | ✅ | ⏳ runtime |
-| frame orchestration | `RendererFacade` | ✅ | ⏳ runtime |
+Mantém compatibilidade com o runtime enquanto a migração termina.
 
-## Migração sem risco
+## Cut-over atual
 
-A migração segue três estados:
+A 9.4 fechada pela PR #8 integrou o estado `EDITOR` na nova stack através de `RendererFacadeAdapter`.
 
-```text
-1. Construir pass novo
-       ↓
-2. Comparar com renderer antigo + CI
-       ↓
-3. Trocar apenas aquele estado/pass para o novo
-```
+Estado atual desejado:
 
-Durante a fase híbrida, o renderer antigo permanece como fallback. Nunca manteremos duas implementações como autoridade permanente.
+| Estado | Implementação nova | Legado ainda necessário |
+|---|---|---|
+| EDITOR | ✅ | referência temporária |
+| PLAYING | ⏳ | ✅ |
+| PAUSED | ⏳ | ✅ |
+| MENU | ⏳ | ✅ |
+| CREDITS | ⏳ | ✅ |
 
-## Próximos passos
+Os próximos cut-overs devem seguir a mesma regra: construir → comparar → validar → substituir.
 
-1. Fazer o CI compilar a nova stack.
-2. Criar o snapshot do editor no ponto real do runtime e ligar `EditorRenderer` ao estado `EDITOR`.
-3. Substituir o bloco `EDITOR` antigo pela nova implementação e validar visualmente.
-4. Substituir PLAYING/PAUSED pelo `WorldRenderer` + `UiRenderer`.
-5. Substituir MENU/CREDITS.
-6. Trocar `main.cpp` para `RendererFacade`.
-7. Remover o caminho morto do `Renderer.cpp` antigo.
-8. Só então eliminar o arquivo antigo, se a fachada não precisar dele como compatibilidade.
+## Requisitos para a nova UI
+
+A migração não deve perpetuar problemas de layout do renderer antigo. A nova UI deve respeitar:
+
+- viewport lógico `640x360`;
+- letterboxing sem deformação;
+- layouts autoajustáveis para texto e número variável de opções;
+- nenhuma informação importante cortada nas extremidades;
+- rodapé contextual com ações essenciais;
+- tamanhos de texto que possam ser reduzidos dentro de limites legíveis.
 
 ## Critério para remover o renderer antigo
 
 Só remover `Renderer.cpp` quando:
 
 1. todas as secções tiverem substituição funcional;
-2. os testes existentes do renderer continuarem verdes;
+2. os testes existentes continuarem verdes;
 3. PLAYING/PAUSED/MENU/CREDITS/EDITOR tiverem paridade visual aceitável;
 4. o CI Linux Vulkan headless passar;
 5. o CI Windows/build passar quando esse job estiver disponível;
-6. não existir nenhum consumidor restante do renderer antigo.
+6. não existir consumidor restante do renderer antigo.
 
 ## Regra importante
 
-Não duplicar permanentemente lógica entre os dois sistemas. O renderer antigo é apenas uma referência temporária. Cada módulo novo deve ter responsabilidade clara e ficar abaixo do limite de tamanho de código definido pelo projeto.
+Não manter duas implementações como autoridades permanentes. O renderer antigo existe apenas como referência/fallback temporário.
+
+Cada módulo novo deve ter responsabilidade clara e respeitar o limite de tamanho de código definido pelo projeto.

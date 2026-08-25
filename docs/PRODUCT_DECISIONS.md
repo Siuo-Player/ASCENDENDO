@@ -1,78 +1,107 @@
 # Decisões de produto — ASCENDENDO
 
-Este documento regista decisões funcionais tomadas durante o desenvolvimento. Estas decisões devem ser refletidas no roadmap e na implementação futura.
+Este documento regista decisões funcionais tomadas durante o desenvolvimento. A implementação futura deve respeitar estas regras; quando uma decisão mudar, atualiza-se este documento e o roadmap na mesma tranche.
 
-## Editores
+## 1. Objetivo do editor
+
+O objetivo principal não é apenas fornecer uma ferramenta interna para criar os níveis iniciais. O **Level Editor é infraestrutura do produto**: depois da base do jogo estar pronta, a comunidade deve conseguir criar, testar, diagnosticar e partilhar mapas durante muitos anos sem depender da equipa original para corrigir manualmente cada mapa.
+
+Por isso, confiabilidade, compatibilidade de formato, diagnósticos claros, playtest e validação são prioridades superiores a adicionar rapidamente muitos tipos de objetos.
+
+O roadmap pode introduzir tipos de conteúdo mais ricos mais tarde, mas a arquitetura deve deixar espaço para os suportar sem quebrar níveis existentes.
+
+## 2. Editores
 
 ### Level Editor = uma única tela
 
 Um ficheiro `.lvl` representa exatamente uma tela lógica de `640x360`.
 
-O **Level Editor** edita apenas essa tela. Não existe navegação/pan vertical do nível. O canvas inteiro deve estar visível e os limites físicos da tela devem ser imediatamente perceptíveis.
+O **Level Editor** edita apenas essa tela. Não existe navegação/pan da tela no editor. O canvas completo deve estar visível e os limites físicos devem ser imediatamente perceptíveis.
 
-A grelha visual deve servir a construção dos blocos e não simplesmente desenhar linhas em excesso. O snap de edição pode ser mais fino do que a grelha visual.
+A grelha visual serve a construção dos blocos e não deve transformar o canvas numa malha de linhas excessiva. O snap pode ser mais fino do que a grelha visual.
 
 ### Campaign Editor = linha do tempo vertical
 
 O **Campaign Editor** é uma ferramenta diferente do Level Editor.
 
-As telas são apresentadas como blocos/miniaturas compactados verticalmente, com proporção `16:9`. A câmara pode deslocar-se verticalmente neste editor.
+As telas são apresentadas como blocos/miniaturas compactados verticalmente, mantendo a proporção `16:9`. Aqui a câmara pode deslocar-se verticalmente.
 
-Cada nível é um bloco arrastável. A movimentação pode usar snap para facilitar a troca de posição na campanha.
-
-A ordem visual dos blocos representa a ordem da campanha.
+Cada nível é um bloco arrastável. A movimentação pode usar snap para facilitar a troca de posição e a ordem visual representa a ordem da campanha.
 
 ### Entrada entre editores
 
 É permitido abrir o Level Editor diretamente a partir do Campaign Editor, mas a mudança deve ocorrer através de uma mudança explícita de estado.
 
-## Teste antes de guardar
+## 3. Teste antes de guardar
 
 Um nível em construção deve poder ser testado antes de ser guardado definitivamente.
 
-O objetivo é permitir:
+Fluxo esperado:
 
 1. editar;
 2. testar imediatamente com o Player;
 3. observar a física e o percurso;
-4. voltar ao editor;
-5. só depois guardar/validar.
+4. voltar ao editor sem perder o documento editado;
+5. corrigir;
+6. validar;
+7. guardar.
 
-## Validação ao vivo
+O playtest não deve transformar alterações experimentais em estado persistido automaticamente.
 
-O editor deve apresentar o resultado do validador enquanto o nível está a ser construído.
+Esta abordagem é coerente com editores integrados em jogos comunitários e com o workflow de criação/playtest usado pelo Jump King. citeturn687736search0turn687736search7
 
-A validação deve ser suficientemente rápida para funcionar em memória, sem executar um processo Python a cada frame.
+## 4. Validação ao vivo e diagnóstico
 
-Além do estado final válido/inválido, a interface deve servir como tutorial visual do que falta corrigir.
+O editor deve apresentar o resultado da validação enquanto o nível está a ser construído.
 
-## Simulação da campanha no editor
+A validação rápida deve funcionar em memória e não executar um processo Python a cada frame.
 
-O Campaign Editor deve conseguir mostrar agentes/runs de validação em background sobre as miniaturas da campanha.
+O feedback deve explicar a primeira causa útil de falha e servir como tutorial visual. O indicador de “inválido” sozinho não é suficiente.
 
-Devem existir vários agentes suficientes para que, idealmente, cada nível tenha pelo menos um agente ativo. Deve existir também pelo menos um agente capaz de mostrar a transição entre níveis, permitindo observar a fluidez da campanha.
+No Campaign Editor, vários agentes/runs podem ser mostrados em background. Idealmente cada nível tem pelo menos um agente ativo e pelo menos um agente atravessa a fronteira entre níveis para mostrar a fluidez da campanha.
 
-Esses agentes são uma visualização do processo de validação/debug e não substituem a validação final do EXE.
+Esses agentes são ferramentas de visualização/debug e não substituem a validação final do EXE.
 
-## Key bindings
+### Diagnóstico do percurso
+
+Quando um agente falhar, a UI deve mostrar:
+
+- o percurso tentado;
+- o ponto aproximado onde a tentativa deixou de ser viável;
+- uma explicação curta quando possível, por exemplo: **alvo demasiado longe**, **ângulo impossível**, **plataforma fora da janela alcançável**, **colisão lateral**, ou **sequência seguinte inacessível**.
+
+No Campaign Editor, o diagnóstico deve tornar evidente se o problema é local ao nível ou surge na transição entre dois níveis.
+
+## 5. Feedback visual do salto
+
+A mecânica do salto continua a ser uma decisão de gameplay própria do ASCENDENDO; o Jump King é referência sobretudo para visual/composição e workflow de criação, não uma obrigação de copiar a sua física.
+
+O carregamento do salto deve ser **visível**. O jogador não deve ter de inferir a força apenas pelo tempo em que manteve uma tecla pressionada.
+
+A interface deve ter uma barra/indicador de força associada ao personagem que:
+
+- mostra continuamente a carga;
+- comunica claramente o estado mínimo/máximo;
+- acompanha visualmente o momento em que a ação pode ser libertada;
+- pode ter indicação de cancelamento/aborto quando isso melhorar acessibilidade ou evitar uma ação acidental.
+
+A forma exata da animação da barra (preencher, voltar ao início, ciclos, etc.) fica como decisão de UX a testar; a exigência é a **visibilidade clara do estado de carga**.
+
+## 6. Key bindings e descobribilidade
 
 As teclas importantes devem ser descobríveis sem consultar documentação externa.
 
-O menu principal deve conter uma área/opção **Controlos / Key Bindings** onde o jogador possa consultar as ações e respetivas teclas.
+O menu principal terá uma área **Controlos / Key Bindings** para consultar as ações e respetivas teclas.
 
-Não é requisito atual permitir rebind arbitrário no jogo; consultar e perceber as teclas é obrigatório.
+Não é requisito atual permitir rebind arbitrário; consultar e perceber as teclas é obrigatório.
 
-Todos os menus devem mostrar no rodapé pelo menos as ações simples necessárias naquele estado, especialmente:
-
-- navegar;
-- confirmar;
-- voltar/sair.
+Todos os menus devem mostrar no rodapé as ações essenciais do estado atual, pelo menos navegar, confirmar e voltar/sair.
 
 ### Teclas acessíveis
 
-Não devemos depender das teclas de função F2/F5/F6 para funcionalidades importantes do editor, porque não estão convenientemente disponíveis em todos os teclados.
+Não devemos depender de F2/F5/F6 para funcionalidades importantes do editor.
 
-As ações do editor usam, por omissão:
+Defaults previstos:
 
 - `1` — guardar;
 - `2` — testar;
@@ -82,22 +111,88 @@ As ações do editor usam, por omissão:
 - `G` — alternar STAMP/DRAG;
 - `[` / `]` — diminuir/aumentar preset;
 - `Delete` / `Backspace` — apagar seleção;
-- `Esc` — voltar/sair do estado atual;
-- `Q` — sair/abandonar para o menu quando aplicável.
+- `Esc` — voltar/sair;
+- `Q` — sair/abandonar quando aplicável;
+- `0` — área de consulta de Controlos.
 
-`0` está reservado para abrir a área de consulta de controlos no menu assim que a entrada dessa subtela estiver ligada ao runtime.
+Os atalhos são aceleradores. As ações essenciais devem continuar acessíveis visualmente.
 
-## Enquadramento da janela
+## 7. Layout e viewport
 
 O jogo mantém o espaço lógico `640x360` e o letterboxing para preservar o rácio.
 
-A janela inicial não deve ser criada com a resolução total do monitor quando isso puder fazer com que a decoração da janela ultrapasse a área física do ecrã. Pedidos de janela demasiado grandes devem ser reduzidos para caber no monitor, mantendo o mesmo rácio de aspecto.
+**Nenhum texto ou componente de UI pode depender de coordenadas fixas que façam o conteúdo desaparecer fora da área visível.**
 
-## Portabilidade
+Usaremos layouts autoajustáveis para:
 
-O objetivo de distribuição continua a ser um executável Windows x64 portátil, acompanhado dos recursos necessários, sem depender do ambiente de desenvolvimento.
+- texto que possa ter comprimentos diferentes;
+- menus com diferentes números de opções;
+- rodapés/contextual help;
+- HUD do editor;
+- painéis de controlos;
+- seleção de campanhas.
 
-## Mapas importados/partilhados
+O fullscreen deve ser preservado. O tamanho da janela física pode mudar, mas o espaço lógico não é deformado nem cortado.
+
+O Level Editor deve conseguir mostrar a tela `640x360` completa dentro do viewport disponível. O Campaign Editor pode ocupar uma área vertical maior e usar scroll nessa área.
+
+## 8. Seleção de campanha
+
+`Começar` não inicia diretamente uma campanha por acidente.
+
+O fluxo é:
+
+`MENU → Seleção de campanha → campanha selecionada → PLAYING`
+
+Mesmo que exista apenas uma campanha, a seleção deve existir como conceito e UI. Isso evita ter de alterar o fluxo quando forem adicionadas outras campanhas.
+
+A seleção deve apresentar informação suficiente para escolher conscientemente, incluindo pelo menos:
+
+- nome;
+- preview/miniatura quando existir;
+- número de níveis;
+- estado de validade;
+- ação iniciar;
+- voltar.
+
+## 9. Conteúdo futuro e compatibilidade
+
+Os primeiros tipos de conteúdo podem permanecer simples, mas o modelo de nível deve ser extensível e versionável.
+
+Categorias futuras previstas, sem obrigação de implementação imediata:
+
+- superfícies e variantes de plataforma;
+- perigos;
+- elementos móveis;
+- objetos interativos;
+- triggers/zonas;
+- decoração;
+- metadados de identidade visual;
+- regras e eventos específicos da campanha.
+
+A introdução destes tipos deve ser aditiva e compatível com níveis antigos sempre que possível.
+
+## 10. Princípios de design adotados de projetos abertos
+
+As referências detalhadas encontram-se em `docs/DESIGN_REFERENCES.md`.
+
+Adotamos destes projetos sobretudo:
+
+- ferramentas explícitas e separadas por modo;
+- snapping visível e previsível;
+- viewport com limites/escala claros;
+- feedback imediato;
+- teste integrado no processo de criação;
+- distinção entre unidade jogável e organização de múltiplas unidades;
+- comunidade e distribuição como parte do produto, não como afterthought.
+
+Não copiamos a generalidade nem a complexidade de editores como Tiled/Godot, porque o problema do ASCENDENDO é intencionalmente menor e mais restrito.
+
+## 11. Portabilidade
+
+O objetivo final continua a ser um executável Windows x64 portátil, acompanhado dos recursos necessários, sem depender do ambiente de desenvolvimento.
+
+## 12. Mapas importados/partilhados
 
 Qualquer mapa obtido por importação, download ou partilha deve ser validado novamente pelo próprio EXE antes de poder ser jogado.
 
