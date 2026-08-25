@@ -16,7 +16,7 @@ ifeq ($(OS),Windows_NT)
     PLATFORM := windows
     EXE_EXT  := .exe
     SHELL    := cmd.exe
-    RUN_TEST = $(TEST_BIN)
+    RUN_TEST = .\$(subst /,\,$(TEST_BIN))
     CAT_FILE := type
     FAIL_CMD := exit /b 1
     RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
@@ -64,6 +64,7 @@ GAME_DIR  := Game
 TEST_DIR  := Tests
 EXT_DIR   := external
 BUILD_DIR := build
+TEST_LOG  := $(BUILD_DIR)/test_results.txt
 
 # ── Includes ──────────────────────────────────────────────────────────────────
 INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
@@ -164,8 +165,8 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+	@$(RUN_TEST) > $(TEST_LOG) || ( $(CAT_FILE) $(TEST_LOG) && $(FAIL_CMD) )
+	@$(CAT_FILE) $(TEST_LOG)
 	@echo ""
 
 ## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
@@ -174,8 +175,8 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > $(TEST_LOG) || ( $(CAT_FILE) $(TEST_LOG) && $(FAIL_CMD) )
+	@$(CAT_FILE) $(TEST_LOG)
 	@echo ""
 
 ## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
@@ -184,8 +185,8 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+	@$(RUN_TEST) --success > $(TEST_LOG) || ( $(CAT_FILE) $(TEST_LOG) && $(FAIL_CMD) )
+	@$(CAT_FILE) $(TEST_LOG)
 	@echo ""
 
 game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
