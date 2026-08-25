@@ -18,6 +18,12 @@ void ShapeRenderer::drawRect(VkCommandBuffer cmd, const Pipeline& pipeline,
                              float x, float y, float w, float h,
                              float r, float g, float b, float a,
                              const Camera* camera) const {
+    // Every primitive draw is responsible for binding its graphics pipeline.
+    // The renderer passes are intentionally independent, so relying on a
+    // previous vkCmdBindPipeline call would make pass ordering a hidden
+    // correctness requirement.
+    if (!bind(cmd, pipeline)) return;
+
     PushConstants constants{};
     constants.color[0] = r;
     constants.color[1] = g;
