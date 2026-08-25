@@ -1,8 +1,57 @@
 # Roadmap de desenvolvimento
 
+## Regra de leitura — antes de cada branch
+
+Antes de implementar qualquer passo, consultar sempre as documentações relevantes e verificar se alguma decisão recente altera o plano:
+
+- `docs/PRODUCT_DECISIONS.md` — decisões de produto e UX; fonte de verdade para comportamento esperado.
+- `docs/DESIGN_REFERENCES.md` — referências de jogos e ferramentas maduras.
+- `docs/SCIENTIFIC_REFERENCES.md` — evidência académica de gameplay, level design, dificuldade, experiência e câmaras.
+- `docs/TECHNICAL_REFERENCES.md` — C++, arquitetura, Vulkan, hardware, testes, packaging e sharing.
+- `docs/RESEARCH_INDEX.md` — mapa entre subsistemas e referências.
+- `docs/EDITOR_UX_SPEC.md` — critérios verificáveis do editor.
+- `docs/CAMPAIGN_EDITOR_DESIGN.md` — comportamento e arquitetura do Campaign Editor.
+
+Quando uma implementação contrariar um destes documentos, atualizar primeiro a decisão/documentação correspondente; não criar divergências silenciosas.
+
 ## Estado de referência
 
-`main` contém a base integrada até à 9.4: editor core + migração incremental do renderer. A branch atual `feat/9-5-editor-ux-campaign` é, nesta tranche, **documentação e design**; esta PR não altera código.
+`main` contém a base integrada até à 9.4: editor core + migração incremental do renderer. A branch `feat/9-5-editor-ux-campaign` é a tranche de documentação/design que prepara a implementação seguinte.
+
+## Princípio estratégico: construir a base antes de enriquecer o jogo
+
+O objetivo inicial é construir um jogo sólido e um editor de níveis suficientemente confiável para sobreviver nas mãos da comunidade. Tipos de conteúdo mais ricos entram depois sobre esta base.
+
+Antes de multiplicar objetos, priorizar:
+
+- confiabilidade do modelo de nível;
+- compatibilidade e versionamento;
+- playtest rápido e reversível;
+- validação independente;
+- diagnóstico explicável;
+- análise de dificuldade e progressão;
+- layouts previsíveis;
+- partilha/importação segura;
+- compatibilidade de hardware e runtime;
+- profiling antes de otimização.
+
+## Princípio de evidência
+
+Para decisões importantes, cruzar sempre que possível:
+
+```text
+paper/estudo específico
+        +
+documentação técnica oficial
+        +
+projeto/jogo maduro
+        +
+testes/profiling internos
+        ↓
+decisão ASCENDENDO
+```
+
+Nunca usar uma única referência como autoridade para uma decisão de design. Mario Maker, Jump King, Tiled, Godot e SuperTux são referências práticas complementares; a física do ASCENDENDO continua própria.
 
 ## O que já existe
 
@@ -16,178 +65,215 @@
 - Base separada de `CampaignEditor` e `LevelEditorValidator`.
 - Test runner Windows e source-size gate.
 
-## Princípio estratégico: comunidade primeiro
-
-O objetivo da base do jogo é permitir que o **editor sobreviva ao próprio desenvolvimento inicial** e continue utilizável pela comunidade.
-
-Portanto, antes de enriquecer o catálogo de objetos, priorizamos:
-
-- confiabilidade do modelo de nível;
-- compatibilidade/versionamento;
-- playtest rápido;
-- validação independente;
-- diagnóstico de falhas compreensível;
-- layouts previsíveis;
-- ferramentas de criação consistentes;
-- partilha/importação segura.
-
-Tipos de conteúdo mais ricos entram depois, sobre esta base, sem obrigar a reescrever níveis existentes.
-
-## Princípios de design a partir da 9.5
-
-Ver `docs/DESIGN_REFERENCES.md`.
-
-1. Ferramenta ativa explícita: o editor deve mostrar o que o clique/drag fará.
-2. Viewport previsível: limites, escala e área útil devem ser claros.
-3. Snapping útil: grid visual e passo de snap podem ser diferentes.
-4. Feedback imediato: preview, seleção, validação e erros aparecem no editor.
-5. Teste é parte da criação: **editar → testar → corrigir → validar → guardar**.
-6. Modelo e apresentação ficam separados.
-7. Atalhos aceleram; não podem ser necessários para descobrir o produto.
-8. Adotamos padrões comprovados sem transformar o ASCENDENDO num editor genérico.
-9. A comunidade é tratada como utilizador de primeira classe do editor.
-10. O Jump King é referência sobretudo visual/composicional e de workflow de criação/playtest, não especificação da física.
-
-## Decisões de produto vigentes
-
-Fonte de verdade: `docs/PRODUCT_DECISIONS.md`.
-
-- `.lvl` = uma tela `640x360`.
-- Level Editor sem pan; canvas completo sempre visível.
-- Campaign Editor separado, vertical, com miniaturas 16:9.
-- Níveis no Campaign Editor são blocos arrastáveis e reordenáveis por snap.
-- Um nível pode abrir diretamente no Level Editor via mudança explícita de estado.
-- Playtest com Player antes de guardar.
-- Validação rápida em memória + feedback orientado a tutorial.
-- Diagnóstico visual mostra percurso tentado e causa/local de falha quando disponível.
-- Campaign Editor pode mostrar vários agentes/runs, incluindo transições entre níveis.
-- Key bindings consultáveis no jogo; ações essenciais visíveis no rodapé.
-- Funcionalidades importantes do editor não dependem de F-keys.
-- UI/texto usam layout adaptável e nunca devem ultrapassar o viewport.
-- Fullscreen é preservado; letterbox adapta o espaço lógico.
-- `Começar` passa sempre por seleção de campanha, mesmo com uma só campanha.
-- A carga do salto deve ter feedback visual claro através de uma barra/indicador de força.
-- O modelo de nível deve reservar espaço para conteúdo futuro extensível e versionável.
-- Importações/downloads são sempre revalidados pelo EXE.
-- Objetivo final: EXE Windows x64 portátil.
-
-## Fase 9 — Edição
+## Fase 9 — Edição e base comunitária
 
 ### 9.4 ✅ — Editor core + migração incremental do renderer
 
 Fechada e integrada em `main`.
 
-### 9.5.a — UX do Level Editor
+### 9.5 — Corrigir e completar a base antes de adicionar conteúdo
+
+A 9.5 passa a ter prioridade de **consolidação**, não apenas de novas funcionalidades.
+
+#### 9.5.a — Level Editor UX
 
 - teclas acessíveis (`1/2/3` em vez de F-keys);
-- painel próprio de Controlos;
+- painel de Controlos configurável/consultável;
 - rodapé contextual;
-- layout de texto/UI autoajustável;
-- fullscreen + letterboxing corretos;
+- layouts autoajustáveis para texto e UI;
+- fullscreen preservado + letterboxing correto;
 - canvas `640x360` integralmente visível;
-- guardar, playtest e validar integrados;
-- feedback de validação orientado a tutorial;
-- diagnóstico do percurso tentado;
-- retorno seguro entre editor e jogo;
-- indicador visual de força do salto.
+- guardar/playtest/validar explícitos;
+- playtest sem persistir alterações automaticamente;
+- indicador visual de força do salto;
+- feedback de erro imediatamente compreensível.
 
-**Critério:** um utilizador entra, percebe os comandos sem documentação externa, constrói, testa, diagnostica falhas e regressa ao jogo sem elementos cortados.
+#### 9.5.b — Seleção de campanhas
 
-### 9.5.b — Seleção de campanhas
-
-- `Começar` abre seleção de campanha;
-- modelo preparado para várias campanhas;
+- `Começar` abre seleção mesmo com uma única campanha;
 - metadata de campanha separada da lista de níveis quando necessário;
-- campanha selecionada determina explicitamente o conjunto jogado;
-- preview e informação suficiente para escolher conscientemente.
+- preview, número de níveis e estado de validade;
+- preparação para múltiplas campanhas oficiais.
 
-### 9.5.c — Campaign Editor
+#### 9.5.c — Campaign Editor
 
 - timeline vertical;
 - miniaturas 16:9 compactadas;
 - blocos arrastáveis;
-- snap/reordenação;
-- abrir Level Editor por mudança de estado;
+- snap/reordenação discreta;
+- abertura do Level Editor via mudança explícita de estado;
 - pré-visualização sequencial;
-- agentes/runs de validação em background;
+- vários runs de validação em background;
 - pelo menos um agente por nível quando possível;
 - pelo menos um agente de transição entre níveis;
-- indicação visual da causa/local de falhas.
+- diagnóstico visual de falhas.
 
-### 9.5.d — Playtest e validação
+#### 9.5.d — Validador e análise de level design
 
-- playtest sem obrigar a guardar;
-- estado editado separado do persistido;
-- reset simples após playtest;
-- validação rápida em memória;
-- erro explicado pela primeira causa útil;
-- percurso tentado mostrado quando uma simulação está disponível;
-- validação final obrigatória antes de uma campanha jogável.
+A validação física continua sendo a autoridade de jogabilidade, mas deve evoluir gradualmente de:
 
-### 9.5.e — Base para conteúdo futuro
+```text
+possível / impossível
+```
 
-Sem ainda enriquecer o jogo com todos os objetos, a base do editor e do formato deve reservar espaço para:
+para:
 
-- superfícies e variantes de plataforma;
+```text
+possível
+↓
+trajetória + ponto de falha
+↓
+margem de erro
+↓
+dificuldade estimada do salto
+↓
+análise da secção
+↓
+análise do nível
+↓
+análise da campanha
+```
+
+O design deverá considerar, conforme a literatura, padrões como guidance, safe zones, foreshadowing, layering, branching e pace breaking, além de distância/largura de gaps, mudanças de direção e progressão de challenge.
+
+#### 9.5.e — Modelo de nível preparado para conteúdo futuro
+
+Sem ainda enriquecer o catálogo, o modelo deve suportar extensão versionável para:
+
+- superfícies/variantes de plataforma;
 - perigos;
 - elementos móveis;
 - objetos interativos;
 - triggers/zonas;
 - decoração;
-- metadados de identidade visual;
+- metadata visual;
 - regras/eventos de campanha.
 
-A prioridade é compatibilidade aditiva: novos elementos devem poder ser introduzidos sem invalidar mapas antigos sempre que tecnicamente possível.
+A prioridade é compatibilidade aditiva e migração controlada.
 
-## Gate 9.5.5 — Consolidação arquitetural
+## Gate 9.6 — Correção da base existente antes de construir por cima
 
-Só começa depois da 9.5 integrada:
+Esta fase é obrigatória e deve vir antes de conteúdo novo significativo.
 
-1. reduzir responsabilidades do `main.cpp`;
-2. fechar `Editor → RenderSnapshot → Renderer`;
-3. migrar gameplay restante para `GameAction`/`KeyBindings`;
-4. limitar catch-up excessivo do fixed timestep;
-5. consolidar `LevelData` entre runtime/editor/parser;
-6. tornar paths independentes do current working directory;
-7. validar graphics/present queues e capacidades Vulkan;
-8. Windows build/tests no CI;
-9. ASan/UBSan no CI;
-10. `make game` no CI;
-11. invariantes/property tests relevantes;
-12. limpar placeholders e documentação histórica redundante.
+### Código / arquitetura
 
-## Fase 10 — Guardar + validar
+1. reduzir responsabilidades de `main.cpp`;
+2. fechar definitivamente `Editor → RenderSnapshot → Renderer`;
+3. eliminar input de gameplay baseado diretamente em `Key` onde `GameAction` já exista;
+4. consolidar `LevelData` entre parser, runtime e editor;
+5. separar configuração global por subsistema quando necessário;
+6. tornar wrappers Vulkan explicitamente seguros quanto a ownership/move/copy;
+7. remover código morto, placeholders e duplicações confirmadas;
+8. manter ficheiros de código abaixo do limite de tamanho acordado e subdividir responsabilidades antes de chegarem a ser monólitos.
+
+### Física / gameplay
+
+9. limitar catch-up do fixed timestep e documentar a política de tempo perdido;
+10. testar invariantes de física e casos extremos;
+11. rever resolução de colisões heurística quando os testes/novas mecânicas mostrarem limitações;
+12. distinguir igualdade exata de `float` de comparação aproximada onde a API o exigir.
+
+### Vulkan / rendering
+
+13. validar queue families e present support separadamente;
+14. selecionar physical device por capabilities/score e não só pelo tipo de GPU;
+15. verificar extensões/features obrigatórias antes de criar o device;
+16. revisar synchronization barriers e evitar sincronização excessiva;
+17. preparar profiling com separação de CPU, GPU, bandwidth, overdraw e synchronization bubbles;
+18. testar pelo menos Intel, NVIDIA, AMD e, quando viável, uma GPU com tile-based rendering;
+19. usar feature detection e fallback paths em vez de assumptions por vendor.
+
+### Qualidade
+
+20. Windows build + tests no CI;
+21. `make game` no CI;
+22. ASan/UBSan no CI quando suportado;
+23. replay regression;
+24. property/invariant tests para viewport, física, editor e formatos;
+25. campanha completa validada automaticamente;
+26. matriz mínima de hardware/software documentada.
+
+### Runtime / distribuição
+
+27. paths independentes do current working directory;
+28. separar development build, portable release archive e eventual installer;
+29. release sem SDK/ambiente de desenvolvimento;
+30. shaders/assets/runtime dependencies incluídos de forma determinística;
+31. fallback amigável quando uma capability obrigatória estiver ausente.
+
+## Fase 10 — Guardar + formatos estáveis + validação
+
+Só começa após o Gate 9.6 verde.
 
 - versão explícita do `.lvl`;
-- `LevelData` declarativo;
-- serialização;
-- área de dados apropriada;
+- `LevelData` declarativo e extensível;
+- serialização determinística;
+- separação entre dados persistidos e estado de runtime;
 - validação em background;
-- mapas inválidos nunca entram na campanha;
-- mapas importados/descarregados revalidados pelo EXE.
+- mapas inválidos nunca entram numa campanha jogável;
+- mapas importados/descarregados revalidados pelo EXE;
+- migrações de formato documentadas.
 
-## Fase 11 — Partilha e biblioteca
+## Fase 11 — Conteúdo oficial e análise de campanhas
 
-### 11.1 — Export/import local
+Depois da infraestrutura ser confiável, começar a enriquecer o jogo:
+
+- novas superfícies e comportamentos;
+- perigos;
+- elementos móveis;
+- objetos interativos;
+- triggers/eventos;
+- decoração e identidade visual por zonas;
+- ferramentas de composição de campanhas;
+- análise de dificuldade e ritmo a várias escalas.
+
+Objetivo de conteúdo oficial:
+
+- várias campanhas;
+- campanhas normais com média de aproximadamente **50 níveis**;
+- campanhas especiais com **100–200 níveis**;
+- níveis finais/opcionais extremamente difíceis;
+- progressão baseada em aprendizagem, variação, recuperação e escalada de desafio, não apenas em aumentar números.
+
+## Fase 12 — Partilha local e web
+
+### 12.1 — Export/import local
 
 Pacote compacto declarativo, extração controlada e validação obrigatória pelo EXE.
 
-### 11.2 — Biblioteca online
+### 12.2 — Biblioteca online
 
-Site para upload/download de pacotes. HTTP(S) é suficiente inicialmente; WebSockets não são requisito.
+Site para upload/download de níveis/campanhas. HTTP(S) é suficiente inicialmente; WebSockets não são requisito.
 
-### 11.3 — Partilha direta
+A camada web trata conteúdo como não confiável. O EXE permanece a autoridade final de validade jogável.
 
-Só adicionar comunicação bidirecional quando existir uma necessidade concreta.
+Metadata futura pode incluir autor, versão do formato, hashes/IDs, descrição, dificuldade declarada/observada, versão do jogo, estatísticas de uso e reports/moderação.
 
-## Fase 12 — Release / Portable Build
+### 12.3 — Partilha direta
 
-Objetivo: um executável Windows x64 que possa ser copiado para outro computador dentro dos requisitos mínimos e executado sem o ambiente de desenvolvimento.
+Só introduzir comunicação bidirecional quando existir uma necessidade real que HTTP(S) + export/import não resolvam.
 
-Requisitos: EXE + DLLs/assets necessárias, sem dependência do current working directory, sem downloads obrigatórios e com mensagem amigável para requisitos ausentes.
+## Fase 13 — Release / Portable Build
 
-## Regra de progressão
+Objetivo: um pacote Windows x64 que possa ser copiado para outro computador dentro dos requisitos mínimos e executado sem o ambiente de desenvolvimento.
 
-Nenhuma fase seguinte começa enquanto a anterior não tiver implementação coerente, testes relevantes, documentação atualizada, branch própria, PR aberta e PR integrada em `main`.
+Requisitos: executável + DLLs/assets necessárias, sem dependência do current working directory, sem downloads obrigatórios e com diagnóstico amigável de requisitos ausentes.
 
-Antes de cada novo passo: integrar a PR anterior, abandonar a branch anterior e criar uma branch nova a partir do `main` atualizado.
+## Regra de progressão entre branches/PRs
+
+Nenhum novo bloco de desenvolvimento começa enquanto a PR anterior não estiver integrada em `main`.
+
+Para cada passo:
+
+1. consultar a documentação acima;
+2. identificar erros/problemas imediatos;
+3. corrigir a base antes de adicionar complexidade;
+4. escrever testes relevantes;
+5. implementar apenas o escopo do passo;
+6. atualizar documentação e roadmap;
+7. abrir PR própria;
+8. validar;
+9. fazer merge;
+10. fechar a branch e criar a próxima a partir do `main` atualizado.
+
+Toda decisão nova deve atualizar `PRODUCT_DECISIONS.md` e, quando alterar o plano, este roadmap. A documentação histórica pode ser atualizada em conjunto, mas estes documentos são a referência operacional.
