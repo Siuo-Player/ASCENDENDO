@@ -197,3 +197,33 @@ O objetivo final continua a ser um executável Windows x64 portátil, acompanhad
 Qualquer mapa obtido por importação, download ou partilha deve ser validado novamente pelo próprio EXE antes de poder ser jogado.
 
 O servidor nunca é a autoridade final de validade do mapa.
+
+## 13. Camadas de dificuldade — descoberta de 2026-08-25
+
+O produto deve distinguir explicitamente quatro conceitos que não podem ser colapsados em um único booleano de validade ou num único score arbitrário:
+
+```text
+validade física
+      ↓
+dificuldade executiva/motora
+      ↓
+desempenho observado
+      ↓
+dificuldade percebida / experiência
+```
+
+A validação física continua a ser autoridade para saber se um nível respeita as regras do motor. Um futuro analisador de dificuldade deve ser uma camada de diagnóstico/apoio ao autor e não deve alterar silenciosamente a geometria, a física ou o conteúdo authored.
+
+A investigação de Francillette et al. (2025) suporta a separação de dificuldade executiva/motora através de perigos estáticos e dinâmicos, mas foi realizada num contexto de platformer próprio e validada em Super Mario Bros.; não adotamos os thresholds ou fórmulas diretamente.
+
+A investigação de Madineni (2025) mostra que ajuste de dificuldade baseado em desempenho pode funcionar de forma desigual entre perfis de jogadores. Portanto, nenhuma futura regra do tipo `falhou → baixar dificuldade` fica aprovada por defeito.
+
+Antes de qualquer adaptive difficulty, o ASCENDENDO deve conseguir medir separadamente:
+
+- dificuldade/modelo do conteúdo;
+- tentativas e resultados do jogador;
+- evolução do desempenho;
+- incerteza do modelo;
+- experiência percebida através de estudos/playtesting.
+
+Estas métricas devem permanecer reproduzíveis e compatíveis com a autoridade determinística do motor.
