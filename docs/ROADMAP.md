@@ -17,7 +17,7 @@ Quando uma implementação contrariar um destes documentos, atualizar primeiro a
 
 ## Estado de referência
 
-`main` contém a base integrada até à 9.4 + tranche documental 9.5. O renderer já foi dividido e o editor já possui snapshot próprio, mas a migração arquitetural ainda não está concluída.
+`main` contém a base integrada até à primeira tranche de hardening 9.6. O renderer já foi dividido e o editor já possui snapshot próprio; a migração arquitetural e a robustez de runtime ainda não estão concluídas.
 
 ## Princípio estratégico
 
@@ -80,15 +80,29 @@ Base de investigação científica/técnica, requisitos community-first, referê
 
 **Referências:** `docs/SCIENTIFIC_REFERENCES.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
 
-## Fase 9.6 — HARDENING DA BASE (próximo passo)
+### 9.6 — hardening da base: tranche input + tempo ✅
 
-**Esta é a próxima fase de implementação. Não iniciar conteúdo novo significativo antes de fechar os P0 e o núcleo dos P1.**
+A primeira tranche de hardening já foi integrada em `main`: gameplay usa uma cadeia única de ações configuráveis e o fixed timestep passou a rejeitar `NaN/Inf` e limitar catch-up.
+
+Validação local desta tranche:
+
+```text
+165 testes
+871 assertions
+0 falhas
+```
+
+**Referências:** `docs/BASE_ARCHITECTURE_AUDIT.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
+
+## Fase 9.6 — HARDENING DA BASE (em curso)
+
+**Não iniciar conteúdo novo significativo antes de fechar os P0 e o núcleo dos P1.**
 
 ### P0 — contradições funcionais e riscos graves
 
-1. **Input único** — migrar `Player` e restante gameplay de teclas físicas para `GameAction`/`KeyBindings`.
-2. **Editor de uma tela** — eliminar qualquer comportamento de camera-pan inconsistente; cursor e renderer devem usar a mesma transformação e respeitar o contrato `640x360`.
-3. **Fixed timestep robusto** — limitar catch-up, definir política para minimização/frames longos e rejeitar `NaN`/`Inf`.
+1. **Input único ✅** — concluído na tranche anterior.
+2. **Editor de uma tela 🔄** — esta branch elimina o camera-pan do Level Editor, torna `640x360` o contrato explícito e usa uma única transformação para cursor e renderização.
+3. **Fixed timestep robusto ✅** — concluído na tranche anterior.
 4. **Vulkan error lifecycle** — proteger o ciclo de fences/submit/present contra estados irrecuperáveis.
 5. **Swapchain recreation** — tratar `VK_ERROR_OUT_OF_DATE_KHR`/`VK_SUBOPTIMAL_KHR` e reconstrução segura dos recursos dependentes.
 6. **Queue/present support** — separar verificação de graphics e present queues; não assumir que são a mesma família.
@@ -100,9 +114,9 @@ Base de investigação científica/técnica, requisitos community-first, referê
 7. **Eliminar o adapter de migração** depois de todos os consumidores/testes passarem para `RendererFacade`.
 8. **Eliminar o `Renderer` legado** depois da migração dos seus testes e consumidores.
 9. **Criar `RenderSnapshot` geral** para gameplay/UI/editor; presentation não recebe `Player`/`Level`/`GameState` diretamente.
-10. **Extrair `Application` / `GameStateMachine` / `Simulation`** de `main.cpp` de forma incremental.
+10. **Extrair responsabilidades do loop principal** de forma incremental para reduzir acoplamento e melhorar testabilidade.
 11. **RAII/ownership Vulkan** — substituir `new/delete` evitáveis e garantir wrappers não-copiáveis/movíveis quando apropriado.
-12. **Consolidar `LevelData`** como fronteira comum entre parser, runtime e editor.
+12. **Consolidar modelo comum de dados de nível** entre parser, runtime e editor.
 13. **Undo/Redo transacional** — drag completo = uma operação lógica.
 14. **Separar user data de source tree** e introduzir resolução de assets baseada na localização do executável.
 15. **Unificar a política de source-size** e remover ferramentas legadas duplicadas.
@@ -135,10 +149,11 @@ GameAction completo
 + graphics/present capabilities verificadas
 + adapter/renderer legado encaminhados para remoção
 + RenderSnapshot geral
-+ LevelData comum
++ modelo comum de nível
 + paths/user-data corretos
 + CI/quality gates essenciais
 + testes das novas fronteiras
++ frame-time medido para validar 60/120 FPS conforme hardware
 ```
 
 ## Fase 9.7 — Level Editor UX
@@ -182,7 +197,7 @@ Só depois de 9.6 verde.
 ## Fase 10 — Level Data + save + validação estáveis
 
 - versão explícita do `.lvl`;
-- `LevelData` declarativo/extensível;
+- modelo declarativo/extensível de dados de nível;
 - serialização determinística;
 - separação entre persistido/runtime;
 - validação em background;
