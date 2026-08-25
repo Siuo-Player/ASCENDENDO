@@ -116,7 +116,7 @@ TEST_CASE("render snapshot expoe apenas dados graficos") {
     CHECK(snapshot.selectedIndex == 0);
     CHECK(snapshot.tool == logic::EditorToolMode::STAMP);
     CHECK(snapshot.sizePreset == logic::EditorSizePreset::MEDIUM);
-    CHECK(snapshot.platforms[0].bounds.width() == doctest::Approx(128.0f));
+    CHECK(snapshot.platforms[0].width() == doctest::Approx(128.0f));
 }
 
 TEST_CASE("DELETE apaga a selecao atual") {
