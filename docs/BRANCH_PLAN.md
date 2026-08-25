@@ -1,92 +1,99 @@
 # Plano da branch atual
 
-**Branch:** `feat/9-9-remove-renderer-adapter`
+**Branch:** `feat/source-size-enforcement`
 
-**Bloco do roadmap:** 9.6 P1 — novas fronteiras arquiteturais
+**Bloco do roadmap:** 9.6 Base Engineering Gate
 
-**Work Package:** 9.6-P1.7 — eliminar o `RendererFacadeAdapter`
+**Work Package:** C — source-size enforcement + primeiro alvo de modularidade
 
 ## Objetivo
 
-Fazer `RendererFacade` passar a ser a API usada diretamente pelo runtime, removendo a última camada de compatibilidade da migração do renderer.
+Fazer o checker de tamanho cumprir a política normativa baseada em linhas e resolver o primeiro erro real desencadeado pelo novo gate sem divisão artificial.
 
 ## Documentos obrigatórios
 
-Antes e durante esta branch consultar:
+Consultar durante esta branch:
 
+- `docs/DEVELOPMENT_PROTOCOL.md`
 - `docs/PROJECT_MANAGEMENT.md`
-- `docs/WORK_PACKAGE_9_9.md`
-- `docs/ARCHITECTURE.md`
 - `docs/ROADMAP.md`
+- `docs/ARCHITECTURE.md`
 - `docs/TECH_DEBT.md`
-- `docs/RENDERER_MIGRATION.md`
+- `docs/CODE_SIZE.md`
 
 ## Dependências
 
 **Depende de:**
 
-- 9.8 integrada;
-- `RendererCore`, passes e `RendererFacade` estáveis;
-- `GameState` independente do renderer legado;
-- testes existentes da nova stack.
+- PR #21 integrada em `main`;
+- política de source-size documentada;
+- decisão explícita de dividir por responsabilidade/cohesion.
 
 **Produz para:**
 
-- `RenderSnapshot` geral;
-- apresentação sem adapters;
-- futura extração de `Application`/loop principal.
+- CI com enforcement real de linhas;
+- work packages seguintes de `SpriteRenderer`, `main.cpp` e testes;
+- gate de engenharia de base.
 
 ## WBS
 
 ```text
-9.6 P1
-└── Presentation
-    └── 9.6-P1.7 remover adapter
-        ├── migrar runtime
-        ├── migrar testes
-        ├── preservar EditorRenderSnapshot
-        ├── remover RendererFacadeAdapter
-        ├── atualizar documentação
-        └── validar build/testes/failure paths
+9.6 Base Engineering Gate
+└── C — source-size enforcement
+    ├── migrar checker KiB → linhas
+    ├── incluir main.cpp
+    ├── preservar warning/error semantics
+    ├── identificar ficheiros que falham o novo gate
+    ├── decompor FontRenderer por responsabilidade
+    └── validar build/tests/source-size
 ```
 
-## Riscos críticos
+## Resultado esperado da decomposição
 
-- perder a atualização do `EditorRenderSnapshot` durante o cut-over;
-- deixar consumidores ocultos do adapter;
-- criar acoplamento adicional no `main.cpp`.
+`FontRenderer.cpp` separa:
 
-Mitigação: mover explicitamente a preparação do snapshot para o ponto de apresentação, procurar referências globalmente e não extrair novas responsabilidades nesta branch.
+- baking/estado de texto;
+- upload Vulkan do atlas (`FontRendererGpu.cpp`);
+- descriptor setup e desenho.
 
-## Definition of Ready
+A divisão não deve alterar a API pública nem criar classes artificiais.
 
-- [x] objetivo definido;
-- [x] escopo incluído/excluído definido;
-- [x] dependências conhecidas;
-- [x] riscos identificados;
-- [x] estratégia de validação definida;
-- [x] documentação de processo consultada.
+## Riscos
 
-## Critério de saída
+- esquecer o novo `.cpp` na build;
+- introduzir duplicate symbols relacionados com `stb_truetype`;
+- alterar lifecycle/ownership do atlas Vulkan;
+- fazer uma divisão apenas para satisfazer a métrica.
+
+## Validação
 
 ```text
-main/testes usam RendererFacade diretamente
-+ nenhum consumidor do adapter
-+ adapter removido
-+ EditorRenderSnapshot preservado
-+ testes/build executados ou falhas registadas
-+ documentação atualizada
+python3 Development/Tools/check_source_sizes.py
+make game
+make tests-verbose
 ```
+
+O CI deve executar o mesmo checker antes do build.
+
+## Definition of Done
+
+- [x] checker usa linhas;
+- [x] `main.cpp` é incluído;
+- [x] política de 300/400 é refletida no checker;
+- [x] `FontRenderer.cpp` deixou de ser monólito acima do hard limit;
+- [x] upload Vulkan está isolado por responsabilidade;
+- [ ] CI verde;
+- [ ] build/testes verdes;
+- [ ] documentação de resultado atualizada.
 
 ## Não entra nesta branch
 
 - `RenderSnapshot` geral;
+- `Application`/`GameStateMachine`;
 - Campaign Editor;
-- save/import;
-- novas mecânicas;
-- networking;
+- save/import/share;
 - otimizações sem profiling.
 
 ## Próximo work package
 
-Depois de integrar esta branch: **9.6 P1.9 — `RenderSnapshot` geral**, transformando a apresentação numa fronteira de dados explícita para gameplay, UI e editor.
+Depois de integrar esta branch: **D — modularidade**, começando por `SpriteRenderer.cpp`, seguido de `main.cpp` e dos ficheiros de teste que permanecerem acima do limite ou warning com motivo arquitetural claro.
