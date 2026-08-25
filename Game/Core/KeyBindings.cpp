@@ -1,5 +1,5 @@
 // =============================================================================
-//  Game/Core/KeyBindings.cpp
+//  ASCENDENDO — KeyBindings
 // =============================================================================
 #include "Core/KeyBindings.h"
 #include "Logic/InputManager.h"
@@ -17,21 +17,22 @@ using logic::InputManager;
 
 std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() {
     return {
-        { GameAction::MoveLeft,         { Key::A, Key::LEFT } },
-        { GameAction::MoveRight,        { Key::D, Key::RIGHT } },
-        { GameAction::Jump,             { Key::SPACE } },
-        { GameAction::Pause,            { Key::ESCAPE } },
-        { GameAction::UIConfirm,        { Key::SPACE } },
-        { GameAction::UILeft,           { Key::LEFT } },
-        { GameAction::UIRight,          { Key::RIGHT } },
-        { GameAction::OpenEditor,       { Key::E } },
-        { GameAction::Quit,             { Key::Q } },
-        { GameAction::EditorPanUp,      { Key::W } },
-        { GameAction::EditorPanDown,    { Key::S } },
-        { GameAction::EditorToggleMode, { Key::G } },
-        { GameAction::EditorSizeDown,   { Key::LBRACKET } },
-        { GameAction::EditorSizeUp,     { Key::RBRACKET } },
-        { GameAction::DeleteSelection,  { Key::DELETE_KEY, Key::BACKSPACE } },
+        { GameAction::MoveLeft,          { Key::A, Key::LEFT } },
+        { GameAction::MoveRight,         { Key::D, Key::RIGHT } },
+        { GameAction::Jump,              { Key::SPACE } },
+        { GameAction::Pause,             { Key::ESCAPE } },
+        { GameAction::UIConfirm,         { Key::SPACE } },
+        { GameAction::UILeft,            { Key::LEFT } },
+        { GameAction::UIRight,           { Key::RIGHT } },
+        { GameAction::OpenEditor,        { Key::E } },
+        { GameAction::OpenCampaignEditor,{ Key::C } },
+        { GameAction::Quit,              { Key::Q } },
+        { GameAction::EditorPanUp,       { Key::W } },
+        { GameAction::EditorPanDown,     { Key::S } },
+        { GameAction::EditorToggleMode,  { Key::G } },
+        { GameAction::EditorSizeDown,    { Key::LBRACKET } },
+        { GameAction::EditorSizeUp,      { Key::RBRACKET } },
+        { GameAction::DeleteSelection,   { Key::DELETE_KEY, Key::BACKSPACE } },
     };
 }
 
@@ -62,8 +63,8 @@ struct KeyName { int key; const char* name; };
 constexpr KeyName KEY_NAMES[] = {
     { Key::LEFT, "LEFT" }, { Key::RIGHT, "RIGHT" },
     { Key::UP, "UP" }, { Key::DOWN, "DOWN" },
-    { Key::A, "A" }, { Key::D, "D" }, { Key::W, "W" }, { Key::S, "S" },
-    { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
+    { Key::A, "A" }, { Key::C, "C" }, { Key::D, "D" },
+    { Key::W, "W" }, { Key::S, "S" }, { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
     { Key::LBRACKET, "LBRACKET" }, { Key::RBRACKET, "RBRACKET" },
     { Key::DELETE_KEY, "DELETE" }, { Key::BACKSPACE, "BACKSPACE" },
     { Key::SPACE, "SPACE" }, { Key::ESCAPE, "ESCAPE" },
@@ -87,6 +88,8 @@ bool stringToKey(const std::string& s, int& outKey) {
     } catch (...) {
         return false;
     }
+}
+
 }
 
 bool KeyBindings::saveToFile(const std::string& path) const {
