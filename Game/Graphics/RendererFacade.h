@@ -74,6 +74,7 @@ private:
     FontRenderer* m_font = nullptr;
     SpritePipeline* m_spritePipeline = nullptr;
     SpriteRenderer* m_sprite = nullptr;
+    const logic::EditorSession* m_editorSession = nullptr; // não possuído
     logic::EditorRenderSnapshot m_editorSnapshot{};
     const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
 
