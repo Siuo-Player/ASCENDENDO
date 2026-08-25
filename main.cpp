@@ -13,6 +13,7 @@
 #include "Game/Graphics/SpritePipeline.h"
 #include "Game/Graphics/SpriteRenderer.h"
 #include "Game/Graphics/RendererFacade.h"
+#include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Graphics/Camera.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/Player.h"
@@ -42,6 +43,41 @@ static const std::string RUNS_CSV_PATH = "Development/Runs/runs.csv";
 static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg";
 
 namespace {
+
+gfx::RenderSnapshot buildRenderSnapshot(const logic::Player& player,
+                                        const logic::Level& level) {
+    gfx::RenderSnapshot snapshot;
+
+    snapshot.player.bounds = {
+        player.position().x,
+        player.position().y,
+        player.body.width,
+        player.body.height
+    };
+    snapshot.player.facingDirection = player.facingDirection;
+
+    snapshot.platforms.reserve(level.platforms().size());
+    for (const auto& platform : level.platforms()) {
+        snapshot.platforms.push_back({
+            platform.bounds.min.x,
+            platform.bounds.min.y,
+            platform.bounds.width(),
+            platform.bounds.height()
+        });
+    }
+
+    snapshot.flag.visible = level.hasFlag;
+    if (level.hasFlag) {
+        snapshot.flag.bounds = {
+            level.flagBounds.min.x,
+            level.flagBounds.min.y,
+            level.flagBounds.width(),
+            level.flagBounds.height()
+        };
+    }
+
+    return snapshot;
+}
 
 void setMenuTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window, "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
@@ -173,7 +209,6 @@ int main() {
         Camera camera;
         Player player;
         EditorSession editorSession(campaign.size() <= 1);
-        renderer.attachEditorSession(&editorSession);
 
         int currentLevelIndex = 0;
         float currentSpawnY = 0.0f;
@@ -384,7 +419,15 @@ int main() {
                 }
             }
 
-            if (!renderer.drawFrame(player, camera, &level, state, menuSel, elapsedTime)) {
+            const gfx::RenderSnapshot renderSnapshot = buildRenderSnapshot(player, level);
+            if (state == GameState::EDITOR) {
+                const logic::EditorRenderSnapshot editorSnapshot = editorSession.renderSnapshot();
+                renderer.attachEditorSnapshot(&editorSnapshot);
+            } else {
+                renderer.attachEditorSnapshot(nullptr);
+            }
+
+            if (!renderer.drawFrame(renderSnapshot, camera, state, menuSel, elapsedTime)) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }
