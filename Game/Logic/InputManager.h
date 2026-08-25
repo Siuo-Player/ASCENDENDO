@@ -21,9 +21,13 @@ namespace Key {
     constexpr int E       = 69;
     constexpr int Q       = 81;
     constexpr int G       = 71;
-    constexpr int F2      = 291;
-    constexpr int F5      = 294;
-    constexpr int F6      = 295;
+    constexpr int NUM0    = 48;
+    constexpr int NUM1    = 49;
+    constexpr int NUM2    = 50;
+    constexpr int NUM3    = 51;
+    constexpr int F2      = 291; // legacy compatibility only
+    constexpr int F5      = 294; // legacy compatibility only
+    constexpr int F6      = 295; // legacy compatibility only
     constexpr int LBRACKET  = 91;
     constexpr int RBRACKET  = 93;
     constexpr int DELETE_KEY = 261;
