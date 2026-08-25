@@ -21,6 +21,9 @@ namespace Key {
     constexpr int E       = 69;
     constexpr int Q       = 81;
     constexpr int G       = 71;
+    constexpr int F2      = 291;
+    constexpr int F5      = 294;
+    constexpr int F6      = 295;
     constexpr int LBRACKET  = 91;
     constexpr int RBRACKET  = 93;
     constexpr int DELETE_KEY = 261;
