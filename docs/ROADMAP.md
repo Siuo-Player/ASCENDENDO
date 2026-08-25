@@ -16,6 +16,23 @@
 - Base separada de `CampaignEditor` e `LevelEditorValidator`.
 - Test runner Windows e source-size gate.
 
+## Princípio estratégico: comunidade primeiro
+
+O objetivo da base do jogo é permitir que o **editor sobreviva ao próprio desenvolvimento inicial** e continue utilizável pela comunidade.
+
+Portanto, antes de enriquecer o catálogo de objetos, priorizamos:
+
+- confiabilidade do modelo de nível;
+- compatibilidade/versionamento;
+- playtest rápido;
+- validação independente;
+- diagnóstico de falhas compreensível;
+- layouts previsíveis;
+- ferramentas de criação consistentes;
+- partilha/importação segura.
+
+Tipos de conteúdo mais ricos entram depois, sobre esta base, sem obrigar a reescrever níveis existentes.
+
 ## Princípios de design a partir da 9.5
 
 Ver `docs/DESIGN_REFERENCES.md`.
@@ -28,6 +45,8 @@ Ver `docs/DESIGN_REFERENCES.md`.
 6. Modelo e apresentação ficam separados.
 7. Atalhos aceleram; não podem ser necessários para descobrir o produto.
 8. Adotamos padrões comprovados sem transformar o ASCENDENDO num editor genérico.
+9. A comunidade é tratada como utilizador de primeira classe do editor.
+10. O Jump King é referência sobretudo visual/composicional e de workflow de criação/playtest, não especificação da física.
 
 ## Decisões de produto vigentes
 
@@ -40,12 +59,15 @@ Fonte de verdade: `docs/PRODUCT_DECISIONS.md`.
 - Um nível pode abrir diretamente no Level Editor via mudança explícita de estado.
 - Playtest com Player antes de guardar.
 - Validação rápida em memória + feedback orientado a tutorial.
+- Diagnóstico visual mostra percurso tentado e causa/local de falha quando disponível.
 - Campaign Editor pode mostrar vários agentes/runs, incluindo transições entre níveis.
 - Key bindings consultáveis no jogo; ações essenciais visíveis no rodapé.
 - Funcionalidades importantes do editor não dependem de F-keys.
 - UI/texto usam layout adaptável e nunca devem ultrapassar o viewport.
 - Fullscreen é preservado; letterbox adapta o espaço lógico.
 - `Começar` passa sempre por seleção de campanha, mesmo com uma só campanha.
+- A carga do salto deve ter feedback visual claro através de uma barra/indicador de força.
+- O modelo de nível deve reservar espaço para conteúdo futuro extensível e versionável.
 - Importações/downloads são sempre revalidados pelo EXE.
 - Objetivo final: EXE Windows x64 portátil.
 
@@ -65,16 +87,19 @@ Fechada e integrada em `main`.
 - canvas `640x360` integralmente visível;
 - guardar, playtest e validar integrados;
 - feedback de validação orientado a tutorial;
-- retorno seguro entre editor e jogo.
+- diagnóstico do percurso tentado;
+- retorno seguro entre editor e jogo;
+- indicador visual de força do salto.
 
-**Critério:** um utilizador entra, percebe os comandos sem documentação externa, constrói, testa e regressa ao jogo sem elementos cortados.
+**Critério:** um utilizador entra, percebe os comandos sem documentação externa, constrói, testa, diagnostica falhas e regressa ao jogo sem elementos cortados.
 
 ### 9.5.b — Seleção de campanhas
 
 - `Começar` abre seleção de campanha;
 - modelo preparado para várias campanhas;
 - metadata de campanha separada da lista de níveis quando necessário;
-- campanha selecionada determina explicitamente o conjunto jogado.
+- campanha selecionada determina explicitamente o conjunto jogado;
+- preview e informação suficiente para escolher conscientemente.
 
 ### 9.5.c — Campaign Editor
 
@@ -86,7 +111,8 @@ Fechada e integrada em `main`.
 - pré-visualização sequencial;
 - agentes/runs de validação em background;
 - pelo menos um agente por nível quando possível;
-- pelo menos um agente de transição entre níveis.
+- pelo menos um agente de transição entre níveis;
+- indicação visual da causa/local de falhas.
 
 ### 9.5.d — Playtest e validação
 
@@ -95,7 +121,23 @@ Fechada e integrada em `main`.
 - reset simples após playtest;
 - validação rápida em memória;
 - erro explicado pela primeira causa útil;
+- percurso tentado mostrado quando uma simulação está disponível;
 - validação final obrigatória antes de uma campanha jogável.
+
+### 9.5.e — Base para conteúdo futuro
+
+Sem ainda enriquecer o jogo com todos os objetos, a base do editor e do formato deve reservar espaço para:
+
+- superfícies e variantes de plataforma;
+- perigos;
+- elementos móveis;
+- objetos interativos;
+- triggers/zonas;
+- decoração;
+- metadados de identidade visual;
+- regras/eventos de campanha.
+
+A prioridade é compatibilidade aditiva: novos elementos devem poder ser introduzidos sem invalidar mapas antigos sempre que tecnicamente possível.
 
 ## Gate 9.5.5 — Consolidação arquitetural
 
