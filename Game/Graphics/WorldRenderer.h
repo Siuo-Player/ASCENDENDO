@@ -3,12 +3,12 @@
 // Game/Graphics/WorldRenderer.h
 //
 // Pass de cena jogável: plataformas, FLAG e jogador.
-// Não conhece GameState, menus ou editor.
+// Consome apenas dados de apresentação.
 // =============================================================================
 
 #include <vulkan/vulkan.h>
+#include "Graphics/RenderSnapshot.h"
 
-namespace logic { class Player; class Level; }
 namespace gfx {
 class Camera;
 class Pipeline;
@@ -21,9 +21,8 @@ public:
     void draw(VkCommandBuffer cmd,
               const Pipeline& shapePipeline,
               const ShapeRenderer& shapes,
-              const logic::Player& player,
+              const RenderSnapshot& snapshot,
               const Camera& camera,
-              const logic::Level* level,
               SpritePipeline* spritePipeline = nullptr,
               SpriteRenderer* sprite = nullptr) const;
 };
