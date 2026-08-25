@@ -10,7 +10,6 @@
 #include "Core/Config.h"
 
 #include <cstdio>
-#include <cmath>
 
 namespace gfx {
 
@@ -36,34 +35,68 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                           FontRenderer* font) const {
     if (cmd == VK_NULL_HANDLE || !shapePipeline.isInitialized()) return;
 
+    // Um .lvl = uma tela. A câmara deve permanecer em (0,0) durante todo o
+    // Level Editor; a deslocação vertical pertence exclusivamente ao
+    // Campaign Editor.
+    const Camera fixedCamera = [&]() {
+        Camera c = camera;
+        c.position = {0.0f, 0.0f};
+        return c;
+    }();
+
     shapes.bind(cmd, shapePipeline);
 
-    // Grelha visual: mesma origem espacial da câmera do editor e custo cullado.
-    const float spacing = config::EDITOR_GRID_VISUAL_SPACING;
-    const float thickness = 1.0f;
-    const float gridR = 0.24f;
-    const float gridG = 0.24f;
-    const float gridB = 0.30f;
+    constexpr float spacing = config::EDITOR_GRID_VISUAL_SPACING;
+    constexpr float majorSpacing = config::EDITOR_GRID_MAJOR_SPACING;
+    constexpr float minorR = 0.18f;
+    constexpr float minorG = 0.18f;
+    constexpr float minorB = 0.22f;
+    constexpr float majorR = 0.28f;
+    constexpr float majorG = 0.28f;
+    constexpr float majorB = 0.34f;
+    constexpr float thickness = 1.0f;
 
-    const float startX = std::floor(camera.position.x / spacing) * spacing;
-    for (float x = startX;
-         x <= camera.position.x + config::LOGICAL_WIDTH + spacing;
-         x += spacing) {
+    for (float x = 0.0f; x <= config::LOGICAL_WIDTH; x += spacing) {
+        const bool major = std::fmod(x, majorSpacing) == 0.0f;
         shapes.drawRect(cmd, shapePipeline,
-                        x - thickness * 0.5f, camera.position.y,
+                        x - thickness * 0.5f, 0.0f,
                         thickness, config::LOGICAL_HEIGHT,
-                        gridR, gridG, gridB, 1.0f, &camera);
+                        major ? majorR : minorR,
+                        major ? majorG : minorG,
+                        major ? majorB : minorB,
+                        1.0f, &fixedCamera);
     }
 
-    const float startY = std::floor(camera.position.y / spacing) * spacing;
-    for (float y = startY;
-         y <= camera.position.y + config::LOGICAL_HEIGHT + spacing;
-         y += spacing) {
+    for (float y = 0.0f; y <= config::LOGICAL_HEIGHT; y += spacing) {
+        const bool major = std::fmod(y, majorSpacing) == 0.0f;
         shapes.drawRect(cmd, shapePipeline,
-                        camera.position.x, y - thickness * 0.5f,
+                        0.0f, y - thickness * 0.5f,
                         config::LOGICAL_WIDTH, thickness,
-                        gridR, gridG, gridB, 1.0f, &camera);
+                        major ? majorR : minorR,
+                        major ? majorG : minorG,
+                        major ? majorB : minorB,
+                        1.0f, &fixedCamera);
     }
+
+    // Moldura física do canvas: deixa imediatamente visível onde o jogador
+    // pode existir. As operações do documento continuam a rejeitar qualquer
+    // plataforma fora destes limites antes do snap.
+    constexpr float border = 3.0f;
+    const float borderR = 0.75f;
+    const float borderG = 0.75f;
+    const float borderB = 0.82f;
+    shapes.drawRect(cmd, shapePipeline, 0.0f, 0.0f,
+                    config::LOGICAL_WIDTH, border,
+                    borderR, borderG, borderB, 1.0f, &fixedCamera);
+    shapes.drawRect(cmd, shapePipeline, 0.0f, config::LOGICAL_HEIGHT - border,
+                    config::LOGICAL_WIDTH, border,
+                    borderR, borderG, borderB, 1.0f, &fixedCamera);
+    shapes.drawRect(cmd, shapePipeline, 0.0f, 0.0f,
+                    border, config::LOGICAL_HEIGHT,
+                    borderR, borderG, borderB, 1.0f, &fixedCamera);
+    shapes.drawRect(cmd, shapePipeline, config::LOGICAL_WIDTH - border, 0.0f,
+                    border, config::LOGICAL_HEIGHT,
+                    borderR, borderG, borderB, 1.0f, &fixedCamera);
 
     for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
         const logic::AABB& platform = snapshot.platforms[i];
@@ -76,18 +109,18 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         platform.min.x, platform.min.y,
                         platform.width(), platform.height(),
-                        r, g, b, selected ? 1.0f : 0.92f, &camera);
+                        r, g, b, selected ? 1.0f : 0.92f, &fixedCamera);
 
         if (selected) {
-            constexpr float border = 2.0f;
+            constexpr float selectionBorder = 2.0f;
             shapes.drawRect(cmd, shapePipeline,
-                            platform.min.x, platform.max.y - border,
-                            platform.width(), border,
-                            1.0f, 0.88f, 0.12f, 1.0f, &camera);
+                            platform.min.x, platform.max.y - selectionBorder,
+                            platform.width(), selectionBorder,
+                            1.0f, 0.88f, 0.12f, 1.0f, &fixedCamera);
             shapes.drawRect(cmd, shapePipeline,
                             platform.min.x, platform.min.y,
-                            platform.width(), border,
-                            1.0f, 0.88f, 0.12f, 1.0f, &camera);
+                            platform.width(), selectionBorder,
+                            1.0f, 0.88f, 0.12f, 1.0f, &fixedCamera);
         }
     }
 
@@ -96,7 +129,7 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         preview.min.x, preview.min.y,
                         preview.width(), preview.height(),
-                        0.35f, 0.85f, 1.0f, 0.32f, &camera);
+                        0.35f, 0.85f, 1.0f, 0.32f, &fixedCamera);
     }
 
     constexpr float cursorHalf = 5.0f;
@@ -105,12 +138,12 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                     snapshot.cursorWorld.x - cursorHalf,
                     snapshot.cursorWorld.y - cursorThickness * 0.5f,
                     cursorHalf * 2.0f, cursorThickness,
-                    0.85f, 0.90f, 1.0f, 0.75f, &camera);
+                    0.85f, 0.90f, 1.0f, 0.75f, &fixedCamera);
     shapes.drawRect(cmd, shapePipeline,
                     snapshot.cursorWorld.x - cursorThickness * 0.5f,
                     snapshot.cursorWorld.y - cursorHalf,
                     cursorThickness, cursorHalf * 2.0f,
-                    0.85f, 0.90f, 1.0f, 0.75f, &camera);
+                    0.85f, 0.90f, 1.0f, 0.75f, &fixedCamera);
 
     shapes.bind(cmd, shapePipeline);
 
@@ -120,11 +153,13 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         if (snapshot.sizePreset == logic::EditorSizePreset::SMALL) size = "SMALL";
         else if (snapshot.sizePreset == logic::EditorSizePreset::LARGE) size = "LARGE";
 
-        char hud[64];
-        std::snprintf(hud, sizeof(hud), "%s  %s", tool, size);
+        char hud[128];
+        std::snprintf(hud, sizeof(hud),
+                      "%s  %s  | F2 GUARDAR | F5 TESTAR | F6 VALIDAR | C CAMPANHA | ESC SAIR",
+                      tool, size);
         drawEditorText(cmd, textPipeline, font, hud,
-                       16.0f, config::LOGICAL_HEIGHT - 26.0f,
-                       0.48f, 0.86f, 0.90f, 0.95f, 0.95f);
+                       10.0f, config::LOGICAL_HEIGHT - 24.0f,
+                       0.38f, 0.86f, 0.90f, 0.95f, 0.95f);
         shapes.bind(cmd, shapePipeline);
     }
 }
