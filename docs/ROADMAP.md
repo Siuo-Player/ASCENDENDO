@@ -80,11 +80,11 @@ Base de investigação científica/técnica, requisitos community-first, referê
 
 **Referências:** `docs/SCIENTIFIC_REFERENCES.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
 
-### 9.6 — hardening da base: tranche input + tempo ✅
+### 9.6 — hardening da base: input + tempo + viewport ✅
 
-A primeira tranche de hardening já foi integrada em `main`: gameplay usa uma cadeia única de ações configuráveis e o fixed timestep passou a rejeitar `NaN/Inf` e limitar catch-up.
+A primeira tranche de hardening já está integrada em `main`: gameplay usa uma cadeia única de ações configuráveis, o fixed timestep passou a rejeitar `NaN/Inf` e limitar catch-up, e o Level Editor tem contrato explícito de uma única tela lógica `640x360`.
 
-Validação local desta tranche:
+Validação local destas tranches:
 
 ```text
 165 testes
@@ -100,12 +100,12 @@ Validação local desta tranche:
 
 ### P0 — contradições funcionais e riscos graves
 
-1. **Input único ✅** — concluído na tranche anterior.
-2. **Editor de uma tela 🔄** — esta branch elimina o camera-pan do Level Editor, torna `640x360` o contrato explícito e usa uma única transformação para cursor e renderização.
-3. **Fixed timestep robusto ✅** — concluído na tranche anterior.
-4. **Vulkan error lifecycle** — proteger o ciclo de fences/submit/present contra estados irrecuperáveis.
-5. **Swapchain recreation** — tratar `VK_ERROR_OUT_OF_DATE_KHR`/`VK_SUBOPTIMAL_KHR` e reconstrução segura dos recursos dependentes.
-6. **Queue/present support** — separar verificação de graphics e present queues; não assumir que são a mesma família.
+1. **Input único ✅** — gameplay roteia `MoveLeft`, `MoveRight` e `Jump` por `GameAction`/`KeyBindings`.
+2. **Editor de uma tela ✅** — cursor e renderer usam a mesma transformação lógica `640x360`; não existe camera-pan no Level Editor.
+3. **Fixed timestep robusto ✅** — limite de catch-up, clamp de frame longo e rejeição de `NaN`/`Inf`.
+4. **Vulkan error lifecycle ✅** — `RendererCore` distingue erro fatal de invalidação recuperável, preserva a fence sinalizada durante recording e só a reseta imediatamente antes de `vkQueueSubmit`.
+5. **Swapchain recreation ✅** — `OUT_OF_DATE`/`SUBOPTIMAL` desencadeiam reconstrução segura do swapchain, image views, framebuffers, command buffers e sync objects; capabilities, formato, present mode e composite alpha são consultados antes da criação.
+6. **Queue/present support 🔄** — a criação do swapchain já verifica que a queue gráfica selecionada consegue apresentar; falta agora permitir seleção de uma família de present distinta quando graphics e present não coincidem.
 
 **Referências:** `docs/BASE_ARCHITECTURE_AUDIT.md`; `docs/TECHNICAL_REFERENCES.md`; `docs/ARCHITECTURE.md`; `docs/RESEARCH_INDEX.md` (Input, Physics, Vulkan, Hardware).
 

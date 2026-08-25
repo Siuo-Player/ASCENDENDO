@@ -85,7 +85,11 @@ bool RendererFacade::drawFrame(const logic::Player& player,
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uint32_t imageIndex = 0;
-    if (!m_core->beginFrame(commandBuffer, imageIndex)) return false;
+    const auto beginStatus = m_core->beginFrame(commandBuffer, imageIndex);
+    if (beginStatus == RendererCore::FrameStatus::SwapchainNeedsRecreate) {
+        return m_core->recreateSwapchain();
+    }
+    if (beginStatus == RendererCore::FrameStatus::Fatal) return false;
 
     float clearR = 0.05f;
     float clearG = 0.05f;
@@ -178,7 +182,12 @@ bool RendererFacade::drawFrame(const logic::Player& player,
     }
 
     if (!m_core->endRenderPass(commandBuffer)) return false;
-    return m_core->submitFrame(commandBuffer, imageIndex);
+
+    const auto submitStatus = m_core->submitFrame(commandBuffer, imageIndex);
+    if (submitStatus == RendererCore::FrameStatus::SwapchainNeedsRecreate) {
+        return m_core->recreateSwapchain();
+    }
+    return submitStatus == RendererCore::FrameStatus::Ready;
 }
 
 } // namespace gfx
