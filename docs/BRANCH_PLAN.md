@@ -19,7 +19,7 @@ O plano da branch anterior (`feat/9-4-editor-ui-integration`) fica **concluído*
 
 ## Objetivo desta branch
 
-Ligar o modelo determinístico do editor à UI/renderização real do jogo, mantendo a interação baseada em grid e estados claros, sem duplicar a lógica de edição entre input e renderer.
+Ligar o modelo determinístico do editor à UI/renderização real do jogo e, em paralelo, substituir gradualmente o renderer monolítico por passes pequenos, mantendo o renderer antigo intacto como referência até existir paridade comprovada.
 
 ## Implementado até agora
 
@@ -28,40 +28,67 @@ Ligar o modelo determinístico do editor à UI/renderização real do jogo, mant
 - `[` / `]` alteram `SMALL` / `MEDIUM` / `LARGE`, começando em `MEDIUM`.
 - Clique esquerdo cria ou move; clique direito cancela; `Delete`/`Backspace` apaga a seleção.
 - Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
-- `EditorRenderSnapshot` separa os dados de apresentação do documento de edição; o renderer não deve conhecer `LevelEditorDocument`.
+- `EditorRenderSnapshot` separa os dados de apresentação do documento de edição; os passes gráficos não devem conhecer `LevelEditorDocument`.
 - Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
 - Testes unitários de input → controller → documento, geometria do preview e conteúdo do snapshot.
 - `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
 - `docs/TECH_DEBT.md` atualizado com a dívida técnica e a regra de tamanho de código.
 - `docs/CODE_SIZE.md` criado com a política de tamanho físico.
 - `Development/Tools/check_source_sizes.py` criado e ligado ao CI.
-- Regra oficial de código: `<30 KiB` normal, `30–36 KiB` warning, `>36 KiB` bloqueado.
+- Regra oficial de código: `<30 KiB` normal, `30–36 KiB` warning, `>36 KiB` bloqueado para novo código.
+- Nova stack de renderer construída em paralelo: `RendererCore`, `ShapeRenderer`, `EditorRenderer`, `WorldRenderer`, `UiRenderer` e `RendererFacade`.
+- `RendererFacadeAdapter` criado como ponte reversível entre a API antiga e a nova fachada.
+- `docs/RENDERER_MIGRATION.md` criado com a matriz de paridade e os critérios de remoção do renderer antigo.
+- Workflow de CI passou também a construir o binário `game` além dos testes.
 
-## Próxima subdivisão obrigatória
+## Estratégia atual para o `Renderer.cpp`
 
-`Game/Graphics/Renderer.cpp` está aproximadamente nos **34 KiB** e encontra-se na zona de aviso. Não deve receber novas responsabilidades.
-
-A divisão planejada é por responsabilidade:
+O `Renderer.cpp` antigo **não será desmontado diretamente**. Em vez disso:
 
 ```text
-Renderer.cpp
-  → ciclo de vida, frame acquire/submit/present e coordenação
-RendererResources.cpp
-  → framebuffers, command pool/buffers e sync objects
+Renderer.cpp legado
+      │
+      ├── referência de comportamento
+      └── fallback temporário
+
+Nova stack
+  ├── RendererCore
+  ├── ShapeRenderer
+  ├── EditorRenderer
+  ├── WorldRenderer
+  ├── UiRenderer
+  └── RendererFacade
 ```
 
-A divisão deve preservar os mesmos símbolos/ownership e não alterar comportamento de rendering.
+Cada pass novo é comparado contra o bloco correspondente do renderer legado. Quando a paridade for demonstrada, o caminho antigo daquele estado deixa de ser executado. Só no fim removemos o arquivo legado ou o reduzimos a uma casca compatível, consoante o que produzir a arquitetura mais simples.
 
-## Pendente nesta tranche
+O `Renderer.cpp` tem aproximadamente 34 KiB e está na zona de atenção da política de tamanho. A solução escolhida evita acrescentar responsabilidades a esse arquivo; o objetivo é **substituí-lo**, não torná-lo ainda maior.
 
-1. Subdividir `Renderer.cpp` por responsabilidade conforme a regra `30/36 KiB`.
-2. Fazer `Renderer` consumir `EditorRenderSnapshot` sem voltar a acoplar-se ao documento.
-3. Renderizar plataformas editáveis, seleção e preview no espaço de mundo.
-4. Renderizar cursor/feedback de ferramenta de forma económica, sem novo sistema de sprites.
-5. Fazer o renderer respeitar exatamente o mesmo canvas/grid usado pelo hit-test.
-6. Adicionar o HUD de ferramenta/tamanho sem sobrecarregar a tela.
-7. Validar visualmente o fluxo real no jogo.
-8. Atualizar documentação final e fechar a PR.
+## Matriz de migração
+
+| Área | Novo componente | Estado |
+|---|---|---|
+| recursos Vulkan/frame lifecycle | `RendererCore` | ✅ construído |
+| primitives / push constants | `ShapeRenderer` | ✅ construído |
+| editor | `EditorRenderer` | ✅ construído |
+| mundo / plataformas / FLAG / jogador | `WorldRenderer` | ✅ construído |
+| timer / MENU / PAUSED / CREDITS | `UiRenderer` | ✅ construído |
+| orquestração | `RendererFacade` | ✅ construída |
+| adapter compatível | `RendererFacadeAdapter` | ✅ construído |
+| integração runtime do `EDITOR` | fachada nova | ⏳ próximo |
+| paridade visual/runtime | todos os passes | ⏳ |
+| remoção do legado | `Renderer.cpp` | ⏳ fim da migração |
+
+## Próximos passos desta tranche
+
+1. Fazer o CI reconhecer e compilar a nova stack (`game` + testes).
+2. Fazer o primeiro cut-over apenas do estado `EDITOR`, mantendo os restantes estados no renderer legado.
+3. Validar visualmente `grelha → plataformas → seleção → preview → cursor → HUD`.
+4. Comparar `PLAYING/PAUSED` e migrar o bloco de mundo para `WorldRenderer`.
+5. Migrar `MENU/CREDITS` para `UiRenderer`.
+6. Trocar `main.cpp` definitivamente para a fachada nova quando todos os estados tiverem paridade.
+7. Remover qualquer consumidor do `Renderer.cpp` legado.
+8. Só então eliminar o arquivo legado ou mantê-lo como fachada mínima, escolhendo a opção com menor complexidade.
 
 ## Decisões de UX herdadas
 
@@ -79,7 +106,7 @@ A divisão deve preservar os mesmos símbolos/ownership e não alterar comportam
 - Evitar duplicação de sprites/dados sempre que uma representação procedural ou atlas compacto for suficiente.
 - O jogo continua offline-first.
 - A futura importação/partilha de mapas deve validar novamente o conteúdo no EXE antes de permitir jogar.
-- Nenhum ficheiro C/C++ deve ultrapassar 36 KiB; a partir de 30 KiB não deve receber novas responsabilidades sem um plano de subdivisão.
+- Nenhum novo ficheiro C/C++ deve ultrapassar 36 KiB; a partir de 30 KiB não deve receber novas responsabilidades sem um plano de subdivisão.
 
 ## Não entra nesta branch
 
@@ -94,4 +121,4 @@ A divisão deve preservar os mesmos símbolos/ownership e não alterar comportam
 
 ## Critério de conclusão
 
-A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, quando os testes automatizados e uma validação manual do fluxo estiverem verdes, e quando o renderer tiver saído da zona de tamanho de aviso.
+A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, quando os testes automatizados e a validação manual do fluxo estiverem verdes, e quando o renderer legado já não for necessário para o editor.
