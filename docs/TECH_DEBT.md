@@ -34,6 +34,9 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 | Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária |
 | Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste |
 | Source size | ficheiros de código demasiado grandes dificultam revisão e alterações seguras | aviso aos 30 KiB; subdividir por responsabilidade antes de 36 KiB | nenhum ficheiro C/C++ > 36 KiB; componentes centrais devem evitar a zona de aviso |
+| Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` a cada bloco do roadmap | cada branch nova tem Ready/Done, dependências e validação definidos |
+| Arquitetura | fronteiras podem ser alteradas sem atualizar WBS/roadmap | tratar mudanças arquiteturais como alteração de planeamento | arquitetura e WBS permanecem congruentes |
+| Coordenação | consumidores e testes podem descobrir uma mudança de interface apenas no fim da branch | manter dependency map no work package | dependências críticas identificadas antes de implementação/merge |
 
 ## P2 — qualidade, cobertura e performance
 
@@ -48,6 +51,8 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 | Tests | pastas `Integration/System/Acceptance` e placeholders não representam cobertura real | criar categorias quando existirem testes; eliminar placeholders vazios |
 | Tooling | `deps.py` é checker, não dependency manager | renomear para `check_deps.py`/`doctor.py` ou clarificar documentação |
 | Build | Makefile já implementa muita lógica de plataforma | avaliar CMake + Ninja quando a matriz Windows/Linux crescer |
+| Planeamento | evolução emergente pode aumentar retrabalho entre subsistemas | decompor por WBS e gates, refinando detalhes conforme a incerteza | work packages atravessam fronteiras com dependências conhecidas |
+| Arquitetura | documentação pode registar estrutura sem preservar rationale | registar decisões arquiteturais relevantes, alternativas e consequências | decisões que condicionam várias fases têm contexto e critério de revisão |
 
 ## P3 — limpeza
 
@@ -70,6 +75,9 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 8. O current working directory não é uma dependência do runtime.
 9. O CI testa o produto que será distribuído, não apenas os testes unitários.
 10. Ficheiros C/C++ devem permanecer abaixo de 36 KiB; a partir de 30 KiB não devem receber novas responsabilidades sem um plano de subdivisão.
+11. Cada work package deve ter dependências e critérios de saída explícitos.
+12. Alterações que mudem fronteiras arquiteturais devem atualizar o planeamento e a documentação relevante.
+13. Uma dependência técnica deve ser considerada também uma dependência de coordenação quando a sua alteração afeta consumidores, testes ou documentação.
 
 ## Portões do roadmap
 
@@ -85,3 +93,7 @@ Antes de **11 Partilha/Biblioteca** devem estar resolvidos:
 - import/export declarativo e seguro.
 
 Antes da **release portable** todos os P0 devem estar fechados e os P1 críticos devem ter critério de saída documentado.
+
+## Governança do roadmap
+
+A lista acima deve ser lida em conjunto com `docs/PROJECT_MANAGEMENT.md`. Um item de dívida não é apenas uma observação técnica: quando exige trabalho, deve tornar-se um work package rastreável no roadmap ou numa tranche de manutenção.
