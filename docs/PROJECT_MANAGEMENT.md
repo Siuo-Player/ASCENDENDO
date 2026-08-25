@@ -100,6 +100,38 @@ Uma fronteira mal definida pode produzir work packages grandes, alto coupling e 
 
 Uma fronteira é justificável quando reduz responsabilidades concentradas, controla dependências relevantes, melhora testabilidade e permite evolução incremental sem complexidade gratuita.
 
+### 5.1 Tamanho de ficheiros como sinal arquitetural
+
+O ASCENDENDO não trata tamanho como uma métrica de qualidade isolada. Trata-o como **sinal de revisão arquitetural**.
+
+A literatura sobre `God Class` e `Long Method` mostra associação com problemas de maintainability, compreensão e evolução; estudos de evolução mostram ainda que frequência de mudança e coocorrência de smells são úteis para priorizar refatorações. [13][14][15]
+
+Assim:
+
+```text
+ficheiro cresce
+    ↓
+verificar responsabilidades / coesão / coupling
+    ↓
+identificar fronteiras naturais
+    ↓
+criar work package de refatoração
+    ↓
+validar comportamento equivalente
+```
+
+Política operacional:
+
+- `< 300` linhas: normal;
+- `300–399`: warning e planeamento de split;
+- `>= 400`: CI bloqueia até existir subdivisão ou decisão arquitetural documentada excepcional.
+
+Os limites são **guardrails internos**, não valores apresentados pela literatura como universais. A fronteira deve ser definida por coesão, coupling e estabilidade da responsabilidade, não por mover linhas arbitrariamente.
+
+O entry point `main.cpp` é explicitamente coberto pelo checker para impedir que uma raiz do projeto contorne a política.
+
+Ver `docs/CODE_MODULARITY.md` para o racional técnico e referências detalhadas.
+
 ## 6. Dívida arquitetural
 
 Uma decisão temporária pode ser racional quando existe benefício imediato e condição clara de revisão:
@@ -134,7 +166,7 @@ PRODUCT_DECISIONS.md
         ↓
 ROADMAP.md
         ↓
-ARCHITECTURE.md / TECH_DEBT.md
+ARCHITECTURE.md / TECH_DEBT.md / CODE_MODULARITY.md
         ↓
 BRANCH_PLAN.md
         ↓
@@ -259,9 +291,16 @@ Hipótese → PoC → resultado observado → decisão → consequência
 
 [12] B. F. Antognolli, F. Petrillo, *Proof of Concept as a First-Class Architectural Decision Instrument*, arXiv:2604.05835 (2026). https://arxiv.org/abs/2604.05835
 
+[13] Lacerda et al., *Code smells and refactoring: A tertiary systematic review of challenges and observations*, Journal of Systems and Software 167 (2020), 110610. DOI: 10.1016/j.jss.2020.110610.
+
+[14] *Towards a Severity and Activity based Assessment of Code Smells*, Procedia Computer Science 116 (2017), 460–467. DOI: 10.1016/j.procs.2017.10.040.
+
+[15] *A large-scale empirical study on the lifecycle of code smell co-occurrences*, Information and Software Technology 99 (2018), 1–10. DOI: 10.1016/j.infsof.2018.02.004.
+
 ## Documentos relacionados
 
 - `docs/WORK_PACKAGE_TEMPLATE.md`
+- `docs/CODE_MODULARITY.md`
 - `docs/PRODUCT_DECISIONS.md`
 - `docs/ROADMAP.md`
 - `docs/ARCHITECTURE.md`
