@@ -78,21 +78,11 @@ void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* sna
 
 bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
                                const Camera& camera,
-                               GameState state,
+                               RenderState state,
                                int menuSelection,
                                float elapsedSeconds) {
     if (!m_initialized || !m_core || !m_shapes || !m_shapePipeline) return false;
-
-    if (!m_editorSnapshotPtr && state == GameState::EDITOR) return false;
-
-    RenderState renderState = RenderState::PLAYING;
-    switch (state) {
-        case GameState::PLAYING: renderState = RenderState::PLAYING; break;
-        case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
-        case GameState::CREDITS: renderState = RenderState::CREDITS; break;
-        case GameState::MENU:    renderState = RenderState::MENU;    break;
-        case GameState::EDITOR:  renderState = RenderState::EDITOR; break;
-    }
+    if (state == RenderState::EDITOR && !m_editorSnapshotPtr) return false;
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uint32_t imageIndex = 0;
@@ -105,7 +95,7 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
     float clearR = 0.05f;
     float clearG = 0.05f;
     float clearB = 0.15f;
-    switch (renderState) {
+    switch (state) {
         case RenderState::CREDITS:
             clearR = config::CLEAR_CREDITS_R;
             clearG = config::CLEAR_CREDITS_G;
@@ -159,12 +149,12 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
     scissor.extent = {viewportWidth, viewportHeight};
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    switch (renderState) {
+    switch (state) {
         case RenderState::PLAYING:
         case RenderState::PAUSED:
             m_world->draw(commandBuffer, *m_shapePipeline, *m_shapes,
                           snapshot, camera, m_spritePipeline, m_sprite);
-            if (renderState == RenderState::PLAYING) {
+            if (state == RenderState::PLAYING) {
                 m_ui->drawTimer(commandBuffer, m_textPipeline, m_font, elapsedSeconds);
             } else {
                 m_ui->drawPaused(commandBuffer, *m_shapePipeline, *m_shapes,
