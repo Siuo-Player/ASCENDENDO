@@ -78,10 +78,11 @@ void EditorSession::updateCursor(const InputManager& input,
                                  const gfx::Camera& camera,
                                  int32_t windowWidth,
                                  int32_t windowHeight) {
-    m_cursor.logical = core::windowToLogical(
+    const core::LogicalPoint logical = core::windowToLogical(
         input.cursorX(), input.cursorY(),
         windowWidth, windowHeight,
         config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
+    m_cursor.logical = {logical.x, logical.y};
     m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, camera).world;
 }
 
