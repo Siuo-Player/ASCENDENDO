@@ -13,7 +13,6 @@
 #include "Logic/Player.h"
 #include "Logic/Level.h"
 #include "Logic/EditorSession.h"
-#include "Logic/EditorRenderSnapshot.h"
 #include "Core/Config.h"
 
 #include <algorithm>
@@ -58,7 +57,8 @@ void RendererFacade::cleanup() {
     m_shapes = nullptr;
     m_core = nullptr;
     m_shapePipeline = nullptr;
-    m_editorSnapshot = nullptr;
+    m_editorSnapshotPtr = nullptr;
+    m_editorSnapshot = {};
     m_initialized = false;
 }
 
@@ -73,17 +73,21 @@ void RendererFacade::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer
 }
 
 void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot) {
-    m_editorSnapshot = snapshot;
+    if (!snapshot) {
+        m_editorSnapshotPtr = nullptr;
+        return;
+    }
+    m_editorSnapshot = *snapshot;
+    m_editorSnapshotPtr = &m_editorSnapshot;
 }
 
 void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
     if (!session) {
-        m_editorSnapshot = nullptr;
+        m_editorSnapshotPtr = nullptr;
         return;
     }
-    static logic::EditorRenderSnapshot snapshot;
-    snapshot = session->renderSnapshot();
-    m_editorSnapshot = &snapshot;
+    m_editorSnapshot = session->renderSnapshot();
+    m_editorSnapshotPtr = &m_editorSnapshot;
 }
 
 bool RendererFacade::drawFrame(const logic::Player& player,
@@ -184,9 +188,9 @@ bool RendererFacade::drawFrame(const logic::Player& player,
             break;
 
         case RenderState::EDITOR:
-            if (m_editorSnapshot) {
+            if (m_editorSnapshotPtr) {
                 m_editor->draw(commandBuffer, *m_shapePipeline, *m_shapes,
-                               *m_editorSnapshot,
+                               *m_editorSnapshotPtr,
                                m_textPipeline, m_font);
             }
             break;
