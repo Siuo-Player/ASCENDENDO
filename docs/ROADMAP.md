@@ -2,162 +2,154 @@
 
 ## Estado de referência
 
-`main` contém a tranche de robustez/build/CI da 9.4 integrada na PR #7 (`10cceeb`). A branch atual, `feat/9-4-editor-visual-integration`, desenvolve a integração visual da 9.4 e contém uma tranche intermédia ainda não integrada.
+`main` contém a base integrada até à 9.4 anterior. A branch atual, `feat/9-4-editor-visual-integration`, desenvolve a integração visual e o modelo dos editores.
 
 Concluído:
 
 - Fases 1–8: motor, física, campanha, UI, texto TTF, sprites, replay/save e validação.
 - 9.1: `GameAction` + `KeyBindings`.
 - 9.2: rato + conversão window/logical + menus clicáveis.
-- 9.3: `GameState::EDITOR`, acesso por menu/tecla, câmera livre e grelha.
+- 9.3: `GameState::EDITOR` e infraestrutura inicial do editor.
 - bootstrap GLFW/Vulkan robusto + cleanup de falhas parciais.
-- 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
-- 9.4 tranche 2: `EditorInteractionController`, cursor logical→world, hit-test, STAMP/DRAG, seleção, movimento e delete.
-- 9.4 tranche 3: validação da dimensão mínima antes do snap, Makefile Windows/Linux, CI headless Vulkan determinístico, validação da campanha e documentação de CI.
+- editor determinístico com grid/snap, plataformas, spawn, FLAG e testes.
+- `EditorInteractionController` + `EditorSession`.
+- nova stack de rendering construída em paralelo: `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer`, `RendererFacade`.
+- `EDITOR` já faz cut-over através de `RendererFacadeAdapter`.
+- Level Editor agora assume uma única tela lógica fixa de `640x360`.
+- base separada de `CampaignEditor` com representação vertical das telas.
+- `LevelEditorValidator` para validação em memória.
+- ações preparadas para guardar/testar/validar.
 
-Documentação arquitetural normativa:
+## Decisões de produto vigentes
 
-- `docs/ARCHITECTURE.md` — direção de arquitetura e fronteiras entre runtime, editor, presentation e services.
-- `docs/TECH_DEBT.md` — problemas classificados por prioridade e critérios de saída.
+A fonte de verdade destas decisões é `docs/PRODUCT_DECISIONS.md`.
 
-## Fase 9 — Editor de níveis
+- Um `.lvl` corresponde a uma única tela de `640x360`.
+- No Level Editor não existe deslocação vertical/horizontal da tela; o canvas completo é editado no mesmo espaço.
+- O Campaign Editor é uma ferramenta distinta, com timeline vertical e miniaturas 16:9 compactadas.
+- Os níveis são blocos arrastáveis no Campaign Editor e podem usar snap para reordenar.
+- Um nível pode ser aberto diretamente do Campaign Editor através de uma mudança explícita de estado.
+- O nível deve poder ser testado com o Player antes de ser guardado definitivamente.
+- O validador deve fornecer feedback ao vivo durante a construção.
+- O Campaign Editor deve conseguir mostrar vários agentes/runs de validação em background, incluindo agentes que atravessem fronteiras entre níveis para visualizar a fluidez da campanha.
+- Os key bindings devem ser consultáveis num local próprio do menu e os menus devem mostrar no ecrã as ações essenciais do estado atual, pelo menos navegar/confirmar/voltar ou sair.
+- Mapas importados ou descarregados são sempre validados novamente pelo próprio EXE.
+- O objetivo final continua a ser um executável Windows x64 portátil.
 
-### 9.1 ✅ — Controlos
+## Fase 9 — Edição
 
-Concluída. Intenção lógica, rebind e persistência existem.
+### 9.4 — Editor de níveis e renderização
 
-### 9.2 ✅ — Input de rato e viewport
-
-Concluída. Cursor, botões, `windowToLogical()` e hit-test existem.
-
-### 9.3 ✅ — Estado EDITOR
-
-Concluída. O editor abre dentro do jogo, com câmera livre e grelha.
-
-### 9.4 ▶ — Manipulação visual de entidades
-
-A integração está a ser feita em tranches para manter cada PR verificável.
-
-#### 9.4.a ✅ — Modelo e interação determinística
+#### 9.4.a ✅ — Modelo e interação
 
 Concluído:
 
-- `LevelEditorDocument` com grid/snap, bounds, spawn e FLAG;
-- `EditorInteractionController` com STAMP, DRAG, seleção, movimento e delete;
-- `EditorSession` a ligar input, camera, key bindings e controller;
-- tamanho MEDIUM por defeito;
-- `G` alterna STAMP/DRAG;
-- `[` e `]` percorrem SMALL/MEDIUM/LARGE;
-- clique esquerdo cria ou move;
-- botão direito cancela;
-- Delete/Backspace remove;
-- preview determinístico e invisível quando fora do canvas válido;
-- testes de input → controller → document.
+- `LevelEditorDocument`;
+- snap e bounds;
+- spawn e FLAG;
+- `EditorInteractionController`;
+- `EditorSession`;
+- STAMP/DRAG;
+- seleção/movimento/delete;
+- bindings base;
+- testes determinísticos.
 
-#### 9.4.b ▶ — Renderização e feedback visual
+#### 9.4.b ▶ — Editor visual real
 
-Em curso na branch `feat/9-4-editor-visual-integration`:
+Em curso:
 
-- desenhar `LevelEditorDocument` no espaço de mundo;
-- preview do preset ativo;
-- seleção/hover visual;
-- feedback claro de STAMP/DRAG/movimento;
-- HUD de ferramenta/tamanho;
-- ligação visual sem duplicar a lógica de edição;
-- validação manual do fluxo real.
+- canvas fixo 640x360;
+- moldura física visível;
+- grelha visual coerente com a escala do jogador/blocos;
+- preview/seleção;
+- HUD de ferramentas;
+- `F2` guardar;
+- `F5` testar;
+- `F6` validar;
+- validação ao vivo;
+- testar sem guardar;
+- estado seguro para voltar ao nível/campanha.
 
-A PR #8 está aberta para esta tranche e só deve ser integrada quando o critério visual estiver cumprido.
+**Critério de conclusão:** editar → testar com Player → voltar ao editor → validar ao vivo → guardar sem regressões.
+
+### 9.4.c ▶ — Descobribilidade de controlos
+
+- menu/overlay dedicado a consultar todos os key bindings relevantes;
+- rodapé consistente nos menus com navegar/confirmar/voltar ou sair;
+- não é necessário suportar rebind completo nesta fase.
+
+### 9.4.d ▶ — Editor de campanha
+
+- timeline vertical;
+- miniaturas compactadas mantendo 16:9;
+- níveis como blocos arrastáveis;
+- snap/reordenação;
+- abrir Level Editor por mudança de estado;
+- pré-visualização dos níveis em sequência;
+- agentes/runs de validação em background;
+- pelo menos um agente por nível quando possível;
+- pelo menos um agente capaz de mostrar transição entre níveis.
 
 ## Gate 9.4.5 — Consolidação arquitetural antes de Save
 
-**Novo gate obrigatório.** Não iniciar `9.5 Save + Validar` enquanto os problemas críticos de arquitetura identificados em `docs/TECH_DEBT.md` não tiverem sido tratados ou explicitamente desclassificados.
+Só inicia depois de 9.4 estar realmente funcional e integrado.
 
 Prioridade:
 
-1. extrair a máquina de estados/aplicação para reduzir o `main.cpp`;
-2. introduzir uma fronteira `Game/Editor → RenderSnapshot → Renderer`;
-3. migrar gameplay de teclas físicas para `GameAction`/`KeyBindings`;
-4. limitar recuperação do fixed timestep após frames muito longos;
-5. consolidar `LevelData` como modelo comum entre parser/runtime/editor;
-6. resolver paths de runtime independentes do current working directory;
-7. validar graphics/present queues e capacidades Vulkan corretamente;
-8. adicionar Windows build/tests ao CI;
-9. executar ASan/UBSan no CI;
-10. garantir que `make game` é validado pelo CI;
-11. introduzir invariantes/property tests onde tragam valor;
-12. iniciar a limpeza de placeholders e documentação histórica redundante.
-
-O objetivo deste gate não é reescrever o motor: é impedir que as próximas features criem um `main.cpp`/`Renderer.cpp` ainda mais acoplado.
+1. reduzir responsabilidades do `main.cpp`;
+2. fechar `Game/Editor → RenderSnapshot → Renderer`;
+3. migrar gameplay restante para `GameAction`/`KeyBindings`;
+4. limitar catch-up excessivo do fixed timestep;
+5. consolidar `LevelData` comum entre runtime/editor/parser;
+6. tornar paths independentes do current working directory;
+7. validar graphics/present queues e capacidades Vulkan;
+8. Windows build/tests no CI;
+9. ASan/UBSan no CI;
+10. `make game` no CI;
+11. invariantes/property tests relevantes;
+12. limpar placeholders e documentação histórica redundante.
 
 ## Fase 9.5 — Guardar + validar
 
-Só começa depois do Gate 9.4.5.
+- versão explícita no `.lvl`;
+- `LevelData` declarativo;
+- serialização;
+- guardar em área apropriada;
+- validação em background;
+- mapas inválidos nunca entram na campanha jogável;
+- qualquer mapa importado/descarregado é novamente validado pelo EXE.
 
-- introduzir versão explícita no formato `.lvl`;
-- extrair `LevelData` declarativo sem Vulkan/GLFW;
-- serializar o documento para `.lvl`;
-- preservar níveis em `NaoValidados/`;
-- executar validação em background;
-- permitir sair enquanto a validação corre;
-- notificar resultado;
-- **qualquer mapa importado ou descarregado da Internet tem de ser novamente validado pelo próprio EXE antes de poder ser jogado**;
-- um mapa só é marcado como jogável depois de a validação local passar.
+## Fase 10 — Hardening e ferramentas
 
-## Fase 9.6 — Editor de campanha
-
-- lista de níveis em estilo playlist;
-- reordenar a campanha;
-- abrir um nível diretamente no `GameState::EDITOR` através de uma transição de estado;
-- persistir apenas `campaign.txt` enquanto não existir metadata adicional necessária;
-- não mover automaticamente ficheiros entre `Levels`, `Unused` e `NaoValidados`.
-
-## Fase 10 — Hardening do runtime e ferramentas
-
-Antes de partilha online, fechar o produto localmente:
-
-- Windows CI completo;
+- CI Windows completo;
 - build/link do jogo no CI;
 - ASan/UBSan;
-- Vulkan device/queue/swapchain validation robusta;
-- RAII e ownership dos wrappers Vulkan;
-- `AssetResolver`/AssetManager quando a quantidade de assets justificar;
-- separar configuração por domínio;
-- `undo/redo` no editor através de comandos transacionais;
+- validação Vulkan robusta;
+- ownership/RAII;
+- AssetResolver quando justificar;
+- configuração separada por domínio;
+- undo/redo transacional;
 - testes de parser malformado, viewport, física e editor;
-- property-based tests onde existam invariantes fortes;
-- limpar `.gitkeep`, placeholders e artefactos de runtime versionados.
+- property-based tests onde façam sentido;
+- limpeza de `.gitkeep`, placeholders e runtime data versionados.
 
 ## Fase 11 — Partilha e biblioteca de mapas
 
-A conectividade é opcional; o jogo base continua totalmente funcional offline.
-
 ### 11.1 — Export/import local
 
-- botão **Exportar/Partilhar**;
-- botão **Importar mapa**;
-- pacote compacto e declarativo;
-- pacote independente do repositório de desenvolvimento;
-- extração para área temporária/controlada;
-- validação local obrigatória pelo EXE;
-- mapas inválidos nunca entram na campanha jogável.
+- Exportar/Partilhar;
+- Importar;
+- pacote compacto declarativo;
+- extração controlada;
+- validação obrigatória pelo EXE.
 
 ### 11.2 — Biblioteca online
 
-Site dedicado para:
+Site para upload/download de pacotes de mapas. HTTP(S) é suficiente inicialmente; WebSockets não são requisito inicial.
 
-- upload de mapas/pacotes;
-- download de mapas/pacotes;
-- páginas de mapas e metadados;
-- eventualmente contas, autores, favoritos, versões e pesquisa.
+### 11.3 — Partilha direta
 
-A primeira versão pode ser HTTP(S) com upload/download. **WebSockets não são requisito inicial.**
-
-### 11.3 — Partilha direta entre computadores
-
-Possibilidade futura e separada do site:
-
-- envio direto de um pacote entre dois computadores;
-- só introduzir WebSockets/WebRTC/etc. quando existir uma necessidade concreta de comunicação bidirecional em tempo real.
+Só adicionar comunicação bidirecional (WebSockets/WebRTC/etc.) quando houver necessidade concreta.
 
 ## Fase 12 — Release / Portable Build
 
@@ -168,44 +160,11 @@ Objetivo final:
 Requisitos:
 
 - `.exe` portable;
-- assets e DLLs necessárias na própria distribuição;
-- sem consola visível na versão final;
-- sem paths dependentes do current working directory;
-- sem downloads obrigatórios para iniciar o jogo;
-- deteção amigável de requisitos ausentes;
-- tentar funcionar no hardware mais fraco que suporte corretamente Vulkan;
-- Vulkan é requisito gráfico real; máquinas sem Vulkan não são prometidas como suportadas.
-
-“Qualquer computador” significa, na prática, **qualquer Windows x64 dentro dos requisitos mínimos definidos pelo projeto**.
-
-## Regra de segurança de mapas
-
-A autoridade final de jogabilidade é o executável do próprio jogo.
-
-Nem:
-
-- `reorganize.py`;
-- o servidor do site;
-- nem um campo `validated=true` enviado por outro computador
-
-pode substituir a validação local do EXE.
-
-Fluxo obrigatório:
-
-```text
-pacote recebido
-   ↓
-extração controlada
-   ↓
-parsing
-   ↓
-validação local
-   ↓
-[ válido ] → biblioteca/local jogável
-[ inválido ] → NaoValidados / rejeitado
-```
-
-O formato importável permanece declarativo: sem scripts, includes, paths arbitrários ou execução de código.
+- assets/DLLs necessárias incluídas;
+- sem dependência do current working directory;
+- sem downloads obrigatórios;
+- mensagem amigável para requisitos ausentes;
+- suporte visado ao hardware mais fraco que suporte Vulkan corretamente.
 
 ## Regra de progressão
 
@@ -218,6 +177,4 @@ Nenhuma fase seguinte começa enquanto a anterior não tiver:
 - PR aberta;
 - PR integrada em `main`.
 
-Antes de cada novo passo: integrar o PR anterior, abandonar a branch anterior e criar uma branch nova a partir do `main` atualizado.
-
-A mesma regra aplica-se ao Gate 9.4.5: é uma etapa própria do roadmap e deve ter branch/PR própria depois de a integração visual 9.4 ser concluída.
+Antes de cada novo passo: integrar a PR anterior, abandonar a branch anterior e criar uma branch nova a partir de `main` atualizado.
