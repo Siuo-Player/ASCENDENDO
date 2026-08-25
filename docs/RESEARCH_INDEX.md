@@ -21,6 +21,7 @@ O projeto é dividido em subsistemas. Cada decisão importante deve consultar a 
 | Packaging | Como distribuir sem ambiente de desenvolvimento? | Microsoft deployment docs | portable archive/installer |
 | Sharing | Como transferir conteúdo não confiável? | OWASP; resumable upload protocols | import/export/site |
 | Community | Como gerir conteúdo e metadata? | UGC/Mario Maker research | IDs, stats, reports, moderation |
+| Base audit | Como fechar contradições entre arquitetura e implementação? | `docs/BASE_ARCHITECTURE_AUDIT.md` + referências técnicas | hardening antes de features |
 
 ## Hierarquia de evidência
 
@@ -65,6 +66,7 @@ O número de níveis deve influenciar arquitetura, análise e tooling, mas não 
 
 - `docs/SCIENTIFIC_REFERENCES.md` — level design, platformers, difficulty, player experience e playtesting.
 - `docs/TECHNICAL_REFERENCES.md` — C++, Vulkan, profiling, hardware, packaging e web sharing.
-- `docs/DESIGN_REFERENCES.md` — Tiled, Godot, SuperTux, Jump King e agora Mario Maker como referências práticas.
+- `docs/DESIGN_REFERENCES.md` — Tiled, Godot, SuperTux, Jump King e Mario Maker como referências práticas.
+- `docs/BASE_ARCHITECTURE_AUDIT.md` — auditoria atual da base, prioridades P0/P1/P2 e critérios de saída.
 - `docs/PRODUCT_DECISIONS.md` — decisões do autor.
-- `docs/ROADMAP.md` — ordem de implementação.
+- `docs/ROADMAP.md` — ordem de implementação e gates.
