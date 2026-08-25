@@ -12,6 +12,7 @@
 #include "Graphics/Camera.h"
 #include "Logic/Player.h"
 #include "Logic/Level.h"
+#include "Logic/EditorSession.h"
 #include "Logic/EditorRenderSnapshot.h"
 #include "Core/Config.h"
 
@@ -73,6 +74,16 @@ void RendererFacade::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer
 
 void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot) {
     m_editorSnapshot = snapshot;
+}
+
+void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
+    if (!session) {
+        m_editorSnapshot = nullptr;
+        return;
+    }
+    static logic::EditorRenderSnapshot snapshot;
+    snapshot = session->renderSnapshot();
+    m_editorSnapshot = &snapshot;
 }
 
 bool RendererFacade::drawFrame(const logic::Player& player,
