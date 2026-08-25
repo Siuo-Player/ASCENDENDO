@@ -3,11 +3,13 @@
 // Game/Graphics/RendererFacadeAdapter.h
 //
 // Adapter de migração: expõe a API usada atualmente por main.cpp enquanto
-// delega para o novo RendererFacade. Permite um cut-over reversível.
+// delega para o novo RendererFacade. O snapshot do editor pertence ao adapter
+// e é atualizado por cópia, evitando referências para temporários.
 // =============================================================================
 
 #include "Graphics/Renderer.h"
 #include "Graphics/RendererFacade.h"
+#include "Logic/EditorRenderSnapshot.h"
 
 namespace logic { class EditorSession; }
 
@@ -34,6 +36,8 @@ public:
 
 private:
     RendererFacade m_facade;
+    logic::EditorRenderSnapshot m_editorSnapshot{};
+    bool m_hasEditorSnapshot = false;
 };
 
 } // namespace gfx
