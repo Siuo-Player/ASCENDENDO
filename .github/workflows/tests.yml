@@ -23,8 +23,8 @@ jobs:
 
       - name: Install toolchain and headless graphics dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
 
       - name: Check source-file size policy
         run: python3 Development/Tools/check_source_sizes.py
@@ -37,15 +37,35 @@ jobs:
           test -n "$ICD"
           echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
           echo "Using Vulkan ICD: $ICD"
-          vulkaninfo --summary
+          vulkaninfo --summary 2>/dev/null | grep -E 'Vulkan Instance Version:|deviceName|driverName|driverInfo' || true
 
       - name: Build and run tests in virtual X display
         shell: bash
         run: |
           set -euo pipefail
-          xvfb-run -a -s '-screen 0 1280x720x24' make clean
-          xvfb-run -a -s '-screen 0 1280x720x24' make game -j2
-          xvfb-run -a -s '-screen 0 1280x720x24' make tests -j2
+
+          run_quiet() {
+            local label="$1"
+            shift
+            local log="build-${label}.log"
+
+            echo "[CI] ${label}..."
+            if ! "$@" >"$log" 2>&1; then
+              echo "[CI] ${label}: FAILED — diagnostic tail"
+              tail -n 200 "$log"
+              return 1
+            fi
+            echo "[CI] ${label}: OK"
+          }
+
+          run_quiet clean xvfb-run -a -s '-screen 0 1280x720x24' make clean
+          run_quiet game-build xvfb-run -a -s '-screen 0 1280x720x24' make game -j2
+          run_quiet tests xvfb-run -a -s '-screen 0 1280x720x24' make tests -j2
+
+          echo "[CI] Test summary:"
+          grep -E '\[doctest\] (test cases|assertions|Status:)' build-tests.log || true
+
+          rm -f build-clean.log build-game-build.log build-tests.log
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
