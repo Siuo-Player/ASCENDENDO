@@ -14,9 +14,27 @@ Reduzir a responsabilidade concentrada em `Game/Graphics/FontRenderer.cpp` atrav
 
 A `main` pós-PR #25 foi validada pelo CI #311 com source-size, Vulkan, build/tests e campaign todos verdes.
 
-A inspeção do código confirmou que `Game/Graphics/FontRenderer.cpp` continua a conter baking CPU, upload Vulkan, criação de image/view/sampler/descriptor e lifecycle. Não existe `Game/Graphics/FontRendererGpu.cpp` em `main`.
+A inspeção do código confirmou que `Game/Graphics/FontRenderer.cpp` continua a conter baking CPU, upload Vulkan, criação de image/view/sampler/descriptor e lifecycle. Não existia `Game/Graphics/FontRendererGpu.cpp` em `main`; a descrição anterior que dizia o contrário foi corrigida antes da implementação.
 
-A descrição anterior que dizia que esse ficheiro já tinha sido criado estava incorreta e foi corrigida no work package. Esta branch deve trabalhar apenas sobre o estado efetivo do repositório.
+## Decisão de fronteira
+
+A análise confirmou que a gestão de recursos Vulkan do atlas é uma responsabilidade coesa e distinta do baking CPU/glyph metrics. A branch extraiu essa responsabilidade para `FontRendererGpu`, mantendo em `FontRenderer` o baking, métricas, lifecycle de alto nível e emissão de glyph draws.
+
+Não foi criada uma abstração genérica de assets nem uma classe por cada operação Vulkan.
+
+## Falha CI observada e resolução
+
+A primeira execução após a extração falhou no build do jogo. Causa confirmada pelo log:
+
+```text
+Game/Graphics/FontRenderer.cpp:72:21: error: member access into incomplete type 'VulkanContext'
+Game/Graphics/FontRenderer.cpp:86:32: error: member access into incomplete type 'VulkanContext'
+Game/Graphics/FontRenderer.cpp:106:28: error: member access into incomplete type 'VulkanContext'
+```
+
+A causa foi a remoção indevida do include que fornece a definição completa de `VulkanContext` durante a decomposição. A correção foi manter `Graphics/VulkanContext.h` incluído na translation unit que utiliza os seus métodos. Não houve alteração da fronteira arquitetural para resolver a falha.
+
+A execução seguinte, **CI #343**, terminou verde: source-size ✅, Vulkan ✅, build/tests ✅ e campaign ✅.
 
 ## Documentos obrigatórios
 
@@ -82,12 +100,6 @@ A descrição anterior que dizia que esse ficheiro já tinha sido criado estava 
         ├── validar build/tests/Vulkan/campaign
         └── atualizar arquitetura/dívida/roadmap
 ```
-
-## Hipóteses a testar
-
-A principal hipótese é que o upload e ownership de recursos Vulkan constituem uma responsabilidade suficientemente coesa para serem separados do baking CPU/glyph metrics.
-
-Isto ainda **não é uma decisão implementada**. A confirmação ou rejeição será documentada antes do código correspondente.
 
 ## Riscos
 
