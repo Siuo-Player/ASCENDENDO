@@ -34,6 +34,7 @@
 #include <chrono>
 #include <iostream>
 #include <string>
+#include <vector>
 
 using namespace gfx;
 using namespace logic;
