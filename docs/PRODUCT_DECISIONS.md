@@ -68,6 +68,31 @@ Todos os menus devem mostrar no rodapé pelo menos as ações simples necessári
 - confirmar;
 - voltar/sair.
 
+### Teclas acessíveis
+
+Não devemos depender das teclas de função F2/F5/F6 para funcionalidades importantes do editor, porque não estão convenientemente disponíveis em todos os teclados.
+
+As ações do editor usam, por omissão:
+
+- `1` — guardar;
+- `2` — testar;
+- `3` — validar;
+- `E` — editor de nível;
+- `C` — editor de campanha;
+- `G` — alternar STAMP/DRAG;
+- `[` / `]` — diminuir/aumentar preset;
+- `Delete` / `Backspace` — apagar seleção;
+- `Esc` — voltar/sair do estado atual;
+- `Q` — sair/abandonar para o menu quando aplicável.
+
+`0` está reservado para abrir a área de consulta de controlos no menu assim que a entrada dessa subtela estiver ligada ao runtime.
+
+## Enquadramento da janela
+
+O jogo mantém o espaço lógico `640x360` e o letterboxing para preservar o rácio.
+
+A janela inicial não deve ser criada com a resolução total do monitor quando isso puder fazer com que a decoração da janela ultrapasse a área física do ecrã. Pedidos de janela demasiado grandes devem ser reduzidos para caber no monitor, mantendo o mesmo rácio de aspecto.
+
 ## Portabilidade
 
 O objetivo de distribuição continua a ser um executável Windows x64 portátil, acompanhado dos recursos necessários, sem depender do ambiente de desenvolvimento.
