@@ -78,12 +78,18 @@ void EditorSession::updateCursor(const InputManager& input,
                                  const gfx::Camera& camera,
                                  int32_t windowWidth,
                                  int32_t windowHeight) {
+    (void)camera;
+
     const core::LogicalPoint logical = core::windowToLogical(
         input.cursorX(), input.cursorY(),
         windowWidth, windowHeight,
         config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
     m_cursor.logical = {logical.x, logical.y};
-    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, camera).world;
+
+    // Level Editor = exactly one 640x360 screen. Camera movement is deliberately
+    // ignored here; Campaign Editor is the only state allowed to scroll.
+    const gfx::Camera fixedCamera{};
+    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, fixedCamera).world;
 }
 
 void EditorSession::updateKeyboard(const InputManager& input,
