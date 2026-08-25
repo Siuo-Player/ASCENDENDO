@@ -54,7 +54,7 @@
 #include "Game/Graphics/FontRenderer.h"
 #include "Game/Graphics/SpritePipeline.h"
 #include "Game/Graphics/SpriteRenderer.h"
-#include "Game/Graphics/Renderer.h"
+#include "Game/Graphics/RendererFacadeAdapter.h"
 #include "Game/Graphics/Camera.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/Player.h"
@@ -109,7 +109,7 @@ int main() {
         FontRenderer   font;
         SpritePipeline spritePipeline;
         SpriteRenderer playerSprite;
-        Renderer       renderer;
+        RendererFacadeAdapter renderer;
         InputManager   input;
         core::KeyBindings bindings;
 
@@ -199,6 +199,7 @@ int main() {
         Camera       camera;
         Player       player;
         EditorSession editorSession(campaign.size() <= 1);
+        renderer.attachEditorSession(&editorSession);
         int          currentLevelIndex = 0;
         float        currentSpawnY     = 0.0f;
 
