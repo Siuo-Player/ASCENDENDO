@@ -59,11 +59,13 @@ endif
 CXXFLAGS_REL := -O2 -DNDEBUG
 
 # ── Diretórios ────────────────────────────────────────────────────────────────
-GAME_DIR  := Game
-TEST_DIR  := Tests
-EXT_DIR   := external
-BUILD_DIR := build
-TEST_LOG  := $(BUILD_DIR)/test_results.txt
+GAME_DIR       := Game
+TEST_DIR       := Tests
+EXT_DIR        := external
+BUILD_DIR      := build
+GAME_BUILD_DIR := $(BUILD_DIR)/game
+TEST_BUILD_DIR := $(BUILD_DIR)/test
+TEST_LOG       := $(BUILD_DIR)/test_results.txt
 
 # ── Includes ──────────────────────────────────────────────────────────────────
 INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
@@ -106,26 +108,29 @@ TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)            \
              $(wildcard $(TEST_DIR)/Acceptance/*.cpp)
 
 GAME_MAIN_SRC := main.cpp
-GAME_MAIN_OBJ := $(BUILD_DIR)/main.o
+GAME_MAIN_OBJ := $(GAME_BUILD_DIR)/main.o
 
 # ── Objects ───────────────────────────────────────────────────────────────────
-GAME_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(GAME_SRCS))
-TEST_OBJS := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(TEST_SRCS))
+# Game e testes usam configurações de compilação diferentes. Separar os objetos
+# evita que objetos compilados com ASan/UBSan sejam reutilizados pelo binário
+# release e elimina mismatches entre compilação e linkagem.
+GAME_OBJS := $(patsubst %.cpp,$(GAME_BUILD_DIR)/%.o,$(GAME_SRCS))
+TEST_OBJS := $(patsubst %.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SRCS))
 
 # ── Dependencias de headers ───────────────────────────────────────────────────
 DEPS := $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d) $(GAME_MAIN_OBJ:.o=.d)
 -include $(DEPS)
 
 # ── Binários ──────────────────────────────────────────────────────────────────
-GAME_LIB  := $(BUILD_DIR)/libgame.a
-GAME_BIN  := $(BUILD_DIR)/game$(EXE_EXT)
-TEST_BIN  := $(BUILD_DIR)/tests$(EXE_EXT)
+GAME_LIB  := $(GAME_BUILD_DIR)/libgame.a
+GAME_BIN  := $(GAME_BUILD_DIR)/game$(EXE_EXT)
+TEST_BIN  := $(TEST_BUILD_DIR)/tests$(EXE_EXT)
 
 ifneq ($(strip $(GAME_OBJS)),)
     TEST_LINK_DEPS := $(GAME_LIB)
 endif
 
-# ── Shaders ───────────────────────────────────────────────────────────────────
+# ── Shaders ────────────────────────────────────────────────────────────────────
 GLSLC       := glslc
 SHADER_DIR  := Game/Assets/Shaders
 SHADER_SRCS := $(wildcard $(SHADER_DIR)/*.vert) $(wildcard $(SHADER_DIR)/*.frag)
@@ -217,8 +222,13 @@ $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 	@echo "[LIB] $(notdir $@)"
 	@$(AR) rcs $@ $^
 
-# ── Regra de Compilação Genérica .cpp → .o ────────────────────────────────────
-$(BUILD_DIR)/%.o: %.cpp
+# ── Regras de Compilação .cpp → .o ─────────────────────────────────────────────
+$(GAME_BUILD_DIR)/%.o: %.cpp
+	@$(call MKDIR_ONE,$(dir $@))
+	@echo "[CC ] $<"
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -c $< -o $@
+
+$(TEST_BUILD_DIR)/%.o: %.cpp
 	@$(call MKDIR_ONE,$(dir $@))
 	@echo "[CC ] $<"
 	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -c $< -o $@
