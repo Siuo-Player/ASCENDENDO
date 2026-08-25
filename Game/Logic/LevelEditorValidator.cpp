@@ -2,22 +2,22 @@
 #include "Logic/LevelEditor.h"
 #include "Core/Config.h"
 
-#include <algorithm>
 #include <cmath>
 #include <deque>
 #include <vector>
+#include <algorithm>
 
 namespace logic {
 
 namespace {
-constexpr float G_VAL = 980.0f;
-constexpr float V_MAX = 600.0f;
-constexpr float ANGLE = 3.14159265358979323846f / 3.0f;
-constexpr float TOLERANCE = 0.90f;
+const float G_VAL = 980.0f;
+const float V_MAX = 600.0f;
+const float ANGLE = 3.14159265358979323846f / 3.0f;
+const float TOLERANCE = 0.90f;
 
-constexpr float VY_EFF = V_MAX * std::sin(ANGLE) * TOLERANCE;
-constexpr float VX_EFF = V_MAX * std::cos(ANGLE) * TOLERANCE;
-constexpr float MAX_JUMP = (VY_EFF * VY_EFF) / (2.0f * G_VAL);
+const float VY_EFF = V_MAX * std::sin(ANGLE) * TOLERANCE;
+const float VX_EFF = V_MAX * std::cos(ANGLE) * TOLERANCE;
+const float MAX_JUMP = (VY_EFF * VY_EFF) / (2.0f * G_VAL);
 
 struct Node {
     enum class Kind { GROUND, PLATFORM, GOAL } kind;
@@ -70,14 +70,11 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
         nodes.push_back({Node::Kind::PLATFORM, document.platforms()[i].bounds, i});
     }
 
-    Node goal;
-    if (document.hasFlag() && document.flag() != nullptr) {
-        goal.kind = Node::Kind::GOAL;
-        goal.bounds = *document.flag();
-    } else {
-        goal.kind = Node::Kind::GOAL;
-        goal.bounds = {{0.0f, config::LOGICAL_HEIGHT}, {0.0f, config::LOGICAL_HEIGHT}};
-    }
+    Node goal{};
+    goal.kind = Node::Kind::GOAL;
+    goal.bounds = document.hasFlag() && document.flag()
+        ? *document.flag()
+        : AABB{{0.0f, config::LOGICAL_HEIGHT}, {0.0f, config::LOGICAL_HEIGHT}};
     nodes.push_back(goal);
 
     std::vector<bool> visited(nodes.size(), false);
