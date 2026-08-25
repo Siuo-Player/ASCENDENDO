@@ -16,8 +16,8 @@ ifeq ($(OS),Windows_NT)
     PLATFORM := windows
     EXE_EXT  := .exe
     SHELL    := cmd.exe
-    WIN_TEST_RUNNER := Development/Tools/run_tests_windows.cmd
-    RUN_TEST = $(WIN_TEST_RUNNER)
+    WIN_TEST_RUNNER := Development\Tools\run_tests_windows.cmd
+    RUN_TEST = call "$(WIN_TEST_RUNNER)"
     CAT_FILE := type
     RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
     MKDIR_ONE = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
@@ -186,7 +186,7 @@ else
 endif
 	@echo ""
 
-## tests-verbose — compila e executa testes imprimindo mensagens detalhadas e sucessos
+## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
 tests-verbose: shaders $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
