@@ -2,105 +2,110 @@
 
 ## Estado de referência
 
-`main` contém a base integrada até à 9.4 anterior. A branch atual, `feat/9-4-editor-visual-integration`, desenvolve a integração visual e o modelo dos editores.
+`main` contém a base integrada até à 9.4: editor core + migração incremental do renderer. A branch atual `feat/9-5-editor-ux-campaign` é, nesta tranche, **documentação e design**; esta PR não altera código.
 
-Concluído:
+## O que já existe
 
 - Fases 1–8: motor, física, campanha, UI, texto TTF, sprites, replay/save e validação.
 - 9.1: `GameAction` + `KeyBindings`.
-- 9.2: rato + conversão window/logical + menus clicáveis.
-- 9.3: `GameState::EDITOR` e infraestrutura inicial do editor.
-- bootstrap GLFW/Vulkan robusto + cleanup de falhas parciais.
-- editor determinístico com grid/snap, plataformas, spawn, FLAG e testes.
-- `EditorInteractionController` + `EditorSession`.
-- nova stack de rendering construída em paralelo: `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer`, `RendererFacade`.
-- `EDITOR` já faz cut-over através de `RendererFacadeAdapter`.
-- Level Editor agora assume uma única tela lógica fixa de `640x360`.
-- base separada de `CampaignEditor` com representação vertical das telas.
-- `LevelEditorValidator` para validação em memória.
-- ações preparadas para guardar/testar/validar.
+- 9.2: rato, window→logical e menus clicáveis.
+- 9.3: `GameState::EDITOR`.
+- `LevelEditorDocument`, `EditorInteractionController`, `EditorSession` e `EditorRenderSnapshot`.
+- Nova stack de rendering: `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer`, `RendererFacade` e `RendererFacadeAdapter`.
+- Level Editor baseado numa única tela lógica `640x360`.
+- Base separada de `CampaignEditor` e `LevelEditorValidator`.
+- Test runner Windows e source-size gate.
+
+## Princípios de design a partir da 9.5
+
+Ver `docs/DESIGN_REFERENCES.md`.
+
+1. Ferramenta ativa explícita: o editor deve mostrar o que o clique/drag fará.
+2. Viewport previsível: limites, escala e área útil devem ser claros.
+3. Snapping útil: grid visual e passo de snap podem ser diferentes.
+4. Feedback imediato: preview, seleção, validação e erros aparecem no editor.
+5. Teste é parte da criação: **editar → testar → corrigir → validar → guardar**.
+6. Modelo e apresentação ficam separados.
+7. Atalhos aceleram; não podem ser necessários para descobrir o produto.
+8. Adotamos padrões comprovados sem transformar o ASCENDENDO num editor genérico.
 
 ## Decisões de produto vigentes
 
-A fonte de verdade destas decisões é `docs/PRODUCT_DECISIONS.md`.
+Fonte de verdade: `docs/PRODUCT_DECISIONS.md`.
 
-- Um `.lvl` corresponde a uma única tela de `640x360`.
-- No Level Editor não existe deslocação vertical/horizontal da tela; o canvas completo é editado no mesmo espaço.
-- O Campaign Editor é uma ferramenta distinta, com timeline vertical e miniaturas 16:9 compactadas.
-- Os níveis são blocos arrastáveis no Campaign Editor e podem usar snap para reordenar.
-- Um nível pode ser aberto diretamente do Campaign Editor através de uma mudança explícita de estado.
-- O nível deve poder ser testado com o Player antes de ser guardado definitivamente.
-- O validador deve fornecer feedback ao vivo durante a construção.
-- O Campaign Editor deve conseguir mostrar vários agentes/runs de validação em background, incluindo agentes que atravessem fronteiras entre níveis para visualizar a fluidez da campanha.
-- Os key bindings devem ser consultáveis num local próprio do menu e os menus devem mostrar no ecrã as ações essenciais do estado atual, pelo menos navegar/confirmar/voltar ou sair.
-- Mapas importados ou descarregados são sempre validados novamente pelo próprio EXE.
-- O objetivo final continua a ser um executável Windows x64 portátil.
+- `.lvl` = uma tela `640x360`.
+- Level Editor sem pan; canvas completo sempre visível.
+- Campaign Editor separado, vertical, com miniaturas 16:9.
+- Níveis no Campaign Editor são blocos arrastáveis e reordenáveis por snap.
+- Um nível pode abrir diretamente no Level Editor via mudança explícita de estado.
+- Playtest com Player antes de guardar.
+- Validação rápida em memória + feedback orientado a tutorial.
+- Campaign Editor pode mostrar vários agentes/runs, incluindo transições entre níveis.
+- Key bindings consultáveis no jogo; ações essenciais visíveis no rodapé.
+- Funcionalidades importantes do editor não dependem de F-keys.
+- UI/texto usam layout adaptável e nunca devem ultrapassar o viewport.
+- Fullscreen é preservado; letterbox adapta o espaço lógico.
+- `Começar` passa sempre por seleção de campanha, mesmo com uma só campanha.
+- Importações/downloads são sempre revalidados pelo EXE.
+- Objetivo final: EXE Windows x64 portátil.
 
 ## Fase 9 — Edição
 
-### 9.4 — Editor de níveis e renderização
+### 9.4 ✅ — Editor core + migração incremental do renderer
 
-#### 9.4.a ✅ — Modelo e interação
+Fechada e integrada em `main`.
 
-Concluído:
+### 9.5.a — UX do Level Editor
 
-- `LevelEditorDocument`;
-- snap e bounds;
-- spawn e FLAG;
-- `EditorInteractionController`;
-- `EditorSession`;
-- STAMP/DRAG;
-- seleção/movimento/delete;
-- bindings base;
-- testes determinísticos.
+- teclas acessíveis (`1/2/3` em vez de F-keys);
+- painel próprio de Controlos;
+- rodapé contextual;
+- layout de texto/UI autoajustável;
+- fullscreen + letterboxing corretos;
+- canvas `640x360` integralmente visível;
+- guardar, playtest e validar integrados;
+- feedback de validação orientado a tutorial;
+- retorno seguro entre editor e jogo.
 
-#### 9.4.b ▶ — Editor visual real
+**Critério:** um utilizador entra, percebe os comandos sem documentação externa, constrói, testa e regressa ao jogo sem elementos cortados.
 
-Em curso:
+### 9.5.b — Seleção de campanhas
 
-- canvas fixo 640x360;
-- moldura física visível;
-- grelha visual coerente com a escala do jogador/blocos;
-- preview/seleção;
-- HUD de ferramentas;
-- `F2` guardar;
-- `F5` testar;
-- `F6` validar;
-- validação ao vivo;
-- testar sem guardar;
-- estado seguro para voltar ao nível/campanha.
+- `Começar` abre seleção de campanha;
+- modelo preparado para várias campanhas;
+- metadata de campanha separada da lista de níveis quando necessário;
+- campanha selecionada determina explicitamente o conjunto jogado.
 
-**Critério de conclusão:** editar → testar com Player → voltar ao editor → validar ao vivo → guardar sem regressões.
-
-### 9.4.c ▶ — Descobribilidade de controlos
-
-- menu/overlay dedicado a consultar todos os key bindings relevantes;
-- rodapé consistente nos menus com navegar/confirmar/voltar ou sair;
-- não é necessário suportar rebind completo nesta fase.
-
-### 9.4.d ▶ — Editor de campanha
+### 9.5.c — Campaign Editor
 
 - timeline vertical;
-- miniaturas compactadas mantendo 16:9;
-- níveis como blocos arrastáveis;
+- miniaturas 16:9 compactadas;
+- blocos arrastáveis;
 - snap/reordenação;
 - abrir Level Editor por mudança de estado;
-- pré-visualização dos níveis em sequência;
+- pré-visualização sequencial;
 - agentes/runs de validação em background;
 - pelo menos um agente por nível quando possível;
-- pelo menos um agente capaz de mostrar transição entre níveis.
+- pelo menos um agente de transição entre níveis.
 
-## Gate 9.4.5 — Consolidação arquitetural antes de Save
+### 9.5.d — Playtest e validação
 
-Só inicia depois de 9.4 estar realmente funcional e integrado.
+- playtest sem obrigar a guardar;
+- estado editado separado do persistido;
+- reset simples após playtest;
+- validação rápida em memória;
+- erro explicado pela primeira causa útil;
+- validação final obrigatória antes de uma campanha jogável.
 
-Prioridade:
+## Gate 9.5.5 — Consolidação arquitetural
+
+Só começa depois da 9.5 integrada:
 
 1. reduzir responsabilidades do `main.cpp`;
-2. fechar `Game/Editor → RenderSnapshot → Renderer`;
+2. fechar `Editor → RenderSnapshot → Renderer`;
 3. migrar gameplay restante para `GameAction`/`KeyBindings`;
 4. limitar catch-up excessivo do fixed timestep;
-5. consolidar `LevelData` comum entre runtime/editor/parser;
+5. consolidar `LevelData` entre runtime/editor/parser;
 6. tornar paths independentes do current working directory;
 7. validar graphics/present queues e capacidades Vulkan;
 8. Windows build/tests no CI;
@@ -109,72 +114,38 @@ Prioridade:
 11. invariantes/property tests relevantes;
 12. limpar placeholders e documentação histórica redundante.
 
-## Fase 9.5 — Guardar + validar
+## Fase 10 — Guardar + validar
 
-- versão explícita no `.lvl`;
+- versão explícita do `.lvl`;
 - `LevelData` declarativo;
 - serialização;
-- guardar em área apropriada;
+- área de dados apropriada;
 - validação em background;
-- mapas inválidos nunca entram na campanha jogável;
-- qualquer mapa importado/descarregado é novamente validado pelo EXE.
+- mapas inválidos nunca entram na campanha;
+- mapas importados/descarregados revalidados pelo EXE.
 
-## Fase 10 — Hardening e ferramentas
-
-- CI Windows completo;
-- build/link do jogo no CI;
-- ASan/UBSan;
-- validação Vulkan robusta;
-- ownership/RAII;
-- AssetResolver quando justificar;
-- configuração separada por domínio;
-- undo/redo transacional;
-- testes de parser malformado, viewport, física e editor;
-- property-based tests onde façam sentido;
-- limpeza de `.gitkeep`, placeholders e runtime data versionados.
-
-## Fase 11 — Partilha e biblioteca de mapas
+## Fase 11 — Partilha e biblioteca
 
 ### 11.1 — Export/import local
 
-- Exportar/Partilhar;
-- Importar;
-- pacote compacto declarativo;
-- extração controlada;
-- validação obrigatória pelo EXE.
+Pacote compacto declarativo, extração controlada e validação obrigatória pelo EXE.
 
 ### 11.2 — Biblioteca online
 
-Site para upload/download de pacotes de mapas. HTTP(S) é suficiente inicialmente; WebSockets não são requisito inicial.
+Site para upload/download de pacotes. HTTP(S) é suficiente inicialmente; WebSockets não são requisito.
 
 ### 11.3 — Partilha direta
 
-Só adicionar comunicação bidirecional (WebSockets/WebRTC/etc.) quando houver necessidade concreta.
+Só adicionar comunicação bidirecional quando existir uma necessidade concreta.
 
 ## Fase 12 — Release / Portable Build
 
-Objetivo final:
+Objetivo: um executável Windows x64 que possa ser copiado para outro computador dentro dos requisitos mínimos e executado sem o ambiente de desenvolvimento.
 
-> um executável Windows x64 que possa ser copiado para outro computador dentro dos requisitos mínimos e executado sem instalar o ambiente de desenvolvimento.
-
-Requisitos:
-
-- `.exe` portable;
-- assets/DLLs necessárias incluídas;
-- sem dependência do current working directory;
-- sem downloads obrigatórios;
-- mensagem amigável para requisitos ausentes;
-- suporte visado ao hardware mais fraco que suporte Vulkan corretamente.
+Requisitos: EXE + DLLs/assets necessárias, sem dependência do current working directory, sem downloads obrigatórios e com mensagem amigável para requisitos ausentes.
 
 ## Regra de progressão
 
-Nenhuma fase seguinte começa enquanto a anterior não tiver:
+Nenhuma fase seguinte começa enquanto a anterior não tiver implementação coerente, testes relevantes, documentação atualizada, branch própria, PR aberta e PR integrada em `main`.
 
-- implementação coerente;
-- testes relevantes;
-- documentação atualizada;
-- branch própria;
-- PR aberta;
-- PR integrada em `main`.
-
-Antes de cada novo passo: integrar a PR anterior, abandonar a branch anterior e criar uma branch nova a partir de `main` atualizado.
+Antes de cada novo passo: integrar a PR anterior, abandonar a branch anterior e criar uma branch nova a partir do `main` atualizado.
