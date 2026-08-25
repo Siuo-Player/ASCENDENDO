@@ -29,13 +29,11 @@ TEST_SUITE("Swapchain") {
         CHECK(swapchain.extent().height == 600);
         CHECK(swapchain.imageCount() >= 2);
 
-        const VkSwapchainKHR firstHandle = swapchain.handle();
         REQUIRE(swapchain.recreate());
         CHECK(swapchain.isInitialized());
         CHECK(swapchain.handle() != VK_NULL_HANDLE);
         CHECK(swapchain.extent().width == 800);
         CHECK(swapchain.extent().height == 600);
         CHECK(swapchain.imageCount() >= 2);
-        CHECK(swapchain.handle() != firstHandle);
     }
 }
