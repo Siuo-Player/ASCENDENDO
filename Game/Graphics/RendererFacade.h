@@ -1,17 +1,15 @@
 #pragma once
 // =============================================================================
 // Game/Graphics/RendererFacade.h
-//
-// Orquestrador do novo renderer. Mantém uma API pequena e delega o desenho
-// para passes especializados.
 // =============================================================================
 
 #include "Graphics/RenderState.h"
 #include "Graphics/GameState.h"
+#include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 
-namespace logic { class Player; class Level; class EditorSession; struct EditorRenderSnapshot; }
+namespace logic { class Player; class Level; class EditorSession; }
 namespace gfx {
 
 class VulkanContext;
@@ -22,7 +20,6 @@ class TextPipeline;
 class FontRenderer;
 class SpritePipeline;
 class SpriteRenderer;
-
 class RendererCore;
 class ShapeRenderer;
 class WorldRenderer;
@@ -68,7 +65,8 @@ private:
     FontRenderer* m_font = nullptr;
     SpritePipeline* m_spritePipeline = nullptr;
     SpriteRenderer* m_sprite = nullptr;
-    const logic::EditorRenderSnapshot* m_editorSnapshot = nullptr;
+    logic::EditorRenderSnapshot m_editorSnapshot{};
+    const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
 
     bool m_initialized = false;
 };
