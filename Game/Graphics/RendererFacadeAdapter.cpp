@@ -2,7 +2,6 @@
 // Game/Graphics/RendererFacadeAdapter.cpp
 // =============================================================================
 #include "Graphics/RendererFacadeAdapter.h"
-#include "Graphics/RendererFacade.h"
 #include "Graphics/Camera.h"
 #include "Logic/EditorSession.h"
 
@@ -15,6 +14,8 @@ bool RendererFacadeAdapter::init(VulkanContext* ctx, Swapchain* swapchain,
 
 void RendererFacadeAdapter::cleanup() {
     m_facade.cleanup();
+    m_hasEditorSnapshot = false;
+    m_editorSnapshot = {};
 }
 
 void RendererFacadeAdapter::attachText(TextPipeline* textPipeline, FontRenderer* font) {
@@ -26,7 +27,16 @@ void RendererFacadeAdapter::attachSprite(SpritePipeline* spritePipeline, SpriteR
 }
 
 void RendererFacadeAdapter::attachEditorSession(const logic::EditorSession* session) {
-    m_facade.attachEditorSnapshot(session ? &session->renderSnapshot() : nullptr);
+    if (!session) {
+        m_hasEditorSnapshot = false;
+        m_editorSnapshot = {};
+        m_facade.attachEditorSnapshot(nullptr);
+        return;
+    }
+
+    m_editorSnapshot = session->renderSnapshot();
+    m_hasEditorSnapshot = true;
+    m_facade.attachEditorSnapshot(&m_editorSnapshot);
 }
 
 bool RendererFacadeAdapter::drawFrame(const logic::Player& player,
