@@ -53,6 +53,51 @@ void drawMenuBoxes(VkCommandBuffer cmd, const Pipeline& shapePipeline,
     }
 }
 
+void drawControlsReference(VkCommandBuffer cmd,
+                           const Pipeline& shapePipeline,
+                           const ShapeRenderer& shapes,
+                           TextPipeline* textPipeline,
+                           FontRenderer* font) {
+    const float centerX = config::LOGICAL_WIDTH / 2.0f;
+    shapes.drawRect(cmd, shapePipeline, 44.0f, 42.0f,
+                    552.0f, 274.0f, 0.04f, 0.04f, 0.08f, 0.92f);
+    shapes.drawRect(cmd, shapePipeline, 44.0f, 314.0f,
+                    552.0f, 2.0f, 0.45f, 0.45f, 0.60f);
+
+    if (!textPipeline || !font || !textPipeline->isInitialized()) return;
+    bindText(cmd, textPipeline, font);
+
+    centerText(cmd, textPipeline, font, "CONTROLOS",
+               centerX, 286.0f, 1.15f, 0.95f, 0.80f, 0.10f);
+
+    const char* lines[] = {
+        "A / D ou SETAS      mover / navegar",
+        "ESPACO              confirmar / saltar",
+        "ESC                 voltar / pausa",
+        "Q                   sair / voltar ao menu",
+        "E                   editor de nivel",
+        "C                   editor de campanha",
+        "0                   ver controlos",
+        "G                   STAMP / DRAG",
+        "[ / ]               tamanho menor / maior",
+        "DELETE / BACKSPACE   apagar selecao",
+        "1                   guardar (editor)",
+        "2                   testar (editor)",
+        "3                   validar (editor)",
+    };
+
+    float y = 255.0f;
+    for (const char* line : lines) {
+        font->drawText(cmd, textPipeline->layout(), line,
+                       66.0f, y, 0.43f, 0.82f, 0.84f, 0.90f, 1.0f);
+        y -= 18.0f;
+    }
+
+    centerText(cmd, textPipeline, font,
+               "ESC OU 0 PARA VOLTAR",
+               centerX, 55.0f, 0.42f, 0.55f, 0.60f, 0.72f);
+}
+
 std::string formatTimer(float seconds) {
     if (seconds < 0.0f) seconds = 0.0f;
     const int total = static_cast<int>(seconds);
@@ -122,6 +167,12 @@ void UiRenderer::drawMenu(VkCommandBuffer cmd,
                           FontRenderer* font,
                           int menuSelection) const {
     const float centerX = config::LOGICAL_WIDTH / 2.0f;
+
+    if (menuSelection == 4) {
+        drawControlsReference(cmd, shapePipeline, shapes, textPipeline, font);
+        return;
+    }
+
     const int count = 4;
     const float boxWidth = core::MenuBoxLayout::boxWidth(count, config::LOGICAL_WIDTH);
     const float boxHeight = core::MenuBoxLayout::BOX_H;
@@ -149,8 +200,8 @@ void UiRenderer::drawMenu(VkCommandBuffer cmd,
     }
 
     centerText(cmd, textPipeline, font,
-               "A/D PARA NAVEGAR   ESPACO PARA CONFIRMAR",
-               centerX, 80.0f, 0.45f, 0.30f, 0.30f, 0.42f);
+               "A/D NAVEGAR   ESPACO CONFIRMAR   0 CONTROLOS   Q SAIR",
+               centerX, 80.0f, 0.38f, 0.30f, 0.30f, 0.42f);
 }
 
 void UiRenderer::drawCredits(VkCommandBuffer cmd,
