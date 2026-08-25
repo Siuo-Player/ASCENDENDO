@@ -26,6 +26,7 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::UIRight,            { Key::RIGHT } },
         { GameAction::OpenEditor,         { Key::E } },
         { GameAction::OpenCampaignEditor, { Key::C } },
+        { GameAction::OpenControls,       { Key::NUM0 } },
         { GameAction::Quit,               { Key::Q } },
         { GameAction::EditorPanUp,        { Key::W } },
         { GameAction::EditorPanDown,      { Key::S } },
