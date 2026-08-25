@@ -1,4 +1,4 @@
-#include "doctest.h"
+#include "doctest/doctest.h"
 #include "Logic/EditorSession.h"
 #include "Core/KeyBindings.h"
 #include "Core/Config.h"
