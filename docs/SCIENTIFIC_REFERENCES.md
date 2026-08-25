@@ -23,7 +23,7 @@ Isto suporta a futura evolução para:
 - identificação de padrões de introdução, escalada e quebra de ritmo;
 - relatórios automáticos para ajudar autores da comunidade.
 
-Fontes: [paper em UCSC](https://eis.ucsc.edu/papers/smith-sandbox-08.pdf), [DBLP](https://dblp.org/rec/conf/siggraph/0001CW08).
+Fonte: [paper em UCSC](https://eis.ucsc.edu/papers/smith-sandbox-08.pdf), [DBLP](https://dblp.org/rec/conf/siggraph/0001CW08).
 
 ## 2. Padrões de level design em 2D — Khalifa, de Mesentier Silva & Togelius (2019)
 
@@ -176,7 +176,77 @@ Para o ASCENDENDO, isto sugere que a análise não deve olhar apenas para um sal
 
 Fonte: [Universidade de Malta](https://www.um.edu.mt/library/oar/handle/123456789/22927).
 
-## 9. Câmara e atenção
+## 9. Dificuldade executiva/motora — Francillette et al. (2025)
+
+**A Comprehensive Model of Automated Evaluation of Difficulty in Platformer Games**
+Games: Research and Practice, 3(1), Article 3, 1–28.
+DOI: `10.1145/3705013`.
+
+Publicado em 24 de janeiro de 2025, o trabalho propõe um modelo automático para avaliar **dificuldade game-centric / executiva (motora)** em platformers. O modelo formaliza zonas de perigo estáticas e analisa perigos dinâmicos, incluindo padrões de movimento de inimigos através de uma abordagem baseada em feromonas simuladas. A avaliação foi experimentada nos níveis de Super Mario Bros. O artigo distingue esta dificuldade intrínseca da dificuldade dependente do jogador e apresenta a ferramenta como apoio à avaliação antes de playtesting extensivo.
+
+### O que é evidência para o ASCENDENDO
+
+O trabalho suporta a introdução de uma camada intermediária entre a validade física e a experiência do jogador:
+
+```text
+VALIDADE FÍSICA
+    ↓
+DIFICULDADE EXECUTIVA / MOTORA
+    ↓
+DESEMPENHO OBSERVADO
+    ↓
+DIFICULDADE PERCEBIDA
+```
+
+Isto é particularmente aplicável ao ASCENDENDO porque já possuímos geometria de colisão, física determinística e validação simulada. A oportunidade não é copiar o modelo de Super Mario Bros.; é aproveitar a mesma separação conceptual para produzir métricas próprias à física do ASCENDENDO.
+
+### Limitações e condições
+
+- O modelo é específico ao domínio de platformers e foi validado em Super Mario Bros.; não demonstra que as mesmas fórmulas ou thresholds funcionem na física do ASCENDENDO.
+- A dificuldade executiva/motora não substitui a experiência percebida nem o playtesting.
+- O uso de movimento inimigo por feromonas simuladas só será relevante no ASCENDENDO quando perigos dinâmicos de natureza semelhante existirem.
+- A validação interna terá de calibrar qualquer métrica à nossa física, janela temporal, movimento e regras de colisão.
+
+### Implicação arquitetural
+
+A análise de dificuldade deve ser tratada como um **consumidor da simulação/representação do nível**, não como autoridade para alterar silenciosamente a física ou o conteúdo authored. O primeiro resultado deve ser relatório/diagnóstico; ajuste automático de conteúdo fica para uma fase posterior e explicitamente controlada.
+
+Fonte principal: [ACM / DOI](https://doi.org/10.1145/3705013). Metadata adicional: [DBLP](https://dblp.org/rec/journals/gamesrp/FrancilletteTBM25).
+
+## 10. Ajuste de dificuldade em tempo real em platformers procedurais — Madineni (2025)
+
+**Analyzing Player Difficulty Perception in Platformers Through Procedural Level Generation**
+Master's Thesis, California Polytechnic State University, San Luis Obispo, June 2025.
+
+A dissertação estuda **real-time difficulty adjustment** em platformers procedurais. No sistema estudado, níveis seguintes são gerados a partir do desempenho observado no nível anterior. O estudo encontrou ajustes de dificuldade adequados para jogadores confortáveis com platformers, mas desempenho menos eficaz para participantes com menor experiência/competência.
+
+### O que é útil para o ASCENDENDO
+
+A dissertação é uma evidência inicial para uma futura camada de **player modelling / adaptive difficulty**, sobretudo como alerta metodológico: desempenho passado não implica automaticamente uma boa estimativa da capacidade de todos os jogadores.
+
+A consequência é evitar desde já uma arquitetura em que:
+
+```text
+morte/falha
+  ↓
+altera diretamente dificuldade
+```
+
+Sem modelar pelo menos contexto, experiência, tendência de aprendizagem e incerteza da estimativa.
+
+### Limitações e condições
+
+- É uma dissertação, não evidência suficiente para definir uma política geral de adaptação.
+- O sistema e a experiência estudados são específicos ao protótipo MIMEVA/PLGen.
+- O resultado diferencial entre jogadores mais e menos confortáveis com platformers deve ser tratado como hipótese a investigar, não como regra universal.
+
+### Implicação para o roadmap
+
+Player modelling deve ser posterior à instrumentação básica de desempenho e à medição da dificuldade intrínseca. Primeiro devemos conseguir responder **“quão difícil é este conteúdo para o motor?”** e **“como este jogador está a desempenhar?”** separadamente; só depois discutir adaptação automática.
+
+Fonte: [Cal Poly Digital Commons](https://digitalcommons.calpoly.edu/theses/3068/).
+
+## 11. Câmara e atenção
 
 A câmara não é apenas uma função técnica de seguir o jogador. Trabalhos sobre camera control tratam a câmara como uma componente da experiência e da informação que fica visível ao jogador.
 
@@ -186,19 +256,34 @@ Fontes relevantes incluem *Camera Control in Computer Graphics* (Christie et al.
 
 Fontes: [Camera Control in Computer Graphics](https://citeseerx.ist.psu.edu/document?doi=b6d321e69773e4cebe9d6e144503baa799d9b00f&repid=rep1&type=pdf), [Space Maze: Experience-Driven Game Camera Control](https://www.um.edu.mt/library/oar/handle/123456789/29709).
 
-## 10. O que isto muda no roadmap
+## 12. O que isto muda no roadmap
 
-A pesquisa reforça cinco áreas que devem existir antes de enriquecer fortemente o catálogo de objetos:
+A pesquisa reforça e agora separa quatro camadas de avaliação que o ASCENDENDO deve evitar colapsar:
+
+```text
+1. validade física
+       ↓
+2. dificuldade executiva/motora do conteúdo
+       ↓
+3. desempenho observado do jogador
+       ↓
+4. dificuldade/experiência percebida
+```
+
+A primeira já é tratada pelo motor/validador. As restantes devem ser adicionadas progressivamente e com métricas cuja calibração seja própria do ASCENDENDO.
+
+Isto reforça seis áreas futuras:
 
 1. **Editor confiável** — limites, snapping, undo/redo, playtest e persistência segura.
 2. **Validador de saltos** — trajetória, alcance, margem e diagnóstico.
-3. **Análise de nível** — sequência e densidade de desafios, safe zones, guidance e pace.
-4. **Análise de campanha** — progressão, repetição, variação e transições.
-5. **Telemetria/replays para estudos futuros** — permitir medir tentativa, sucesso, falha e tempo sem alterar a autoridade determinística do motor.
+3. **Análise executiva do nível** — perigos estáticos/dinâmicos, densidade, exposição e margem.
+4. **Análise de nível/campanha** — sequência, safe zones, guidance, progressão e ritmo.
+5. **Telemetria/replays para player modelling** — tentativa, sucesso, falha, tempo e comportamento, sem alterar a autoridade determinística do motor.
+6. **Adaptação de dificuldade** — só depois de existir modelação suficientemente validada do conteúdo e do jogador.
 
 Só depois devemos expandir fortemente o número de elementos colocáveis.
 
-## 11. Escala prevista do conteúdo oficial
+## 13. Escala prevista do conteúdo oficial
 
 O objetivo editorial passa a ser explicitamente de **campanhas longas e duráveis**:
 
@@ -210,7 +295,7 @@ O objetivo editorial passa a ser explicitamente de **campanhas longas e durávei
 
 Isto significa que o editor e os formatos devem ser desenhados desde cedo para suportar centenas de níveis sem depender de hacks específicos para a campanha atual.
 
-## 12. Regra de evidência
+## 14. Regra de evidência
 
 Quando uma decisão importante de level design, dificuldade, câmara, input ou experiência do jogador for tomada, devemos preferir:
 
@@ -220,3 +305,7 @@ Quando uma decisão importante de level design, dificuldade, câmara, input ou e
 4. preferência pessoal, quando os anteriores não responderem à questão.
 
 A evidência científica não substitui playtesting. Serve para dar ao projeto melhores hipóteses iniciais e para decidir o que vale a pena medir.
+
+Para o novo eixo de dificuldade, a regra operacional é ainda mais estrita:
+
+> uma métrica publicada é uma hipótese de medição; só se torna contrato do ASCENDENDO depois de ser calibrada e validada contra a nossa física e dados internos.
