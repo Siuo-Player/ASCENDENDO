@@ -11,7 +11,7 @@
 
 #include <vulkan/vulkan.h>
 
-namespace logic { class Player; class Level; struct EditorRenderSnapshot; }
+namespace logic { class Player; class Level; class EditorSession; struct EditorRenderSnapshot; }
 namespace gfx {
 
 class VulkanContext;
@@ -45,6 +45,7 @@ public:
     void attachText(TextPipeline* textPipeline, FontRenderer* font);
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
+    void attachEditorSession(const logic::EditorSession* session);
 
     bool drawFrame(const logic::Player& player,
                    const Camera& camera,
