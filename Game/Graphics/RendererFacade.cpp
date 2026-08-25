@@ -93,6 +93,24 @@ void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
 bool RendererFacade::drawFrame(const logic::Player& player,
                                const Camera& camera,
                                const logic::Level* level,
+                               GameState state,
+                               int menuSelection,
+                               float elapsedSeconds) {
+    RenderState renderState = RenderState::PLAYING;
+    switch (state) {
+        case GameState::PLAYING: renderState = RenderState::PLAYING; break;
+        case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
+        case GameState::CREDITS: renderState = RenderState::CREDITS; break;
+        case GameState::MENU:    renderState = RenderState::MENU;    break;
+        case GameState::EDITOR:  renderState = RenderState::EDITOR; break;
+    }
+    return drawFrame(player, camera, level, renderState,
+                     menuSelection, elapsedSeconds);
+}
+
+bool RendererFacade::drawFrame(const logic::Player& player,
+                               const Camera& camera,
+                               const logic::Level* level,
                                RenderState state,
                                int menuSelection,
                                float elapsedSeconds) {
