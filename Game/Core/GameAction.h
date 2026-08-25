@@ -22,6 +22,9 @@ enum class GameAction {
     EditorSizeDown,
     EditorSizeUp,
     DeleteSelection,
+    EditorSave,
+    EditorTest,
+    EditorValidate,
 };
 
 inline constexpr GameAction ALL_ACTIONS[] = {
@@ -31,6 +34,7 @@ inline constexpr GameAction ALL_ACTIONS[] = {
     GameAction::EditorPanUp, GameAction::EditorPanDown,
     GameAction::EditorToggleMode, GameAction::EditorSizeDown,
     GameAction::EditorSizeUp, GameAction::DeleteSelection,
+    GameAction::EditorSave, GameAction::EditorTest, GameAction::EditorValidate,
 };
 inline constexpr std::size_t ACTION_COUNT = sizeof(ALL_ACTIONS) / sizeof(ALL_ACTIONS[0]);
 
