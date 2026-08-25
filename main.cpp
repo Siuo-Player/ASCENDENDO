@@ -2,6 +2,8 @@
 //  ASCENDENDO — Entry Point
 //
 //  Runtime state machine: MENU / PLAYING / PAUSED / CREDITS / EDITOR.
+//  The entry point owns process lifetime; application helpers own setup/data
+//  transformation so this file stays small and cohesive.
 // =============================================================================
 #include "Game/Graphics/Window.h"
 #include "Game/Graphics/VulkanContext.h"
@@ -13,8 +15,9 @@
 #include "Game/Graphics/SpritePipeline.h"
 #include "Game/Graphics/SpriteRenderer.h"
 #include "Game/Graphics/RendererFacade.h"
-#include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Graphics/Camera.h"
+#include "Game/Core/ApplicationHelpers.h"
+#include "Game/Core/ApplicationGraphics.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/Player.h"
 #include "Game/Logic/Physics.h"
@@ -30,8 +33,6 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <iostream>
-#include <fstream>
-#include <vector>
 #include <string>
 
 using namespace gfx;
@@ -41,57 +42,6 @@ static const std::string CAMPAIGN_NAME = "Campanha Principal";
 static const std::string LEVELS_DIR = "Game/Assets/Levels";
 static const std::string RUNS_CSV_PATH = "Development/Runs/runs.csv";
 static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg";
-
-namespace {
-
-gfx::RenderSnapshot buildRenderSnapshot(const logic::Player& player,
-                                        const logic::Level& level) {
-    gfx::RenderSnapshot snapshot;
-
-    snapshot.player.bounds = {
-        player.position().x,
-        player.position().y,
-        player.body.width,
-        player.body.height
-    };
-    snapshot.player.facingDirection = player.facingDirection;
-
-    snapshot.platforms.reserve(level.platforms().size());
-    for (const auto& platform : level.platforms()) {
-        snapshot.platforms.push_back({
-            platform.bounds.min.x,
-            platform.bounds.min.y,
-            platform.bounds.width(),
-            platform.bounds.height()
-        });
-    }
-
-    snapshot.flag.visible = level.hasFlag;
-    if (level.hasFlag) {
-        snapshot.flag.bounds = {
-            level.flagBounds.min.x,
-            level.flagBounds.min.y,
-            level.flagBounds.width(),
-            level.flagBounds.height()
-        };
-    }
-
-    return snapshot;
-}
-
-void setMenuTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
-}
-
-void setPlayingTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | E editor  Q voltar ao menu  ESC pausa");
-}
-
-void setEditorTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
-}
-
-} // namespace
 
 int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
@@ -123,61 +73,11 @@ int main() {
         InputManager input;
         core::KeyBindings bindings;
 
-        if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) {
-            std::cerr << "[ERRO] Nao foi possivel criar a janela GLFW.\n";
+        if (!app::initializeGraphics(
+                win, ctx, swapchain, renderPass, pipeline,
+                textPipeline, font, spritePipeline, playerSprite,
+                renderer, screenWidth, screenHeight)) {
             return -1;
-        }
-
-        std::vector<const char*> exts;
-        win.appendRequiredExtensions(exts);
-        if (!ctx.init(false, exts)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar Vulkan.\n";
-            return -1;
-        }
-
-        VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
-        if (surface == VK_NULL_HANDLE) {
-            std::cerr << "[ERRO] Nao foi possivel criar a surface Vulkan.\n";
-            return -1;
-        }
-        if (!ctx.createSurface(surface)) {
-            std::cerr << "[ERRO] Nao foi possivel associar a surface Vulkan ao contexto.\n";
-            return -1;
-        }
-
-        if (!swapchain.init(&ctx, &win)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar o swapchain Vulkan.\n";
-            return -1;
-        }
-        if (!renderPass.init(&ctx, &swapchain)) {
-            std::cerr << "[ERRO] Nao foi possivel criar o render pass Vulkan.\n";
-            return -1;
-        }
-        if (!pipeline.init(&ctx, &swapchain, &renderPass)) {
-            std::cerr << "[ERRO] Nao foi possivel criar a pipeline grafica.\n";
-            return -1;
-        }
-        if (!renderer.init(&ctx, &swapchain, &renderPass, &pipeline)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar o renderer.\n";
-            return -1;
-        }
-
-        if (textPipeline.init(&ctx, &swapchain, &renderPass) &&
-            font.init(&ctx, textPipeline.descriptorSetLayout())) {
-            renderer.attachText(&textPipeline, &font);
-            std::cout << "[ASCENDENDO] Fonte TTF carregada (texto real em CREDITOS/MENU/PAUSA).\n";
-        } else {
-            std::cout << "[ASCENDENDO] Fonte TTF nao disponivel -- a usar BitmapFont (fallback).\n";
-        }
-
-        if (spritePipeline.init(&ctx, &swapchain, &renderPass) &&
-            playerSprite.init(&ctx, spritePipeline.descriptorSetLayout(),
-                              "Game/Assets/Sprites/personagem.png")) {
-            renderer.attachSprite(&spritePipeline, &playerSprite);
-            std::cout << "[ASCENDENDO] Sprite do jogador carregado ("
-                      << playerSprite.width() << "x" << playerSprite.height() << ").\n";
-        } else {
-            std::cout << "[ASCENDENDO] Sprite do jogador nao disponivel -- a usar rectangulo (fallback).\n";
         }
 
         input.registerWithWindow(win.handle());
@@ -189,16 +89,7 @@ int main() {
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
-        std::vector<std::string> campaign;
-        {
-            std::ifstream f(LEVELS_DIR + "/campaign.txt");
-            std::string line;
-            while (std::getline(f, line)) {
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                if (!line.empty() && line[0] != '#')
-                    campaign.push_back(LEVELS_DIR + "/" + line);
-            }
-        }
+        const std::vector<std::string> campaign = app::loadCampaignLevels(LEVELS_DIR);
 
         std::string campaignID = core::computeCampaignID(LEVELS_DIR);
         std::cout << "[ASCENDENDO] Campaign ID: "
@@ -236,7 +127,7 @@ int main() {
 
             state = GameState::PLAYING;
             menuSel = 0;
-            setPlayingTitle(win.handle());
+            app::setPlayingTitle(win.handle());
         };
 
         auto openEditor = [&](GameState returnState) {
@@ -245,11 +136,7 @@ int main() {
             editorSession.cancelInteraction();
             state = GameState::EDITOR;
             menuSel = 0;
-            setEditorTitle(win.handle());
-        };
-
-        auto navigate = [&](int delta, int count) {
-            menuSel = (menuSel + delta + count) % count;
+            app::setEditorTitle(win.handle());
         };
 
         auto clickedMenuBox = [&](int count) -> int {
@@ -261,7 +148,7 @@ int main() {
             return core::hitTestMenuBox(pt.x, pt.y, count, config::LOGICAL_WIDTH);
         };
 
-        setMenuTitle(win.handle());
+        app::setMenuTitle(win.handle());
 
         auto lastTime = std::chrono::high_resolution_clock::now();
         std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor | Q sair\n";
@@ -287,7 +174,7 @@ int main() {
                     editorSession.cancelInteraction();
                     state = GameState::MENU;
                     menuSel = 0;
-                    setMenuTitle(win.handle());
+                    app::setMenuTitle(win.handle());
                 } else if (pausePressed) {
                     state = GameState::PAUSED;
                     menuSel = 0;
@@ -339,22 +226,22 @@ int main() {
             } else if (state == GameState::PAUSED) {
                 if (pausePressed) {
                     state = GameState::PLAYING;
-                    setPlayingTitle(win.handle());
+                    app::setPlayingTitle(win.handle());
                 } else if (quitPressed) {
                     state = GameState::MENU;
                     menuSel = 0;
-                    setMenuTitle(win.handle());
+                    app::setMenuTitle(win.handle());
                 } else {
                     int clickedPaused = clickedMenuBox(3);
                     if (clickedPaused >= 0) menuSel = clickedPaused;
 
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 3);
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 3);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) app::navigateMenu(menuSel, -1, 3);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) app::navigateMenu(menuSel, +1, 3);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
                         if (menuSel == 0) {
                             state = GameState::PLAYING;
-                            setPlayingTitle(win.handle());
+                            app::setPlayingTitle(win.handle());
                         } else if (menuSel == 1) {
                             creditsReturnState = GameState::PAUSED;
                             state = GameState::CREDITS;
@@ -362,7 +249,7 @@ int main() {
                         } else {
                             state = GameState::MENU;
                             menuSel = 0;
-                            setMenuTitle(win.handle());
+                            app::setMenuTitle(win.handle());
                         }
                     }
                 }
@@ -371,8 +258,8 @@ int main() {
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || pausePressed) {
                     state = creditsReturnState;
                     menuSel = 0;
-                    if (state == GameState::MENU) setMenuTitle(win.handle());
-                    else if (state == GameState::PLAYING) setPlayingTitle(win.handle());
+                    if (state == GameState::MENU) app::setMenuTitle(win.handle());
+                    else if (state == GameState::PLAYING) app::setPlayingTitle(win.handle());
                     else glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
                 }
@@ -388,8 +275,8 @@ int main() {
                     int clickedMenu = clickedMenuBox(4);
                     if (clickedMenu >= 0) menuSel = clickedMenu;
 
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 4);
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) app::navigateMenu(menuSel, -1, 4);
+                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) app::navigateMenu(menuSel, +1, 4);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
                         if (menuSel == 0) {
@@ -411,15 +298,15 @@ int main() {
                     editorSession.cancelInteraction();
                     state = editorReturnState;
                     menuSel = 0;
-                    if (state == GameState::PLAYING) setPlayingTitle(win.handle());
-                    else setMenuTitle(win.handle());
+                    if (state == GameState::PLAYING) app::setPlayingTitle(win.handle());
+                    else app::setMenuTitle(win.handle());
                 } else {
                     editorSession.update(input, bindings,
                                         (int32_t)win.width(), (int32_t)win.height());
                 }
             }
 
-            const gfx::RenderSnapshot renderSnapshot = buildRenderSnapshot(player, level);
+            const gfx::RenderSnapshot renderSnapshot = app::buildRenderSnapshot(player, level);
             if (state == GameState::EDITOR) {
                 const logic::EditorRenderSnapshot editorSnapshot = editorSession.renderSnapshot();
                 renderer.attachEditorSnapshot(&editorSnapshot);
