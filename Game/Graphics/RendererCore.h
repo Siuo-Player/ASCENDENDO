@@ -18,6 +18,12 @@ class Pipeline;
 
 class RendererCore {
 public:
+    enum class FrameStatus {
+        Ready,
+        SwapchainNeedsRecreate,
+        Fatal,
+    };
+
     RendererCore() = default;
     ~RendererCore() { cleanup(); }
 
@@ -28,11 +34,14 @@ public:
               RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
 
-    bool beginFrame(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
+    FrameStatus beginFrame(VkCommandBuffer& commandBuffer, uint32_t& imageIndex);
     bool beginRenderPass(VkCommandBuffer commandBuffer, uint32_t imageIndex,
                          float clearR, float clearG, float clearB);
     bool endRenderPass(VkCommandBuffer commandBuffer);
-    bool submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+    FrameStatus submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex);
+
+    // Rebuilds swapchain-dependent resources after OUT_OF_DATE/SUBOPTIMAL.
+    bool recreateSwapchain();
 
     VkExtent2D swapchainExtent() const;
     bool isInitialized() const { return m_initialized; }
@@ -42,6 +51,7 @@ private:
     bool createCommandPool();
     bool allocateCommandBuffers();
     bool createSyncObjects();
+    void destroyFrameResources();
 
     VulkanContext* m_ctx = nullptr;
     Swapchain* m_swapchain = nullptr;
