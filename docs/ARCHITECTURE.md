@@ -28,7 +28,7 @@ Application
 ├── Presentation
 │   ├── RenderSnapshot
 │   ├── UI/HUD data
-│   └── Renderer / Vulkan
+│   └── RendererFacade / Vulkan passes
 │
 ├── Core
 │   ├── ViewportTransform
@@ -42,7 +42,7 @@ Application
     └── Local user data
 ```
 
-A implementação atual ainda está parcialmente concentrada em `main.cpp` e `Renderer.cpp`. A consolidação destas fronteiras é uma tarefa explícita do roadmap e não deve ser adiada para depois de save/import/share.
+A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente em `main`; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e fechar a fronteira `RenderSnapshot`.
 
 ## Fluxo por frame
 
@@ -61,7 +61,9 @@ Simulation / LevelData / EditorDocument
       ↓
 RenderSnapshot
       ↓
-Renderer
+RendererFacade
+      ↓
+World / UI / Editor passes
       ↓
 Vulkan
 ```
@@ -70,23 +72,43 @@ O renderer não deve decidir regras de gameplay, editor ou campanha.
 
 ## `main.cpp` e estado da aplicação
 
-`main.cpp` é atualmente o orquestrador e ainda contém inicialização Vulkan, campanha, física, máquina de estados, menus e editor. Isto é dívida técnica prioritária.
+`main.cpp` continua a concentrar inicialização, composição do runtime, estados, campanha, física, editor e persistência. Isto é dívida técnica prioritária.
 
 A direção é extrair gradualmente:
 
-- `Application`: ciclo de vida e loop;
+- `Application`: ciclo de vida e composição;
 - `GameStateMachine`: estados e transições;
 - `Simulation`: fixed timestep e ticks de gameplay;
 - `EditorSession`: estado/interação do editor;
-- `Renderer`: apresentação.
+- `RendererFacade` / passes: apresentação.
 
 A extração deve ser incremental e testada, não uma reescrita completa do motor.
 
+A decomposição deve seguir responsabilidades. O limite de tamanho de ficheiros é apenas um sinal para iniciar esta análise; não é uma razão para criar ficheiros artificiais.
+
 ## Renderer e `RenderSnapshot`
 
-A API atual recebe diretamente `Player`, `Level`, `Camera`, `GameState`, seleção de menu e timer. Isso funciona, mas cria acoplamento entre presentation e runtime.
+A arquitetura integrada em `main` já não usa `Renderer.cpp/.h`, mas a fronteira de dados entre runtime e presentation ainda não está completa.
 
-A direção é introduzir um snapshot de renderização, por exemplo:
+Atualmente, `WorldRenderer` recebe diretamente `logic::Player` e `logic::Level`, além da `Camera`. Esta dependência mantém presentation acoplada aos modelos de domínio.
+
+A direção é:
+
+```text
+Player / Level / GameState
+          ↓
+     RenderSnapshot
+          ↓
+    RendererFacade
+          ↓
+    rendering passes
+```
+
+O snapshot contém dados compactos, transitórios e próprios de presentation; não possui Vulkan resources, lógica de jogo nem tipos de domínio.
+
+PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) é o work item atual desta migração. Até ser integrada, esta fronteira deve ser considerada **em transição**, não concluída.
+
+Exemplo de contrato:
 
 ```cpp
 struct RenderSnapshot {
@@ -98,8 +120,6 @@ struct RenderSnapshot {
     EditorRenderData editor;
 };
 ```
-
-O snapshot contém dados compactos e transitórios; não possui Vulkan resources nem lógica de jogo.
 
 ## Modelo comum de níveis
 
@@ -224,7 +244,9 @@ Windows build + tests
 Windows game build/link
 ```
 
-O número de assertions não é uma métrica suficiente; devem ser cobertas invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
+O workflow de `main` ainda agrega `make clean`, `make game` e `make tests-verbose` num único step; esta limitação de observabilidade está documentada em `docs/CI.md`.
+
+Run #281 falhou no step agregado de build/teste, mas a causa detalhada permanece desconhecida sem diagnóstico observável. O número de assertions não é uma métrica suficiente; devem ser cobertas invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
 
 ## Formatos e partilha futura
 
@@ -277,8 +299,8 @@ Testes + documentação
 
 Cada work package deve declarar as dependências relevantes, os consumidores afetados e o seu critério de saída. Uma dependência não é considerada gerida apenas porque está expressa no código; também é necessário conhecer o impacto da sua alteração sobre consumidores, testes e documentação.
 
-A modularidade deve ser avaliada pela redução de responsabilidades e dependências relevantes, não pelo número de classes. A literatura de socio-technical congruence mostra que modularização técnica não representa por si só todas as dependências de trabalho que exigem coordenação. 
+A modularidade deve ser avaliada pela redução de responsabilidades e dependências relevantes, não pelo número de classes. A literatura de socio-technical congruence mostra que modularização técnica não representa por si só todas as dependências de trabalho que exigem coordenação.
 
-Para o processo operacional, ver `docs/PROJECT_MANAGEMENT.md`.
+Mudanças de arquitetura, de processo ou de gate devem ser documentadas antes da implementação correspondente. Para o processo operacional, ver `docs/DEVELOPMENT_PROTOCOL.md` e `docs/PROJECT_MANAGEMENT.md`.
 
 **Referências:** Tausworthe, *The Work Breakdown Structure in Software Project Management* (1979); Cataldo, Herbsleb & Carley, *Socio-technical congruence* (2008); Bick et al., *Coordination challenges in large-scale software development* (2018); Kruchten et al., *Building up and Exploiting Architectural Knowledge* (2005).
