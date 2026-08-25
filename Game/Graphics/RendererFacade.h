@@ -4,7 +4,6 @@
 // =============================================================================
 
 #include "Graphics/RenderState.h"
-#include "Graphics/GameState.h"
 #include "Graphics/RenderSnapshot.h"
 #include "Logic/EditorRenderSnapshot.h"
 
@@ -45,7 +44,7 @@ public:
 
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
-                   GameState state,
+                   RenderState state,
                    int menuSelection = 0,
                    float elapsedSeconds = 0.0f);
 
