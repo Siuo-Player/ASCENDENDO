@@ -1,7 +1,7 @@
 // =============================================================================
 //  Tests/Integration/test_renderer.cpp
 //
-//  Validação de integração da API pública RendererFacade após o cut-over.
+//  Validação da API pública RendererFacade usando apenas presentation data.
 // =============================================================================
 
 #include "../../external/doctest/doctest.h"
@@ -11,18 +11,16 @@
 #include "../../Game/Graphics/RenderPass.h"
 #include "../../Game/Graphics/Pipeline.h"
 #include "../../Game/Graphics/RendererFacade.h"
+#include "../../Game/Graphics/RenderSnapshot.h"
 #include "../../Game/Graphics/Camera.h"
-#include "../../Game/Logic/Player.h"
-#include "../../Game/Logic/Physics.h"
 #include "../../Game/Core/Config.h"
 #include <vector>
 
 using namespace gfx;
-using namespace logic;
 
 TEST_SUITE("Renderer") {
 
-    TEST_CASE("drawFrame: Fisica e Player injetados (Cair no chao)") {
+    TEST_CASE("drawFrame: RenderSnapshot mantem frame rendererizavel") {
         Window        win;
         VulkanContext ctx;
         Swapchain     swapchain;
@@ -44,25 +42,25 @@ TEST_SUITE("Renderer") {
         REQUIRE(pipeline.init(&ctx, &swapchain, &renderPass));
         REQUIRE(renderer.init(&ctx, &swapchain, &renderPass, &pipeline));
 
-        Player player;
-        PhysicsWorld world;
         Camera camera;
-
-        player.body.width  = 32.0f;
-        player.body.height = 32.0f;
-        player.body.position = {
+        RenderSnapshot snapshot;
+        snapshot.player.bounds = {
             (config::LOGICAL_WIDTH / 2.0f) - 16.0f,
-            300.0f
+            300.0f,
+            32.0f,
+            32.0f
         };
+        snapshot.player.facingDirection = 1.0f;
+        snapshot.platforms.push_back({0.0f, 360.0f, config::LOGICAL_WIDTH, 16.0f});
 
         constexpr int FRAMES = 120;
         int successFrames = 0;
 
         for (int i = 0; i < FRAMES; ++i) {
             win.pollEvents();
-            world.step(player.body, config::FIXED_STEP);
+            snapshot.player.bounds.y += 0.1f;
 
-            if (renderer.drawFrame(player, camera, nullptr,
+            if (renderer.drawFrame(snapshot, camera,
                                    GameState::PLAYING, 0,
                                    i * config::FIXED_STEP)) {
                 ++successFrames;
@@ -73,6 +71,6 @@ TEST_SUITE("Renderer") {
 
         vkDeviceWaitIdle(ctx.device());
         CHECK(successFrames == FRAMES);
-        MESSAGE("RendererFacade manteve o contrato de drawFrame durante a simulacao.");
+        MESSAGE("RendererFacade manteve o contrato de frame baseado em RenderSnapshot.");
     }
 }
