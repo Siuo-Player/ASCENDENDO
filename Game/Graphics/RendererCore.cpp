@@ -186,8 +186,15 @@ bool RendererCore::recreateSwapchain() {
     VkDevice device = m_ctx->device();
     if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
 
+    // From this point onward the old frame resources are deliberately gone.
+    // Mark the core inactive before destroying anything so a failed rebuild
+    // can never leave a half-valid object that drawFrame() might reuse.
+    m_initialized = false;
     destroyFrameResources();
-    if (!m_swapchain->recreate()) return false;
+
+    if (!m_swapchain->recreate()) {
+        return false;
+    }
 
     if (!createFramebuffers() || !createCommandPool() ||
         !allocateCommandBuffers() || !createSyncObjects()) {
@@ -195,6 +202,7 @@ bool RendererCore::recreateSwapchain() {
         return false;
     }
 
+    m_initialized = true;
     return true;
 }
 

@@ -41,6 +41,8 @@ public:
     FrameStatus submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     // Rebuilds swapchain-dependent resources after OUT_OF_DATE/SUBOPTIMAL.
+    // On failure the core is left explicitly uninitialized so callers cannot
+    // accidentally reuse destroyed synchronization or frame resources.
     bool recreateSwapchain();
 
     VkExtent2D swapchainExtent() const;
