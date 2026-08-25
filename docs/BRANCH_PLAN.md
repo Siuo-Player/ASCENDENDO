@@ -1,102 +1,92 @@
-# Plano da branch atual
-
-**Branch:** `refactor/font-renderer-decomposition`
+# Plano da próxima branch
 
 **Bloco do roadmap:** `9.6 Base Engineering Gate — modularity`
 
-**Work Package:** `FontRenderer decomposition`
+**Work Package:** `SpriteRenderer review/decomposition`
 
 ## Objetivo
 
-Reduzir a responsabilidade concentrada em `Game/Graphics/FontRenderer.cpp` através de uma divisão coesa e verificável, sem criar módulos artificiais nem alterar o contrato de rendering.
+Investigar e, se a análise confirmar uma fronteira coesa, reduzir a responsabilidade concentrada em `Game/Graphics/SpriteRenderer.cpp` sem criar módulos artificiais nem alterar o contrato de rendering.
 
 ## Estado inicial confirmado
 
-A `main` pós-PR #25 foi validada pelo CI #311 com source-size, Vulkan, build/tests e campaign todos verdes.
+O `main` atual já contém a decomposição integrada do `FontRenderer` e foi validado pelo CI #387 com source-size, Vulkan, build/tests e campaign todos verdes.
 
-A inspeção do código confirmou que `Game/Graphics/FontRenderer.cpp` continua a conter baking CPU, upload Vulkan, criação de image/view/sampler/descriptor e lifecycle. Não existe `Game/Graphics/FontRendererGpu.cpp` em `main`.
+A inspeção de `SpriteRenderer.cpp/.h` confirmou quatro áreas distintas:
 
-A descrição anterior que dizia que esse ficheiro já tinha sido criado estava incorreta e foi corrigida no work package. Esta branch deve trabalhar apenas sobre o estado efetivo do repositório.
+1. decode CPU de PNG via `stb_image`;
+2. criação/upload de imagem Vulkan, staging, barriers, image view e sampler;
+3. descriptor/lifecycle e ownership dos recursos GPU;
+4. emissão de draw e preparação de `SpritePushConstants`.
 
-## Documentos obrigatórios
+A semelhança entre a área 2/3 e a fronteira extraída do `FontRenderer` é uma evidência para investigação, não uma obrigação de copiar a arquitetura.
 
-- `docs/DEVELOPMENT_PROTOCOL.md`
-- `docs/PROJECT_MANAGEMENT.md`
-- `docs/ROADMAP.md`
-- `docs/ARCHITECTURE.md`
-- `docs/TECH_DEBT.md`
-- `docs/WORK_PACKAGE_FONT_RENDERER.md`
-- `docs/CODE_SIZE.md`
+O teste `Tests/Integration/test_sprite_pipeline.cpp` valida o contrato público (`init`, dimensões e estado inicializado) e não depende da implementação interna.
 
-## Escopo
+## Hipótese arquitetural
 
-- analisar coesão de baking, upload GPU, descriptors e lifecycle;
-- escolher a fronteira mínima que reduza responsabilidade/coupling;
-- preservar `STB_TRUETYPE_IMPLEMENTATION` numa única translation unit;
-- preservar ownership e failure paths dos recursos Vulkan;
-- ajustar testes/documentação conforme a nova fronteira.
+A hipótese a testar é que a gestão/upload dos recursos Vulkan pode ser separada da preparação CPU da imagem e do draw, mantendo ownership explícito e uma interface pequena.
 
-## Fora de escopo
+Alternativas consideradas:
 
-- mudanças de gameplay;
-- `RenderSnapshot` geral;
-- `SpriteRenderer`;
-- `main.cpp`;
-- `AssetManager`;
-- adaptive difficulty/player modelling;
-- otimizações sem profiling;
-- divisão artificial baseada apenas em linhas.
+- manter a classe monolítica apesar do tamanho, se as responsabilidades forem fortemente acopladas;
+- extrair apenas uma fronteira específica de recursos GPU;
+- reutilizar diretamente `FontRendererGpu`, rejeitada por enquanto porque os formatos, samplers e estado do sprite são diferentes e não queremos um módulo genérico prematuro.
 
 ## Dependências
 
 **Depende de:**
 
-- CI verde da `main`;
-- renderer stack integrada;
-- source-size policy ativa;
-- testes existentes do renderer/Vulkan.
+- `main` verde;
+- decomposição de `FontRenderer` integrada;
+- pipeline e testes Vulkan existentes.
 
 **Produz para:**
 
-- revisão de `SpriteRenderer`;
+- hardening de modularidade;
 - futura decomposição de `main.cpp`;
-- manutenção de recursos de texto.
+- eventual unificação de infraestrutura GPU apenas se surgir evidência suficiente.
 
-**Consumidores:**
+**Consumidores afetados:**
 
-- `RendererFacade`/text rendering;
-- `TextPipeline`;
-- testes Vulkan/rendering.
+- `RendererFacade` / passes que usam `SpriteRenderer`;
+- `Tests/Integration/test_sprite_pipeline.cpp`;
+- `SpritePipeline` apenas através do contrato de descriptor/pipeline.
+
+## Fora de escopo
+
+- `RenderSnapshot` geral;
+- `main.cpp`;
+- animação de sprites/atlases multi-frame;
+- `AssetManager`;
+- adaptive difficulty/player modelling;
+- otimizações sem profiling;
+- abstração GPU genérica entre fontes e sprites.
 
 ## WBS
 
 ```text
 9.6 Base Engineering Gate
 └── Modularity
-    └── FontRenderer
+    └── SpriteRenderer
         ├── inventariar responsabilidades
         ├── mapear ownership/dependências
+        ├── verificar consumidores
         ├── comparar alternativas
-        ├── extrair fronteira mínima coesa
-        ├── preservar failure paths
+        ├── decidir fronteira
+        ├── implementar apenas se coesa
+        ├── preservar failure paths e sampler NEAREST
         ├── validar build/tests/Vulkan/campaign
         └── atualizar arquitetura/dívida/roadmap
 ```
 
-## Hipóteses a testar
-
-A principal hipótese é que o upload e ownership de recursos Vulkan constituem uma responsabilidade suficientemente coesa para serem separados do baking CPU/glyph metrics.
-
-Isto ainda **não é uma decisão implementada**. A confirmação ou rejeição será documentada antes do código correspondente.
-
 ## Riscos
 
-- ownership Vulkan ambíguo após extração;
-- destruction paths incompletos;
-- duplicate symbol de `stb_truetype`;
-- nova interface com pouco benefício;
-- regressão de sampler/atlas/descriptor;
-- criação de ficheiros artificiais.
+- copiar uma abstração do `FontRenderer` que não seja adequada;
+- separar ownership Vulkan incorretamente;
+- regressão de `VK_FORMAT_R8G8B8A8_UNORM` ou sampler `NEAREST`;
+- quebrar a inicialização/destruição Vulkan;
+- criar uma classe GPU genérica sem necessidade real.
 
 ## Validação
 
@@ -109,21 +99,22 @@ Vulkan integration tests
 campaign validation
 ```
 
-Também verificar exatamente uma ocorrência de `STB_TRUETYPE_IMPLEMENTATION` e procurar todos os consumidores do `FontRenderer` antes/depois.
+Também verificar que `STB_IMAGE_IMPLEMENTATION` continua a existir numa única translation unit e que o contrato público do `SpriteRenderer` permanece estável.
 
 ## Critério de saída
 
 ```text
-FontRenderer.cpp abaixo do ERROR ou exceção arquitetural documentada
-+ ownership claro
-+ nenhuma dependência transitória desnecessária
+cohesion decision documented
++ selected boundary justified by responsibility/coupling
++ ownership explicit
++ no artificial module split
 + build/tests/Vulkan/campaign verdes
-+ documentação congruente com implementação
-+ comportamento preservado
++ documentation matches implementation
++ source-size policy respected
 ```
 
 ## Próximo work package
 
-Depois de integrar esta branch e validar novamente `main`: **9.6 Base Engineering Gate — SpriteRenderer review/decomposition**.
+Só depois de integrar e revalidar esta branch: revisão/decomposição dos testes grandes e depois `main.cpp`, conforme o roadmap atual.
 
 `RenderSnapshot` geral continua bloqueado até o Gate de Engenharia estar fechado.
