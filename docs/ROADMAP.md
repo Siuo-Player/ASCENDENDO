@@ -35,6 +35,8 @@ Antes de multiplicar objetos, priorizar:
 - compatibilidade de hardware e runtime;
 - profiling antes de otimização.
 
+**Referências:** `docs/RESEARCH_INDEX.md` (mapa geral); `docs/SCIENTIFIC_REFERENCES.md` (level design, dificuldade, playtesting); `docs/TECHNICAL_REFERENCES.md` (arquitetura, Vulkan, QA, packaging, sharing); `docs/DESIGN_REFERENCES.md` (Tiled, Godot, SuperTux, Mario Maker e Jump King).
+
 ## Princípio de evidência
 
 Para decisões importantes, cruzar sempre que possível:
@@ -65,11 +67,15 @@ Nunca usar uma única referência como autoridade para uma decisão de design. M
 - Base separada de `CampaignEditor` e `LevelEditorValidator`.
 - Test runner Windows e source-size gate.
 
+**Referências para avaliar e preservar a base existente:** `docs/TECHNICAL_REFERENCES.md` (arquitetura, C++, Vulkan, testes, hardware); `docs/SCIENTIFIC_REFERENCES.md` (física/replay/playtesting); `docs/PRODUCT_DECISIONS.md` (invariantes de produto).
+
 ## Fase 9 — Edição e base comunitária
 
 ### 9.4 ✅ — Editor core + migração incremental do renderer
 
 Fechada e integrada em `main`.
+
+**Referências:** `docs/DESIGN_REFERENCES.md` (Tiled/Godot/SuperTux); `docs/EDITOR_UX_SPEC.md`; `docs/CAMPAIGN_EDITOR_DESIGN.md`; `docs/TECHNICAL_REFERENCES.md` (separação renderer/modelo e testes).
 
 ### 9.5 — Corrigir e completar a base antes de adicionar conteúdo
 
@@ -88,12 +94,16 @@ A 9.5 passa a ter prioridade de **consolidação**, não apenas de novas funcion
 - indicador visual de força do salto;
 - feedback de erro imediatamente compreensível.
 
+**Referências e critérios:** `docs/EDITOR_UX_SPEC.md`; `docs/PRODUCT_DECISIONS.md`; `docs/DESIGN_REFERENCES.md` (Godot/Tiled/SuperTux/Jump King/Mario Maker); `docs/SCIENTIFIC_REFERENCES.md` (player experience, challenge, camera e feedback).
+
 #### 9.5.b — Seleção de campanhas
 
 - `Começar` abre seleção mesmo com uma única campanha;
 - metadata de campanha separada da lista de níveis quando necessário;
 - preview, número de níveis e estado de validade;
 - preparação para múltiplas campanhas oficiais.
+
+**Referências e critérios:** `docs/PRODUCT_DECISIONS.md` (seleção explícita); `docs/CAMPAIGN_EDITOR_DESIGN.md` (separação nível/campanha); `docs/SCIENTIFIC_REFERENCES.md` (progressão e experiência em escalas maiores); `docs/DESIGN_REFERENCES.md` (SuperTux/worldmap, Mario Maker/UGC).
 
 #### 9.5.c — Campaign Editor
 
@@ -107,6 +117,8 @@ A 9.5 passa a ter prioridade de **consolidação**, não apenas de novas funcion
 - pelo menos um agente por nível quando possível;
 - pelo menos um agente de transição entre níveis;
 - diagnóstico visual de falhas.
+
+**Referências e critérios:** `docs/CAMPAIGN_EDITOR_DESIGN.md` (fonte operacional); `docs/DESIGN_REFERENCES.md` (SuperTux, Tiled/Godot, Jump King); `docs/SCIENTIFIC_REFERENCES.md` (progressão multi-escala, level patterns); `docs/PRODUCT_DECISIONS.md` (community-first).
 
 #### 9.5.d — Validador e análise de level design
 
@@ -136,6 +148,8 @@ análise da campanha
 
 O design deverá considerar, conforme a literatura, padrões como guidance, safe zones, foreshadowing, layering, branching e pace breaking, além de distância/largura de gaps, mudanças de direção e progressão de challenge.
 
+**Referências principais:** `docs/SCIENTIFIC_REFERENCES.md` — Smith/Cha/Whitehead (2008), Khalifa et al. (2019), Pedersen/Togelius/Yannakakis (2009), Aramini/Lanzi/Loiacono (2018), Fernández/Mikami/Kondo (2018), Tanagra e trabalhos de análise de UGC/Mario Maker; `docs/DESIGN_REFERENCES.md` — Mario Maker, Jump King e SuperTux como casos práticos; `docs/RESEARCH_INDEX.md` — Level design, Jump design, Difficulty, Progression, UGC, Authoring tools e Playtesting.
+
 #### 9.5.e — Modelo de nível preparado para conteúdo futuro
 
 Sem ainda enriquecer o catálogo, o modelo deve suportar extensão versionável para:
@@ -150,6 +164,8 @@ Sem ainda enriquecer o catálogo, o modelo deve suportar extensão versionável 
 - regras/eventos de campanha.
 
 A prioridade é compatibilidade aditiva e migração controlada.
+
+**Referências e critérios:** `docs/TECHNICAL_REFERENCES.md` (modelo declarativo, compatibilidade, data-oriented design); `docs/SCIENTIFIC_REFERENCES.md` (separar autoria, análise e simulação); `docs/DESIGN_REFERENCES.md` (Tiled/SuperTux e evolução de formatos); `docs/PRODUCT_DECISIONS.md` (compatibilidade aditiva).
 
 ## Gate 9.6 — Correção da base existente antes de construir por cima
 
@@ -166,12 +182,16 @@ Esta fase é obrigatória e deve vir antes de conteúdo novo significativo.
 7. remover código morto, placeholders e duplicações confirmadas;
 8. manter ficheiros de código abaixo do limite de tamanho acordado e subdividir responsabilidades antes de chegarem a ser monólitos.
 
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (C++/data-oriented design, ownership, arquitetura); `docs/RESEARCH_INDEX.md` (C++ architecture); `docs/PRODUCT_DECISIONS.md` (regras de manutenção do projeto).
+
 ### Física / gameplay
 
 9. limitar catch-up do fixed timestep e documentar a política de tempo perdido;
 10. testar invariantes de física e casos extremos;
 11. rever resolução de colisões heurística quando os testes/novas mecânicas mostrarem limitações;
 12. distinguir igualdade exata de `float` de comparação aproximada onde a API o exigir.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (physics/timestep/testing); `docs/SCIENTIFIC_REFERENCES.md` (jump metrics, player experience); `docs/RESEARCH_INDEX.md` (Physics, Jump design, Testing).
 
 ### Vulkan / rendering
 
@@ -183,6 +203,8 @@ Esta fase é obrigatória e deve vir antes de conteúdo novo significativo.
 18. testar pelo menos Intel, NVIDIA, AMD e, quando viável, uma GPU com tile-based rendering;
 19. usar feature detection e fallback paths em vez de assumptions por vendor.
 
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (Vulkan synchronization, profiling, tile-based rendering, portability); `docs/RESEARCH_INDEX.md` (Vulkan, Hardware); documentação oficial Khronos/Vulkan indicada nesses documentos. O objetivo é aplicar práticas comprovadas sem sobre-engineering.
+
 ### Qualidade
 
 20. Windows build + tests no CI;
@@ -193,6 +215,8 @@ Esta fase é obrigatória e deve vir antes de conteúdo novo significativo.
 25. campanha completa validada automaticamente;
 26. matriz mínima de hardware/software documentada.
 
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (game testing, regression, hardware matrix); `docs/SCIENTIFIC_REFERENCES.md` (playtesting, difficulty analysis); `docs/RESEARCH_INDEX.md` (Testing, Playtesting, Hardware).
+
 ### Runtime / distribuição
 
 27. paths independentes do current working directory;
@@ -200,6 +224,8 @@ Esta fase é obrigatória e deve vir antes de conteúdo novo significativo.
 29. release sem SDK/ambiente de desenvolvimento;
 30. shaders/assets/runtime dependencies incluídos de forma determinística;
 31. fallback amigável quando uma capability obrigatória estiver ausente.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (Packaging / EXE, portability, runtime paths, deployment); `docs/RESEARCH_INDEX.md` (Packaging, Hardware); documentação Microsoft referenciada nesses documentos.
 
 ## Fase 10 — Guardar + formatos estáveis + validação
 
@@ -213,6 +239,8 @@ Só começa após o Gate 9.6 verde.
 - mapas inválidos nunca entram numa campanha jogável;
 - mapas importados/descarregados revalidados pelo EXE;
 - migrações de formato documentadas.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (modelo de dados, packaging, sharing e segurança); `docs/DESIGN_REFERENCES.md` (Tiled/SuperTux e evolução de formatos); `docs/PRODUCT_DECISIONS.md` (validação final pelo EXE); `docs/RESEARCH_INDEX.md` (Level design, Sharing, Packaging).
 
 ## Fase 11 — Conteúdo oficial e análise de campanhas
 
@@ -235,11 +263,15 @@ Objetivo de conteúdo oficial:
 - níveis finais/opcionais extremamente difíceis;
 - progressão baseada em aprendizagem, variação, recuperação e escalada de desafio, não apenas em aumentar números.
 
+**Referências:** `docs/SCIENTIFIC_REFERENCES.md` (level-design patterns, player experience, progression, difficulty at multiple scales); `docs/DESIGN_REFERENCES.md` (Mario Maker, Jump King, SuperTux); `docs/RESEARCH_INDEX.md` (Progression, Difficulty, UGC, Extreme levels); `docs/PRODUCT_DECISIONS.md` (escala e objetivos de conteúdo oficial).
+
 ## Fase 12 — Partilha local e web
 
 ### 12.1 — Export/import local
 
 Pacote compacto declarativo, extração controlada e validação obrigatória pelo EXE.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (web/sharing security, authority split, archive handling); `docs/PRODUCT_DECISIONS.md` (revalidação obrigatória no EXE); `docs/RESEARCH_INDEX.md` (Sharing).
 
 ### 12.2 — Biblioteca online
 
@@ -249,15 +281,21 @@ A camada web trata conteúdo como não confiável. O EXE permanece a autoridade 
 
 Metadata futura pode incluir autor, versão do formato, hashes/IDs, descrição, dificuldade declarada/observada, versão do jogo, estatísticas de uso e reports/moderação.
 
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (OWASP upload security, resumable uploads, UGC metadata); `docs/DESIGN_REFERENCES.md`/`docs/SCIENTIFIC_REFERENCES.md` (Mario Maker e comunidades UGC); `docs/RESEARCH_INDEX.md` (Sharing, Community); documentação OWASP/Microsoft indicada nesses documentos.
+
 ### 12.3 — Partilha direta
 
 Só introduzir comunicação bidirecional quando existir uma necessidade real que HTTP(S) + export/import não resolvam.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (sharing architecture); `docs/PRODUCT_DECISIONS.md` (offline-first/HTTP(S) before WebSockets); `docs/RESEARCH_INDEX.md` (Sharing).
 
 ## Fase 13 — Release / Portable Build
 
 Objetivo: um pacote Windows x64 que possa ser copiado para outro computador dentro dos requisitos mínimos e executado sem o ambiente de desenvolvimento.
 
 Requisitos: executável + DLLs/assets necessárias, sem dependência do current working directory, sem downloads obrigatórios e com diagnóstico amigável de requisitos ausentes.
+
+**Referências:** `docs/TECHNICAL_REFERENCES.md` (Packaging / EXE, portability, deployment models); `docs/RESEARCH_INDEX.md` (Packaging, Hardware); documentação Microsoft indicada nesses documentos.
 
 ## Regra de progressão entre branches/PRs
 
