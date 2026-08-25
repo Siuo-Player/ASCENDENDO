@@ -14,6 +14,7 @@ bool RendererFacadeAdapter::init(VulkanContext* ctx, Swapchain* swapchain,
 
 void RendererFacadeAdapter::cleanup() {
     m_facade.cleanup();
+    m_editorSession = nullptr;
     m_hasEditorSnapshot = false;
     m_editorSnapshot = {};
 }
@@ -27,6 +28,7 @@ void RendererFacadeAdapter::attachSprite(SpritePipeline* spritePipeline, SpriteR
 }
 
 void RendererFacadeAdapter::attachEditorSession(const logic::EditorSession* session) {
+    m_editorSession = session;
     if (!session) {
         m_hasEditorSnapshot = false;
         m_editorSnapshot = {};
@@ -51,7 +53,14 @@ bool RendererFacadeAdapter::drawFrame(const logic::Player& player,
         case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
         case GameState::CREDITS: renderState = RenderState::CREDITS; break;
         case GameState::MENU:    renderState = RenderState::MENU;    break;
-        case GameState::EDITOR:  renderState = RenderState::EDITOR;  break;
+        case GameState::EDITOR:
+            renderState = RenderState::EDITOR;
+            if (m_editorSession) {
+                m_editorSnapshot = m_editorSession->renderSnapshot();
+                m_hasEditorSnapshot = true;
+                m_facade.attachEditorSnapshot(&m_editorSnapshot);
+            }
+            break;
     }
 
     return m_facade.drawFrame(player, camera, level,
