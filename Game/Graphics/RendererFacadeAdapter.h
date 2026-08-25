@@ -3,8 +3,8 @@
 // Game/Graphics/RendererFacadeAdapter.h
 //
 // Adapter de migração: expõe a API usada atualmente por main.cpp enquanto
-// delega para o novo RendererFacade. O snapshot do editor pertence ao adapter
-// e é atualizado por cópia, evitando referências para temporários.
+// delega para o novo RendererFacade. Mantém a sessão do editor como fonte da
+// verdade e atualiza o snapshot por cópia no frame em que EDITOR é desenhado.
 // =============================================================================
 
 #include "Graphics/Renderer.h"
@@ -36,6 +36,7 @@ public:
 
 private:
     RendererFacade m_facade;
+    const logic::EditorSession* m_editorSession = nullptr; // não possuído
     logic::EditorRenderSnapshot m_editorSnapshot{};
     bool m_hasEditorSnapshot = false;
 };
