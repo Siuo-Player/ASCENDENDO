@@ -94,8 +94,6 @@ bool stringToKey(const std::string& s, int& outKey) {
     }
 }
 
-}
-
 bool KeyBindings::saveToFile(const std::string& path) const {
     try {
         std::filesystem::path p(path);
