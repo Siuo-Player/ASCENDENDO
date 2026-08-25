@@ -134,14 +134,21 @@ The distinction between **likely** and **confirmed** is mandatory. Never infer a
 
 Run #281 (`32879936455`) is known to have failed in the aggregate job/step named **Build and run tests in virtual X display**. The source-size gate did not cause this run to fail.
 
-The detailed failure diagnostic has not been recovered from the job log through the available GitHub interface at the time of this update. Therefore:
+The later build failure received during the FontRenderer decomposition work package contained this concrete compiler diagnostic:
 
 ```text
-Classification: CI build/test failure
-Confirmed cause: UNKNOWN
+Game/Graphics/SpriteRenderer.cpp:52:21: error: member access into incomplete type 'VulkanContext'
+SpriteRenderer.h:20:7: note: forward declaration of 'gfx::VulkanContext'
+make: *** [Makefile:229: build/game/Game/Graphics/SpriteRenderer.o] Error 1
 ```
 
-No code change may be attributed to a more specific cause until the diagnostic is obtained.
+**Classification:** compiler build failure.
+
+**Likely cause:** `SpriteRenderer.cpp` was compiled in a state where the complete `VulkanContext` definition was not visible at the point of `ctx->isInitialized()`.
+
+**Current source evidence:** the current branch version of `SpriteRenderer.cpp` already includes `Graphics/VulkanContext.h` directly, so the corrective include is present in the source being validated now. The exact reason the failing CI state did not observe the complete type cannot be reconstructed solely from the supplied tail; the current commit therefore still requires CI validation rather than assuming success.
+
+**Validation required:** a fresh CI build of the current branch must compile `SpriteRenderer.cpp` and complete the full test/campaign pipeline.
 
 ### Historical source-size incident
 
@@ -159,148 +166,57 @@ That result is evidence of a maintainability problem in the affected files; it i
 
 ## Source-size and modularity policy
 
-The project policy is intentionally **line-based** because the engineering question is source-structure/cohesion, not encoded byte density:
+The project uses **encoded file size** as the primary source-size gate because the historical CI signal already measures KiB and because the repository wants a stable physical-size limit independent of comments/blank-line formatting. File size is still a heuristic: it triggers architectural/cohesion analysis and never justifies arbitrary splitting.
+
+For C/C++ files:
 
 ```text
-< 300 lines
+< 30 KiB
     normal
 
-300–399
+30–36 KiB
     WARNING
     explicit subdivision plan required
 
-≥ 400
+> 36 KiB
     ERROR
     CI blocks until subdivided or an explicit exception is documented
 ```
 
-This threshold is a decision trigger, not a demand for arbitrary splitting. An exception must document:
+A file may have many lines without being a problem, and a compact file may still have poor cohesion. The byte/size gate is therefore a guardrail, not a substitute for architectural review.
+
+An exception above the hard limit must document:
 
 ```text
 why the file remains cohesive
-important coupling/dependencies
+coupling/dependencies relevant to the decision
 alternatives considered
-why splitting is not appropriate now
-when to reconsider
+cost/risk of splitting now
+condition for reconsideration
 ```
 
-Prefer responsibility-cohesive boundaries. Never create artificial files such as `main1.cpp`, `main2.cpp`, `main3.cpp` solely to reduce metrics.
+The exception belongs to the work package/PR that keeps the file large.
 
-### Enforcement status
+### Historical wording correction
 
-As of `main` at `1573e21c518620188ac47568b99d23327f80a279`, the checked-in `Development/Tools/check_source_sizes.py` still implements the older **KiB-based** rule and scans `Game/` and `Tests/` only. It does not yet include `main.cpp`.
+An earlier draft of this protocol used a 300/400-line policy. That wording is superseded by the encoded-size policy above. The active checker is the authority for enforcement, and the documentation must remain aligned with it.
 
-Therefore the line-based policy above is the **normative target**, while the CI implementation remains a follow-up implementation work package. The repository must not claim that the new policy is enforced on `main` until the checker and workflow are actually updated and validated.
+## Source-size work packages
 
-The duplicate checker `Development/check_source_size.py` is not present on current `main`; `Development/Tools/check_source_sizes.py` is the current checker path.
-
-## Architecture / WBS consistency
-
-Architecture and work breakdown must evolve together:
+The current engineering order remains:
 
 ```text
-Architecture
-    ↕
-Roadmap / WBS
-    ↕
-Branch / Work Package
-    ↕
-Implementation
-    ↕
-Tests / CI
-    ↕
-Documentation result
+FontRenderer.cpp
+    → decompose by cohesive responsibility
+
+SpriteRenderer.cpp
+    → investigate cohesion after FontRenderer
+
+main.cpp
+    → continue architectural extraction, not artificial splitting
+
+large test files
+    → split by behavior/domain only where cohesion supports it
 ```
 
-A change that crosses architectural boundaries must update the affected architecture, roadmap, debt and work-package records before or together with implementation.
-
-## Current renderer boundary
-
-The legacy `Renderer.cpp/.h` implementation is absent from `main`. The current presentation direction is:
-
-```text
-Runtime / domain
-      ↓
-application boundary
-      ↓
-render data / RenderSnapshot
-      ↓
-RendererFacade
-      ↓
-World / UI / Editor passes
-```
-
-On current `main`, `WorldRenderer` still directly receives `logic::Player` and `logic::Level`. Therefore the general `RenderSnapshot` boundary is **not yet complete on `main`**. PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) remains open and is the current implementation record for this migration.
-
-## Branch / PR discipline
-
-Normal development order:
-
-```text
-main
- ↓
-new branch
- ↓
-document / update work package
- ↓
-implement
- ↓
-validate
- ↓
-document result
- ↓
-PR
- ↓
-merge
- ↓
-close branch
- ↓
-new branch from updated main
-```
-
-Documentation committed directly to `main` by mistake is treated as a process defect. Do not rewrite history merely to hide it; track and correct the process through normal repository changes unless a deliberate history rewrite is explicitly authorized.
-
-## End-of-work record
-
-```text
-Changed:
-Decisions added/updated:
-Discoveries:
-Tests run:
-CI result:
-Failures and disposition:
-Remaining debt:
-Next dependent work package:
-```
-
-Update architecture, roadmap, debt, branch and validation documents whenever their truth changes.
-
-## Knowledge continuity contract
-
-A new engineer or AI must be able to answer from repository documents alone:
-
-1. What are the current architectural boundaries?
-2. Why do they exist?
-3. What is the current roadmap and next work package?
-4. What dependencies must be respected?
-5. Which temporary decisions/debts remain?
-6. How is the project actually validated?
-7. Which recent failures/discoveries changed the plan?
-
-If answering requires an old conversation, the documentation is incomplete.
-
-## Research basis
-
-This protocol follows the project's research-repository principle that project knowledge must remain reproducible, traceable and sufficient for continuation without the originating conversation. Relevant foundations include WBS, architectural decision/rationale documentation, socio-technical congruence, coordination breakdowns, technical/architectural debt and code-smell research.
-
-Key references already catalogued by the project include:
-
-- Tausworthe, *The Work Breakdown Structure in Software Project Management* (1979), DOI `10.1016/0164-1212(79)90018-9`.
-- van Heesch et al., *A documentation framework for architecture decisions* (2012), DOI `10.1016/j.jss.2011.10.017`.
-- Tofan et al., *An expert survey on kinds, influence factors and documentation of design decisions in practice* (2014).
-- Capilla et al., *10 years of software architecture knowledge management: Practice and future* (2016), DOI `10.1016/j.jss.2015.08.054`.
-- Cataldo, Herbsleb & Carley, *Socio-technical congruence* (ESEM 2008), DOI `10.1145/1414004.1414008`.
-- Cataldo & Herbsleb, *Coordination Breakdowns and Their Impact on Development Productivity and Software Failures* (IEEE TSE, 2013), DOI `10.1109/TSE.2012.32`.
-- Abbes et al., *Code smells and their collocations* (2018), DOI `10.1016/j.jss.2018.05.057`.
-
-For provenance and paper-level synthesis, use the project's research repository rather than copying conclusions into this protocol without traceability.
+Consult `docs/CODE_SIZE.md` and `docs/PROJECT_MANAGEMENT.md` before beginning each split.
