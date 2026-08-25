@@ -10,10 +10,9 @@ Policy:
   30–36 KiB or 300–399 lines WARNING
   > 36 KiB or >= 400 lines ERROR (CI failure)
 
-The goal is to prevent application entry points and domain/presentation
-components from becoming oversized, multi-responsibility units. When a limit
-is reached, split by cohesive responsibility instead of merely moving random
-functions between files.
+When a limit is reached, split by cohesive responsibility instead of merely
+moving random functions between files. The root entry point is explicitly
+checked because otherwise it can bypass subsystem limits.
 """
 
 from __future__ import annotations
@@ -27,10 +26,11 @@ HARD_LIMIT_LINES = 400
 EXTENSIONS = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
 EXCLUDED_PARTS = {".git", "build", "dist"}
 ROOTS = (pathlib.Path("Game"), pathlib.Path("Tests"))
+ROOT_FILES = (pathlib.Path("main.cpp"),)
 
 
 def iter_sources() -> list[pathlib.Path]:
-    files: list[pathlib.Path] = []
+    files: list[pathlib.Path] = [path for path in ROOT_FILES if path.is_file()]
     for root in ROOTS:
         if not root.exists():
             continue
@@ -38,7 +38,7 @@ def iter_sources() -> list[pathlib.Path]:
             if path.is_file() and path.suffix.lower() in EXTENSIONS:
                 if not EXCLUDED_PARTS.intersection(path.parts):
                     files.append(path)
-    return sorted(files)
+    return sorted(set(files))
 
 
 def main() -> int:
@@ -54,7 +54,7 @@ def main() -> int:
             failed = True
             reasons = []
             if size > HARD_LIMIT_BYTES:
-                reasons.append(f"> 36 KiB")
+                reasons.append("> 36 KiB")
             if line_count >= HARD_LIMIT_LINES:
                 reasons.append(f">= {HARD_LIMIT_LINES} lines")
             print(f"ERROR   {kib:7.2f} KiB  {line_count:4d} lines  {path} ({'; '.join(reasons)})")
