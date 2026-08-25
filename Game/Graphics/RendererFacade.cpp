@@ -78,6 +78,22 @@ void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* sna
 
 bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
                                const Camera& camera,
+                               GameState state,
+                               int menuSelection,
+                               float elapsedSeconds) {
+    RenderState renderState = RenderState::PLAYING;
+    switch (state) {
+        case GameState::PLAYING: renderState = RenderState::PLAYING; break;
+        case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
+        case GameState::CREDITS: renderState = RenderState::CREDITS; break;
+        case GameState::MENU:    renderState = RenderState::MENU;    break;
+        case GameState::EDITOR:  renderState = RenderState::EDITOR; break;
+    }
+    return drawFrame(snapshot, camera, renderState, menuSelection, elapsedSeconds);
+}
+
+bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
+                               const Camera& camera,
                                RenderState state,
                                int menuSelection,
                                float elapsedSeconds) {
