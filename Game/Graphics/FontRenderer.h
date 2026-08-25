@@ -2,8 +2,6 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Graphics/VulkanContext.h"
-
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -12,6 +10,7 @@
 namespace gfx {
 
 class FontRendererGpu;
+class VulkanContext;
 
 class FontRenderer {
 public:
