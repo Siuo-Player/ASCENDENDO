@@ -33,9 +33,9 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::EditorSizeDown,     { Key::LBRACKET } },
         { GameAction::EditorSizeUp,       { Key::RBRACKET } },
         { GameAction::DeleteSelection,    { Key::DELETE_KEY, Key::BACKSPACE } },
-        { GameAction::EditorSave,         { Key::F2 } },
-        { GameAction::EditorTest,         { Key::F5 } },
-        { GameAction::EditorValidate,     { Key::F6 } },
+        { GameAction::EditorSave,         { Key::NUM1 } },
+        { GameAction::EditorTest,         { Key::NUM2 } },
+        { GameAction::EditorValidate,     { Key::NUM3 } },
     };
 }
 
@@ -68,6 +68,7 @@ constexpr KeyName KEY_NAMES[] = {
     { Key::UP, "UP" }, { Key::DOWN, "DOWN" },
     { Key::A, "A" }, { Key::C, "C" }, { Key::D, "D" },
     { Key::W, "W" }, { Key::S, "S" }, { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
+    { Key::NUM0, "0" }, { Key::NUM1, "1" }, { Key::NUM2, "2" }, { Key::NUM3, "3" },
     { Key::F2, "F2" }, { Key::F5, "F5" }, { Key::F6, "F6" },
     { Key::LBRACKET, "LBRACKET" }, { Key::RBRACKET, "RBRACKET" },
     { Key::DELETE_KEY, "DELETE" }, { Key::BACKSPACE, "BACKSPACE" },
