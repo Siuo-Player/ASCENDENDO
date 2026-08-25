@@ -38,9 +38,10 @@ bool chooseSurfaceFormat(VkPhysicalDevice device,
         }
     }
 
-    outFormat = formats.front().format;
-    outColorSpace = formats.front().colorSpace;
-    return true;
+    // RenderPass currently uses the swapchain format directly at initialization
+    // and is not recreated during a frame. Reject a different format rather than
+    // silently creating an incompatible render pass/framebuffer combination.
+    return false;
 }
 
 VkPresentModeKHR choosePresentMode(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -58,6 +59,20 @@ VkPresentModeKHR choosePresentMode(VkPhysicalDevice device, VkSurfaceKHR surface
         return VK_PRESENT_MODE_FIFO_KHR;
     }
     return modes.front();
+}
+
+VkCompositeAlphaFlagBitsKHR chooseCompositeAlpha(const VkSurfaceCapabilitiesKHR& capabilities) {
+    constexpr VkCompositeAlphaFlagBitsKHR candidates[] = {
+        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
+        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
+    };
+
+    for (const auto candidate : candidates) {
+        if (capabilities.supportedCompositeAlpha & candidate) return candidate;
+    }
+    return static_cast<VkCompositeAlphaFlagBitsKHR>(0);
 }
 
 VkExtent2D chooseExtent(const VkSurfaceCapabilitiesKHR& capabilities,
@@ -168,8 +183,11 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
     if (!chooseSurfaceFormat(physicalDevice, surface, format, colorSpace)) return false;
 
-    VkPresentModeKHR presentMode = choosePresentMode(physicalDevice, surface);
-    VkExtent2D extent = chooseExtent(capabilities, m_window->width(), m_window->height());
+    const VkPresentModeKHR presentMode = choosePresentMode(physicalDevice, surface);
+    const VkCompositeAlphaFlagBitsKHR compositeAlpha = chooseCompositeAlpha(capabilities);
+    if (compositeAlpha == 0) return false;
+
+    const VkExtent2D extent = chooseExtent(capabilities, m_window->width(), m_window->height());
     if (extent.width == 0 || extent.height == 0) return false;
 
     uint32_t imageCount = std::max(2u, capabilities.minImageCount);
@@ -190,7 +208,7 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     createInfo.preTransform = (capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
         ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
         : capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.compositeAlpha = compositeAlpha;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = oldSwapchain;
