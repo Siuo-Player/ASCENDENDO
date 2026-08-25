@@ -1,17 +1,15 @@
 #pragma once
 // =============================================================================
 // Game/Graphics/RendererFacade.h
-//
-// Orquestrador do novo renderer. Mantém uma API pequena e delega o desenho
-// para passes especializados.
 // =============================================================================
 
 #include "Graphics/RenderState.h"
 #include "Graphics/GameState.h"
+#include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 
-namespace logic { class Player; class Level; struct EditorRenderSnapshot; }
+namespace logic { class Player; class Level; class EditorSession; }
 namespace gfx {
 
 class VulkanContext;
@@ -22,7 +20,6 @@ class TextPipeline;
 class FontRenderer;
 class SpritePipeline;
 class SpriteRenderer;
-
 class RendererCore;
 class ShapeRenderer;
 class WorldRenderer;
@@ -45,11 +42,21 @@ public:
     void attachText(TextPipeline* textPipeline, FontRenderer* font);
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
+    void attachEditorSession(const logic::EditorSession* session);
 
     bool drawFrame(const logic::Player& player,
                    const Camera& camera,
                    const logic::Level* level,
                    RenderState state,
+                   int menuSelection = 0,
+                   float elapsedSeconds = 0.0f);
+
+    // Transitional overload for existing runtime callers. It converts the
+    // application state at the presentation boundary rather than in an adapter.
+    bool drawFrame(const logic::Player& player,
+                   const Camera& camera,
+                   const logic::Level* level,
+                   GameState state,
                    int menuSelection = 0,
                    float elapsedSeconds = 0.0f);
 
@@ -67,7 +74,9 @@ private:
     FontRenderer* m_font = nullptr;
     SpritePipeline* m_spritePipeline = nullptr;
     SpriteRenderer* m_sprite = nullptr;
-    const logic::EditorRenderSnapshot* m_editorSnapshot = nullptr;
+    const logic::EditorSession* m_editorSession = nullptr; // não possuído
+    logic::EditorRenderSnapshot m_editorSnapshot{};
+    const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
 
     bool m_initialized = false;
 };

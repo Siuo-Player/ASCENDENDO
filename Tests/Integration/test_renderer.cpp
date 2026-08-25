@@ -1,8 +1,7 @@
 // =============================================================================
 //  Tests/Integration/test_renderer.cpp
 //
-//  Validação de integração do renderer público após a migração para
-//  RendererFacadeAdapter.
+//  Validação de integração da API pública RendererFacade após o cut-over.
 // =============================================================================
 
 #include "../../external/doctest/doctest.h"
@@ -11,7 +10,7 @@
 #include "../../Game/Graphics/Swapchain.h"
 #include "../../Game/Graphics/RenderPass.h"
 #include "../../Game/Graphics/Pipeline.h"
-#include "../../Game/Graphics/RendererFacadeAdapter.h"
+#include "../../Game/Graphics/RendererFacade.h"
 #include "../../Game/Graphics/Camera.h"
 #include "../../Game/Logic/Player.h"
 #include "../../Game/Logic/Physics.h"
@@ -29,9 +28,9 @@ TEST_SUITE("Renderer") {
         Swapchain     swapchain;
         RenderPass    renderPass;
         Pipeline      pipeline;
-        RendererFacadeAdapter renderer;
+        RendererFacade renderer;
 
-        REQUIRE(win.create(800, 600, "ASCENDENDO | RendererFacadeAdapter"));
+        REQUIRE(win.create(800, 600, "ASCENDENDO | RendererFacade"));
 
         std::vector<const char*> exts;
         win.appendRequiredExtensions(exts);
@@ -74,6 +73,6 @@ TEST_SUITE("Renderer") {
 
         vkDeviceWaitIdle(ctx.device());
         CHECK(successFrames == FRAMES);
-        MESSAGE("RendererFacadeAdapter manteve o contrato de drawFrame durante a simulacao.");
+        MESSAGE("RendererFacade manteve o contrato de drawFrame durante a simulacao.");
     }
 }

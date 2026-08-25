@@ -12,7 +12,7 @@
 #include "Graphics/Camera.h"
 #include "Logic/Player.h"
 #include "Logic/Level.h"
-#include "Logic/EditorRenderSnapshot.h"
+#include "Logic/EditorSession.h"
 #include "Core/Config.h"
 
 #include <algorithm>
@@ -57,7 +57,9 @@ void RendererFacade::cleanup() {
     m_shapes = nullptr;
     m_core = nullptr;
     m_shapePipeline = nullptr;
-    m_editorSnapshot = nullptr;
+    m_editorSession = nullptr;
+    m_editorSnapshotPtr = nullptr;
+    m_editorSnapshot = {};
     m_initialized = false;
 }
 
@@ -72,7 +74,41 @@ void RendererFacade::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer
 }
 
 void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot) {
-    m_editorSnapshot = snapshot;
+    m_editorSession = nullptr;
+    if (!snapshot) {
+        m_editorSnapshotPtr = nullptr;
+        return;
+    }
+    m_editorSnapshot = *snapshot;
+    m_editorSnapshotPtr = &m_editorSnapshot;
+}
+
+void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
+    m_editorSession = session;
+    if (!session) {
+        m_editorSnapshotPtr = nullptr;
+        return;
+    }
+    m_editorSnapshot = session->renderSnapshot();
+    m_editorSnapshotPtr = &m_editorSnapshot;
+}
+
+bool RendererFacade::drawFrame(const logic::Player& player,
+                               const Camera& camera,
+                               const logic::Level* level,
+                               GameState state,
+                               int menuSelection,
+                               float elapsedSeconds) {
+    RenderState renderState = RenderState::PLAYING;
+    switch (state) {
+        case GameState::PLAYING: renderState = RenderState::PLAYING; break;
+        case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
+        case GameState::CREDITS: renderState = RenderState::CREDITS; break;
+        case GameState::MENU:    renderState = RenderState::MENU;    break;
+        case GameState::EDITOR:  renderState = RenderState::EDITOR; break;
+    }
+    return drawFrame(player, camera, level, renderState,
+                     menuSelection, elapsedSeconds);
 }
 
 bool RendererFacade::drawFrame(const logic::Player& player,
@@ -82,6 +118,11 @@ bool RendererFacade::drawFrame(const logic::Player& player,
                                int menuSelection,
                                float elapsedSeconds) {
     if (!m_initialized || !m_core || !m_shapes || !m_shapePipeline) return false;
+
+    if (state == RenderState::EDITOR && m_editorSession) {
+        m_editorSnapshot = m_editorSession->renderSnapshot();
+        m_editorSnapshotPtr = &m_editorSnapshot;
+    }
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uint32_t imageIndex = 0;
@@ -173,9 +214,9 @@ bool RendererFacade::drawFrame(const logic::Player& player,
             break;
 
         case RenderState::EDITOR:
-            if (m_editorSnapshot) {
+            if (m_editorSnapshotPtr) {
                 m_editor->draw(commandBuffer, *m_shapePipeline, *m_shapes,
-                               *m_editorSnapshot,
+                               *m_editorSnapshotPtr,
                                m_textPipeline, m_font);
             }
             break;
