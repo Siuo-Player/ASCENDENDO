@@ -75,19 +75,16 @@ EditorRenderSnapshot EditorSession::renderSnapshot() const {
 }
 
 void EditorSession::updateCursor(const InputManager& input,
-                                 const gfx::Camera& camera,
                                  int32_t windowWidth,
                                  int32_t windowHeight) {
-    (void)camera;
-
     const core::LogicalPoint logical = core::windowToLogical(
         input.cursorX(), input.cursorY(),
         windowWidth, windowHeight,
         config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
     m_cursor.logical = {logical.x, logical.y};
 
-    // Level Editor = exactly one 640x360 screen. Camera movement is deliberately
-    // ignored here; Campaign Editor is the only state allowed to scroll.
+    // Level Editor = exactly one 640x360 screen. There is no camera transform
+    // here: cursor coordinates and rendered geometry share the same space.
     const gfx::Camera fixedCamera{};
     m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, fixedCamera).world;
 }
@@ -164,10 +161,9 @@ void EditorSession::updateMouse(const InputManager& input) {
 
 void EditorSession::update(const InputManager& input,
                            const core::KeyBindings& bindings,
-                           const gfx::Camera& camera,
                            int32_t windowWidth,
                            int32_t windowHeight) {
-    updateCursor(input, camera, windowWidth, windowHeight);
+    updateCursor(input, windowWidth, windowHeight);
     updateKeyboard(input, bindings);
     updateMouse(input);
 }

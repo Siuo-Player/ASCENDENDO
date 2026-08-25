@@ -9,11 +9,10 @@ TEST_CASE("default medium preset e cursor window->world") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     CHECK(session.sizePreset() == logic::EditorSizePreset::MEDIUM);
     CHECK(session.cursor().world.x == doctest::Approx(config::LOGICAL_WIDTH / 2.0f));
@@ -24,12 +23,11 @@ TEST_CASE("STAMP cria plataforma media no clique vazio") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
     CHECK(session.document().platforms()[0].bounds.width() == doctest::Approx(128.0f));
@@ -41,11 +39,10 @@ TEST_CASE("STAMP preview usa o preset medio e respeita o canvas") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     const auto preview = session.preview();
     REQUIRE(preview.visible);
@@ -54,16 +51,14 @@ TEST_CASE("STAMP preview usa o preset medio e respeita o canvas") {
     CHECK(preview.bounds.height() == doctest::Approx(20.0f));
 }
 
-TEST_CASE("level editor ignora movimento da camera e mantem preview dentro da tela") {
+TEST_CASE("level editor ignora camera e mantem preview dentro da tela") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
-    camera.position = {400.0f, 0.0f};
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     const auto preview = session.preview();
     REQUIRE(preview.visible);
@@ -77,25 +72,24 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
     input.onKeyEvent(logic::Key::G, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
     CHECK(session.controller().toolMode() == logic::EditorToolMode::DRAG);
 
     input.beginFrame();
     input.injectCursorPos(100.0, 200.0); // world (100,160)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     CHECK(session.preview().visible);
 
     input.beginFrame();
     input.injectCursorPos(196.0, 136.0); // world (196,224)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
@@ -108,12 +102,11 @@ TEST_CASE("render snapshot expoe apenas dados graficos") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     const auto snapshot = session.renderSnapshot();
     REQUIRE(snapshot.platforms.size() == 1);
@@ -128,18 +121,17 @@ TEST_CASE("DELETE apaga a selecao atual") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
-    gfx::Camera camera;
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
     REQUIRE(session.document().platformCount() == 1);
 
     input.beginFrame();
     input.injectCursorPos(320.0, 180.0);
     input.onKeyEvent(logic::Key::DELETE_KEY, logic::Action::PRESS);
-    session.update(input, bindings, camera, 640, 360);
+    session.update(input, bindings, 640, 360);
 
     CHECK(session.document().platformCount() == 0);
     CHECK_FALSE(session.controller().hasSelection());

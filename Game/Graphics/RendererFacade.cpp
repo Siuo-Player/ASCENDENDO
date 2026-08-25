@@ -171,7 +171,7 @@ bool RendererFacade::drawFrame(const logic::Player& player,
         case RenderState::EDITOR:
             if (m_editorSnapshot) {
                 m_editor->draw(commandBuffer, *m_shapePipeline, *m_shapes,
-                               camera, *m_editorSnapshot,
+                               *m_editorSnapshot,
                                m_textPipeline, m_font);
             }
             break;

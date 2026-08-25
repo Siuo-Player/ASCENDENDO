@@ -6,7 +6,7 @@ Esta auditoria regista a revisão posterior à integração da 9.4. O projeto me
 
 A regra de manutenção é: primeiro fechar a base; só depois construir conteúdo significativo sobre ela.
 
-As conclusões arquiteturais abaixo devem ser entendidas como **processos e propriedades desejáveis**, não como obrigação de usar nomes de classes específicos. A investigação sobre coupling, cohesion, architectural smells e maintainability dá suporte à redução de dependências e de componentes excessivamente grandes, mas não prova uma implementação nominal única. Estudos empíricos encontraram relações entre coupling/complexity/size e maintainability, e estudos recentes sobre architectural smells encontram relações negativas com testability/maintainability. Ver `docs/TECHNICAL_REFERENCES.md` e `docs/RESEARCH_INDEX.md` para as fontes. 
+As conclusões arquiteturais abaixo devem ser entendidas como **processos e propriedades desejáveis**, não como obrigação de usar nomes de classes específicos. A investigação sobre coupling, cohesion, architectural smells e maintainability dá suporte à redução de dependências e de componentes excessivamente grandes, mas não prova uma implementação nominal única. Estudos empíricos encontraram relações entre coupling/complexity/size e maintainability, e estudos recentes sobre architectural smells encontram relações negativas com testability/maintainability. Ver `docs/TECHNICAL_REFERENCES.md` e `docs/RESEARCH_INDEX.md` para as fontes.
 
 ## Estado atual
 
@@ -24,7 +24,7 @@ Isto não implica reescrever o motor. A estratégia continua sendo migração in
 
 ## P0 — corrigir antes de novas funcionalidades significativas
 
-### 1. Unificar o fluxo de input
+### 1. Unificar o fluxo de input ✅
 
 Toda a entrada de gameplay deve seguir uma única cadeia de significado:
 
@@ -32,37 +32,33 @@ Toda a entrada de gameplay deve seguir uma única cadeia de significado:
 hardware → estado bruto → mapeamento configurável → ação de jogo → gameplay
 ```
 
-Nenhuma regra de gameplay deve depender diretamente de uma tecla física quando já existe uma ação configurável equivalente. O objetivo é evitar estados em que a interface apresenta uma configuração enquanto o gameplay utiliza outra.
+A tranche inicial 9.6 eliminou o acesso direto a teclas físicas no gameplay e fez o movimento/salto respeitar o mesmo conjunto configurável de ações usado pelo restante do jogo.
 
-A escolha de uma cadeia única é uma decisão de engenharia orientada por consistência e acessibilidade; a literatura de HCI/input sustenta a importância de consistência e adequação do mapeamento, mas não impõe nomes concretos para a implementação.
+### 2. Fechar o contrato do editor de uma única tela 🔄
 
-### 2. Fechar o contrato do editor de uma única tela
+A documentação estabelece um Level Editor fixo de `640x360`. A implementação anterior ainda possuía camera-pan e passava a câmera para componentes que já a ignoravam.
 
-A documentação estabelece um Level Editor fixo de `640x360`, mas ainda existem caminhos de código que movem a câmera. Ao mesmo tempo, partes do editor tratam a câmera como fixa.
-
-**Objetivo:** uma única interpretação do espaço do Level Editor:
+A branch `feat/9-6-editor-viewport-hardening` está a fechar este contrato:
 
 ```text
 Level Editor = uma tela fixa 640x360
+cursor        = logical → editor world
+renderer      = editor world → logical screen
+camera        = fora da transformação do Level Editor
 ```
 
-A transformação usada pelo cursor e a transformação usada pelo renderer devem ser a mesma. Nenhum movimento visual que não tenha efeito real deve permanecer.
+A sessão e o renderer do editor já não recebem uma câmera e o runtime deixou de atualizar camera-pan no estado EDITOR. O teste cobre explicitamente que uma câmera externa não altera o cursor/preview.
 
-### 3. Corrigir o fixed timestep
+### 3. Corrigir o fixed timestep ✅
 
-O acumulador não deve permitir catch-up ilimitado depois de um frame muito longo. A referência clássica de game-loop demonstra que, quando a simulação tenta recuperar mais tempo do que consegue processar, o custo pode entrar numa espiral crescente; limites de tempo/passo e margem de desempenho são formas conhecidas de evitar isso. Ver Gaffer On Games em `docs/TECHNICAL_REFERENCES.md`. 
+O acumulador já não permite catch-up ilimitado após um frame muito longo. A tranche inicial de hardening:
 
-**Estado desta branch:** o passo físico continua em **60 Hz** para preservar a semântica e os testes atuais. O objetivo de runtime é manter **60 FPS de forma consistente como piso** e chegar a **120 FPS de forma consistente quando o hardware permitir**. Não existe obrigação de forçar 120 FPS em hardware que não o sustente.
+- limita passos de simulação por frame;
+- rejeita `NaN`/`Inf`;
+- mantém o passo físico atual de 60 Hz;
+- adiciona regressões para frames longos e tempo inválido.
 
-**Objetivo técnico:**
-
-- limitar passos de simulação por frame;
-- limitar ou tratar de forma explícita grandes hitches/minimizações;
-- rejeitar `NaN`/`Inf` na fronteira temporal;
-- preservar determinismo dentro do contrato definido para replay;
-- medir frame time, não apenas FPS médio.
-
-A investigação não sustenta que um valor específico (por exemplo, 15 passos ou 250 ms) seja universalmente correto; esse valor é uma escolha de engenharia e deve ser calibrado por profiling.
+A política concreta de limite é uma decisão de engenharia; o problema do catch-up ilimitado/spiral of death é o fundamento técnico.
 
 ### 4. Fechar ciclo de vida e erros de Vulkan
 
@@ -207,9 +203,9 @@ Estas técnicas só entram quando um problema medido as justificar.
 
 A base fica pronta para construção de conteúdo quando:
 
-1. input é totalmente orientado a ações;
-2. Level Editor tem uma única interpretação de viewport;
-3. fixed timestep tem limite defensivo;
+1. input é totalmente orientado a ações; ✅
+2. Level Editor tem uma única interpretação de viewport; 🔄
+3. fixed timestep tem limite defensivo; ✅
 4. swapchain/queues/error paths são robustos;
 5. pontes e caminhos legados de apresentação deixam de ser necessários;
 6. gameplay usa dados de apresentação em vez de objetos de domínio diretamente;

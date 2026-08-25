@@ -2,13 +2,12 @@
 // =============================================================================
 //  Game/Logic/EditorSession.h
 //
-//  Fase 9.4 — camada de orquestração do editor.
-//  Liga InputManager + Camera + EditorInteractionController sem conhecer
-//  Vulkan. A sessão é a fonte de estado da interação visual.
+//  Fase 9.6 — camada de orquestração do editor.
+//  Liga InputManager + EditorInteractionController sem conhecer Vulkan nem
+//  estado de câmera: o Level Editor ocupa sempre uma única tela lógica 640x360.
 // =============================================================================
 
 #include "Core/KeyBindings.h"
-#include "Graphics/Camera.h"
 #include "Logic/EditorInteraction.h"
 #include "Logic/EditorRenderSnapshot.h"
 #include "Logic/InputManager.h"
@@ -44,10 +43,9 @@ public:
     EditorPreview preview() const;
     EditorRenderSnapshot renderSnapshot() const;
 
-    // Atualiza input e interação do editor para um frame.
+    // Atualiza input e interação para uma única tela lógica 640x360.
     void update(const InputManager& input,
                 const core::KeyBindings& bindings,
-                const gfx::Camera& camera,
                 int32_t windowWidth,
                 int32_t windowHeight);
 
@@ -55,7 +53,6 @@ public:
 
 private:
     void updateCursor(const InputManager& input,
-                      const gfx::Camera& camera,
                       int32_t windowWidth,
                       int32_t windowHeight);
     void updateKeyboard(const InputManager& input,

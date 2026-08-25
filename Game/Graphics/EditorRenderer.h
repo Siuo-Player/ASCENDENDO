@@ -3,7 +3,8 @@
 // Game/Graphics/EditorRenderer.h
 //
 // Pass gráfico do editor. Conhece apenas dados de apresentação, nunca o
-// documento de edição nem InputManager.
+// documento de edição nem InputManager. O Level Editor usa exclusivamente
+// coordenadas da tela lógica 640x360.
 // =============================================================================
 
 #include "Logic/EditorRenderSnapshot.h"
@@ -11,7 +12,6 @@
 
 namespace gfx {
 
-class Camera;
 class Pipeline;
 class ShapeRenderer;
 class TextPipeline;
@@ -22,7 +22,6 @@ public:
     void draw(VkCommandBuffer cmd,
               const Pipeline& shapePipeline,
               const ShapeRenderer& shapes,
-              const Camera& camera,
               const logic::EditorRenderSnapshot& snapshot,
               TextPipeline* textPipeline = nullptr,
               FontRenderer* font = nullptr) const;
