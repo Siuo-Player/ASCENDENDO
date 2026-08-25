@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Enforce source-file size limits for maintainability.
+"""Enforce source-file line limits for maintainability.
 
 Only C/C++ source/header files are checked. Documentation, data files,
 assets and scripts intentionally have no size limit here.
 
-Policy:
-  < 30 KiB  OK
-  30–36 KiB WARNING
-  > 36 KiB  ERROR (CI failure)
+Policy (normative; see docs/CODE_SIZE.md):
+  < 300 lines       OK
+  300–399 lines     WARNING
+  >= 400 lines      ERROR (CI failure)
+
+The root ``main.cpp`` is explicitly included because it is an architectural
+composition unit and is subject to the same responsibility/cohesion review.
 """
 
 from __future__ import annotations
@@ -15,23 +18,35 @@ from __future__ import annotations
 import pathlib
 import sys
 
-WARNING_BYTES = 30 * 1024
-HARD_LIMIT_BYTES = 36 * 1024
+WARNING_LINES = 300
+HARD_LIMIT_LINES = 400
 EXTENSIONS = {".c", ".cc", ".cpp", ".cxx", ".h", ".hh", ".hpp", ".hxx"}
 EXCLUDED_PARTS = {".git", "build", "dist"}
 ROOTS = (pathlib.Path("Game"), pathlib.Path("Tests"))
+ROOT_FILES = (pathlib.Path("main.cpp"),)
 
 
 def iter_sources() -> list[pathlib.Path]:
-    files: list[pathlib.Path] = []
+    files: set[pathlib.Path] = set()
+
     for root in ROOTS:
         if not root.exists():
             continue
         for path in root.rglob("*"):
             if path.is_file() and path.suffix.lower() in EXTENSIONS:
                 if not EXCLUDED_PARTS.intersection(path.parts):
-                    files.append(path)
+                    files.add(path)
+
+    for path in ROOT_FILES:
+        if path.is_file() and path.suffix.lower() in EXTENSIONS:
+            files.add(path)
+
     return sorted(files)
+
+
+def line_count(path: pathlib.Path) -> int:
+    """Count physical source lines without changing the repository contents."""
+    return len(path.read_text(encoding="utf-8").splitlines())
 
 
 def main() -> int:
@@ -39,14 +54,13 @@ def main() -> int:
     warned = False
 
     for path in iter_sources():
-        size = path.stat().st_size
-        kib = size / 1024.0
-        if size > HARD_LIMIT_BYTES:
+        lines = line_count(path)
+        if lines >= HARD_LIMIT_LINES:
             failed = True
-            print(f"ERROR   {kib:7.2f} KiB  {path} (> 36 KiB)")
-        elif size >= WARNING_BYTES:
+            print(f"ERROR   {lines:4d} lines  {path} (>= {HARD_LIMIT_LINES})")
+        elif lines >= WARNING_LINES:
             warned = True
-            print(f"WARNING {kib:7.2f} KiB  {path} (>= 30 KiB; plan a split)")
+            print(f"WARNING {lines:4d} lines  {path} (>= {WARNING_LINES}; plan a split)")
 
     if not failed and not warned:
         print("Source size check: OK")

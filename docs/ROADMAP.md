@@ -18,11 +18,15 @@ Antes de implementar qualquer passo, consultar sempre as documentações relevan
 
 Quando uma implementação contrariar um destes documentos, atualizar primeiro a decisão/documentação correspondente; não criar divergências silenciosas.
 
-## Estado de referência
+## Estado de referência — 2026-08-26
 
-`main` contém a base integrada através do hardening 9.6 e da consolidação do renderer legado/adapter. `RendererCore` → passes → `RendererFacade` é a rota de presentation do runtime.
+`main` contém a base integrada através dos principais blocos de hardening 9.6 e da consolidação `RendererCore` → passes → `RendererFacade`.
 
-A fronteira geral `RenderSnapshot`, contudo, **ainda não está concluída em `main`**: `WorldRenderer` continua a receber diretamente `Player` e `Level`. PR #20 é a tranche ativa dessa migração.
+O contrato inicial de `RenderSnapshot` está integrado em `main` (PR #19), mas a migração geral **não** está concluída. A apresentação de gameplay ainda recebe modelos de domínio diretamente em `WorldRenderer`/`RendererFacade`.
+
+PR #20, que tentou fazer parte do cut-over de `RenderSnapshot`, foi encerrado/superseded e **não é uma tranche ativa**. A continuação de `RenderSnapshot` permanece bloqueada pelo Base Engineering Gate.
+
+A decomposição de `FontRenderer` e `SpriteRenderer` já está integrada em `main`. O trabalho imediato continua a ser fechar o Gate de Engenharia, não avançar para UX/campaign/content.
 
 ## Princípio estratégico
 
@@ -67,7 +71,7 @@ Nenhuma referência única é autoridade absoluta. Mario Maker, Jump King, Tiled
 
 ### Fases 1–8 ✅
 
-Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação.
+Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação — concluídas como **feature milestones**, não como prova de robustez transversal.
 
 ### 9.1–9.3 ✅
 
@@ -81,15 +85,15 @@ Editor core + migração incremental do renderer, incluindo `LevelEditorDocument
 
 Base de investigação científica/técnica, requisitos community-first, referências a Mario Maker/Jump King/Tiled/Godot/SuperTux, objetivos de campanhas de ~50 e 100–200 níveis, e contratos de UX/editor.
 
-### 9.6 — hardening / consolidação ✅
+### 9.6 — hardening / consolidação ✅ por blocos funcionais; Gate de Engenharia 🔒
 
-A base passou pelas principais correções de input, fixed timestep, viewport, lifecycle Vulkan e reconstrução de swapchain. A migração de presentation foi consolidada até `RendererFacade`, incluindo a remoção do renderer legado e da implementação do adapter.
+Foram integrados input por ações, fixed timestep defensivo, viewport do editor `640x360`, lifecycle/recriação de swapchain, distinção graphics/present, remoção do renderer legado, remoção do adapter, contrato inicial de `RenderSnapshot` e decomposição de `FontRenderer`/`SpriteRenderer`.
 
-**Validação histórica relevante:** a tranche 9.4 tinha 162/162 testes e 849/849 assertions no Windows; a 9.6 adicionou invariantes e failure paths adicionais.
+O Gate de Engenharia continua aberto porque robustez e governança transversal ainda precisam de evidência e de algumas refatorações estruturais.
 
-## Gate atual de engenharia — 2026-08-25 🔒
+## Gate atual de engenharia — 2026-08-26 🔒
 
-Antes de avançar para a implementação de nova funcionalidade ou para a continuação estrutural de `RenderSnapshot`, o repositório deve fechar este gate de base.
+Antes de avançar para nova funcionalidade ou para a migração geral de `RenderSnapshot`, o repositório deve fechar este gate de base.
 
 ### WBS
 
@@ -102,22 +106,22 @@ Antes de avançar para a implementação de nova funcionalidade ou para a contin
 │   └── provenance / evidence rules
 │
 ├── B — CI observability
-│   ├── classify current run #281
+│   ├── classify failures from actual workflow evidence
 │   ├── recover diagnostics before causal claims
 │   ├── document workflow boundaries
-│   └── revalidate CI
+│   └── expand/revalidate CI evidence
 │
 ├── C — source-size enforcement
-│   ├── document line-based policy
-│   ├── migrate checker from KiB to lines
-│   ├── include main.cpp
+│   ├── document line-based policy ✅
+│   ├── migrate checker from KiB to lines 🔄
+│   ├── include main.cpp 🔄
 │   └── validate warnings/errors
 │
 ├── D — modularity work packages
-│   ├── FontRenderer decomposition
-│   ├── SpriteRenderer review/decomposition
-│   ├── main.cpp architectural decomposition
-│   └── large test file decomposition
+│   ├── FontRenderer decomposition ✅
+│   ├── SpriteRenderer review/decomposition ✅
+│   ├── large test file review/decomposition 🔄
+│   └── main.cpp architectural decomposition 🔒
 │
 └── E — gate review
     └── only then continue RenderSnapshot / Application extraction
@@ -135,9 +139,9 @@ E → 9.6 P1.9 RenderSnapshot
 ### Critério de saída
 
 ```text
-process protocol merged and reproducible
+process protocol reproducible
 + CI failures classified from evidence
-+ source-size policy is implemented and validated
++ source-size policy is executable and matches documentation
 + oversized/warning files have documented WPs and progress
 + main.cpp decomposition follows architecture, not line-count gaming
 + tests validate each refactoring tranche
@@ -148,21 +152,21 @@ process protocol merged and reproducible
 ## 9.6 P1 — fronteiras arquiteturais 🔄
 
 7. **Eliminar o adapter de migração ✅** — `RendererFacadeAdapter.cpp` removido, snapshot/editor ownership absorvido por `RendererFacade` e runtime migrado para `RendererFacade`.
-8. **Eliminar o `Renderer` legado ✅** — `Renderer.cpp/.h` removidos em 9.8.
-9. **Criar `RenderSnapshot` geral 🔄** — presentation ainda recebe `Player`/`Level` diretamente em `WorldRenderer`/`RendererFacade`; esta tranche só prossegue depois do Gate atual de engenharia.
-10. **Extrair responsabilidades do loop principal 🔄** — reduzir o acoplamento de `main.cpp` através de `Application` / `GameStateMachine` / `Simulation`, depois de estabilizar `RenderSnapshot`.
+8. **Eliminar o `Renderer` legado ✅** — `Renderer.cpp/.h` removidos.
+9. **Criar `RenderSnapshot` geral 🔒** — contrato inicial integrado, mas presentation ainda recebe `Player`/`Level` diretamente; bloqueado pelo Gate atual.
+10. **Extrair responsabilidades do loop principal 🔒** — reduzir o acoplamento de `main.cpp` através de `Application` / `GameStateMachine` / `Simulation`, seguindo uma decomposição por responsabilidades e não por contagem de linhas.
 11. **RAII/ownership Vulkan** — substituir `new/delete` evitáveis e garantir wrappers não-copiáveis/movíveis quando apropriado.
 12. **Consolidar modelo comum de dados de nível** entre parser, runtime e editor.
 13. **Undo/Redo transacional** — drag completo = uma operação lógica.
 14. **Separar user data de source tree** e introduzir resolução de assets baseada na localização do executável.
-15. **Unificar a política de source-size** e remover ferramentas legadas duplicadas.
+15. **Unificar a política de source-size** e remover ferramentas legadas duplicadas 🔄 — a documentação e o checker estão a ser alinhados na branch de Base Engineering Gate.
 
 **Referências:** `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/BASE_ARCHITECTURE_AUDIT.md`, `docs/PROJECT_MANAGEMENT.md`, `docs/DEVELOPMENT_PROTOCOL.md`.
 
 ### P2 — qualidade e compatibilidade
 
 16. Windows build + tests no CI.
-17. `make game` no CI.
+17. `make game` no CI para o ambiente Windows quando a infraestrutura o permitir.
 18. ASan/UBSan no CI quando suportado.
 19. Replay regression tick-by-tick.
 20. Property/invariant tests para viewport, snap, física, editor e formatos.
@@ -171,7 +175,7 @@ process protocol merged and reproducible
 23. Matriz mínima de hardware/software documentada e validada.
 24. Profiling em pelo menos Intel/NVIDIA/AMD e, quando viável, uma GPU tile-based.
 
-## Próximo bloco autorizado após o Gate — 9.6 P1.9 RenderSnapshot geral
+## Próximo bloco autorizado após o Gate — 9.6 P1.9 RenderSnapshot geral 🔒
 
 Só começar quando o Gate atual estiver fechado e a tranche documental/CI estiver refletida em `main`.
 
@@ -194,7 +198,7 @@ Objetivo: fazer com que a presentation consuma um modelo de dados próprio, redu
 
 - `RendererFacade` estável;
 - `EditorRenderSnapshot` existente;
-- `GameState` extraído do renderer legado;
+- contrato inicial de `RenderSnapshot` integrado;
 - testes de integração do renderer;
 - Gate atual de engenharia fechado.
 
@@ -358,19 +362,3 @@ Objetivo: pacote Windows x64 copiável para outro computador dentro dos requisit
 ## Regra de progressão entre branches/PRs
 
 Nenhum novo bloco começa antes de integrar a PR anterior em `main`.
-
-Para cada passo:
-
-1. consultar `DEVELOPMENT_PROTOCOL.md` e documentação relevante;
-2. verificar problemas imediatos da base;
-3. documentar descobertas/decisões antes da alteração correspondente;
-4. corrigir a base antes de adicionar complexidade;
-5. escrever testes relevantes;
-6. implementar apenas o escopo do passo;
-7. atualizar documentação e roadmap;
-8. abrir PR própria;
-9. validar;
-10. fazer merge;
-11. fechar a branch e criar a próxima a partir do `main` atualizado.
-
-Toda decisão nova deve atualizar `PRODUCT_DECISIONS.md` e, quando alterar o plano, este roadmap. O WBS/risco/dependências do bloco devem acompanhar a mesma alteração.

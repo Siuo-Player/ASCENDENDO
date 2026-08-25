@@ -38,16 +38,23 @@ Exemplos aceitáveis:
 
 ```text
 FontRenderer
-├── font resource/lifecycle
-├── glyph/layout preparation
+├── CPU font preparation / metrics
+├── GPU atlas resource ownership
 └── text draw submission
+```
+
+```text
+SpriteRenderer
+├── CPU image decode / sprite preparation
+├── GPU image resource ownership
+└── sprite draw submission
 ```
 
 ```text
 main.cpp
 ├── process lifetime / composition
-├── application setup/orchestration
-└── delegação para Runtime / Editor / Presentation
+├── runtime state orchestration
+└── delegation to application/runtime/editor/presentation components
 ```
 
 Exemplos não aceitáveis:
@@ -62,11 +69,14 @@ ou qualquer divisão por intervalos arbitrários de linhas apenas para fazer a m
 
 ## Estado da implementação
 
-A política acima é a decisão normativa deste processo. **Ela ainda não corresponde ao checker integrado em `main`**.
+A política normativa está agora alinhada com o checker de `main` por meio de uma mudança na branch `chore/9-6-base-engineering-gate`:
 
-Em `main` (`1573e21c518620188ac47568b99d23327f80a279`), `Development/Tools/check_source_sizes.py` usa ainda limites em KiB (`30/36 KiB`) e apenas percorre `Game/` e `Tests/`. `main.cpp` não é atualmente incluído por esse checker.
+- a unidade de medida é **linhas físicas de código**, não KiB;
+- `main.cpp` é explicitamente incluído;
+- os mesmos limiares `<300`, `300–399`, `>=400` são usados pelo checker e por esta documentação;
+- CI continua a executar `Development/Tools/check_source_sizes.py` antes do restante da validação.
 
-Logo, a transição deve ser tratada como um work package de tooling/CI. A documentação não deve afirmar que a nova política já está automaticamente imposta até o checker, workflow e validação serem atualizados.
+Esta branch transforma uma inconsistência de tooling em uma regra executável. O resultado concreto de cada ficheiro deve ser obtido no CI da branch; avisos não equivalem a falhas e devem permanecer acompanhados por work packages quando exigirem intervenção estrutural.
 
 ## Incidente de referência — 2026-08-25
 
@@ -80,7 +90,7 @@ WARNING 326 linhas  Tests/Unit/test_level.cpp
 WARNING 330 linhas  main.cpp
 ```
 
-O primeiro alvo de decomposição é `FontRenderer.cpp`, seguido por investigação de `SpriteRenderer.cpp`, `main.cpp` e os dois ficheiros de testes. A ordem pode mudar apenas por decisão documentada caso uma nova evidência mude o risco.
+Os dois primeiros alvos já foram investigados e decompostos por fronteira de responsabilidade coesa. Os avisos restantes passam a ser tratados como trabalho de modularidade/testabilidade, não como motivo para alterar a métrica.
 
 ## Relação com WBS
 

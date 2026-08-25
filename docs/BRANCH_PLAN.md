@@ -1,120 +1,124 @@
-# Plano da próxima branch
+# Plano da branch atual
 
-**Bloco do roadmap:** `9.6 Base Engineering Gate — modularity`
+**Bloco do roadmap:** `9.6 Base Engineering Gate`
 
-**Work Package:** `SpriteRenderer review/decomposition`
+**Work Package:** `Base gate alignment — tooling, evidence and remaining modularity`
 
 ## Objetivo
 
-Investigar e, se a análise confirmar uma fronteira coesa, reduzir a responsabilidade concentrada em `Game/Graphics/SpriteRenderer.cpp` sem criar módulos artificiais nem alterar o contrato de rendering.
+Fechar contradições de base antes de iniciar `RenderSnapshot` geral ou novas funcionalidades significativas. A branch começa pelo tooling que ainda não implementava a política documental e prepara a verificação dos restantes alvos de modularidade.
 
 ## Estado inicial confirmado
 
-O `main` atual já contém a decomposição integrada do `FontRenderer` e foi validado pelo CI #387 com source-size, Vulkan, build/tests e campaign todos verdes.
+O `main` atual já integrou:
 
-A inspeção de `SpriteRenderer.cpp/.h` confirmou quatro áreas distintas:
+- hardening do input e fixed timestep;
+- contrato de viewport do Level Editor `640x360`;
+- lifecycle/swapchain e seleção separada de graphics/present conforme as tranches Vulkan;
+- remoção do renderer legado e do adapter de migração;
+- contrato inicial de `RenderSnapshot`;
+- decomposição de `FontRenderer`;
+- decomposição de `SpriteRenderer`.
 
-1. decode CPU de PNG via `stb_image`;
-2. criação/upload de imagem Vulkan, staging, barriers, image view e sampler;
-3. descriptor/lifecycle e ownership dos recursos GPU;
-4. emissão de draw e preparação de `SpritePushConstants`.
+A investigação documental e científica, incluindo `Siuo-Player-PROJECT-STUDIES/ASCENDENDO`, mostra contudo que o Gate ainda não deve ser considerado encerrado. Permanecem, em particular:
 
-A semelhança entre a área 2/3 e a fronteira extraída do `FontRenderer` é uma evidência para investigação, não uma obrigação de copiar a arquitetura.
+- política de source-size anteriormente divergente do checker real;
+- composição excessiva em `main.cpp`;
+- ficheiros de testes grandes que merecem revisão por coesão;
+- necessidade de evidência de CI além da execução Linux/headless atual;
+- fronteiras de dados/runtime ainda por consolidar.
 
-O teste `Tests/Integration/test_sprite_pipeline.cpp` valida o contrato público (`init`, dimensões e estado inicializado) e não depende da implementação interna.
+## Descoberta principal
 
-## Hipótese arquitetural
+`docs/CODE_SIZE.md` já definia uma política por linhas (`<300`, `300–399`, `>=400`), mas `Development/Tools/check_source_sizes.py` ainda media KiB e não incluía `main.cpp`.
 
-A hipótese a testar é que a gestão/upload dos recursos Vulkan pode ser separada da preparação CPU da imagem e do draw, mantendo ownership explícito e uma interface pequena.
+Isto permitia que a documentação dissesse que existia um gate que o CI, na realidade, não aplicava.
 
-Alternativas consideradas:
+## Decisão
 
-- manter a classe monolítica apesar do tamanho, se as responsabilidades forem fortemente acopladas;
-- extrair apenas uma fronteira específica de recursos GPU;
-- reutilizar diretamente `FontRendererGpu`, rejeitada por enquanto porque os formatos, samplers e estado do sprite são diferentes e não queremos um módulo genérico prematuro.
+Corrigir primeiro o mecanismo executável, sem alterar os limiares para fazer ficheiros passarem:
 
-## Dependências
+```text
+política normativa
+      ↓
+checker CI
+      ↓
+resultado observável
+      ↓
+work package de cada alvo > 300 linhas
+```
 
-**Depende de:**
+`main.cpp` passa a ser explicitamente avaliado pelo mesmo checker.
 
-- `main` verde;
-- decomposição de `FontRenderer` integrada;
-- pipeline e testes Vulkan existentes.
+## Alterações desta branch
 
-**Produz para:**
-
-- hardening de modularidade;
-- futura decomposição de `main.cpp`;
-- eventual unificação de infraestrutura GPU apenas se surgir evidência suficiente.
-
-**Consumidores afetados:**
-
-- `RendererFacade` / passes que usam `SpriteRenderer`;
-- `Tests/Integration/test_sprite_pipeline.cpp`;
-- `SpritePipeline` apenas através do contrato de descriptor/pipeline.
+1. Migrar o checker de KiB para linhas físicas.
+2. Incluir `main.cpp`.
+3. Manter `Game/` e `Tests/` abrangidos pela mesma regra.
+4. Atualizar `docs/CODE_SIZE.md` para declarar a implementação real.
+5. Atualizar roadmap/auditoria para distinguir claramente:
+   - ferramenta alinhada;
+   - warning de tamanho;
+   - hard limit;
+   - Gate de Engenharia ainda aberto.
+6. Criar work packages apenas para decomposições justificadas por responsabilidade/cohesion, nunca por contagem arbitrária.
 
 ## Fora de escopo
 
 - `RenderSnapshot` geral;
-- `main.cpp`;
-- animação de sprites/atlases multi-frame;
-- `AssetManager`;
-- adaptive difficulty/player modelling;
+- Campaign Editor;
+- dificuldade adaptativa;
+- `AssetManager` genérico;
 - otimizações sem profiling;
-- abstração GPU genérica entre fontes e sprites.
-
-## WBS
-
-```text
-9.6 Base Engineering Gate
-└── Modularity
-    └── SpriteRenderer
-        ├── inventariar responsabilidades
-        ├── mapear ownership/dependências
-        ├── verificar consumidores
-        ├── comparar alternativas
-        ├── decidir fronteira
-        ├── implementar apenas se coesa
-        ├── preservar failure paths e sampler NEAREST
-        ├── validar build/tests/Vulkan/campaign
-        └── atualizar arquitetura/dívida/roadmap
-```
+- substituição da política de tamanho por outra métrica;
+- abstração Vulkan genérica sem consumidores concretos.
 
 ## Riscos
 
-- copiar uma abstração do `FontRenderer` que não seja adequada;
-- separar ownership Vulkan incorretamente;
-- regressão de `VK_FORMAT_R8G8B8A8_UNORM` ou sampler `NEAREST`;
-- quebrar a inicialização/destruição Vulkan;
-- criar uma classe GPU genérica sem necessidade real.
+- novo checker revelar ficheiros já acima do hard limit;
+- confundir warning com defeito funcional;
+- dividir testes ou `main.cpp` artificialmente;
+- declarar o Gate fechado apenas porque CI está verde;
+- documentação ficar novamente atrás da implementação.
 
 ## Validação
 
+A branch só pode ser considerada pronta para PR quando houver evidência observável de:
+
 ```text
-source-size gate
-build game
-build tests
-Vulkan integration tests
-167+ test cases sem regressão
-campaign validation
+source-size checker executado
++ resultado de todos os ficheiros relevante
++ build game
++ build/tests
++ Vulkan/headless
++ campaign validation
++ documentação sincronizada
 ```
 
-Também verificar que `STB_IMAGE_IMPLEMENTATION` continua a existir numa única translation unit e que o contrato público do `SpriteRenderer` permanece estável.
+Para cada refatoração posterior:
+
+```text
+responsabilidade identificada
+→ consumidores/ownership mapeados
+→ alternativa comparada
+→ implementação mínima
+→ testes de regressão
+→ resultado CI
+→ documentação atualizada
+```
 
 ## Critério de saída
 
 ```text
-cohesion decision documented
-+ selected boundary justified by responsibility/coupling
-+ ownership explicit
-+ no artificial module split
-+ build/tests/Vulkan/campaign verdes
-+ documentation matches implementation
-+ source-size policy respected
+checker e documentação usam a mesma política
++ main.cpp é coberto
++ nenhum erro de tamanho não tratado permanece
++ warnings restantes têm work package explícito quando exigirem ação
++ resultados CI são observáveis
++ arquitetura/roadmap correspondem ao estado real
++ RenderSnapshot geral continua bloqueado até todos os gates necessários fecharem
 ```
 
-## Próximo work package
+## Próximo work package após esta correção
 
-Só depois de integrar e revalidar esta branch: revisão/decomposição dos testes grandes e depois `main.cpp`, conforme o roadmap atual.
-
-`RenderSnapshot` geral continua bloqueado até o Gate de Engenharia estar fechado.
+Investigar os grandes ficheiros de testes e, depois, `main.cpp`, começando sempre por coesão, dependências e testabilidade. Só após esse gate será retomada a migração geral para `RenderSnapshot`.
