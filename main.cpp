@@ -12,7 +12,7 @@
 #include "Game/Graphics/FontRenderer.h"
 #include "Game/Graphics/SpritePipeline.h"
 #include "Game/Graphics/SpriteRenderer.h"
-#include "Game/Graphics/RendererFacadeAdapter.h"
+#include "Game/Graphics/RendererFacade.h"
 #include "Game/Graphics/Camera.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/Player.h"
@@ -83,7 +83,7 @@ int main() {
         FontRenderer font;
         SpritePipeline spritePipeline;
         SpriteRenderer playerSprite;
-        RendererFacadeAdapter renderer;
+        RendererFacade renderer;
         InputManager input;
         core::KeyBindings bindings;
 
