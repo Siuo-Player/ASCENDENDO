@@ -6,7 +6,10 @@ O projeto é dividido em subsistemas. Cada decisão importante deve consultar a 
 |---|---|---|---|
 | Level design | Como compor desafios 2D? | Smith/Cha/Whitehead; Khalifa et al. | vocabulário de design, análise do editor |
 | Jump design | O salto é executável e com que margem? | Aramini/Lanzi/Loiacono | alcance, margem, diagnóstico |
-| Difficulty | Difícil para o motor ≠ difícil para o jogador | Pedersen; Fernández; Scientific Reports 2025 | score de dificuldade, expectativa vs realidade |
+| Difficulty | O conteúdo é fisicamente válido, executivamente difícil e percebido como difícil? | Francillette et al. 2025; Pedersen; Fernández | score de dificuldade por camadas, expectativa vs realidade |
+| Motor difficulty | Quais perigos e margens tornam um nível difícil para executar? | Francillette et al. 2025 | danger zones, hazards, risco/margem, análise automática |
+| Player modelling | Como o desempenho do jogador deve informar uma estimativa de capacidade? | Madineni 2025 + futura telemetria própria | skill proxies, aprendizagem, incerteza |
+| Adaptive difficulty | Como adaptar sem degradar a experiência ou favorecer apenas certos perfis? | Madineni 2025 + player experience literature | fase posterior, só após calibração |
 | Progression | Como construir campanhas longas? | level-design patterns; learning-progress research | 50–200 níveis sem monotonia |
 | User Generated Content | Como autores trabalham e aprendem? | Super Mario Maker studies; SuperTux | onboarding, feedback, metadata |
 | Extreme levels | Como distinguir desafio intencional de erro? | Johnson 2019; Mario Maker studies | classificação e comunicação de dificuldade |
@@ -71,6 +74,36 @@ CI + tests
         ↓
 work package ASCENDENDO
 ```
+
+Para dificuldade:
+
+```text
+motor / física determinística
+        +
+modelo de perigo/dificuldade executiva
+        +
+telemetria de desempenho
+        +
+playtesting / experiência percebida
+        ↓
+modelo de dificuldade ASCENDENDO
+```
+
+## Novas referências de 2025
+
+### Francillette et al. — dificuldade executiva em platformers
+
+**A Comprehensive Model of Automated Evaluation of Difficulty in Platformer Games**
+DOI: `10.1145/3705013`
+
+O trabalho propõe avaliação automática de dificuldade game-centric/executiva por zonas de perigo estáticas e perigos dinâmicos. Foi validado nos níveis de Super Mario Bros. Para o ASCENDENDO, a principal contribuição é a separação conceptual entre validade do conteúdo e dificuldade executiva; as fórmulas e thresholds não são assumidos como válidos para a nossa física sem calibração interna.
+
+### Madineni — ajuste de dificuldade e player modelling
+
+**Analyzing Player Difficulty Perception in Platformers Through Procedural Level Generation**
+California Polytechnic State University, 2025.
+
+A dissertação estuda ajuste de dificuldade em tempo real num platformer procedural e encontra desempenho desigual entre jogadores mais confortáveis e menos confortáveis com platformers. É uma fonte útil para a fase futura de player modelling, mas não é suficiente para definir uma política universal de adaptive difficulty.
 
 ## Conteúdo oficial pretendido
 
