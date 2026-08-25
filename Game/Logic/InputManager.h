@@ -14,6 +14,7 @@ namespace Key {
     constexpr int UP      = 265;
     constexpr int DOWN    = 264;
     constexpr int A       = 65;
+    constexpr int C       = 67;
     constexpr int D       = 68;
     constexpr int W       = 87;
     constexpr int S       = 83;
