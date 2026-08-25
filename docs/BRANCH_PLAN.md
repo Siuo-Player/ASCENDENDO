@@ -1,124 +1,117 @@
 # Plano da branch atual
 
-**Branch:** `feat/9-4-editor-visual-integration`
+**Branch:** `feat/9-8-remove-legacy-renderer`
 
-**Base:** `main` após integração da PR #7 (`10cceeb`).
+**Bloco do roadmap:** 9.6 — hardening/consolidação arquitetural
+
+**Objetivo:** eliminar o renderer legado depois da migração para `RendererFacade`, retirar dependências de compatibilidade que já não têm consumidores legítimos e consolidar a documentação de arquitetura/gestão do projeto.
+
+## WBS desta branch
+
+```text
+9.6 — consolidação de presentation
+└── 9.8 — remover renderer legado
+    ├── 9.8.1 — extrair GameState do renderer antigo
+    ├── 9.8.2 — migrar testes/consumidores para RendererFacade
+    ├── 9.8.3 — remover dependências de Renderer.h
+    ├── 9.8.4 — retirar Renderer.cpp/.h quando não existirem referências
+    ├── 9.8.5 — atualizar documentação de arquitetura/planeamento
+    └── 9.8.6 — validação completa e PR
+```
+
+## Dependências
+
+**Depende de:**
+
+- 9.6 base hardening integrado;
+- `RendererCore` estável;
+- `RendererFacade` + passes especializados;
+- `RendererFacadeAdapter` operacional durante a migração;
+- testes de `RendererCore` existentes.
+
+**Produz para:**
+
+- futura remoção do adapter;
+- `RenderSnapshot` geral;
+- extração progressiva do loop principal;
+- arquitetura de presentation sem API legada.
+
+**Consumidores afetados:**
+
+- `main.cpp` / adapter;
+- integration tests do renderer;
+- Makefile (por wildcard, nenhum source manual adicional é necessário);
+- documentação de arquitetura/migração.
 
 ## Estado herdado — concluído
 
 - Fases 1–8.
-- 9.1–9.3.
-- bootstrap GLFW/Vulkan e cleanup de falhas parciais.
-- documentação técnica inicial.
-- 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
-- 9.4 tranche 2: `EditorInteractionController`, cursor logical→world, hit-test, STAMP/DRAG, seleção, movimento e delete com testes sem GPU.
-- 9.4 tranche 3: robustez de validação, Makefile Windows/Linux, CI headless Vulkan determinístico, validação de campanha e documentação de CI.
-- requisito de produto: EXE portable Windows x64, offline-first, import/export e futura biblioteca online com validação local obrigatória.
+- 9.1–9.5.
+- primeira tranche 9.6: input, timestep, viewport.
+- `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer` e `RendererFacade`.
+- 9.7: lifecycle seguro de falhas/recriação no `RendererCore`, integrado via PR #14.
 
-O plano da branch anterior (`feat/9-4-editor-ui-integration`) fica **concluído**.
+## Trabalho desta branch
 
-## Objetivo desta branch
+### 9.8.1 — GameState
 
-Ligar o modelo determinístico do editor à UI/renderização real do jogo e, em paralelo, substituir gradualmente o renderer monolítico por passes pequenos, mantendo o renderer antigo intacto como referência até existir paridade comprovada.
+`GameState` deve ter header próprio e não depender do renderer histórico.
 
-## Implementado até agora
+### 9.8.2 — consumidores
 
-- `EditorSession` para orquestrar `InputManager`, `Camera`, `KeyBindings` e `EditorInteractionController`.
-- `G` alterna entre `STAMP` e `DRAG` como ferramenta persistente.
-- `[` / `]` alteram `SMALL` / `MEDIUM` / `LARGE`, começando em `MEDIUM`.
-- Clique esquerdo cria ou move; clique direito cancela; `Delete`/`Backspace` apaga a seleção.
-- Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
-- `EditorRenderSnapshot` separa os dados de apresentação do documento de edição; os passes gráficos não devem conhecer `LevelEditorDocument`.
-- Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
-- Testes unitários de input → controller → documento, geometria do preview e conteúdo do snapshot.
-- `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
-- `docs/TECH_DEBT.md` atualizado com a dívida técnica e a regra de tamanho de código.
-- `docs/CODE_SIZE.md` criado com a política de tamanho físico.
-- `Development/Tools/check_source_sizes.py` criado e ligado ao CI.
-- Regra oficial de código: `<30 KiB` normal, `30–36 KiB` warning, `>36 KiB` bloqueado para novo código.
-- Nova stack de renderer construída em paralelo: `RendererCore`, `ShapeRenderer`, `EditorRenderer`, `WorldRenderer`, `UiRenderer` e `RendererFacade`.
-- `RendererFacadeAdapter` criado como ponte reversível entre a API antiga e a nova fachada.
-- `docs/RENDERER_MIGRATION.md` criado com a matriz de paridade e os critérios de remoção do renderer antigo.
-- Workflow de CI passou também a construir o binário `game` além dos testes.
+Todos os testes e consumidores legítimos devem usar `RendererFacade`/adapter durante a transição. Nenhum novo consumidor deve ser ligado a `Renderer` legado.
 
-## Estratégia atual para o `Renderer.cpp`
+### 9.8.3 — dependências
 
-O `Renderer.cpp` antigo **não será desmontado diretamente**. Em vez disso:
+Remover includes e APIs que apenas existem para suportar o renderer antigo.
+
+### 9.8.4 — legado
+
+Eliminar `Game/Graphics/Renderer.cpp` e `Game/Graphics/Renderer.h` apenas depois de confirmar que não existem referências de código, testes ou documentação operacional.
+
+### 9.8.5 — documentação
+
+Atualizar, nesta branch, quando afetados:
+
+- `docs/ROADMAP.md`;
+- `docs/ARCHITECTURE.md`;
+- `docs/TECH_DEBT.md`;
+- `docs/RESEARCH_INDEX.md`;
+- `docs/TECHNICAL_REFERENCES.md`;
+- `docs/PROJECT_MANAGEMENT.md`.
+
+## Critério de saída
+
+A branch só pode abrir PR quando:
 
 ```text
-Renderer.cpp legado
-      │
-      ├── referência de comportamento
-      └── fallback temporário
-
-Nova stack
-  ├── RendererCore
-  ├── ShapeRenderer
-  ├── EditorRenderer
-  ├── WorldRenderer
-  ├── UiRenderer
-  └── RendererFacade
+Renderer legado sem consumidores
++ GameState desacoplado
++ testes migrados
++ dependências antigas removidas
++ documentação atualizada
++ testes/CI validados
 ```
 
-Cada pass novo é comparado contra o bloco correspondente do renderer legado. Quando a paridade for demonstrada, o caminho antigo daquele estado deixa de ser executado. Só no fim removemos o arquivo legado ou o reduzimos a uma casca compatível, consoante o que produzir a arquitetura mais simples.
+## Definition of Done
 
-O `Renderer.cpp` tem aproximadamente 34 KiB e está na zona de atenção da política de tamanho. A solução escolhida evita acrescentar responsabilidades a esse arquivo; o objetivo é **substituí-lo**, não torná-lo ainda maior.
-
-## Matriz de migração
-
-| Área | Novo componente | Estado |
-|---|---|---|
-| recursos Vulkan/frame lifecycle | `RendererCore` | ✅ construído |
-| primitives / push constants | `ShapeRenderer` | ✅ construído |
-| editor | `EditorRenderer` | ✅ construído |
-| mundo / plataformas / FLAG / jogador | `WorldRenderer` | ✅ construído |
-| timer / MENU / PAUSED / CREDITS | `UiRenderer` | ✅ construído |
-| orquestração | `RendererFacade` | ✅ construída |
-| adapter compatível | `RendererFacadeAdapter` | ✅ construído |
-| integração runtime do `EDITOR` | fachada nova | ⏳ próximo |
-| paridade visual/runtime | todos os passes | ⏳ |
-| remoção do legado | `Renderer.cpp` | ⏳ fim da migração |
-
-## Próximos passos desta tranche
-
-1. Fazer o CI reconhecer e compilar a nova stack (`game` + testes).
-2. Fazer o primeiro cut-over apenas do estado `EDITOR`, mantendo os restantes estados no renderer legado.
-3. Validar visualmente `grelha → plataformas → seleção → preview → cursor → HUD`.
-4. Comparar `PLAYING/PAUSED` e migrar o bloco de mundo para `WorldRenderer`.
-5. Migrar `MENU/CREDITS` para `UiRenderer`.
-6. Trocar `main.cpp` definitivamente para a fachada nova quando todos os estados tiverem paridade.
-7. Remover qualquer consumidor do `Renderer.cpp` legado.
-8. Só então eliminar o arquivo legado ou mantê-lo como fachada mínima, escolhendo a opção com menor complexidade.
-
-## Decisões de UX herdadas
-
-- O editor abre no tamanho médio por defeito.
-- Presets devem privilegiar tamanhos familiares de jogos de plataforma, restringidos pelo grid.
-- Teclado e rato podem alternar entre ferramentas/estados; os bindings devem ser explorados de forma consistente.
-- Elementos fora da grid/canvas não são oferecidos como opção editável.
-- O FLAG continua reservado ao último nível da campanha.
-- O editor é uma mudança de estado explícita, inclusive ao navegar diretamente do editor de campanha para o editor de nível.
-
-## Requisitos de engenharia
-
-- Não introduzir dependência de networking.
-- Manter o núcleo leve e otimizado.
-- Evitar duplicação de sprites/dados sempre que uma representação procedural ou atlas compacto for suficiente.
-- O jogo continua offline-first.
-- A futura importação/partilha de mapas deve validar novamente o conteúdo no EXE antes de permitir jogar.
-- Nenhum novo ficheiro C/C++ deve ultrapassar 36 KiB; a partir de 30 KiB não deve receber novas responsabilidades sem um plano de subdivisão.
+- Não existem includes de `Graphics/Renderer.h` fora de ficheiros explicitamente históricos.
+- `Renderer.cpp`/`.h` já não são necessários para compilar produto ou testes.
+- A nova stack continua a ser a única rota de renderização do runtime.
+- Alterações arquiteturais relevantes estão documentadas com rationale e consequências.
+- O work package permanece rastreável a este bloco do roadmap.
 
 ## Não entra nesta branch
 
-- save/serialização final de mapas;
-- import/export de pacotes;
-- biblioteca online/site;
-- networking/WebSockets;
-- campanha/playlist 9.6;
-- sistema final de sprites/atlas do editor;
-- empacotamento final do EXE release;
-- Gate 9.4.5 de consolidação arquitetural.
+- novo gameplay;
+- novas mecânicas de nível;
+- save/import final;
+- networking/web sharing;
+- nova arquitetura genérica de engine;
+- otimizações prematuras sem profiling.
 
-## Critério de conclusão
+## Próximo work package após o merge
 
-A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, quando os testes automatizados e a validação manual do fluxo estiverem verdes, e quando o renderer legado já não for necessário para o editor.
+A prioridade seguinte é **9.6 P1 — eliminar o adapter de migração**, seguindo para `RenderSnapshot` geral apenas depois de a nova fachada ser a API direta do runtime.
+
+Consultar `docs/PROJECT_MANAGEMENT.md` para a Definition of Ready/Done e regras de dependency awareness.

@@ -260,3 +260,25 @@ EDITOR
 ```
 
 A futura extração para `GameStateMachine` deve manter estas transições e torná-las testáveis sem Vulkan.
+
+## Arquitetura ↔ planeamento
+
+Arquitetura e planeamento são tratados como dois lados da mesma estrutura de engenharia. O work breakdown não deve ser definido independentemente das fronteiras técnicas: mudanças arquiteturais podem criar ou remover work packages, alterar dependências e exigir novos critérios de validação.
+
+```text
+Arquitetura
+   ↕
+WBS / roadmap
+   ↕
+Branch / PR
+   ↕
+Testes + documentação
+```
+
+Cada work package deve declarar as dependências relevantes, os consumidores afetados e o seu critério de saída. Uma dependência não é considerada gerida apenas porque está expressa no código; também é necessário conhecer o impacto da sua alteração sobre consumidores, testes e documentação.
+
+A modularidade deve ser avaliada pela redução de responsabilidades e dependências relevantes, não pelo número de classes. A literatura de socio-technical congruence mostra que modularização técnica não representa por si só todas as dependências de trabalho que exigem coordenação. 
+
+Para o processo operacional, ver `docs/PROJECT_MANAGEMENT.md`.
+
+**Referências:** Tausworthe, *The Work Breakdown Structure in Software Project Management* (1979); Cataldo, Herbsleb & Carley, *Socio-technical congruence* (2008); Bick et al., *Coordination challenges in large-scale software development* (2018); Kruchten et al., *Building up and Exploiting Architectural Knowledge* (2005).

@@ -7,7 +7,7 @@
 // verdade e atualiza o snapshot por cópia no frame em que EDITOR é desenhado.
 // =============================================================================
 
-#include "Graphics/Renderer.h"
+#include "Graphics/GameState.h"
 #include "Graphics/RendererFacade.h"
 #include "Logic/EditorRenderSnapshot.h"
 
