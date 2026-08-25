@@ -7,12 +7,18 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 - **P2** — melhoria importante de manutenção/performance.
 - **P3** — limpeza posterior.
 
+## Estado atual da migração do renderer
+
+A dívida de compatibilidade `RendererFacadeAdapter` foi eliminada na tranche 9.9: a implementação duplicada já não existe, `RendererFacade` é a API de presentation usada pelo runtime e o snapshot do editor pertence à fachada.
+
+A próxima dívida arquitetural relevante de presentation é a ausência de um `RenderSnapshot` geral que impeça o renderer de receber diretamente modelos de gameplay (`Player`, `Level`) e estado de aplicação. Essa alteração fica deliberadamente depois do cut-over do adapter.
+
 ## P0 — tratar antes da release e, quando indicado, antes de save/import
 
 | Área | Problema | Ação | Critério de saída |
 |---|---|---|---|
 | Runtime | `main.cpp` acumula inicialização, estados, campanha, física, editor e persistência | extrair `Application`, `GameStateMachine` e `Simulation` incrementalmente | `main.cpp` deixa de possuir regras de gameplay/editor |
-| Presentation | `Renderer.cpp` conhece `Player`, `Level`, `GameState`, menu e editor | introduzir `RenderSnapshot`/`EditorRenderData` | Renderer só consome dados de apresentação |
+| Presentation | `RendererFacade` ainda conhece `Player`, `Level` e estado de aplicação | introduzir `RenderSnapshot`/`EditorRenderData` | presentation recebe dados próprios de apresentação |
 | Input | gameplay ainda pode consultar teclas físicas diretamente | migrar `Player` para `GameAction`/`KeyBindings` | nenhuma regra de gameplay depende de `Key::...` |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
 | Levels | runtime/editor têm modelos separados que representam o mesmo conteúdo | introduzir `LevelData` independente de Vulkan/GLFW | parser, editor e runtime convergem no mesmo modelo |
@@ -78,6 +84,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 11. Cada work package deve ter dependências e critérios de saída explícitos.
 12. Alterações que mudem fronteiras arquiteturais devem atualizar o planeamento e a documentação relevante.
 13. Uma dependência técnica deve ser considerada também uma dependência de coordenação quando a sua alteração afeta consumidores, testes ou documentação.
+14. `RendererFacadeAdapter` não é mais uma API suportada do runtime.
 
 ## Portões do roadmap
 
