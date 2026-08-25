@@ -51,6 +51,15 @@ public:
                    int menuSelection = 0,
                    float elapsedSeconds = 0.0f);
 
+    // Transitional overload for existing runtime callers. It converts the
+    // application state at the presentation boundary rather than in an adapter.
+    bool drawFrame(const logic::Player& player,
+                   const Camera& camera,
+                   const logic::Level* level,
+                   GameState state,
+                   int menuSelection = 0,
+                   float elapsedSeconds = 0.0f);
+
     bool isInitialized() const { return m_initialized; }
 
 private:
