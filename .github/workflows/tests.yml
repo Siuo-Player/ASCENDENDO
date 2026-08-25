@@ -2,9 +2,12 @@ name: Tests
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - '**'
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -23,6 +26,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
 
+      - name: Check source-file size policy
+        run: python3 Development/Tools/check_source_sizes.py
+
       - name: Select deterministic Vulkan software driver
         shell: bash
         run: |
@@ -38,6 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           xvfb-run -a -s '-screen 0 1280x720x24' make clean
+          xvfb-run -a -s '-screen 0 1280x720x24' make game -j2
           xvfb-run -a -s '-screen 0 1280x720x24' make tests-verbose -j2
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"

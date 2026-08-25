@@ -1,5 +1,5 @@
 // =============================================================================
-//  Game/Core/KeyBindings.cpp
+//  ASCENDENDO — KeyBindings
 // =============================================================================
 #include "Core/KeyBindings.h"
 #include "Logic/InputManager.h"
@@ -17,21 +17,26 @@ using logic::InputManager;
 
 std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() {
     return {
-        { GameAction::MoveLeft,         { Key::A, Key::LEFT } },
-        { GameAction::MoveRight,        { Key::D, Key::RIGHT } },
-        { GameAction::Jump,             { Key::SPACE } },
-        { GameAction::Pause,            { Key::ESCAPE } },
-        { GameAction::UIConfirm,        { Key::SPACE } },
-        { GameAction::UILeft,           { Key::LEFT } },
-        { GameAction::UIRight,          { Key::RIGHT } },
-        { GameAction::OpenEditor,       { Key::E } },
-        { GameAction::Quit,             { Key::Q } },
-        { GameAction::EditorPanUp,      { Key::W } },
-        { GameAction::EditorPanDown,    { Key::S } },
-        { GameAction::EditorToggleMode, { Key::G } },
-        { GameAction::EditorSizeDown,   { Key::LBRACKET } },
-        { GameAction::EditorSizeUp,     { Key::RBRACKET } },
-        { GameAction::DeleteSelection,  { Key::DELETE_KEY, Key::BACKSPACE } },
+        { GameAction::MoveLeft,           { Key::A, Key::LEFT } },
+        { GameAction::MoveRight,          { Key::D, Key::RIGHT } },
+        { GameAction::Jump,               { Key::SPACE } },
+        { GameAction::Pause,              { Key::ESCAPE } },
+        { GameAction::UIConfirm,          { Key::SPACE } },
+        { GameAction::UILeft,             { Key::LEFT } },
+        { GameAction::UIRight,            { Key::RIGHT } },
+        { GameAction::OpenEditor,         { Key::E } },
+        { GameAction::OpenCampaignEditor, { Key::C } },
+        { GameAction::OpenControls,       { Key::NUM0 } },
+        { GameAction::Quit,               { Key::Q } },
+        { GameAction::EditorPanUp,        { Key::W } },
+        { GameAction::EditorPanDown,      { Key::S } },
+        { GameAction::EditorToggleMode,   { Key::G } },
+        { GameAction::EditorSizeDown,     { Key::LBRACKET } },
+        { GameAction::EditorSizeUp,       { Key::RBRACKET } },
+        { GameAction::DeleteSelection,    { Key::DELETE_KEY, Key::BACKSPACE } },
+        { GameAction::EditorSave,         { Key::NUM1 } },
+        { GameAction::EditorTest,         { Key::NUM2 } },
+        { GameAction::EditorValidate,     { Key::NUM3 } },
     };
 }
 
@@ -62,8 +67,10 @@ struct KeyName { int key; const char* name; };
 constexpr KeyName KEY_NAMES[] = {
     { Key::LEFT, "LEFT" }, { Key::RIGHT, "RIGHT" },
     { Key::UP, "UP" }, { Key::DOWN, "DOWN" },
-    { Key::A, "A" }, { Key::D, "D" }, { Key::W, "W" }, { Key::S, "S" },
-    { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
+    { Key::A, "A" }, { Key::C, "C" }, { Key::D, "D" },
+    { Key::W, "W" }, { Key::S, "S" }, { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
+    { Key::NUM0, "0" }, { Key::NUM1, "1" }, { Key::NUM2, "2" }, { Key::NUM3, "3" },
+    { Key::F2, "F2" }, { Key::F5, "F5" }, { Key::F6, "F6" },
     { Key::LBRACKET, "LBRACKET" }, { Key::RBRACKET, "RBRACKET" },
     { Key::DELETE_KEY, "DELETE" }, { Key::BACKSPACE, "BACKSPACE" },
     { Key::SPACE, "SPACE" }, { Key::ESCAPE, "ESCAPE" },

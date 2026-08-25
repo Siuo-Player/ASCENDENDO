@@ -16,9 +16,9 @@ ifeq ($(OS),Windows_NT)
     PLATFORM := windows
     EXE_EXT  := .exe
     SHELL    := cmd.exe
-    RUN_TEST = $(TEST_BIN)
+    WIN_TEST_RUNNER := Development\Tools\run_tests_windows.cmd
+    RUN_TEST = call "$(WIN_TEST_RUNNER)"
     CAT_FILE := type
-    FAIL_CMD := exit /b 1
     RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
     MKDIR_ONE = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
 else
@@ -26,7 +26,6 @@ else
     EXE_EXT  :=
     RUN_TEST = ./$(TEST_BIN)
     CAT_FILE := cat
-    FAIL_CMD := exit 1
     RM_BUILD = rm -rf "$(BUILD_DIR)"
     MKDIR_ONE = mkdir -p "$(1)"
 endif
@@ -64,6 +63,7 @@ GAME_DIR  := Game
 TEST_DIR  := Tests
 EXT_DIR   := external
 BUILD_DIR := build
+TEST_LOG  := $(BUILD_DIR)/test_results.txt
 
 # ── Includes ──────────────────────────────────────────────────────────────────
 INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
@@ -164,8 +164,12 @@ tests: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+ifeq ($(PLATFORM),windows)
+	@$(RUN_TEST) normal
+else
+	@$(RUN_TEST) > $(TEST_LOG) 2>&1 || ( $(CAT_FILE) $(TEST_LOG) && exit 1 )
+	@$(CAT_FILE) $(TEST_LOG)
+endif
 	@echo ""
 
 ## tests-fast — corre apenas os testes de Lógica e Matemática (ignora Vulkan/GLFW)
@@ -174,8 +178,12 @@ tests-fast: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes TDD (MUITO RÁPIDO)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+ifeq ($(PLATFORM),windows)
+	@$(RUN_TEST) fast
+else
+	@$(RUN_TEST) --test-suite-exclude="*Renderer*,*Vulkan*,*Window*,*Swapchain*,*RenderPass*" > $(TEST_LOG) 2>&1 || ( $(CAT_FILE) $(TEST_LOG) && exit 1 )
+	@$(CAT_FILE) $(TEST_LOG)
+endif
 	@echo ""
 
 ## tests-verbose — compila e corre testes imprimindo mensagens detalhadas e sucessos
@@ -184,8 +192,12 @@ tests-verbose: shaders $(TEST_BIN)
 	@echo "  ==========================================="
 	@echo "  A executar testes (modo detalhado)..."
 	@echo "  ==========================================="
-	@$(RUN_TEST) --success > build/test_results.txt || ( $(CAT_FILE) build/test_results.txt && $(FAIL_CMD) )
-	@$(CAT_FILE) build/test_results.txt
+ifeq ($(PLATFORM),windows)
+	@$(RUN_TEST) verbose
+else
+	@$(RUN_TEST) --success > $(TEST_LOG) 2>&1 || ( $(CAT_FILE) $(TEST_LOG) && exit 1 )
+	@$(CAT_FILE) $(TEST_LOG)
+endif
 	@echo ""
 
 game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)

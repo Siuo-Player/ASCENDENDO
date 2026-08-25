@@ -1,8 +1,8 @@
 # Plano da branch atual
 
-**Branch:** `feat/9-4-editor-ui-integration`
+**Branch:** `feat/9-4-editor-visual-integration`
 
-**Base:** `main` após integração da PR #6 (`55e4a0a`).
+**Base:** `main` após integração da PR #7 (`10cceeb`).
 
 ## Estado herdado — concluído
 
@@ -12,57 +12,113 @@
 - documentação técnica inicial.
 - 9.4 tranche 1: modelo determinístico do editor, grid/snap, plataformas, spawn, FLAG e testes.
 - 9.4 tranche 2: `EditorInteractionController`, cursor logical→world, hit-test, STAMP/DRAG, seleção, movimento e delete com testes sem GPU.
+- 9.4 tranche 3: robustez de validação, Makefile Windows/Linux, CI headless Vulkan determinístico, validação de campanha e documentação de CI.
 - requisito de produto: EXE portable Windows x64, offline-first, import/export e futura biblioteca online com validação local obrigatória.
 
-O plano da branch anterior (`feat/9-4-editor-ui-v2`) fica **concluído**.
+O plano da branch anterior (`feat/9-4-editor-ui-integration`) fica **concluído**.
 
 ## Objetivo desta branch
 
-Garantir que a infraestrutura de build/testes funciona de forma consistente no Windows e no CI, e fechar as correções de robustez encontradas antes da integração visual do editor.
+Ligar o modelo determinístico do editor à UI/renderização real do jogo e, em paralelo, substituir gradualmente o renderer monolítico por passes pequenos, mantendo o renderer antigo intacto como referência até existir paridade comprovada.
 
-## Implementado até agora nesta branch
+## Implementado até agora
 
-- correção da regra de dimensão mínima de plataformas: dimensão inválida é rejeitada antes do snap;
-- Makefile com comandos de criação/remoção de diretórios adequados ao Windows e Linux;
-- targets `tests`, `tests-fast` e `tests-verbose` sem depender de `./`/`cat` no Windows;
-- separação dos comandos de execução/leitura/erro por plataforma;
-- GitHub Actions para compilar e executar os testes em Ubuntu;
-- execução headless dos testes gráficos através de Xvfb + Mesa Vulkan software;
-- seleção explícita do ICD Vulkan de software `lavapipe` no CI para tornar o ambiente headless determinístico;
-- `vulkaninfo --summary` no CI para falhar cedo quando o driver Vulkan de software não estiver disponível;
-- execução do CI num display X virtual com resolução fixa;
-- GitHub Actions para validar toda a campanha ativa com `ai_validator.py --campaign`;
-- remoção de warning morto no `EditorInteractionController`;
-- correção da impressão de resultados de testes falhados no Makefile, mantendo-a síncrona;
-- remoção dos logs locais gerados do repositório.
+- `EditorSession` para orquestrar `InputManager`, `Camera`, `KeyBindings` e `EditorInteractionController`.
+- `G` alterna entre `STAMP` e `DRAG` como ferramenta persistente.
+- `[` / `]` alteram `SMALL` / `MEDIUM` / `LARGE`, começando em `MEDIUM`.
+- Clique esquerdo cria ou move; clique direito cancela; `Delete`/`Backspace` apaga a seleção.
+- Preview determinístico (`EditorPreview`) separado da renderização, incluindo recusa fora do canvas lógico.
+- `EditorRenderSnapshot` separa os dados de apresentação do documento de edição; os passes gráficos não devem conhecer `LevelEditorDocument`.
+- Integração do ciclo `EDITOR` no `main.cpp`, sem executar física enquanto o editor está ativo.
+- Testes unitários de input → controller → documento, geometria do preview e conteúdo do snapshot.
+- `docs/ARCHITECTURE.md` atualizado com a direção arquitetural alvo.
+- `docs/TECH_DEBT.md` atualizado com a dívida técnica e a regra de tamanho de código.
+- `docs/CODE_SIZE.md` criado com a política de tamanho físico.
+- `Development/Tools/check_source_sizes.py` criado e ligado ao CI.
+- Regra oficial de código: `<30 KiB` normal, `30–36 KiB` warning, `>36 KiB` bloqueado para novo código.
+- Nova stack de renderer construída em paralelo: `RendererCore`, `ShapeRenderer`, `EditorRenderer`, `WorldRenderer`, `UiRenderer` e `RendererFacade`.
+- `RendererFacadeAdapter` criado como ponte reversível entre a API antiga e a nova fachada.
+- `docs/RENDERER_MIGRATION.md` criado com a matriz de paridade e os critérios de remoção do renderer antigo.
+- Workflow de CI passou também a construir o binário `game` além dos testes.
 
-## Resultado da validação conhecida
+## Estratégia atual para o `Renderer.cpp`
 
-A primeira execução local encontrou corretamente o bug da plataforma mínima (`3x2` aceite indevidamente). Depois da correção, uma execução local ainda não passou porque o Makefile antigo usava comandos POSIX (`./`, `cat`, `mkdir -p`, `rm -rf`) sob o shell Windows.
+O `Renderer.cpp` antigo **não será desmontado diretamente**. Em vez disso:
 
-A primeira execução CI compilou todo o projeto e confirmou os testes da nova camada do editor, mas falhou nos testes gráficos/Vulkan porque o runner Ubuntu não tinha display nem ambiente Vulkan headless configurado. O workflow foi então atualizado para usar Xvfb e Mesa software.
+```text
+Renderer.cpp legado
+      │
+      ├── referência de comportamento
+      └── fallback temporário
 
-A execução CI #8, com o ICD Vulkan de software explicitamente selecionado, terminou **com sucesso**. Está a ser feita uma nova execução após a última correção do Makefile, que não altera a lógica do jogo e serve para validar a tranche final com o estado exato da branch.
+Nova stack
+  ├── RendererCore
+  ├── ShapeRenderer
+  ├── EditorRenderer
+  ├── WorldRenderer
+  ├── UiRenderer
+  └── RendererFacade
+```
 
-## Ordem interna restante
+Cada pass novo é comparado contra o bloco correspondente do renderer legado. Quando a paridade for demonstrada, o caminho antigo daquele estado deixa de ser executado. Só no fim removemos o arquivo legado ou o reduzimos a uma casca compatível, consoante o que produzir a arquitetura mais simples.
 
-1. Confirmar CI verde no estado final da branch.
-2. Rever warnings restantes que pertençam ao código do projeto.
-3. Atualizar documentação final da tranche e critérios de aceitação.
-4. Merge desta tranche.
-5. Criar a branch seguinte dedicada à integração visual da 9.4.
+O `Renderer.cpp` tem aproximadamente 34 KiB e está na zona de atenção da política de tamanho. A solução escolhida evita acrescentar responsabilidades a esse arquivo; o objetivo é **substituí-lo**, não torná-lo ainda maior.
+
+## Matriz de migração
+
+| Área | Novo componente | Estado |
+|---|---|---|
+| recursos Vulkan/frame lifecycle | `RendererCore` | ✅ construído |
+| primitives / push constants | `ShapeRenderer` | ✅ construído |
+| editor | `EditorRenderer` | ✅ construído |
+| mundo / plataformas / FLAG / jogador | `WorldRenderer` | ✅ construído |
+| timer / MENU / PAUSED / CREDITS | `UiRenderer` | ✅ construído |
+| orquestração | `RendererFacade` | ✅ construída |
+| adapter compatível | `RendererFacadeAdapter` | ✅ construído |
+| integração runtime do `EDITOR` | fachada nova | ⏳ próximo |
+| paridade visual/runtime | todos os passes | ⏳ |
+| remoção do legado | `Renderer.cpp` | ⏳ fim da migração |
+
+## Próximos passos desta tranche
+
+1. Fazer o CI reconhecer e compilar a nova stack (`game` + testes).
+2. Fazer o primeiro cut-over apenas do estado `EDITOR`, mantendo os restantes estados no renderer legado.
+3. Validar visualmente `grelha → plataformas → seleção → preview → cursor → HUD`.
+4. Comparar `PLAYING/PAUSED` e migrar o bloco de mundo para `WorldRenderer`.
+5. Migrar `MENU/CREDITS` para `UiRenderer`.
+6. Trocar `main.cpp` definitivamente para a fachada nova quando todos os estados tiverem paridade.
+7. Remover qualquer consumidor do `Renderer.cpp` legado.
+8. Só então eliminar o arquivo legado ou mantê-lo como fachada mínima, escolhendo a opção com menor complexidade.
+
+## Decisões de UX herdadas
+
+- O editor abre no tamanho médio por defeito.
+- Presets devem privilegiar tamanhos familiares de jogos de plataforma, restringidos pelo grid.
+- Teclado e rato podem alternar entre ferramentas/estados; os bindings devem ser explorados de forma consistente.
+- Elementos fora da grid/canvas não são oferecidos como opção editável.
+- O FLAG continua reservado ao último nível da campanha.
+- O editor é uma mudança de estado explícita, inclusive ao navegar diretamente do editor de campanha para o editor de nível.
+
+## Requisitos de engenharia
+
+- Não introduzir dependência de networking.
+- Manter o núcleo leve e otimizado.
+- Evitar duplicação de sprites/dados sempre que uma representação procedural ou atlas compacto for suficiente.
+- O jogo continua offline-first.
+- A futura importação/partilha de mapas deve validar novamente o conteúdo no EXE antes de permitir jogar.
+- Nenhum novo ficheiro C/C++ deve ultrapassar 36 KiB; a partir de 30 KiB não deve receber novas responsabilidades sem um plano de subdivisão.
 
 ## Não entra nesta branch
 
-- integração visual completa do editor;
-- save/serialização;
-- validação assíncrona do editor;
+- save/serialização final de mapas;
 - import/export de pacotes;
 - biblioteca online/site;
-- networking;
+- networking/WebSockets;
 - campanha/playlist 9.6;
-- sistema final de sprites do editor.
+- sistema final de sprites/atlas do editor;
+- empacotamento final do EXE release;
+- Gate 9.4.5 de consolidação arquitetural.
 
-## Próxima branch após esta
+## Critério de conclusão
 
-Depois de esta tranche ser integrada, criar uma branch nova dedicada à **integração visual da 9.4**: renderização de entidades, cursor/preview, STAMP, DRAG, seleção, movimento, botão direito e feedback visual. O `docs/BRANCH_PLAN.md` dessa nova branch deve substituir este plano e marcar esta tranche como concluída.
+A tranche só é considerada concluída quando for possível entrar no editor de nível real e, com mouse/teclado, selecionar, criar, mover e apagar elementos com feedback visual coerente, sem quebrar o estado de jogo normal, quando os testes automatizados e a validação manual do fluxo estiverem verdes, e quando o renderer legado já não for necessário para o editor.

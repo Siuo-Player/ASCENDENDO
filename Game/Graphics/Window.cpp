@@ -12,6 +12,9 @@
 #define GLFW_INCLUDE_VULKAN   // faz GLFW incluir vulkan.h automaticamente
 #include <GLFW/glfw3.h>
 
+#include <algorithm>
+#include <cmath>
+
 namespace gfx {
 
 bool Window::create(uint32_t width, uint32_t height, const char* title) {
@@ -19,6 +22,28 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);   // sem contexto OpenGL
     glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);    // fixo por agora (Fase 4: redimensionavel)
+
+    // O caller pode passar a resolucao total do monitor. Uma janela normal
+    // acrescenta decoracao fora da area cliente, portanto uma janela com
+    // exactamente a resolucao do monitor pode ficar cortada no lado direito.
+    // Limitar a 90% da area do monitor garante que o client area e os borders
+    // conseguem caber mantendo o mesmo rácio pedido.
+    GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+    const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
+    if (mode && width > 0 && height > 0) {
+        const double maxWidth = static_cast<double>(mode->width) * 0.90;
+        const double maxHeight = static_cast<double>(mode->height) * 0.90;
+        const double scale = std::min({
+            1.0,
+            maxWidth / static_cast<double>(width),
+            maxHeight / static_cast<double>(height)
+        });
+
+        if (scale < 1.0) {
+            width = static_cast<uint32_t>(std::floor(width * scale));
+            height = static_cast<uint32_t>(std::floor(height * scale));
+        }
+    }
 
     m_handle = glfwCreateWindow(static_cast<int>(width),
                                 static_cast<int>(height),
