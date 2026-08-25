@@ -14,7 +14,12 @@ O projeto é dividido em subsistemas. Cada decisão importante deve consultar a 
 | Playtesting | Como testar sem depender só de humanos? | automated regression; smart playtesting | agentes, replay regression |
 | Camera | Que informação deve permanecer visível? | camera-control literature + platformer analyses | framing, lookahead, dead zones |
 | Physics | Como preservar determinismo? | engine/replay/testing practice | fixed timestep, replay |
-| C++ architecture | Como manter desempenho sem sobre-engineering? | data-oriented/ECS research | layouts de dados e hot paths |
+| C++ architecture | Como manter desempenho sem sobre-engineering? | coupling/cohesion/size research; architecture knowledge management | boundaries, ownership, testability |
+| Software architecture knowledge | Como preservar decisões e rationale? | Kruchten/Lago/van Vliet; AKM literature | ADRs/architecture docs, reviewability |
+| Project management | Como decompor trabalho sem perder a ligação à arquitetura? | Tausworthe WBS; software-engineering WBS practice | WBS, work packages, PR gates |
+| Dependency management | Como tornar dependências e coordenação visíveis? | Cataldo/Herbsleb/Carley; Begel/Nagappan; Bick et al.; Sablis et al. | dependency maps, coordination awareness |
+| Modularity | Quando uma fronteira reduz de facto a complexidade? | socio-technical congruence; modularity/architecture research | coupling, subsystem boundaries |
+| Architectural technical debt | Como evitar acumulação silenciosa de decisões subótimas? | ATD multiple-case studies; TD management studies | TECH_DEBT, refactoring gates |
 | Vulkan | Como otimizar sem quebrar sincronização? | Khronos spec/samples | barriers, queues, profiling |
 | Hardware | Como suportar GPUs diferentes? | Vulkan portability/version docs | feature detection, fallbacks |
 | Testing | Como detetar regressões? | game testing literature | CI, replay, hardware matrix |
@@ -28,12 +33,14 @@ O projeto é dividido em subsistemas. Cada decisão importante deve consultar a 
 Quando existem conflitos:
 
 1. evidência científica diretamente aplicável ao problema;
-2. documentação técnica oficial da tecnologia utilizada;
+2. documentação técnica oficial da tecnologia;
 3. experiência comprovada de jogos/ferramentas maduros;
 4. testes internos, profiling e telemetria;
 5. preferência estética/pessoal.
 
 Isto não significa que um paper "vence" o playtest. A investigação dá-nos uma hipótese melhor; o jogo tem de confirmar se ela funciona para a nossa física e público.
+
+Para questões de processo, arquitetura e gestão de dependências, a literatura deve ser usada da mesma forma: como base para hipóteses e mecanismos verificáveis, não como receita rígida.
 
 ## Regra de múltiplas fontes
 
@@ -50,6 +57,20 @@ Mario Maker
 ```
 
 O mesmo princípio vale para Vulkan, arquitetura e web.
+
+Para planeamento:
+
+```text
+WBS / project management research
+        +
+architecture / dependency research
+        +
+repository history / current code
+        +
+CI + tests
+        ↓
+work package ASCENDENDO
+```
 
 ## Conteúdo oficial pretendido
 
@@ -68,5 +89,6 @@ O número de níveis deve influenciar arquitetura, análise e tooling, mas não 
 - `docs/TECHNICAL_REFERENCES.md` — C++, Vulkan, profiling, hardware, packaging e web sharing.
 - `docs/DESIGN_REFERENCES.md` — Tiled, Godot, SuperTux, Jump King e Mario Maker como referências práticas.
 - `docs/BASE_ARCHITECTURE_AUDIT.md` — auditoria atual da base, prioridades P0/P1/P2 e critérios de saída.
+- `docs/PROJECT_MANAGEMENT.md` — WBS, work packages, dependency awareness, Definition of Ready/Done e relação arquitetura↔roadmap.
 - `docs/PRODUCT_DECISIONS.md` — decisões do autor.
 - `docs/ROADMAP.md` — ordem de implementação e gates.
