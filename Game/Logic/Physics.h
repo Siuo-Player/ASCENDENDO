@@ -1,8 +1,6 @@
 #pragma once
 // =============================================================================
 //  Game/Logic/Physics.h
-//
-//  @version 7.1
 // =============================================================================
 
 #include "Core/Config.h"
@@ -28,7 +26,7 @@ struct AABB {
         return max.x > o.min.x && min.x < o.max.x &&
                max.y > o.min.y && min.y < o.max.y;
     }
-    
+
     float width() const { return max.x - min.x; }
     float height() const { return max.y - min.y; }
 };
@@ -36,11 +34,8 @@ struct AABB {
 struct PhysicsBody {
     Vec2 position;
     Vec2 velocity;
-    
-    // O tamanho do corpo agora é consumido diretamente da Configuração Global
     float width = config::PLAYER_WIDTH;
     float height = config::PLAYER_HEIGHT;
-    
     bool isGrounded = false;
 
     AABB bounds() const {
@@ -50,9 +45,13 @@ struct PhysicsBody {
 
 class PhysicsWorld {
 public:
-    // Mantém compatibilidade com os testes existentes
     static constexpr float FIXED_STEP = config::FIXED_STEP;
-    static constexpr float GRAVITY    = config::GRAVITY;
+    static constexpr float GRAVITY = config::GRAVITY;
+
+    // Defensive limit: a long hitch/minimize must not create an unbounded
+    // catch-up storm. 15 steps ~= 250 ms at 60 Hz.
+    static constexpr int MAX_STEPS_PER_ADVANCE = 15;
+    static constexpr float MAX_FRAME_TIME = FIXED_STEP * MAX_STEPS_PER_ADVANCE;
 
     int advance(float dt);
     void step(PhysicsBody& body, float dt);

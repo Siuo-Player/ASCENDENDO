@@ -15,6 +15,8 @@ namespace core {
 namespace Key = logic::Key;
 using logic::InputManager;
 
+const KeyBindings* KeyBindings::s_active = nullptr;
+
 std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() {
     return {
         { GameAction::MoveLeft,           { Key::A, Key::LEFT } },
@@ -40,7 +42,17 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
     };
 }
 
-KeyBindings::KeyBindings() : m_bindings(defaultBindings()) {}
+KeyBindings::KeyBindings() : m_bindings(defaultBindings()) {
+    s_active = this;
+}
+
+KeyBindings::~KeyBindings() {
+    if (s_active == this) s_active = nullptr;
+}
+
+const KeyBindings* KeyBindings::active() {
+    return s_active;
+}
 
 const std::vector<int>& KeyBindings::keysFor(GameAction action) const {
     static const std::vector<int> empty;
