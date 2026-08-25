@@ -54,7 +54,7 @@ TEST_CASE("STAMP preview usa o preset medio e respeita o canvas") {
     CHECK(preview.bounds.height() == doctest::Approx(20.0f));
 }
 
-TEST_CASE("preview desaparece fora do canvas valido") {
+TEST_CASE("level editor ignora movimento da camera e mantem preview dentro da tela") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
@@ -65,7 +65,12 @@ TEST_CASE("preview desaparece fora do canvas valido") {
     input.injectCursorPos(320.0, 180.0);
     session.update(input, bindings, camera, 640, 360);
 
-    CHECK_FALSE(session.preview().visible);
+    const auto preview = session.preview();
+    REQUIRE(preview.visible);
+    CHECK(preview.bounds.min.x == doctest::Approx(256.0f));
+    CHECK(preview.bounds.max.x == doctest::Approx(384.0f));
+    CHECK(preview.bounds.min.y == doctest::Approx(170.0f));
+    CHECK(preview.bounds.max.y == doctest::Approx(190.0f));
 }
 
 TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
