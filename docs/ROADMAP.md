@@ -12,12 +12,14 @@ Antes de implementar qualquer passo, consultar sempre as documentações relevan
 - `docs/EDITOR_UX_SPEC.md` — critérios verificáveis do editor.
 - `docs/CAMPAIGN_EDITOR_DESIGN.md` — comportamento e arquitetura do Campaign Editor.
 - `docs/BASE_ARCHITECTURE_AUDIT.md` — auditoria atual da implementação e prioridades de hardening.
+- `docs/PROJECT_MANAGEMENT.md` — WBS, dependências, riscos, gates e Definition of Ready/Done.
+- `docs/WORK_PACKAGE_TEMPLATE.md` — contrato operacional de cada work package.
 
 Quando uma implementação contrariar um destes documentos, atualizar primeiro a decisão/documentação correspondente; não criar divergências silenciosas.
 
 ## Estado de referência
 
-`main` contém a base integrada até à primeira tranche de hardening 9.6. O renderer já foi dividido e o editor já possui snapshot próprio; a migração arquitetural e a robustez de runtime ainda não estão concluídas.
+`main` contém a base integrada através do hardening 9.6 e da consolidação 9.9 do renderer. `RendererCore` → passes → `RendererFacade` é agora a rota de presentation do runtime; a dívida de compatibilidade `RendererFacadeAdapter` foi removida.
 
 ## Princípio estratégico
 
@@ -72,56 +74,29 @@ Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação.
 
 Editor core + migração incremental do renderer, incluindo `LevelEditorDocument`, `EditorInteractionController`, `EditorSession`, `EditorRenderSnapshot`, `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer`, `RendererFacade` e `RendererFacadeAdapter`.
 
-**Referências:** `docs/EDITOR_UX_SPEC.md`, `docs/CAMPAIGN_EDITOR_DESIGN.md`, `docs/DESIGN_REFERENCES.md`, `docs/TECHNICAL_REFERENCES.md`.
-
-### 9.5 — documentação/design ✅
+### 9.5 ✅
 
 Base de investigação científica/técnica, requisitos community-first, referências a Mario Maker/Jump King/Tiled/Godot/SuperTux, objetivos de campanhas de ~50 e 100–200 níveis, e contratos de UX/editor.
 
-**Referências:** `docs/SCIENTIFIC_REFERENCES.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
+### 9.6 — hardening / consolidação ✅
 
-### 9.6 — hardening da base: input + tempo + viewport ✅
+A base passou pelas principais correções de input, fixed timestep, viewport, lifecycle Vulkan e reconstrução de swapchain. A migração de presentation foi consolidada até `RendererFacade`, incluindo a remoção do renderer legado e da implementação do adapter.
 
-A primeira tranche de hardening já está integrada em `main`: gameplay usa uma cadeia única de ações configuráveis, o fixed timestep passou a rejeitar `NaN/Inf` e limitar catch-up, e o Level Editor tem contrato explícito de uma única tela lógica `640x360`.
+**Validação histórica relevante:** a tranche 9.4 tinha 162/162 testes e 849/849 assertions no Windows; a 9.6 adicionou invariantes e failure paths adicionais.
 
-Validação local destas tranches:
+### 9.6 P1 — fronteiras arquiteturais 🔄
 
-```text
-165 testes
-871 assertions
-0 falhas
-```
-
-**Referências:** `docs/BASE_ARCHITECTURE_AUDIT.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
-
-## Fase 9.6 — HARDENING DA BASE (em curso)
-
-**Não iniciar conteúdo novo significativo antes de fechar os P0 e o núcleo dos P1.**
-
-### P0 — contradições funcionais e riscos graves
-
-1. **Input único ✅** — gameplay roteia `MoveLeft`, `MoveRight` e `Jump` por `GameAction`/`KeyBindings`.
-2. **Editor de uma tela ✅** — cursor e renderer usam a mesma transformação lógica `640x360`; não existe camera-pan no Level Editor.
-3. **Fixed timestep robusto ✅** — limite de catch-up, clamp de frame longo e rejeição de `NaN`/`Inf`.
-4. **Vulkan error lifecycle ✅** — `RendererCore` distingue erro fatal de invalidação recuperável, preserva a fence sinalizada durante recording e só a reseta imediatamente antes de `vkQueueSubmit`.
-5. **Swapchain recreation ✅** — `OUT_OF_DATE`/`SUBOPTIMAL` desencadeiam reconstrução segura do swapchain, image views, framebuffers, command buffers e sync objects; capabilities, formato, present mode e composite alpha são consultados antes da criação.
-6. **Queue/present support 🔄** — a criação do swapchain já verifica que a queue gráfica selecionada consegue apresentar; falta agora permitir seleção de uma família de present distinta quando graphics e present não coincidem.
-
-**Referências:** `docs/BASE_ARCHITECTURE_AUDIT.md`; `docs/TECHNICAL_REFERENCES.md`; `docs/ARCHITECTURE.md`; `docs/RESEARCH_INDEX.md` (Input, Physics, Vulkan, Hardware).
-
-### P1 — fechar as novas fronteiras arquiteturais
-
-7. **Eliminar o adapter de migração** depois de todos os consumidores/testes passarem para `RendererFacade`.
-8. **Eliminar o `Renderer` legado** depois da migração dos seus testes e consumidores.
-9. **Criar `RenderSnapshot` geral** para gameplay/UI/editor; presentation não recebe `Player`/`Level`/`GameState` diretamente.
-10. **Extrair responsabilidades do loop principal** de forma incremental para reduzir acoplamento e melhorar testabilidade.
+7. **Eliminar o adapter de migração ✅** — `RendererFacadeAdapter.cpp` removido, snapshot/editor ownership absorvido por `RendererFacade` e runtime migrado para `RendererFacade`.
+8. **Eliminar o `Renderer` legado ✅** — `Renderer.cpp/.h` removidos em 9.8.
+9. **Criar `RenderSnapshot` geral 🔄** — presentation ainda recebe `Player`/`Level` diretamente em `RendererFacade`; próxima tranche deve definir um contrato geral de dados de renderização.
+10. **Extrair responsabilidades do loop principal 🔄** — reduzir o acoplamento de `main.cpp` através de `Application` / `GameStateMachine` / `Simulation`, depois de estabilizar `RenderSnapshot`.
 11. **RAII/ownership Vulkan** — substituir `new/delete` evitáveis e garantir wrappers não-copiáveis/movíveis quando apropriado.
 12. **Consolidar modelo comum de dados de nível** entre parser, runtime e editor.
 13. **Undo/Redo transacional** — drag completo = uma operação lógica.
 14. **Separar user data de source tree** e introduzir resolução de assets baseada na localização do executável.
 15. **Unificar a política de source-size** e remover ferramentas legadas duplicadas.
 
-**Referências:** `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/BASE_ARCHITECTURE_AUDIT.md`.
+**Referências:** `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/BASE_ARCHITECTURE_AUDIT.md`, `docs/PROJECT_MANAGEMENT.md`.
 
 ### P2 — qualidade e compatibilidade
 
@@ -135,25 +110,40 @@ Validação local destas tranches:
 23. Matriz mínima de hardware/software documentada e validada.
 24. Profiling em pelo menos Intel/NVIDIA/AMD e, quando viável, uma GPU tile-based.
 
-**Referências:** `docs/TECHNICAL_REFERENCES.md`, `docs/SCIENTIFIC_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
+## Próximo bloco autorizado — 9.6 P1.9 RenderSnapshot geral
 
-### Critério de saída da 9.6
+Só começar depois de a tranche 9.9 estar integrada.
 
-A base só é considerada pronta quando:
+Objetivo: fazer com que a presentation consuma um modelo de dados próprio, reduzindo a dependência direta de `Player`, `Level` e `GameState`.
+
+### WBS
 
 ```text
-GameAction completo
-+ editor 640x360 coerente
-+ timestep defensivo
-+ Vulkan error/swapchain robustos
-+ graphics/present capabilities verificadas
-+ adapter/renderer legado encaminhados para remoção
-+ RenderSnapshot geral
-+ modelo comum de nível
-+ paths/user-data corretos
-+ CI/quality gates essenciais
-+ testes das novas fronteiras
-+ frame-time medido para validar 60/120 FPS conforme hardware
+9.6 P1.9 — RenderSnapshot
+├── definir dados necessários por pass
+├── separar estado persistente de estado de apresentação
+├── criar snapshot de gameplay
+├── integrar UI/editor snapshot sem duplicar ownership
+├── migrar RendererFacade
+├── testes de equivalência do frame
+└── profiling/regressão
+```
+
+### Dependências
+
+- `RendererFacade` estável;
+- `EditorRenderSnapshot` existente;
+- `GameState` extraído do renderer legado;
+- testes de integração do renderer.
+
+### Critério de saída
+
+```text
+RendererFacade não necessita dos modelos de domínio para extrair dados de apresentação
++ snapshot tem ownership/imutabilidade claros
++ gameplay continua determinístico
++ testes cobrem equivalência do caminho antigo/novo
++ documentação arquitetural atualizada
 ```
 
 ## Fase 9.7 — Level Editor UX
@@ -170,16 +160,12 @@ Só depois de 9.6 verde.
 - feedback de erro e trajetória tentada;
 - retorno seguro entre editor e jogo.
 
-**Referências:** `docs/EDITOR_UX_SPEC.md`, `docs/PRODUCT_DECISIONS.md`, `docs/DESIGN_REFERENCES.md`, `docs/SCIENTIFIC_REFERENCES.md`.
-
 ## Fase 9.8 — Seleção de campanhas
 
 - `Começar` abre seleção mesmo com uma campanha;
 - preview, número de níveis e validade;
 - metadata separada quando necessário;
 - preparação para várias campanhas.
-
-**Referências:** `docs/PRODUCT_DECISIONS.md`, `docs/CAMPAIGN_EDITOR_DESIGN.md`, `docs/SCIENTIFIC_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`.
 
 ## Fase 9.9 — Campaign Editor
 
@@ -192,8 +178,6 @@ Só depois de 9.6 verde.
 - runs de transição entre níveis;
 - diagnóstico visual de falhas.
 
-**Referências:** `docs/CAMPAIGN_EDITOR_DESIGN.md`, `docs/DESIGN_REFERENCES.md`, `docs/SCIENTIFIC_REFERENCES.md`, `docs/PRODUCT_DECISIONS.md`.
-
 ## Fase 10 — Level Data + save + validação estáveis
 
 - versão explícita do `.lvl`;
@@ -203,8 +187,6 @@ Só depois de 9.6 verde.
 - validação em background;
 - importados/descarregados revalidados pelo EXE;
 - migrações documentadas.
-
-**Referências:** `docs/TECHNICAL_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`, `docs/PRODUCT_DECISIONS.md`, `docs/RESEARCH_INDEX.md`.
 
 ## Fase 11 — Conteúdo oficial e análise de campanhas
 
@@ -219,16 +201,6 @@ Depois da infraestrutura ser confiável:
 - ferramentas de composição;
 - análise de dificuldade/ritmo em salto → secção → nível → campanha.
 
-Objetivos oficiais:
-
-- várias campanhas;
-- campanhas normais com média de ~50 níveis;
-- campanhas especiais de 100–200 níveis;
-- níveis finais/opcionais extremamente difíceis;
-- progressão baseada em aprendizagem, variação, recuperação e escalada de desafio.
-
-**Referências:** `docs/SCIENTIFIC_REFERENCES.md` (level design, difficulty, progression, UGC); `docs/DESIGN_REFERENCES.md` (Mario Maker, Jump King, SuperTux); `docs/RESEARCH_INDEX.md`; `docs/PRODUCT_DECISIONS.md`.
-
 ## Fase 12 — Partilha local e web
 
 ### 12.1 Export/import
@@ -239,21 +211,13 @@ Pacote declarativo, extração controlada e validação obrigatória pelo EXE.
 
 HTTP(S) inicialmente; site trata conteúdo como não confiável; EXE continua autoridade final.
 
-Metadata futura: autor, versão, hash/ID, descrição, dificuldade declarada/observada, versão do jogo, estatísticas e reports/moderação.
-
 ### 12.3 Partilha direta
 
 Só adicionar comunicação bidirecional quando HTTP(S) + export/import forem insuficientes.
 
-**Referências:** `docs/TECHNICAL_REFERENCES.md`, `docs/PRODUCT_DECISIONS.md`, `docs/SCIENTIFIC_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`, `docs/RESEARCH_INDEX.md`.
-
 ## Fase 13 — Release / Portable Build
 
 Objetivo: pacote Windows x64 copiável para outro computador dentro dos requisitos mínimos, sem ambiente de desenvolvimento.
-
-Requisitos: executável + DLLs/assets necessárias, paths independentes do current working directory, sem downloads obrigatórios e diagnóstico amigável.
-
-**Referências:** `docs/TECHNICAL_REFERENCES.md`, `docs/RESEARCH_INDEX.md`, documentação Microsoft indicada nesses documentos.
 
 ## Regra de progressão entre branches/PRs
 
@@ -272,4 +236,4 @@ Para cada passo:
 9. fazer merge;
 10. fechar a branch e criar a próxima a partir do `main` atualizado.
 
-Toda decisão nova deve atualizar `PRODUCT_DECISIONS.md` e, quando alterar o plano, este roadmap. A documentação histórica pode ser atualizada em conjunto, mas estes documentos são a referência operacional.
+Toda decisão nova deve atualizar `PRODUCT_DECISIONS.md` e, quando alterar o plano, este roadmap. O WBS/risco/dependências do bloco devem acompanhar a mesma alteração.
