@@ -9,16 +9,18 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 
 ## Estado atual da migração do renderer
 
-A dívida de compatibilidade `RendererFacadeAdapter` foi eliminada na tranche 9.9: a implementação duplicada já não existe, `RendererFacade` é a API de presentation usada pelo runtime e o snapshot do editor pertence à fachada.
+A implementação legada `Renderer.cpp/.h` já não está presente em `main`. A migração para `RendererCore` + passes + `RendererFacade` está integrada.
 
-A próxima dívida arquitetural relevante de presentation é a ausência de um `RenderSnapshot` geral que impeça o renderer de receber diretamente modelos de gameplay (`Player`, `Level`) e estado de aplicação. Essa alteração fica deliberadamente depois do cut-over do adapter.
+A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`. PR #20 formaliza a migração desta fronteira e permanece aberta até integração.
 
-## P0 — tratar antes da release e, quando indicado, antes de save/import
+## P0 — tratar antes de continuar a acumular complexidade
 
 | Área | Problema | Ação | Critério de saída |
 |---|---|---|---|
+| CI / evidência | Run #281 falhou no step agregado de build/teste, mas a causa detalhada não está confirmada | obter diagnóstico observável antes de atribuir causalidade e, depois, corrigir/revalidar | causa classificada por evidência e nova execução documentada |
+| Source size | regra normativa de 300/400 linhas não corresponde ao checker de `main`, que ainda usa 30/36 KiB e ignora `main.cpp` | documentar primeiro; migrar checker/workflow num WP próprio | checker verifica política de linhas, inclui `main.cpp`, e CI verde |
 | Runtime | `main.cpp` acumula inicialização, estados, campanha, física, editor e persistência | extrair `Application`, `GameStateMachine` e `Simulation` incrementalmente | `main.cpp` deixa de possuir regras de gameplay/editor |
-| Presentation | `RendererFacade` ainda conhece `Player`, `Level` e estado de aplicação | introduzir `RenderSnapshot`/`EditorRenderData` | presentation recebe dados próprios de apresentação |
+| Presentation | `RendererFacade`/passes ainda recebem modelos de domínio diretamente | introduzir `RenderSnapshot`/dados de apresentação | presentation recebe dados próprios de apresentação |
 | Input | gameplay ainda pode consultar teclas físicas diretamente | migrar `Player` para `GameAction`/`KeyBindings` | nenhuma regra de gameplay depende de `Key::...` |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
 | Levels | runtime/editor têm modelos separados que representam o mesmo conteúdo | introduzir `LevelData` independente de Vulkan/GLFW | parser, editor e runtime convergem no mesmo modelo |
@@ -31,7 +33,7 @@ A próxima dívida arquitetural relevante de presentation é a ausência de um `
 |---|---|---|
 | CI | só Linux é referência de build | adicionar Windows build/tests |
 | CI | sanitizers existem no Makefile mas não são um job obrigatório | job ASan + UBSan |
-| CI | `make game` não é necessariamente exercitado pelo pipeline de testes | validar build/link do jogo |
+| CI | build/game/testes ainda estão agregados em parte do workflow | separar steps para observabilidade e diagnosticar cada fase |
 | Editor | não existe undo/redo | Command Pattern + stacks |
 | Editor | drag deve ser uma operação lógica única | criar transações/comandos begin/update/end |
 | Config | `Config.h` acumula domínios | separar progressivamente physics/render/window/editor/gameplay |
@@ -39,8 +41,7 @@ A próxima dívida arquitetural relevante de presentation é a ausência de um `
 | Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato |
 | Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária |
 | Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste |
-| Source size | ficheiros de código demasiado grandes dificultam revisão e alterações seguras | aviso aos 30 KiB; subdividir por responsabilidade antes de 36 KiB | nenhum ficheiro C/C++ > 36 KiB; componentes centrais devem evitar a zona de aviso |
-| Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` a cada bloco do roadmap | cada branch nova tem Ready/Done, dependências e validação definidos |
+| Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md` a cada bloco |
 | Arquitetura | fronteiras podem ser alteradas sem atualizar WBS/roadmap | tratar mudanças arquiteturais como alteração de planeamento | arquitetura e WBS permanecem congruentes |
 | Coordenação | consumidores e testes podem descobrir uma mudança de interface apenas no fim da branch | manter dependency map no work package | dependências críticas identificadas antes de implementação/merge |
 
@@ -69,6 +70,29 @@ A próxima dívida arquitetural relevante de presentation é a ausência de um `
 - separar documentação normativa de diário de desenvolvimento;
 - evitar usar `Development/Runs/runs.csv` como parte do source tree de runtime.
 
+## Source-size work packages em preparação
+
+A partir do incidente de 2026-08-25, os seguintes alvos estão explicitamente rastreados:
+
+```text
+FontRenderer.cpp
+    → 430 linhas históricas → primeiro alvo de decomposição
+
+SpriteRenderer.cpp
+    → 332 linhas históricas → investigar coesão antes de dividir
+
+Tests/Unit/test_keybindings.cpp
+    → 305 linhas históricas → dividir por famílias de comportamento se a coesão justificar
+
+Tests/Unit/test_level.cpp
+    → 326 linhas históricas → dividir por domínio de invariantes/falhas se justificável
+
+main.cpp
+    → 330 linhas históricas → continuar extração arquitetural, não split artificial
+```
+
+A ordem pode mudar apenas por nova evidência documentada.
+
 ## Regras de arquitetura derivadas da revisão
 
 1. O renderer nunca lê input nem altera lógica.
@@ -80,15 +104,16 @@ A próxima dívida arquitetural relevante de presentation é a ausência de um `
 7. O EXE é a autoridade final de validação de mapas.
 8. O current working directory não é uma dependência do runtime.
 9. O CI testa o produto que será distribuído, não apenas os testes unitários.
-10. Ficheiros C/C++ devem permanecer abaixo de 36 KiB; a partir de 30 KiB não devem receber novas responsabilidades sem um plano de subdivisão.
+10. A política normativa de modularidade é `<300` normal, `300–399` warning e `>=400` error; o enforcement em `main` ainda precisa de migração do checker.
 11. Cada work package deve ter dependências e critérios de saída explícitos.
 12. Alterações que mudem fronteiras arquiteturais devem atualizar o planeamento e a documentação relevante.
 13. Uma dependência técnica deve ser considerada também uma dependência de coordenação quando a sua alteração afeta consumidores, testes ou documentação.
-14. `RendererFacadeAdapter` não é mais uma API suportada do runtime.
+14. `RendererFacadeAdapter` não é uma API suportada do runtime.
+15. Causas de falhas CI não são tratadas como confirmadas sem evidência observável.
 
 ## Portões do roadmap
 
-Antes de **9.5 Save + Validar** devem estar resolvidos os pontos P0 que afetam o editor/níveis e pelo menos o fixed timestep/path model.
+Antes de avançar para uma nova tranche arquitetural dependente de presentation, os gates de processo acima devem estar resolvidos ou explicitamente aceites como dívida com risco e condição de revisão.
 
 Antes de **11 Partilha/Biblioteca** devem estar resolvidos:
 
@@ -103,4 +128,4 @@ Antes da **release portable** todos os P0 devem estar fechados e os P1 críticos
 
 ## Governança do roadmap
 
-A lista acima deve ser lida em conjunto com `docs/PROJECT_MANAGEMENT.md`. Um item de dívida não é apenas uma observação técnica: quando exige trabalho, deve tornar-se um work package rastreável no roadmap ou numa tranche de manutenção.
+A lista acima deve ser lida em conjunto com `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md`. Um item de dívida não é apenas uma observação técnica: quando exige trabalho, deve tornar-se um work package rastreável no roadmap ou numa tranche de manutenção.
