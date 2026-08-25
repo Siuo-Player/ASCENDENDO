@@ -6,7 +6,6 @@
 #include "Graphics/Pipeline.h"
 #include "Graphics/TextPipeline.h"
 #include "Graphics/FontRenderer.h"
-#include "Graphics/Camera.h"
 #include "Core/Config.h"
 
 #include <cmath>
@@ -30,17 +29,14 @@ void drawEditorText(VkCommandBuffer cmd, TextPipeline* pipeline, FontRenderer* f
 void EditorRenderer::draw(VkCommandBuffer cmd,
                           const Pipeline& shapePipeline,
                           const ShapeRenderer& shapes,
-                          const Camera& camera,
                           const logic::EditorRenderSnapshot& snapshot,
                           TextPipeline* textPipeline,
                           FontRenderer* font) const {
     if (cmd == VK_NULL_HANDLE || !shapePipeline.isInitialized()) return;
 
-    const Camera fixedCamera = [&]() {
-        Camera c = camera;
-        c.position = {0.0f, 0.0f};
-        return c;
-    }();
+    // The Level Editor is a single logical 640x360 screen. Geometry is already
+    // in logical coordinates, so no camera transform is permitted here.
+    const Camera fixedCamera{};
 
     shapes.bind(cmd, shapePipeline);
 
