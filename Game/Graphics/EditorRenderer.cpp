@@ -36,9 +36,6 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                           FontRenderer* font) const {
     if (cmd == VK_NULL_HANDLE || !shapePipeline.isInitialized()) return;
 
-    // Um .lvl = uma tela. A câmara deve permanecer em (0,0) durante todo o
-    // Level Editor; a deslocação vertical pertence exclusivamente ao
-    // Campaign Editor.
     const Camera fixedCamera = [&]() {
         Camera c = camera;
         c.position = {0.0f, 0.0f};
@@ -153,7 +150,7 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
 
         char hud[128];
         std::snprintf(hud, sizeof(hud),
-                      "%s  %s  | F2 GUARDAR | F5 TESTAR | F6 VALIDAR | C CAMPANHA | ESC SAIR",
+                      "%s  %s  | 1 GUARDAR | 2 TESTAR | 3 VALIDAR | C CAMPANHA | ESC SAIR",
                       tool, size);
         drawEditorText(cmd, textPipeline, font, hud,
                        10.0f, config::LOGICAL_HEIGHT - 24.0f,
