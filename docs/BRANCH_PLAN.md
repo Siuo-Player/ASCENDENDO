@@ -14,7 +14,7 @@ Reduzir a responsabilidade concentrada em `Game/Graphics/FontRenderer.cpp` atrav
 
 A `main` pós-PR #25 foi validada pelo CI #311 com source-size, Vulkan, build/tests e campaign todos verdes.
 
-A inspeção do código confirmou que `Game/Graphics/FontRenderer.cpp` continua a conter baking CPU, upload Vulkan, criação de image/view/sampler/descriptor e lifecycle. Não existia `Game/Graphics/FontRendererGpu.cpp` em `main`; a descrição anterior que dizia o contrário foi corrigida antes da implementação.
+A inspeção do código confirmou que `Game/Graphics/FontRenderer.cpp` continuava a conter baking CPU, upload Vulkan, criação de image/view/sampler/descriptor e lifecycle. Não existia `Game/Graphics/FontRendererGpu.cpp` em `main`; a descrição anterior que dizia o contrário foi corrigida antes da implementação.
 
 ## Decisão de fronteira
 
@@ -24,7 +24,7 @@ Não foi criada uma abstração genérica de assets nem uma classe por cada oper
 
 ## Falha CI observada e resolução
 
-A primeira execução após a extração falhou no build do jogo. Causa confirmada pelo log:
+A primeira execução após a extração, **CI #316** (commit intermédio da branch), falhou no build do jogo. Causa confirmada pelo log:
 
 ```text
 Game/Graphics/FontRenderer.cpp:72:21: error: member access into incomplete type 'VulkanContext'
@@ -34,7 +34,9 @@ Game/Graphics/FontRenderer.cpp:106:28: error: member access into incomplete type
 
 A causa foi a remoção indevida do include que fornece a definição completa de `VulkanContext` durante a decomposição. A correção foi manter `Graphics/VulkanContext.h` incluído na translation unit que utiliza os seus métodos. Não houve alteração da fronteira arquitetural para resolver a falha.
 
-A execução seguinte, **CI #343**, terminou verde: source-size ✅, Vulkan ✅, build/tests ✅ e campaign ✅.
+Após essa correção, **CI #343** terminou verde: source-size ✅, Vulkan ✅, build/tests ✅ e campaign ✅.
+
+A documentação da recuperação foi posteriormente atualizada na branch e o **CI #375**, executando o HEAD atual, terminou novamente verde em todos os steps.
 
 ## Documentos obrigatórios
 
