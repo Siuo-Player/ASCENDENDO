@@ -1,11 +1,5 @@
-// =============================================================================
-// Game/Graphics/FontRenderer.cpp
-//
-// Responsabilidade: preparação CPU do atlas de fontes e emissão de glyph draws.
-// A gestão de recursos Vulkan do atlas vive em FontRendererGpu.cpp.
-// STB_TRUETYPE_IMPLEMENTATION deve existir apenas nesta translation unit.
-// =============================================================================
 #include "Graphics/FontRenderer.h"
+#include "Graphics/FontRendererGpu.h"
 #include "Graphics/VulkanContext.h"
 #include "Graphics/TextPipeline.h"
 
@@ -17,8 +11,12 @@
 
 namespace gfx {
 
+FontRenderer::FontRenderer() : m_gpu(std::make_unique<FontRendererGpu>()) {}
+
+FontRenderer::~FontRenderer() { cleanup(); }
+
 bool FontRenderer::loadAndBakeFont(const std::string& ttfPath, float pixelHeight,
-                                    std::vector<uint8_t>& outAtlasPixels) {
+                                   std::vector<uint8_t>& outAtlasPixels) {
     std::ifstream file(ttfPath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) {
         std::cerr << "[FontRenderer] Nao foi possivel abrir: " << ttfPath << "\n";
@@ -36,10 +34,9 @@ bool FontRenderer::loadAndBakeFont(const std::string& ttfPath, float pixelHeight
 
     outAtlasPixels.assign(static_cast<size_t>(ATLAS_W) * ATLAS_H, 0);
     std::vector<stbtt_bakedchar> baked(NUM_CHARS);
-
-    const int ret = stbtt_BakeFontBitmap(
-        ttfBuffer.data(), 0, pixelHeight, outAtlasPixels.data(),
-        ATLAS_W, ATLAS_H, FIRST_CHAR, NUM_CHARS, baked.data());
+    const int ret = stbtt_BakeFontBitmap(ttfBuffer.data(), 0, pixelHeight,
+                                         outAtlasPixels.data(), ATLAS_W, ATLAS_H,
+                                         FIRST_CHAR, NUM_CHARS, baked.data());
     if (ret == 0) {
         std::cerr << "[FontRenderer] stbtt_BakeFontBitmap falhou (atlas demasiado pequeno?)\n";
         return false;
@@ -54,7 +51,6 @@ bool FontRenderer::loadAndBakeFont(const std::string& ttfPath, float pixelHeight
         m_chars[i].yoff = baked[i].yoff;
         m_chars[i].xadvance = baked[i].xadvance;
     }
-
     m_bakePixelHeight = pixelHeight;
     return true;
 }
@@ -65,27 +61,10 @@ bool FontRenderer::init(VulkanContext* ctx, VkDescriptorSetLayout descriptorSetL
     if (!ctx || !ctx->isInitialized()) return false;
 
     m_ctx = ctx;
-
     std::vector<uint8_t> atlasPixels;
-    if (!loadAndBakeFont(ttfPath, bakePixelHeight, atlasPixels)) {
-        m_ctx = nullptr;
-        return false;
-    }
-    if (!createAtlasImage(atlasPixels)) {
-        m_ctx = nullptr;
-        return false;
-    }
-    if (!createDescriptorSet(descriptorSetLayout)) {
-        VkDevice device = m_ctx->device();
-        if (m_sampler) vkDestroySampler(device, m_sampler, nullptr);
-        if (m_imageView) vkDestroyImageView(device, m_imageView, nullptr);
-        if (m_image) vkDestroyImage(device, m_image, nullptr);
-        if (m_imageMemory) vkFreeMemory(device, m_imageMemory, nullptr);
-        m_sampler = VK_NULL_HANDLE;
-        m_imageView = VK_NULL_HANDLE;
-        m_image = VK_NULL_HANDLE;
-        m_imageMemory = VK_NULL_HANDLE;
-        m_ctx = nullptr;
+    if (!loadAndBakeFont(ttfPath, bakePixelHeight, atlasPixels) ||
+        !m_gpu->init(ctx, descriptorSetLayout, atlasPixels, ATLAS_W, ATLAS_H)) {
+        cleanup();
         return false;
     }
 
@@ -94,30 +73,14 @@ bool FontRenderer::init(VulkanContext* ctx, VkDescriptorSetLayout descriptorSetL
 }
 
 void FontRenderer::cleanup() {
-    if (!m_initialized || !m_ctx) return;
-
-    VkDevice device = m_ctx->device();
-    vkDeviceWaitIdle(device);
-
-    if (m_descPool) vkDestroyDescriptorPool(device, m_descPool, nullptr);
-    if (m_sampler) vkDestroySampler(device, m_sampler, nullptr);
-    if (m_imageView) vkDestroyImageView(device, m_imageView, nullptr);
-    if (m_image) vkDestroyImage(device, m_image, nullptr);
-    if (m_imageMemory) vkFreeMemory(device, m_imageMemory, nullptr);
-
-    m_descPool = VK_NULL_HANDLE;
-    m_sampler = VK_NULL_HANDLE;
-    m_imageView = VK_NULL_HANDLE;
-    m_image = VK_NULL_HANDLE;
-    m_imageMemory = VK_NULL_HANDLE;
-    m_descSet = VK_NULL_HANDLE;
+    if (m_gpu) m_gpu->cleanup();
     m_initialized = false;
     m_ctx = nullptr;
 }
 
 void FontRenderer::bind(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout) const {
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout,
-                            0, 1, &m_descSet, 0, nullptr);
+    if (!m_initialized) return;
+    m_gpu->bind(cmd, pipelineLayout);
 }
 
 void FontRenderer::drawText(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout,
@@ -127,60 +90,46 @@ void FontRenderer::drawText(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout
 
     const float invAtlasW = 1.0f / static_cast<float>(ATLAS_W);
     const float invAtlasH = 1.0f / static_cast<float>(ATLAS_H);
-    float cx = x;
+    float cursorX = x;
 
     for (const char* p = text; *p; ++p) {
         const unsigned char c = static_cast<unsigned char>(*p);
         if (c < FIRST_CHAR || c >= FIRST_CHAR + NUM_CHARS) {
-            cx += scale * m_bakePixelHeight * 0.3f;
+            cursorX += scale * m_bakePixelHeight * 0.3f;
             continue;
         }
 
-        const BakedChar& bc = m_chars[c - FIRST_CHAR];
-        const float glyphW = static_cast<float>(bc.x1 - bc.x0);
-        const float glyphH = static_cast<float>(bc.y1 - bc.y0);
-        if (glyphW > 0.0f && glyphH > 0.0f) {
-            const float left = cx + bc.xoff * scale;
-            const float top = baseline_y - bc.yoff * scale;
-            const float bottom = top - glyphH * scale;
-            const float width = glyphW * scale;
-            const float height = glyphH * scale;
-            const float u0 = bc.x0 * invAtlasW;
-            const float v0 = bc.y0 * invAtlasH;
-            const float u1 = bc.x1 * invAtlasW;
-            const float v1 = bc.y1 * invAtlasH;
+        const BakedChar& glyph = m_chars[c - FIRST_CHAR];
+        const float width = static_cast<float>(glyph.x1 - glyph.x0);
+        const float height = static_cast<float>(glyph.y1 - glyph.y0);
+        if (width > 0.0f && height > 0.0f) {
+            const float left = cursorX + glyph.xoff * scale;
+            const float top = baseline_y - glyph.yoff * scale;
+            const float bottom = top - height * scale;
 
             TextPushConstants pc{};
-            pc.color[0] = r;
-            pc.color[1] = g;
-            pc.color[2] = b;
-            pc.color[3] = a;
-            pc.objPos[0] = left;
-            pc.objPos[1] = bottom;
-            pc.objSize[0] = width;
-            pc.objSize[1] = height;
-            pc.uv0[0] = u0;
-            pc.uv0[1] = v0;
-            pc.uv1[0] = u1;
-            pc.uv1[1] = v1;
-            pc.logicalRes[0] = 640.0f;
-            pc.logicalRes[1] = 360.0f;
+            pc.color[0] = r; pc.color[1] = g; pc.color[2] = b; pc.color[3] = a;
+            pc.objPos[0] = left; pc.objPos[1] = bottom;
+            pc.objSize[0] = width * scale; pc.objSize[1] = height * scale;
+            pc.uv0[0] = glyph.x0 * invAtlasW; pc.uv0[1] = glyph.y0 * invAtlasH;
+            pc.uv1[0] = glyph.x1 * invAtlasW; pc.uv1[1] = glyph.y1 * invAtlasH;
+            pc.logicalRes[0] = 640.0f; pc.logicalRes[1] = 360.0f;
 
             vkCmdPushConstants(cmd, pipelineLayout,
                                VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                                0, sizeof(TextPushConstants), &pc);
             vkCmdDraw(cmd, 6, 1, 0, 0);
         }
-
-        cx += bc.xadvance * scale;
+        cursorX += glyph.xadvance * scale;
     }
 }
 
 void FontRenderer::drawTextCentered(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout,
                                     const char* text, float cx, float baseline_y, float scale,
                                     float r, float g, float b, float a) const {
-    const float w = textWidth(text, scale);
-    drawText(cmd, pipelineLayout, text, cx - w * 0.5f, baseline_y, scale, r, g, b, a);
+    const float width = textWidth(text, scale);
+    drawText(cmd, pipelineLayout, text, cx - width * 0.5f, baseline_y,
+             scale, r, g, b, a);
 }
 
 float FontRenderer::textWidth(const char* text, float scale) const {
@@ -196,6 +145,10 @@ float FontRenderer::textWidth(const char* text, float scale) const {
         width += m_chars[c - FIRST_CHAR].xadvance * scale;
     }
     return width;
+}
+
+bool FontRenderer::isInitialized() const {
+    return m_initialized && m_gpu && m_gpu->isInitialized();
 }
 
 } // namespace gfx
