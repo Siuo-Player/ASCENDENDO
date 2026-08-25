@@ -57,6 +57,7 @@ void RendererFacade::cleanup() {
     m_shapes = nullptr;
     m_core = nullptr;
     m_shapePipeline = nullptr;
+    m_editorSession = nullptr;
     m_editorSnapshotPtr = nullptr;
     m_editorSnapshot = {};
     m_initialized = false;
@@ -73,6 +74,7 @@ void RendererFacade::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer
 }
 
 void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot) {
+    m_editorSession = nullptr;
     if (!snapshot) {
         m_editorSnapshotPtr = nullptr;
         return;
@@ -82,6 +84,7 @@ void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* sna
 }
 
 void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
+    m_editorSession = session;
     if (!session) {
         m_editorSnapshotPtr = nullptr;
         return;
@@ -115,6 +118,11 @@ bool RendererFacade::drawFrame(const logic::Player& player,
                                int menuSelection,
                                float elapsedSeconds) {
     if (!m_initialized || !m_core || !m_shapes || !m_shapePipeline) return false;
+
+    if (state == RenderState::EDITOR && m_editorSession) {
+        m_editorSnapshot = m_editorSession->renderSnapshot();
+        m_editorSnapshotPtr = &m_editorSnapshot;
+    }
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uint32_t imageIndex = 0;
