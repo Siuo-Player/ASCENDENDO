@@ -23,6 +23,9 @@ const char* actionDisplayName(GameAction action) {
         case GameAction::EditorSizeDown:  return "Editor: Tamanho Menor";
         case GameAction::EditorSizeUp:    return "Editor: Tamanho Maior";
         case GameAction::DeleteSelection: return "Editor: Apagar Seleção";
+        case GameAction::EditorSave:      return "Editor: Guardar";
+        case GameAction::EditorTest:      return "Editor: Testar Nivel";
+        case GameAction::EditorValidate:  return "Editor: Validar Nivel";
     }
     return "?";
 }
@@ -44,6 +47,9 @@ const char* actionSerializedName(GameAction action) {
         case GameAction::EditorSizeDown:   return "EditorSizeDown";
         case GameAction::EditorSizeUp:     return "EditorSizeUp";
         case GameAction::DeleteSelection:  return "DeleteSelection";
+        case GameAction::EditorSave:       return "EditorSave";
+        case GameAction::EditorTest:       return "EditorTest";
+        case GameAction::EditorValidate:   return "EditorValidate";
     }
     return "Unknown";
 }
