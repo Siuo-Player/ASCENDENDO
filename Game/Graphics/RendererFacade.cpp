@@ -16,6 +16,7 @@
 #include "Core/Config.h"
 
 #include <algorithm>
+#include <memory>
 
 namespace gfx {
 
@@ -28,11 +29,11 @@ bool RendererFacade::init(VulkanContext* ctx, Swapchain* swapchain,
     if (m_initialized) return true;
     if (!ctx || !swapchain || !renderPass || !pipeline) return false;
 
-    m_core = new RendererCore();
-    m_shapes = new ShapeRenderer();
-    m_world = new WorldRenderer();
-    m_ui = new UiRenderer();
-    m_editor = new EditorRenderer();
+    m_core = std::make_unique<RendererCore>();
+    m_shapes = std::make_unique<ShapeRenderer>();
+    m_world = std::make_unique<WorldRenderer>();
+    m_ui = std::make_unique<UiRenderer>();
+    m_editor = std::make_unique<EditorRenderer>();
     m_shapePipeline = pipeline;
 
     if (!m_core->init(ctx, swapchain, renderPass, pipeline)) {
@@ -45,17 +46,12 @@ bool RendererFacade::init(VulkanContext* ctx, Swapchain* swapchain,
 }
 
 void RendererFacade::cleanup() {
-    delete m_editor;
-    delete m_ui;
-    delete m_world;
-    delete m_shapes;
-    delete m_core;
+    m_editor.reset();
+    m_ui.reset();
+    m_world.reset();
+    m_shapes.reset();
+    m_core.reset();
 
-    m_editor = nullptr;
-    m_ui = nullptr;
-    m_world = nullptr;
-    m_shapes = nullptr;
-    m_core = nullptr;
     m_shapePipeline = nullptr;
     m_editorSession = nullptr;
     m_editorSnapshotPtr = nullptr;
@@ -223,12 +219,7 @@ bool RendererFacade::drawFrame(const logic::Player& player,
     }
 
     if (!m_core->endRenderPass(commandBuffer)) return false;
-
-    const auto submitStatus = m_core->submitFrame(commandBuffer, imageIndex);
-    if (submitStatus == RendererCore::FrameStatus::SwapchainNeedsRecreate) {
-        return m_core->recreateSwapchain();
-    }
-    return submitStatus == RendererCore::FrameStatus::Ready;
+    return m_core->endFrame(commandBuffer, imageIndex);
 }
 
 } // namespace gfx
