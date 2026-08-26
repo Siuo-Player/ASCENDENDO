@@ -1,11 +1,13 @@
 #include "doctest/doctest.h"
 #include "Core/KeyBindings.h"
+#include "Logic/InputManager.h"
 
 #include <filesystem>
 #include <fstream>
 #include <string>
 
 using namespace core;
+using namespace logic;
 
 namespace {
 std::string tempControlsPath() {
