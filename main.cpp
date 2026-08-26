@@ -8,6 +8,7 @@
 #include "Game/Graphics/Swapchain.h"
 #include "Game/Graphics/RenderPass.h"
 #include "Game/Graphics/Pipeline.h"
+#include "Game/Graphics/GraphicsRuntime.h"
 #include "Game/Graphics/TextPipeline.h"
 #include "Game/Graphics/FontRenderer.h"
 #include "Game/Graphics/SpritePipeline.h"
@@ -103,55 +104,22 @@ int main(int argc, char** argv) {
     }
 
     {
-        Window win;
-        VulkanContext ctx;
-        Swapchain swapchain;
-        RenderPass renderPass;
-        Pipeline pipeline;
+        GraphicsRuntime graphics;
+        Window& win = graphics.window();
+        VulkanContext& ctx = graphics.context();
+        Swapchain& swapchain = graphics.swapchain();
+        RenderPass& renderPass = graphics.renderPass();
+        Pipeline& pipeline = graphics.pipeline();
+        RendererFacade& renderer = graphics.renderer();
         TextPipeline textPipeline;
         FontRenderer font;
         SpritePipeline spritePipeline;
         SpriteRenderer playerSprite;
-        RendererFacade renderer;
         InputManager input;
         core::KeyBindings bindings;
 
-        if (!win.create(screenWidth, screenHeight, "ASCENDENDO")) {
-            std::cerr << "[ERRO] Nao foi possivel criar a janela GLFW.\n";
-            return -1;
-        }
-
-        std::vector<const char*> exts;
-        win.appendRequiredExtensions(exts);
-        if (!ctx.init(false, exts)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar Vulkan.\n";
-            return -1;
-        }
-
-        VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
-        if (surface == VK_NULL_HANDLE) {
-            std::cerr << "[ERRO] Nao foi possivel criar a surface Vulkan.\n";
-            return -1;
-        }
-        if (!ctx.createSurface(surface)) {
-            std::cerr << "[ERRO] Nao foi possivel associar a surface Vulkan ao contexto.\n";
-            return -1;
-        }
-
-        if (!swapchain.init(&ctx, &win)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar o swapchain Vulkan.\n";
-            return -1;
-        }
-        if (!renderPass.init(&ctx, &swapchain)) {
-            std::cerr << "[ERRO] Nao foi possivel criar o render pass Vulkan.\n";
-            return -1;
-        }
-        if (!pipeline.init(&ctx, &swapchain, &renderPass)) {
-            std::cerr << "[ERRO] Nao foi possivel criar a pipeline grafica.\n";
-            return -1;
-        }
-        if (!renderer.init(&ctx, &swapchain, &renderPass, &pipeline)) {
-            std::cerr << "[ERRO] Nao foi possivel inicializar o renderer.\n";
+        if (!graphics.init(screenWidth, screenHeight, "ASCENDENDO")) {
+            std::cerr << "[ERRO] Nao foi possivel inicializar o subsistema grafico.\n";
             return -1;
         }
 
