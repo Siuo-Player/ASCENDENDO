@@ -27,6 +27,7 @@
 #include "Game/Core/GameStateMachine.h"
 #include "Game/Core/KeyBindings.h"
 #include "Game/Core/Viewport.h"
+#include "Game/Core/RuntimePaths.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -39,9 +40,6 @@ using namespace gfx;
 using namespace logic;
 
 static const std::string CAMPAIGN_NAME = "Campanha Principal";
-static const std::string LEVELS_DIR = "Game/Assets/Levels";
-static const std::string RUNS_CSV_PATH = "Development/Runs/runs.csv";
-static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg";
 
 namespace {
 
@@ -76,7 +74,7 @@ void setEditorTitle(GLFWwindow* window) {
 
 } // namespace
 
-int main() {
+int main(int argc, char** argv) {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
 
     GlfwRuntime glfw;
@@ -84,6 +82,17 @@ int main() {
         std::cerr << "[ERRO] GLFW nao conseguiu inicializar.\n";
         return -1;
     }
+
+    const core::RuntimePaths runtimePaths =
+        core::RuntimePaths::fromProcess(argc > 0 ? argv[0] : nullptr);
+    if (!runtimePaths.ensureUserDirectories()) {
+        std::cerr << "[AVISO] Nao foi possivel preparar completamente o diretorio de dados do utilizador.\n";
+    }
+
+    const std::string levelsDir = runtimePaths.levelsRoot().string();
+    const std::string runsCsvPath = runtimePaths.runsFile().string();
+    const std::string controlsCfgPath = runtimePaths.controlsFile().string();
+    const std::string playerSpritePath = runtimePaths.playerSprite().string();
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
@@ -155,8 +164,7 @@ int main() {
         }
 
         if (spritePipeline.init(&ctx, &swapchain, &renderPass) &&
-            playerSprite.init(&ctx, spritePipeline.descriptorSetLayout(),
-                              "Game/Assets/Sprites/personagem.png")) {
+            playerSprite.init(&ctx, spritePipeline.descriptorSetLayout(), playerSpritePath)) {
             renderer.attachSprite(&spritePipeline, &playerSprite);
             std::cout << "[ASCENDENDO] Sprite do jogador carregado ("
                       << playerSprite.width() << "x" << playerSprite.height() << ").\n";
@@ -166,25 +174,25 @@ int main() {
 
         input.registerWithWindow(win.handle());
 
-        if (bindings.loadFromFile(CONTROLS_CFG_PATH)) {
-            std::cout << "[ASCENDENDO] Controlos carregados de " << CONTROLS_CFG_PATH << ".\n";
+        if (bindings.loadFromFile(controlsCfgPath)) {
+            std::cout << "[ASCENDENDO] Controlos carregados de " << controlsCfgPath << ".\n";
         } else {
-            std::cout << "[ASCENDENDO] " << CONTROLS_CFG_PATH
+            std::cout << "[ASCENDENDO] " << controlsCfgPath
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
         std::vector<std::string> campaign;
         {
-            std::ifstream f(LEVELS_DIR + "/campaign.txt");
+            std::ifstream f(levelsDir + "/campaign.txt");
             std::string line;
             while (std::getline(f, line)) {
                 if (!line.empty() && line.back() == '\r') line.pop_back();
                 if (!line.empty() && line[0] != '#')
-                    campaign.push_back(LEVELS_DIR + "/" + line);
+                    campaign.push_back(levelsDir + "/" + line);
             }
         }
 
-        std::string campaignID = core::computeCampaignID(LEVELS_DIR);
+        std::string campaignID = core::computeCampaignID(levelsDir);
         std::cout << "[ASCENDENDO] Campaign ID: "
                   << (campaignID.empty() ? "(indisponivel)" : campaignID) << "\n";
 
@@ -289,14 +297,14 @@ int main() {
                     if (level.hasFlag &&
                         PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
                         const bool recorded = logic::recordRun(
-                            RUNS_CSV_PATH, CAMPAIGN_NAME, campaignID, elapsedTime);
+                            runsCsvPath, CAMPAIGN_NAME, campaignID, elapsedTime);
 
                         std::cout
                             << "\n============================================\n"
                             << "  ASCENDENDO -- FIM DA CAMPANHA\n"
                             << "  Tempo:         " << logic::formatElapsed(elapsedTime) << "\n"
                             << "  Campaign ID:   " << campaignID << "\n"
-                            << "  Registo:       " << (recorded ? "guardado em " + RUNS_CSV_PATH
+                            << "  Registo:       " << (recorded ? "guardado em " + runsCsvPath
                                                                  : "FALHOU (verificar permissoes)") << "\n"
                             << "  Autor:         Rafael Gomes Bernardo\n"
                             << "  Auxiliado por: Claude (Anthropic)\n"
