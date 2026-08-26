@@ -20,6 +20,8 @@
 
 namespace gfx {
 
+RendererFacade::RendererFacade() = default;
+
 RendererFacade::~RendererFacade() {
     cleanup();
 }
