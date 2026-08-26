@@ -23,6 +23,7 @@
 #include "Game/Logic/EditorSession.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
+#include "Game/Core/CampaignLoader.h"
 #include "Game/Core/GameAction.h"
 #include "Game/Core/GameStateMachine.h"
 #include "Game/Core/KeyBindings.h"
@@ -32,7 +33,6 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <iostream>
-#include <fstream>
 #include <vector>
 #include <string>
 
@@ -181,16 +181,10 @@ int main(int argc, char** argv) {
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
-        std::vector<std::string> campaign;
-        {
-            std::ifstream f(levelsDir + "/campaign.txt");
-            std::string line;
-            while (std::getline(f, line)) {
-                if (!line.empty() && line.back() == '\r') line.pop_back();
-                if (!line.empty() && line[0] != '#')
-                    campaign.push_back(levelsDir + "/" + line);
-            }
-        }
+        const std::vector<std::filesystem::path> campaign =
+            core::CampaignLoader::load(
+                runtimePaths.campaignFile(),
+                runtimePaths.levelsRoot());
 
         std::string campaignID = core::computeCampaignID(levelsDir);
         std::cout << "[ASCENDENDO] Campaign ID: "
@@ -221,7 +215,7 @@ int main(int argc, char** argv) {
 
             if (!campaign.empty()) {
                 currentSpawnY = level.appendFromFile(
-                    campaign[0], config::LOGICAL_WIDTH, 0.0f);
+                    campaign[0].string(), config::LOGICAL_WIDTH, 0.0f);
                 currentLevelIndex = 1;
             }
 
@@ -288,7 +282,7 @@ int main(int argc, char** argv) {
                     if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
                         if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
                             currentSpawnY = level.appendFromFile(
-                                campaign[currentLevelIndex],
+                                campaign[currentLevelIndex].string(),
                                 config::LOGICAL_WIDTH, currentSpawnY);
                             currentLevelIndex++;
                         }
