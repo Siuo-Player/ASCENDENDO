@@ -11,6 +11,33 @@
 
 namespace gfx {
 
+namespace {
+
+class ShaderModuleGuard {
+public:
+    ShaderModuleGuard(VkDevice device, VkShaderModule module)
+        : device_(device), module_(module) {}
+
+    ~ShaderModuleGuard() {
+        if (device_ != VK_NULL_HANDLE && module_ != VK_NULL_HANDLE) {
+            vkDestroyShaderModule(device_, module_, nullptr);
+        }
+    }
+
+    ShaderModuleGuard(const ShaderModuleGuard&) = delete;
+    ShaderModuleGuard& operator=(const ShaderModuleGuard&) = delete;
+
+    void release() { module_ = VK_NULL_HANDLE; }
+
+    VkShaderModule get() const { return module_; }
+
+private:
+    VkDevice device_ = VK_NULL_HANDLE;
+    VkShaderModule module_ = VK_NULL_HANDLE;
+};
+
+} // namespace
+
 std::vector<char> Pipeline::readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) return {};
@@ -27,42 +54,65 @@ VkShaderModule Pipeline::createShaderModule(const std::vector<char>& code) {
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = code.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
-    VkShaderModule module;
-    if (vkCreateShaderModule(m_ctx->device(), &createInfo, nullptr, &module) != VK_SUCCESS) return VK_NULL_HANDLE;
+    VkShaderModule module = VK_NULL_HANDLE;
+    if (vkCreateShaderModule(m_ctx->device(), &createInfo, nullptr, &module) != VK_SUCCESS) {
+        return VK_NULL_HANDLE;
+    }
     return module;
 }
 
 void Pipeline::cleanup() {
-    if (!m_initialized) return;
-    vkDestroyPipeline(m_ctx->device(), m_pipeline, nullptr);
-    vkDestroyPipelineLayout(m_ctx->device(), m_layout, nullptr);
+    if (m_ctx != nullptr) {
+        VkDevice device = m_ctx->device();
+        if (m_pipeline != VK_NULL_HANDLE) {
+            vkDestroyPipeline(device, m_pipeline, nullptr);
+        }
+        if (m_layout != VK_NULL_HANDLE) {
+            vkDestroyPipelineLayout(device, m_layout, nullptr);
+        }
+    }
+
     m_pipeline = VK_NULL_HANDLE;
     m_layout = VK_NULL_HANDLE;
     m_initialized = false;
+    m_ctx = nullptr;
 }
 
 bool Pipeline::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* renderPass) {
     if (m_initialized) return true;
+    if (!ctx || !swapchain || !renderPass || !ctx->isInitialized() ||
+        !swapchain->isInitialized() || !renderPass->isInitialized()) {
+        return false;
+    }
+
+    cleanup();
     m_ctx = ctx;
+    const VkDevice device = m_ctx->device();
 
     auto vertCode = readFile("Game/Assets/Shaders/base.vert.spv");
     auto fragCode = readFile("Game/Assets/Shaders/base.frag.spv");
-    if (vertCode.empty() || fragCode.empty()) return false;
+    if (vertCode.empty() || fragCode.empty()) {
+        cleanup();
+        return false;
+    }
 
-    VkShaderModule vertModule = createShaderModule(vertCode);
-    VkShaderModule fragModule = createShaderModule(fragCode);
-    if (!vertModule || !fragModule) return false;
+    ShaderModuleGuard vertModule(device, createShaderModule(vertCode));
+    ShaderModuleGuard fragModule(device, createShaderModule(fragCode));
+    if (vertModule.get() == VK_NULL_HANDLE || fragModule.get() == VK_NULL_HANDLE) {
+        cleanup();
+        return false;
+    }
 
     VkPipelineShaderStageCreateInfo vertStageInfo{};
     vertStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertStageInfo.module = vertModule;
+    vertStageInfo.module = vertModule.get();
     vertStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo fragStageInfo{};
     fragStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragStageInfo.module = fragModule;
+    fragStageInfo.module = fragModule.get();
     fragStageInfo.pName = "main";
 
     VkPipelineShaderStageCreateInfo shaderStages[] = {vertStageInfo, fragStageInfo};
@@ -122,7 +172,10 @@ bool Pipeline::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* render
     pipelineLayoutInfo.pushConstantRangeCount = 1;
     pipelineLayoutInfo.pPushConstantRanges = &pushConstant;
 
-    if (vkCreatePipelineLayout(m_ctx->device(), &pipelineLayoutInfo, nullptr, &m_layout) != VK_SUCCESS) return false;
+    if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_layout) != VK_SUCCESS) {
+        cleanup();
+        return false;
+    }
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -145,11 +198,13 @@ bool Pipeline::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* render
     pipelineInfo.renderPass = renderPass->handle();
     pipelineInfo.subpass = 0;
 
-    if (vkCreateGraphicsPipelines(m_ctx->device(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) return false;
+    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+        cleanup();
+        return false;
+    }
 
-    vkDestroyShaderModule(m_ctx->device(), fragModule, nullptr);
-    vkDestroyShaderModule(m_ctx->device(), vertModule, nullptr);
-
+    vertModule.release();
+    fragModule.release();
     m_initialized = true;
     return true;
 }
