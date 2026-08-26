@@ -17,7 +17,7 @@ class RendererFacade;
 class PresentationRuntime {
 public:
     PresentationRuntime() = default;
-    ~PresentationRuntime() = default;
+    ~PresentationRuntime();
 
     PresentationRuntime(const PresentationRuntime&) = delete;
     PresentationRuntime& operator=(const PresentationRuntime&) = delete;
