@@ -5,9 +5,31 @@
 #include "../../Game/Graphics/RenderPass.h"
 #include "../../Game/Graphics/Pipeline.h"
 #include "../../Game/Graphics/RendererCore.h"
+#include <filesystem>
+#include <string>
 #include <vector>
 
 using namespace gfx;
+
+namespace {
+
+class CurrentPathGuard {
+public:
+    explicit CurrentPathGuard(const std::filesystem::path& path)
+        : previous_(std::filesystem::current_path()) {
+        std::filesystem::current_path(path);
+    }
+
+    ~CurrentPathGuard() {
+        std::error_code error;
+        std::filesystem::current_path(previous_, error);
+    }
+
+private:
+    std::filesystem::path previous_;
+};
+
+} // namespace
 
 TEST_SUITE("RendererCore") {
     TEST_CASE("Recreacao mantem o core operacional") {
@@ -43,6 +65,26 @@ TEST_SUITE("RendererCore") {
 
         REQUIRE(core.recreateSwapchain());
         CHECK(core.isInitialized());
+
+        const auto temporaryRoot = std::filesystem::temp_directory_path() /
+            (std::string("ascendendo-pipeline-failure-") + std::to_string(std::rand()));
+        REQUIRE(std::filesystem::create_directories(temporaryRoot));
+
+        {
+            CurrentPathGuard pathGuard(temporaryRoot);
+            Pipeline retryablePipeline;
+
+            CHECK_FALSE(retryablePipeline.init(&ctx, &swapchain, &renderPass));
+            CHECK_FALSE(retryablePipeline.isInitialized());
+            CHECK(retryablePipeline.handle() == VK_NULL_HANDLE);
+            CHECK(retryablePipeline.layout() == VK_NULL_HANDLE);
+
+            REQUIRE(retryablePipeline.init(&ctx, &swapchain, &renderPass));
+            CHECK(retryablePipeline.isInitialized());
+        }
+
+        std::error_code cleanupError;
+        std::filesystem::remove_all(temporaryRoot, cleanupError);
 
         vkDeviceWaitIdle(ctx.device());
     }
