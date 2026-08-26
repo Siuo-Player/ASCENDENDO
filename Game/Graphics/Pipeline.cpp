@@ -27,8 +27,6 @@ public:
     ShaderModuleGuard(const ShaderModuleGuard&) = delete;
     ShaderModuleGuard& operator=(const ShaderModuleGuard&) = delete;
 
-    void release() { module_ = VK_NULL_HANDLE; }
-
     VkShaderModule get() const { return module_; }
 
 private:
@@ -203,8 +201,6 @@ bool Pipeline::init(VulkanContext* ctx, Swapchain* swapchain, RenderPass* render
         return false;
     }
 
-    vertModule.release();
-    fragModule.release();
     m_initialized = true;
     return true;
 }
