@@ -1,5 +1,5 @@
 #include "doctest/doctest.h"
-#include "Game/Core/GameStateMachine.h"
+#include "Core/GameStateMachine.h"
 
 using core::GameStateMachine;
 using gfx::GameState;
