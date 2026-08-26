@@ -163,16 +163,17 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
         return false;
     }
 
-    // The current device exposes a single graphics queue. Before allocating
-    // swapchain resources, fail explicitly if that queue cannot present to the
-    // selected surface instead of discovering it later during vkQueuePresentKHR.
-    VkBool32 graphicsCanPresent = VK_FALSE;
+    const uint32_t graphicsFamily = m_ctx->graphicsFamily();
+    const uint32_t presentFamily = m_ctx->presentFamily();
+    if (graphicsFamily == UINT32_MAX || presentFamily == UINT32_MAX) return false;
+
+    VkBool32 presentSupported = VK_FALSE;
     if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice,
-                                             m_ctx->graphicsFamily(),
+                                             presentFamily,
                                              surface,
-                                             &graphicsCanPresent) != VK_SUCCESS ||
-        graphicsCanPresent != VK_TRUE) {
-        std::cerr << "[ERRO] A queue de graphics selecionada nao suporta presentation nesta surface.\n";
+                                             &presentSupported) != VK_SUCCESS ||
+        presentSupported != VK_TRUE) {
+        std::cerr << "[ERRO] A queue de presentation selecionada nao suporta esta surface.\n";
         return false;
     }
 
@@ -197,6 +198,9 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
         imageCount = std::min(imageCount, capabilities.maxImageCount);
     }
 
+    const bool separateQueueFamilies = graphicsFamily != presentFamily;
+    uint32_t queueFamilyIndices[] = {graphicsFamily, presentFamily};
+
     VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface = surface;
@@ -206,7 +210,10 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.imageSharingMode = separateQueueFamilies ? VK_SHARING_MODE_CONCURRENT
+                                                        : VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.queueFamilyIndexCount = separateQueueFamilies ? 2u : 0u;
+    createInfo.pQueueFamilyIndices = separateQueueFamilies ? queueFamilyIndices : nullptr;
     createInfo.preTransform = (capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
         ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR
         : capabilities.currentTransform;
