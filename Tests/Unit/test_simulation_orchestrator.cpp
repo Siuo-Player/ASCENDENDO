@@ -26,11 +26,12 @@ TEST_SUITE("SimulationOrchestrator") {
         Level level;
         InputManager input;
 
+        player.body.position.y = 10.0f;
         const float beforeY = player.position().y;
         const int steps = simulation.advance(PhysicsWorld::FIXED_STEP, input, player, world, level);
 
         CHECK(steps == 1);
-        CHECK(player.position().y != doctest::Approx(beforeY));
+        CHECK(player.position().y < beforeY);
     }
 
     TEST_CASE("large delta respects physics step cap") {
