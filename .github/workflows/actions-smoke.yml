@@ -1,10 +1,12 @@
 name: Actions smoke diagnostic
 
 on:
-  pull_request:
-    paths:
-      - '.github/workflows/actions-smoke.yml'
-      - 'docs/05-work-packages/WORK_PACKAGE_ACTIONS_STARTUP_DIAGNOSTIC.md'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why the smoke check is being run
+        required: false
+        default: manual diagnostic
 
 permissions:
   contents: read
