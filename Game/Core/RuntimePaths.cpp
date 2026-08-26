@@ -2,12 +2,12 @@
 
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #if defined(_WIN32)
     #include <windows.h>
 #elif defined(__APPLE__)
     #include <mach-o/dyld.h>
-    #include <vector>
 #elif defined(__linux__)
     #include <unistd.h>
 #endif
@@ -82,8 +82,8 @@ std::filesystem::path userDataDirectory() {
 
 RuntimePaths::RuntimePaths(std::filesystem::path executableRoot,
                            std::filesystem::path userDataRoot)
-    : executableRoot_(std::move(executableRoot)),
-      userDataRoot_(std::move(userDataRoot)) {}
+    : executableRoot_(executableRoot),
+      userDataRoot_(userDataRoot) {}
 
 RuntimePaths RuntimePaths::fromProcess(const char* argv0) {
     return RuntimePaths(executableDirectory(argv0), userDataDirectory());
