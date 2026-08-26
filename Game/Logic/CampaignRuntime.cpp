@@ -1,8 +1,5 @@
 #include "Logic/CampaignRuntime.h"
 #include "Logic/Level.h"
-#include "Core/Config.h"
-
-#include <utility>
 
 namespace logic {
 
