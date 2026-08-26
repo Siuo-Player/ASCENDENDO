@@ -22,6 +22,18 @@ TEST_SUITE("Swapchain") {
         REQUIRE(surface != VK_NULL_HANDLE);
         REQUIRE(ctx.createSurface(surface));
 
+        CHECK(ctx.graphicsFamily() != UINT32_MAX);
+        CHECK(ctx.presentFamily() != UINT32_MAX);
+        CHECK(ctx.graphicsQueue() != VK_NULL_HANDLE);
+        CHECK(ctx.presentQueue() != VK_NULL_HANDLE);
+
+        VkBool32 presentSupported = VK_FALSE;
+        REQUIRE(vkGetPhysicalDeviceSurfaceSupportKHR(ctx.physicalDevice(),
+                                                     ctx.presentFamily(),
+                                                     ctx.surface(),
+                                                     &presentSupported) == VK_SUCCESS);
+        CHECK(presentSupported == VK_TRUE);
+
         REQUIRE(swapchain.init(&ctx, &win));
         REQUIRE(swapchain.isInitialized());
         REQUIRE(swapchain.handle() != VK_NULL_HANDLE);
