@@ -9,10 +9,7 @@
 #include "Game/Graphics/RenderPass.h"
 #include "Game/Graphics/Pipeline.h"
 #include "Game/Graphics/GraphicsRuntime.h"
-#include "Game/Graphics/TextPipeline.h"
-#include "Game/Graphics/FontRenderer.h"
-#include "Game/Graphics/SpritePipeline.h"
-#include "Game/Graphics/SpriteRenderer.h"
+#include "Game/Graphics/PresentationRuntime.h"
 #include "Game/Graphics/RendererFacade.h"
 #include "Game/Graphics/Camera.h"
 #include "Game/Logic/InputManager.h"
@@ -94,7 +91,6 @@ int main(int argc, char** argv) {
     const std::string levelsDir = runtimePaths.levelsRoot().string();
     const std::string runsCsvPath = runtimePaths.runsFile().string();
     const std::string controlsCfgPath = runtimePaths.controlsFile().string();
-    const std::string playerSpritePath = runtimePaths.playerSprite().string();
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
@@ -112,10 +108,7 @@ int main(int argc, char** argv) {
         RenderPass& renderPass = graphics.renderPass();
         Pipeline& pipeline = graphics.pipeline();
         RendererFacade& renderer = graphics.renderer();
-        TextPipeline textPipeline;
-        FontRenderer font;
-        SpritePipeline spritePipeline;
-        SpriteRenderer playerSprite;
+        PresentationRuntime presentation;
         InputManager input;
         core::KeyBindings bindings;
 
@@ -124,19 +117,22 @@ int main(int argc, char** argv) {
             return -1;
         }
 
-        if (textPipeline.init(&ctx, &swapchain, &renderPass) &&
-            font.init(&ctx, textPipeline.descriptorSetLayout())) {
-            renderer.attachText(&textPipeline, &font);
+        if (!presentation.init(&ctx, &swapchain, &renderPass,
+                               &renderer, runtimePaths.playerSprite())) {
+            std::cerr << "[ERRO] Nao foi possivel inicializar o subsistema de apresentacao.\n";
+            return -1;
+        }
+
+        if (presentation.textReady()) {
             std::cout << "[ASCENDENDO] Fonte TTF carregada (texto real em CREDITOS/MENU/PAUSA).\n";
         } else {
             std::cout << "[ASCENDENDO] Fonte TTF nao disponivel -- a usar BitmapFont (fallback).\n";
         }
 
-        if (spritePipeline.init(&ctx, &swapchain, &renderPass) &&
-            playerSprite.init(&ctx, spritePipeline.descriptorSetLayout(), playerSpritePath)) {
-            renderer.attachSprite(&spritePipeline, &playerSprite);
+        if (presentation.spriteReady()) {
             std::cout << "[ASCENDENDO] Sprite do jogador carregado ("
-                      << playerSprite.width() << "x" << playerSprite.height() << ").\n";
+                      << presentation.playerSprite().width() << "x"
+                      << presentation.playerSprite().height() << ").\n";
         } else {
             std::cout << "[ASCENDENDO] Sprite do jogador nao disponivel -- a usar rectangulo (fallback).\n";
         }
