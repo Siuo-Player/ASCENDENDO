@@ -5,6 +5,7 @@
 #include "../../Game/Graphics/RenderPass.h"
 #include "../../Game/Graphics/Pipeline.h"
 #include "../../Game/Graphics/RendererCore.h"
+#include <chrono>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -66,22 +67,22 @@ TEST_SUITE("RendererCore") {
         REQUIRE(core.recreateSwapchain());
         CHECK(core.isInitialized());
 
+        const auto uniqueId = std::chrono::steady_clock::now().time_since_epoch().count();
         const auto temporaryRoot = std::filesystem::temp_directory_path() /
-            (std::string("ascendendo-pipeline-failure-") + std::to_string(std::rand()));
+            (std::string("ascendendo-pipeline-failure-") + std::to_string(uniqueId));
         REQUIRE(std::filesystem::create_directories(temporaryRoot));
 
+        Pipeline retryablePipeline;
         {
             CurrentPathGuard pathGuard(temporaryRoot);
-            Pipeline retryablePipeline;
-
             CHECK_FALSE(retryablePipeline.init(&ctx, &swapchain, &renderPass));
             CHECK_FALSE(retryablePipeline.isInitialized());
             CHECK(retryablePipeline.handle() == VK_NULL_HANDLE);
             CHECK(retryablePipeline.layout() == VK_NULL_HANDLE);
-
-            REQUIRE(retryablePipeline.init(&ctx, &swapchain, &renderPass));
-            CHECK(retryablePipeline.isInitialized());
         }
+
+        REQUIRE(retryablePipeline.init(&ctx, &swapchain, &renderPass));
+        CHECK(retryablePipeline.isInitialized());
 
         std::error_code cleanupError;
         std::filesystem::remove_all(temporaryRoot, cleanupError);
