@@ -1,6 +1,6 @@
 # Regra de tamanho dos ficheiros de código
 
-O ASCENDENDO usa tamanho de ficheiro como **sinal de manutenção e arquitetura**, não como objetivo de produtividade. Um tamanho elevado desencadeia análise de coesão, responsabilidades e coupling; não justifica divisão artificial.
+O ASCENDENDO usa o tamanho físico do ficheiro como **sinal de manutenção e arquitetura**, não como objetivo de produtividade. Um tamanho elevado desencadeia análise de coesão, responsabilidades e coupling; não justifica divisão artificial.
 
 ## Política normativa
 
@@ -8,17 +8,32 @@ Aplica-se a ficheiros de código C/C++:
 
 `.c`, `.cc`, `.cpp`, `.cxx`, `.h`, `.hh`, `.hpp`, `.hxx`
 
-| Linhas | Estado | Regra |
-|---:|---|---|
-| `< 300` | normal | desenvolvimento normal; continuar a avaliar coesão |
-| `300–399` | warning | não adicionar responsabilidades sem plano de subdivisão |
-| `>= 400` | error | CI deve bloquear até subdivisão ou exceção documentada |
+A métrica normativa é o **tamanho físico em KiB**. A contagem de linhas pode aparecer como diagnóstico, mas nunca decide o estado do gate.
 
-A métrica é uma heurística. Um ficheiro com 399 linhas não é automaticamente bom e um ficheiro com 401 linhas não é automaticamente mal arquitetado.
+| Tamanho físico | Estado | Regra |
+|---:|---|---|
+| `< 40 KiB` | normal | desenvolvimento normal; continuar a avaliar coesão |
+| `40–47.99 KiB` | warning | não adicionar responsabilidades sem plano de subdivisão |
+| `>= 48 KiB` | error | CI deve bloquear até subdivisão ou exceção documentada |
+
+Os limiares são bytes físicos (`1 KiB = 1024 bytes`). O objetivo é medir o peso real do artefacto-fonte, evitando que formatação, comentários ou densidade de linhas distorçam a regra física.
+
+## Métricas complementares
+
+LOC continua útil para diagnóstico e revisão humana, mas não é uma política de bloqueio. Complexidade, coupling, número de responsabilidades e coesão devem ser avaliados separadamente.
+
+Assim:
+
+```text
+peso físico do ficheiro  → KiB → gate
+estrutura do código      → revisão arquitetural
+complexidade             → métricas próprias
+LOC                      → diagnóstico auxiliar
+```
 
 ## Exceções
 
-Uma exceção a `>= 400` deve documentar antes da implementação/integração:
+Uma exceção a `>= 48 KiB` deve documentar antes da implementação/integração:
 
 ```text
 por que o ficheiro permanece coeso
@@ -67,30 +82,26 @@ main3.cpp
 
 ou qualquer divisão por intervalos arbitrários de linhas apenas para fazer a métrica passar.
 
-## Estado da implementação
+## Implementação
 
-A política normativa está agora alinhada com o checker de `main` por meio de uma mudança na branch `chore/9-6-base-engineering-gate`:
+`Development/Tools/check_source_sizes.py` é o **checker canónico** usado pelo CI.
 
-- a unidade de medida é **linhas físicas de código**, não KiB;
-- `main.cpp` é explicitamente incluído;
-- os mesmos limiares `<300`, `300–399`, `>=400` são usados pelo checker e por esta documentação;
-- CI continua a executar `Development/Tools/check_source_sizes.py` antes do restante da validação.
-
-Esta branch transforma uma inconsistência de tooling em uma regra executável. O resultado concreto de cada ficheiro deve ser obtido no CI da branch; avisos não equivalem a falhas e devem permanecer acompanhados por work packages quando exigirem intervenção estrutural.
-
-## Incidente de referência — 2026-08-25
-
-A execução histórica #251 identificou:
+Os limiares normativos são:
 
 ```text
-ERROR   430 linhas  Game/Graphics/FontRenderer.cpp
-WARNING 332 linhas  Game/Graphics/SpriteRenderer.cpp
-WARNING 305 linhas  Tests/Unit/test_keybindings.cpp
-WARNING 326 linhas  Tests/Unit/test_level.cpp
-WARNING 330 linhas  main.cpp
+WARNING_BYTES   = 40 * 1024
+HARD_LIMIT_BYTES = 48 * 1024
 ```
 
-Os dois primeiros alvos já foram investigados e decompostos por fronteira de responsabilidade coesa. Os avisos restantes passam a ser tratados como trabalho de modularidade/testabilidade, não como motivo para alterar a métrica.
+`Development/check_source_size.py` permanece apenas como entry point de compatibilidade e delega para o checker canónico; não existe uma segunda implementação da política.
+
+O CI executa ainda `Tests/Tooling/test_check_source_sizes.py`, que verifica os limiares de 40/48 KiB antes de executar o gate sobre o repositório real.
+
+## Incidente de referência — 2026-08-25/26
+
+A implementação anterior usava linhas como métrica normativa e bloqueou `main.cpp` ao atingir 402 linhas. Isso revelou uma inconsistência de tooling: o repositório já possuía um checker em KiB com limites de 40/48 KiB, mas o CI executava outro checker baseado em LOC.
+
+A política passa agora a ter uma única unidade física (KiB) e uma única implementação normativa. O incidente não deve ser resolvido comprimindo código artificialmente para passar um contador de linhas.
 
 ## Relação com WBS
 
