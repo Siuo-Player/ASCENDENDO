@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
             if (!renderer.drawFrame(player, camera, &level, stateMachine.state(),
                                     stateMachine.menuSelection(), elapsedTime)) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
-                break;
+                return -1;
             }
         }
 
