@@ -1,4 +1,4 @@
-#include "Game/Core/GameStateMachine.h"
+#include "Core/GameStateMachine.h"
 
 namespace core {
 
