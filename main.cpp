@@ -23,6 +23,7 @@
 #include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/GameAction.h"
+#include "Game/Core/GameStateMachine.h"
 #include "Game/Core/KeyBindings.h"
 #include "Game/Core/Viewport.h"
 
@@ -174,14 +175,11 @@ int main() {
         Player player;
         EditorSession editorSession(campaign.size() <= 1);
         renderer.attachEditorSession(&editorSession);
+        core::GameStateMachine stateMachine;
 
         int currentLevelIndex = 0;
         float currentSpawnY = 0.0f;
-        GameState state = GameState::MENU;
-        GameState editorReturnState = GameState::MENU;
-        int menuSel = 0;
         float elapsedTime = 0.0f;
-        GameState creditsReturnState = GameState::MENU;
 
         auto resetGame = [&]() {
             player = logic::Player{};
@@ -199,22 +197,19 @@ int main() {
                 currentLevelIndex = 1;
             }
 
-            state = GameState::PLAYING;
-            menuSel = 0;
+            stateMachine.enterPlaying();
             setPlayingTitle(win.handle());
         };
 
         auto openEditor = [&](GameState returnState) {
-            editorReturnState = returnState;
             camera = gfx::Camera{};
             editorSession.cancelInteraction();
-            state = GameState::EDITOR;
-            menuSel = 0;
+            stateMachine.enterEditor(returnState);
             setEditorTitle(win.handle());
         };
 
         auto navigate = [&](int delta, int count) {
-            menuSel = (menuSel + delta + count) % count;
+            stateMachine.selectRelative(delta, count);
         };
 
         auto clickedMenuBox = [&](int count) -> int {
@@ -242,6 +237,7 @@ int main() {
             const bool pausePressed = core::isActionJustPressed(bindings, input, core::GameAction::Pause);
             const bool quitPressed = core::isActionJustPressed(bindings, input, core::GameAction::Quit);
             const bool openEditorPressed = core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
+            const GameState state = stateMachine.state();
 
             if (state == GameState::PLAYING) {
                 elapsedTime += dt;
@@ -250,12 +246,10 @@ int main() {
                     openEditor(GameState::PLAYING);
                 } else if (quitPressed) {
                     editorSession.cancelInteraction();
-                    state = GameState::MENU;
-                    menuSel = 0;
+                    stateMachine.returnToMenu();
                     setMenuTitle(win.handle());
                 } else if (pausePressed) {
-                    state = GameState::PAUSED;
-                    menuSel = 0;
+                    stateMachine.pause();
                     glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
                 } else {
@@ -294,8 +288,7 @@ int main() {
                             << "============================================\n"
                             << "  Pressiona ESPACO para continuar\n\n";
 
-                        creditsReturnState = GameState::MENU;
-                        state = GameState::CREDITS;
+                        stateMachine.enterCredits(GameState::MENU);
                         glfwSetWindowTitle(win.handle(),
                             "ASCENDENDO | Creditos | ESPACO para continuar");
                     }
@@ -303,30 +296,27 @@ int main() {
 
             } else if (state == GameState::PAUSED) {
                 if (pausePressed) {
-                    state = GameState::PLAYING;
+                    stateMachine.resume();
                     setPlayingTitle(win.handle());
                 } else if (quitPressed) {
-                    state = GameState::MENU;
-                    menuSel = 0;
+                    stateMachine.returnToMenu();
                     setMenuTitle(win.handle());
                 } else {
                     int clickedPaused = clickedMenuBox(3);
-                    if (clickedPaused >= 0) menuSel = clickedPaused;
+                    if (clickedPaused >= 0) stateMachine.select(clickedPaused, 3);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 3);
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 3);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
-                        if (menuSel == 0) {
-                            state = GameState::PLAYING;
+                        if (stateMachine.menuSelection() == 0) {
+                            stateMachine.resume();
                             setPlayingTitle(win.handle());
-                        } else if (menuSel == 1) {
-                            creditsReturnState = GameState::PAUSED;
-                            state = GameState::CREDITS;
+                        } else if (stateMachine.menuSelection() == 1) {
+                            stateMachine.enterCredits(GameState::PAUSED);
                             glfwSetWindowTitle(win.handle(), "ASCENDENDO | Creditos | ESPACO para continuar");
                         } else {
-                            state = GameState::MENU;
-                            menuSel = 0;
+                            stateMachine.returnToMenu();
                             setMenuTitle(win.handle());
                         }
                     }
@@ -334,10 +324,9 @@ int main() {
 
             } else if (state == GameState::CREDITS) {
                 if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || pausePressed) {
-                    state = creditsReturnState;
-                    menuSel = 0;
-                    if (state == GameState::MENU) setMenuTitle(win.handle());
-                    else if (state == GameState::PLAYING) setPlayingTitle(win.handle());
+                    stateMachine.returnFromCredits();
+                    if (stateMachine.state() == GameState::MENU) setMenuTitle(win.handle());
+                    else if (stateMachine.state() == GameState::PLAYING) setPlayingTitle(win.handle());
                     else glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
                 }
@@ -351,19 +340,18 @@ int main() {
                     openEditor(GameState::MENU);
                 } else {
                     int clickedMenu = clickedMenuBox(4);
-                    if (clickedMenu >= 0) menuSel = clickedMenu;
+                    if (clickedMenu >= 0) stateMachine.select(clickedMenu, 4);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 4);
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
 
                     if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
-                        if (menuSel == 0) {
+                        if (stateMachine.menuSelection() == 0) {
                             resetGame();
-                        } else if (menuSel == 1) {
+                        } else if (stateMachine.menuSelection() == 1) {
                             openEditor(GameState::MENU);
-                        } else if (menuSel == 2) {
-                            creditsReturnState = GameState::MENU;
-                            state = GameState::CREDITS;
+                        } else if (stateMachine.menuSelection() == 2) {
+                            stateMachine.enterCredits(GameState::MENU);
                             glfwSetWindowTitle(win.handle(), "ASCENDENDO | Creditos | ESPACO para continuar");
                         } else {
                             break;
@@ -374,9 +362,8 @@ int main() {
             } else if (state == GameState::EDITOR) {
                 if (pausePressed) {
                     editorSession.cancelInteraction();
-                    state = editorReturnState;
-                    menuSel = 0;
-                    if (state == GameState::PLAYING) setPlayingTitle(win.handle());
+                    stateMachine.returnFromEditor();
+                    if (stateMachine.state() == GameState::PLAYING) setPlayingTitle(win.handle());
                     else setMenuTitle(win.handle());
                 } else {
                     editorSession.update(input, bindings,
@@ -384,7 +371,8 @@ int main() {
                 }
             }
 
-            if (!renderer.drawFrame(player, camera, &level, state, menuSel, elapsedTime)) {
+            if (!renderer.drawFrame(player, camera, &level, stateMachine.state(),
+                                    stateMachine.menuSelection(), elapsedTime)) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }
