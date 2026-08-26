@@ -18,15 +18,41 @@ Antes de implementar qualquer passo, consultar sempre as documentações relevan
 
 Quando uma implementação contrariar um destes documentos, atualizar primeiro a decisão/documentação correspondente; não criar divergências silenciosas.
 
+## Fonte operacional e proveniência
+
+`docs/ROADMAP.md` é a única fonte de verdade para a **ordem de execução atual**.
+
+`README.md` e documentos históricos não definem a numeração operacional das fases. Números antigos de fases podem ser mantidos como histórico, mas não devem ser usados para abrir novas branches sem primeiro consultar este documento.
+
+Para afirmações importantes, distinguir:
+
+```text
+DECISION     escolha de produto/engenharia
+REQUIREMENT  comportamento obrigatório
+HYPOTHESIS   expectativa ainda testável
+EVIDENCE     resultado observado/testado
+REFERENCE    fonte externa usada no raciocínio
+HISTORICAL   estado de uma implementação anterior
+```
+
 ## Estado de referência — 2026-08-26
 
-`main` contém a base integrada através dos principais blocos de hardening 9.6 e da consolidação `RendererCore` → passes → `RendererFacade`.
+`main` contém os principais blocos de hardening 9.6 e a consolidação `RendererCore` → passes → `RendererFacade`.
 
-O contrato inicial de `RenderSnapshot` está integrado em `main` (PR #19), mas a migração geral **não** está concluída. A apresentação de gameplay ainda recebe modelos de domínio diretamente em `WorldRenderer`/`RendererFacade`.
+O contrato inicial de `RenderSnapshot` está integrado (PR #19), mas a migração geral **não** está concluída. A presentation de gameplay ainda possui dependências diretas de modelos de domínio e a continuação de `RenderSnapshot` permanece bloqueada pelo Base Engineering Gate.
 
-PR #20, que tentou fazer parte do cut-over de `RenderSnapshot`, foi encerrado/superseded e **não é uma tranche ativa**. A continuação de `RenderSnapshot` permanece bloqueada pelo Base Engineering Gate.
+PR #20 foi encerrado/superseded e não é uma tranche ativa. O histórico do PR/commits permanece suficiente para comparação; não manter branches históricas apenas para laboratório.
 
-A decomposição de `FontRenderer` e `SpriteRenderer` já está integrada em `main`. O trabalho imediato continua a ser fechar o Gate de Engenharia, não avançar para UX/campaign/content.
+A decomposição de `FontRenderer` e `SpriteRenderer` já está integrada.
+
+### Estado corrente do Base Engineering Gate
+
+- **Source-size policy:** alinhada entre documentação e checker; `main.cpp` passou a ser coberto. PR #34 integrado.
+- **Warnings após a correção do checker:** `SpriteRendererGpu.cpp`, `test_level.cpp` e `main.cpp` ainda requerem avaliação/refatoração quando a inspeção de coesão justificar.
+- **Large test files:** `test_keybindings.cpp` está em decomposição por responsabilidade no PR #35; produção não é alterada nessa tranche.
+- **Main loop:** `main.cpp` continua concentrando responsabilidades e permanece um alvo arquitetural posterior, não uma divisão por contagem de linhas.
+- **CI:** Linux/Clang/headless Vulkan está funcional e produz evidência observável; Windows, sanitizers e matriz de hardware continuam incompletos.
+- **RenderSnapshot geral:** bloqueado até o Gate fechar.
 
 ## Princípio estratégico
 
@@ -47,8 +73,6 @@ Prioridades gerais:
 - profiling antes de otimização;
 - partilha/importação segura.
 
-**Referências gerais:** `docs/RESEARCH_INDEX.md`, `docs/SCIENTIFIC_REFERENCES.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/DESIGN_REFERENCES.md`.
-
 ## Princípio de evidência
 
 Para decisões importantes, cruzar sempre que possível:
@@ -65,13 +89,13 @@ testes/profiling internos
 decisão ASCENDENDO
 ```
 
-Nenhuma referência única é autoridade absoluta. Mario Maker, Jump King, Tiled, Godot e SuperTux são referências práticas complementares; a física do ASCENDENDO continua própria.
+Nenhuma referência única é autoridade absoluta. As referências de Mario Maker, Jump King, Tiled, Godot e SuperTux são complementares; a física do ASCENDENDO continua própria.
 
 ## Fases concluídas
 
-### Fases 1–8 ✅
+### Fases 1–8 ✅ — feature milestones
 
-Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação — concluídas como **feature milestones**, não como prova de robustez transversal.
+Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação estão historicamente concluídos como funcionalidades. Isto **não** significa que todas as propriedades transversais estejam provadas; o hardening 9.6 existe precisamente para fechar essas lacunas.
 
 ### 9.1–9.3 ✅
 
@@ -81,19 +105,19 @@ Motor, física, campanha, UI, texto TTF, sprites, replay/save e validação — 
 
 Editor core + migração incremental do renderer, incluindo `LevelEditorDocument`, `EditorInteractionController`, `EditorSession`, `EditorRenderSnapshot`, `RendererCore`, `ShapeRenderer`, `WorldRenderer`, `UiRenderer`, `EditorRenderer`, `RendererFacade` e o período transitório do adapter.
 
-### 9.5 ✅
+### 9.5 ✅ — design/evidence foundation
 
-Base de investigação científica/técnica, requisitos community-first, referências a Mario Maker/Jump King/Tiled/Godot/SuperTux, objetivos de campanhas de ~50 e 100–200 níveis, e contratos de UX/editor.
+Base científica/técnica, requisitos community-first, contratos de UX/editor e referências práticas. Metas como “~50 níveis” ou “100–200 níveis” são **decisões editoriais**, não resultados científicos universais.
 
-### 9.6 — hardening / consolidação ✅ por blocos funcionais; Gate de Engenharia 🔒
+### 9.6 — hardening / consolidação ✅ por blocos; Gate de Engenharia 🔒
 
 Foram integrados input por ações, fixed timestep defensivo, viewport do editor `640x360`, lifecycle/recriação de swapchain, distinção graphics/present, remoção do renderer legado, remoção do adapter, contrato inicial de `RenderSnapshot` e decomposição de `FontRenderer`/`SpriteRenderer`.
 
-O Gate de Engenharia continua aberto porque robustez e governança transversal ainda precisam de evidência e de algumas refatorações estruturais.
+O Gate continua aberto porque ainda faltam refatorações estruturais e evidência transversal suficiente.
 
 ## Gate atual de engenharia — 2026-08-26 🔒
 
-Antes de avançar para nova funcionalidade ou para a migração geral de `RenderSnapshot`, o repositório deve fechar este gate de base.
+Antes de nova funcionalidade significativa ou da migração geral de `RenderSnapshot`, fechar este gate.
 
 ### WBS
 
@@ -111,29 +135,48 @@ Antes de avançar para nova funcionalidade ou para a migração geral de `Render
 │   ├── document workflow boundaries
 │   └── expand/revalidate CI evidence
 │
-├── C — source-size enforcement
-│   ├── document line-based policy ✅
-│   ├── migrate checker from KiB to lines 🔄
-│   ├── include main.cpp 🔄
-│   └── validate warnings/errors
+├── C — source-size enforcement ✅
+│   ├── line-based policy documented ✅
+│   ├── checker migrated from KiB to lines ✅
+│   ├── main.cpp included ✅
+│   └── remaining warnings converted into justified work packages 🔄
 │
-├── D — modularity work packages
+├── D — modularity work packages 🔄
 │   ├── FontRenderer decomposition ✅
 │   ├── SpriteRenderer review/decomposition ✅
-│   ├── large test file review/decomposition 🔄
+│   ├── KeyBindings test decomposition 🔄 (PR #35)
+│   ├── Level test cohesion review 🔒
 │   └── main.cpp architectural decomposition 🔒
 │
-└── E — gate review
+└── E — gate review 🔒
     └── only then continue RenderSnapshot / Application extraction
 ```
+
+### Regra para D — não fazer “line-count gaming”
+
+Uma divisão só é autorizada quando existir uma fronteira de responsabilidade/cohesão clara e uma razão de testabilidade, ownership ou manutenção. O número de linhas é um **sinal de inspeção**, não o critério arquitetural.
+
+### Regra de evidência do Gate
+
+Cada item relevante deve deixar uma cadeia observável:
+
+```text
+property
+→ test/evidence
+→ environment
+→ result
+→ artifact/documentation
+```
+
+CI verde sozinho não fecha o Gate.
 
 ### Dependências
 
 ```text
-A → B/C documentation and governance
+A → B/C governance and observability
 B/C → D implementation targets
 D → E architectural continuation
-E → 9.6 P1.9 RenderSnapshot
+E → RenderSnapshot / Application extraction
 ```
 
 ### Critério de saída
@@ -141,45 +184,43 @@ E → 9.6 P1.9 RenderSnapshot
 ```text
 process protocol reproducible
 + CI failures classified from evidence
-+ source-size policy is executable and matches documentation
-+ oversized/warning files have documented WPs and progress
-+ main.cpp decomposition follows architecture, not line-count gaming
-+ tests validate each refactoring tranche
-+ roadmap / architecture / debt reflect actual state
-+ next RenderSnapshot block has no unresolved base-hardening contradiction
++ source-size policy executable and synchronized with documentation
++ justified warnings have explicit work packages or are resolved
++ main.cpp decomposition follows architecture, not line count
++ each refactoring tranche has regression evidence
++ roadmap / architecture / debt match actual state
++ no unresolved base-hardening contradiction blocks the next RenderSnapshot tranche
 ```
 
 ## 9.6 P1 — fronteiras arquiteturais 🔄
 
-7. **Eliminar o adapter de migração ✅** — `RendererFacadeAdapter.cpp` removido, snapshot/editor ownership absorvido por `RendererFacade` e runtime migrado para `RendererFacade`.
+7. **Eliminar o adapter de migração ✅** — `RendererFacadeAdapter.cpp` removido e ownership absorvido pela fachada.
 8. **Eliminar o `Renderer` legado ✅** — `Renderer.cpp/.h` removidos.
-9. **Criar `RenderSnapshot` geral 🔒** — contrato inicial integrado, mas presentation ainda recebe `Player`/`Level` diretamente; bloqueado pelo Gate atual.
-10. **Extrair responsabilidades do loop principal 🔒** — reduzir o acoplamento de `main.cpp` através de `Application` / `GameStateMachine` / `Simulation`, seguindo uma decomposição por responsabilidades e não por contagem de linhas.
-11. **RAII/ownership Vulkan** — substituir `new/delete` evitáveis e garantir wrappers não-copiáveis/movíveis quando apropriado.
-12. **Consolidar modelo comum de dados de nível** entre parser, runtime e editor.
-13. **Undo/Redo transacional** — drag completo = uma operação lógica.
-14. **Separar user data de source tree** e introduzir resolução de assets baseada na localização do executável.
-15. **Unificar a política de source-size** e remover ferramentas legadas duplicadas 🔄 — a documentação e o checker estão a ser alinhados na branch de Base Engineering Gate.
+9. **Criar `RenderSnapshot` geral 🔒** — contrato inicial integrado, mas a presentation ainda não é independente dos modelos de domínio.
+10. **Extrair responsabilidades do loop principal 🔒** — decompor `main.cpp` por responsabilidades (`Application` / state machine / simulation ou equivalente), sem criar camadas artificiais.
+11. **RAII/ownership Vulkan 🔒** — rever `new/delete` evitáveis e wrappers de ownership/copy/move.
+12. **Consolidar modelo comum de dados de nível 🔒** — parser, editor, validator e runtime devem convergir num contrato comum.
+13. **Undo/Redo transacional 🔒** — um drag completo deve constituir uma operação lógica.
+14. **Separar user data de source tree 🔒** — resolução de assets relativa ao executável e diretórios de dados persistentes separados.
+15. **Unificar tooling de source-size ✅/🔄** — política e checker estão alinhados; falta decidir e fechar eventuais ferramentas duplicadas e os warnings remanescentes.
 
-**Referências:** `docs/ARCHITECTURE.md`, `docs/TECHNICAL_REFERENCES.md`, `docs/BASE_ARCHITECTURE_AUDIT.md`, `docs/PROJECT_MANAGEMENT.md`, `docs/DEVELOPMENT_PROTOCOL.md`.
-
-### P2 — qualidade e compatibilidade
+## P2 — qualidade, compatibilidade e evidência transversal 🔒
 
 16. Windows build + tests no CI.
-17. `make game` no CI para o ambiente Windows quando a infraestrutura o permitir.
+17. `make game`/equivalente no CI Windows quando a infraestrutura permitir.
 18. ASan/UBSan no CI quando suportado.
-19. Replay regression tick-by-tick.
+19. Replay regression **tick-by-tick**, não apenas por estado final.
 20. Property/invariant tests para viewport, snap, física, editor e formatos.
 21. Testes de malformed `.lvl` e error paths.
-22. Testes de swapchain/error paths onde forem automatizáveis.
+22. Testes de swapchain/error paths automatizáveis.
 23. Matriz mínima de hardware/software documentada e validada.
-24. Profiling em pelo menos Intel/NVIDIA/AMD e, quando viável, uma GPU tile-based.
+24. Profiling antes de otimização, com cobertura representativa de hardware quando viável.
 
 ## Próximo bloco autorizado após o Gate — 9.6 P1.9 RenderSnapshot geral 🔒
 
-Só começar quando o Gate atual estiver fechado e a tranche documental/CI estiver refletida em `main`.
+Só começar quando o Gate atual estiver fechado e refletido em `main`.
 
-Objetivo: fazer com que a presentation consuma um modelo de dados próprio, reduzindo a dependência direta de `Player`, `Level` e `GameState`.
+Objetivo: fazer a presentation consumir um modelo de dados próprio, reduzindo a dependência direta de `Player`, `Level` e `GameState`.
 
 ### WBS
 
@@ -194,14 +235,6 @@ Objetivo: fazer com que a presentation consuma um modelo de dados próprio, redu
 └── profiling/regressão
 ```
 
-### Dependências
-
-- `RendererFacade` estável;
-- `EditorRenderSnapshot` existente;
-- contrato inicial de `RenderSnapshot` integrado;
-- testes de integração do renderer;
-- Gate atual de engenharia fechado.
-
 ### Critério de saída
 
 ```text
@@ -212,123 +245,116 @@ RendererFacade não necessita dos modelos de domínio para extrair dados de apre
 + documentação arquitetural atualizada
 ```
 
-## Novo eixo de investigação — Difficulty Architecture 🔬
+## Arquitetura de dificuldade — investigação 🔬
 
-A investigação de 2025 introduziu uma distinção que não estava suficientemente explícita no roadmap: **validade física, dificuldade executiva/motora, desempenho observado e dificuldade percebida são camadas diferentes**.
+Validade física, dificuldade executiva/motora, desempenho observado e dificuldade percebida são camadas diferentes.
 
-A evidência principal é Francillette et al. (2025), que apresenta um modelo automático de dificuldade executiva em platformers baseado em zonas de perigo estáticas e perigos dinâmicos. Esta evidência suporta a ideia de uma camada de análise sobre o nível, mas não autoriza copiar thresholds ou fórmulas diretamente para a física do ASCENDENDO.
-
-Uma dissertação de 2025 sobre adaptação de dificuldade em platformers procedurais reforça uma segunda separação: desempenho passado pode alimentar ajuste de dificuldade, mas a eficácia do modelo pode variar com experiência do jogador. Isto justifica adiar adaptive difficulty até existir instrumentação e player modelling suficientes.
-
-### Arquitetura conceptual futura
-
-```text
-collision geometry + deterministic physics
-                    ↓
-             physics validity
-                    ↓
-       motor/executive difficulty
-                    ↓
-          player performance
-                    ↓
-        perceived difficulty
-```
-
-### Consequência de engenharia
-
-A primeira implementação futura deve ser **análise/diagnóstico**, não adaptação automática. O analisador deve consumir representação do nível e resultados da simulação sem alterar silenciosamente a física ou o conteúdo authored.
-
-### WBS preliminar
-
-```text
-Difficulty Architecture
-├── D1 — difficulty evidence model
-│   ├── danger-zone representation
-│   ├── dynamic hazard representation quando aplicável
-│   └── mapping para métricas próprias do ASCENDENDO
-├── D2 — motor difficulty analysis
-│   ├── score por salto/secção
-│   ├── margem/risco
-│   └── relatório explicável
-├── D3 — performance telemetry
-│   ├── tentativas
-│   ├── sucesso/falha
-│   ├── tempo
-│   └── comportamento relevante
-├── D4 — player modelling
-│   ├── experiência/skill proxies
-│   ├── incerteza
-│   └── aprendizagem ao longo da campanha
-└── D5 — adaptive difficulty
-    └── apenas após validação das camadas anteriores
-```
+A primeira implementação autorizada é **análise/diagnóstico**, não adaptive difficulty. Antes de qualquer score é necessário definir quais variáveis do ASCENDENDO são observáveis, reproduzíveis e calibráveis.
 
 ### Dependências
 
 ```text
-D1/D2 dependem de física determinística + modelo de nível estáveis
-D3 depende de replay/telemetria com provenance suficiente
-D4 depende de D2 + D3
-D5 depende de D4 + validação com playtesting
+physics validity
+    ↓
+motor/executive difficulty
+    ↓
+player performance
+    ↓
+perceived difficulty
 ```
 
-### Não decidido ainda
+Adaptive difficulty só pode ser considerada depois de telemetry + player modelling + validação com playtesting. Um agente automático não substitui jogador humano e PCG metrics isoladas não provam player experience.
 
-- fórmula final de dificuldade;
-- thresholds universais;
-- adaptação automática por morte/falha simples;
-- uso do modelo de feromonas do paper fora de hazards para os quais faça sentido;
-- equivalência entre score motor e dificuldade percebida.
+## Fase 9.7 — Level Editor UX 🔒
 
-### Critério para autorizar implementação
-
-Antes de abrir D2 deve existir uma definição documentada de **quais variáveis do ASCENDENDO são observáveis, reproduzíveis e calibráveis**. Antes de abrir D4/D5 devem existir dados de jogadores suficientes para testar generalização e erro do modelo.
-
-## Fase 9.7 — Level Editor UX
-
-Só depois de 9.6 verde.
+Só depois do Gate 9.6.
 
 - painel de Controlos configurável/consultável;
-- rodapé contextual;
-- layouts autoajustáveis;
-- fullscreen + letterboxing corretos;
+- layouts autoajustáveis e letterboxing corretos;
 - guardar/playtest/validar explícitos;
 - playtest não persiste automaticamente;
 - indicador visual de força do salto;
 - feedback de erro e trajetória tentada;
 - retorno seguro entre editor e jogo.
 
-## Fase 9.8 — Seleção de campanhas
+A especificação deve distinguir requisitos `must`, `should` e `experimental`; alegações de discoverability/usabilidade permanecem hipóteses até testes com utilizadores.
+
+## Fase 9.8 — Seleção de campanhas 🔒
 
 - `Começar` abre seleção mesmo com uma campanha;
 - preview, número de níveis e validade;
-- metadata separada quando necessário;
-- preparação para várias campanhas.
+- metadata separada da validade/runtime;
+- metadata derivada/versionada para evitar estados obsoletos.
 
-## Fase 9.9 — Campaign Editor
+Fluxo recomendado:
+
+```text
+campaign source
+→ metadata extraction
+→ version/validation
+→ cached preview
+```
+
+Malformed/missing metadata deve ter testes explícitos.
+
+## Fase 9.9 — Campaign Editor 🔒
 
 - timeline vertical;
-- miniaturas 16:9 compactadas;
+- miniaturas compactadas 16:9;
 - blocos arrastáveis + snap/reordenação;
 - abrir Level Editor via mudança de estado;
 - preview sequencial;
-- runs em background por nível;
+- validation runs em background;
 - runs de transição entre níveis;
 - diagnóstico visual de falhas.
 
-## Fase 10 — Level Data + save + validação estáveis
+### Critérios adicionais derivados dos estudos
 
-- versão explícita do `.lvl`;
-- modelo declarativo/extensível de dados de nível;
+- reorder → save → reload preserva a ordem;
+- reordenação repetida é determinística;
+- nível inválido continua marcado como inválido após reload;
+- cancelamento/late-result de validação assíncrona é race-safe;
+- um run de transição identifica exatamente a fronteira onde falhou.
+
+## Fase 10 — Level Data + save + validação estáveis 🔒
+
+Esta fase começa por **evolução de schema**, não apenas por novas features do editor.
+
+### Pipeline normativo
+
+```text
+parse
+→ validate envelope
+→ identify schema version
+→ migrate known old version
+→ validate migrated representation
+→ normalize
+→ runtime
+```
+
+### Requisitos
+
+- `version` explícito no `.lvl` como parte do contrato;
+- migrações documentadas;
+- modelo declarativo/extensível;
 - serialização determinística;
-- separação entre persistido/runtime;
-- validação em background;
-- importados/descarregados revalidados pelo EXE;
-- migrações documentadas.
+- separação persistido/runtime;
+- fixtures por versão suportada;
+- importados/descarregados revalidados pelo EXE.
 
-## Fase 11 — Conteúdo oficial e análise de campanhas
+### Evidência obrigatória
 
-Depois da infraestrutura ser confiável:
+- round-trip semântico;
+- versão desconhecida rejeitada explicitamente;
+- campos obrigatórios ausentes rejeitados;
+- valores fora do domínio rejeitados;
+- migração antiga → atual;
+- determinismo de serialização;
+- corpus de malformed data; fuzzing posteriormente.
+
+## Fase 11 — Conteúdo oficial e análise de campanhas 🔒
+
+Só depois da infraestrutura ser confiável.
 
 - novas superfícies/comportamentos;
 - perigos;
@@ -336,29 +362,109 @@ Depois da infraestrutura ser confiável:
 - objetos interativos;
 - triggers/eventos;
 - decoração/identidade visual;
-- ferramentas de composição;
-- análise de dificuldade/ritmo em salto → secção → nível → campanha;
-- separação explícita entre validade física, dificuldade executiva, desempenho do jogador e experiência percebida;
-- eventual player modelling e adaptive difficulty apenas após validação das métricas.
+- ferramentas de composição.
 
-## Fase 12 — Partilha local e web
+### Progressão de campanha
+
+Número de níveis é parâmetro editorial, não verdade científica.
+
+A hipótese a validar é a qualidade da progressão:
+
+```text
+introdução
+→ prática
+→ variação
+→ domínio
+→ recuperação
+→ escalada
+→ avaliação
+```
+
+A análise deve existir em múltiplas escalas:
+
+```text
+salto
+→ secção
+→ nível
+→ sequência de níveis
+→ campanha
+```
+
+Separar sempre:
+
+```text
+validade física
+motor/executive difficulty
+desempenho observado
+experiência percebida
+```
+
+### Difficulty analysis
+
+A camada futura deve começar por análise explicável do nível/resultados, sem alterar silenciosamente a física ou o conteúdo authored.
+
+## Fase 12 — Partilha local e web 🔒
 
 ### 12.1 Export/import
 
-Pacote declarativo, extração controlada e validação obrigatória pelo EXE.
+Pacote declarativo; extração controlada; conteúdo tratado como não confiável; validação obrigatória pelo EXE.
+
+Pipeline:
+
+```text
+web/user file
+→ parse defensivo
+→ size/depth/resource limits
+→ schema validation
+→ semantic/game validation
+→ canonical normalization
+→ playable
+```
 
 ### 12.2 Biblioteca online
 
-HTTP(S) inicialmente; site trata conteúdo como não confiável; EXE continua autoridade final.
+HTTP(S) inicialmente. O servidor pode rejeitar conteúdo, mas o EXE continua autoridade final antes de jogar.
 
-### 12.3 Partilha direta
+### 12.3 Metadata
 
-Só adicionar comunicação bidirecional quando HTTP(S) + export/import forem insuficientes.
+Separar explicitamente:
 
-## Fase 13 — Release / Portable Build
+```text
+claimed_difficulty
+observed_difficulty
+validation_status
+```
 
-Objetivo: pacote Windows x64 copiável para outro computador dentro dos requisitos mínimos, sem ambiente de desenvolvimento.
+A metadata declarada pelo autor não é substituto da dificuldade observada.
+
+### 12.4 Partilha direta
+
+Adicionar comunicação bidirecional apenas se HTTP(S) + export/import se mostrarem insuficientes.
+
+## Fase 13 — Release / Portable Build 🔒
+
+Objetivo: artefacto Windows x64 copiável para outro computador dentro dos requisitos mínimos, sem ambiente de desenvolvimento.
+
+### Critério de release
+
+```text
+fresh Windows machine
+→ copy/extract package
+→ launch
+→ first run
+→ asset resolution
+→ save/user data
+→ replay/load
+→ import level
+→ clean shutdown
+```
+
+Guardar manifest das versões/artefactos usados pela build.
+
+A escolha entre ZIP/Xcopy, installer ou outro mecanismo é decisão de distribuição; o requisito técnico é que o artefacto seja reproduzível e não dependa do ambiente de desenvolvimento.
 
 ## Regra de progressão entre branches/PRs
 
 Nenhum novo bloco começa antes de integrar a PR anterior em `main`.
+
+Uma branch encerrada sem merge não é preservada por padrão. O histórico de PR/commits é a referência para comparação. Branch de laboratório só deve existir temporariamente quando houver uma experiência ativa que não possa ser feita diretamente a partir de um commit histórico.
