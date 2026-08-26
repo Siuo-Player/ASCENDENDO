@@ -1,24 +1,36 @@
 # Documentação técnica do ASCENDENDO
 
-Esta pasta complementa o `README.md` com documentação que precisa de mais detalhe do que a visão geral do projeto.
+Esta pasta é organizada por **função documental**, não por uma coleção de fases ou branches históricas.
 
-## Documentos
+## Fontes normativas
 
-- [Arquitetura](ARCHITECTURE.md) — responsabilidades dos módulos e fluxo de execução.
-- [Formato de níveis](LEVEL_FORMAT.md) — sintaxe de `.lvl`, `campaign.txt`, regras de coordenadas e invariantes.
-- [Editor de níveis](LEVEL_EDITOR.md) — decisões de UX da Fase 9, grid, bindings e modelo de edição.
-- [Testes e validação](TESTING.md) — build, testes unitários/integração e validação física.
-- [Roadmap](ROADMAP.md) — estado atual, histórico das fases e próximos passos aprovados.
-- [Contribuição](CONTRIBUTING.md) — fluxo de branches, PRs, TDD e regras de alteração.
-- [Plano da branch atual](BRANCH_PLAN.md) — o que já está concluído e o objetivo específico desta branch.
+- [Roadmap](ROADMAP.md) — **fonte única da ordem de execução**.
+- [00-meta](00-meta/README.md) — processo, gestão, decisões de produto e continuidade.
+- [01-architecture](01-architecture/README.md) — arquitetura, ownership, dívida e fronteiras.
+- [02-engineering](02-engineering/README.md) — CI, testes e políticas de manutenção.
 
-## Regra de documentação
+## Domínio do jogo
 
-Cada nova branch de trabalho deve atualizar a documentação de estado antes da implementação principal. O documento da branch deve dizer:
+- [03-gameplay-editor](03-gameplay-editor/README.md) — níveis, editor, campanhas e UX.
+- [04-research](04-research/README.md) — papers, referências técnicas e investigação.
+- [05-work-packages](05-work-packages/README.md) — contratos de implementação por tranche.
 
-1. o que já estava concluído quando a branch abriu;
-2. o que a branch vai implementar;
-3. critérios objetivos de conclusão;
-4. o que fica explicitamente para a branch seguinte.
+## Histórico
 
-Ao abrir uma nova branch, o plano anterior deixa de ser "planeamento futuro" e passa a constar como concluído, ou é substituído pelo estado efetivamente alcançado.
+- [99-history](99-history/README.md) — snapshots, changelogs e evidência histórica específica.
+
+## Regra de leitura antes de uma branch
+
+1. `ROADMAP.md`
+2. `docs/00-meta/` — processo e decisões
+3. `docs/01-architecture/` — fronteiras e dívida
+4. `docs/04-research/` + `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO` — evidência externa/consultiva
+5. work package relevante
+
+## Regra de manutenção
+
+Os ficheiros que ainda estão no topo de `docs/` não foram renomeados nesta tranche: o objetivo foi criar uma classificação estável **sem quebrar links existentes nem alterar conteúdo**. A migração física dos ficheiros será feita depois, em bloco mecânico e verificável.
+
+O `PROJECT-STUDIES/ASCENDENDO` é **somente leitura** a partir deste projeto.
+
+Cada descoberta material deve ser documentada antes da implementação, a validação deve produzir evidência observável e a documentação deve refletir o resultado real.
