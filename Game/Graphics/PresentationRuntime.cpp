@@ -7,6 +7,14 @@
 
 namespace gfx {
 
+PresentationRuntime::~PresentationRuntime() {
+    if (renderer_) {
+        renderer_->attachText(nullptr, nullptr);
+        renderer_->attachSprite(nullptr, nullptr);
+        renderer_ = nullptr;
+    }
+}
+
 bool PresentationRuntime::init(VulkanContext* ctx,
                                Swapchain* swapchain,
                                RenderPass* renderPass,
