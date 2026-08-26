@@ -8,6 +8,7 @@
 #include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
+#include <memory>
 
 namespace logic { class Player; class Level; class EditorSession; }
 namespace gfx {
@@ -63,11 +64,11 @@ public:
     bool isInitialized() const { return m_initialized; }
 
 private:
-    RendererCore* m_core = nullptr;
-    ShapeRenderer* m_shapes = nullptr;
-    WorldRenderer* m_world = nullptr;
-    UiRenderer* m_ui = nullptr;
-    EditorRenderer* m_editor = nullptr;
+    std::unique_ptr<RendererCore> m_core;
+    std::unique_ptr<ShapeRenderer> m_shapes;
+    std::unique_ptr<WorldRenderer> m_world;
+    std::unique_ptr<UiRenderer> m_ui;
+    std::unique_ptr<EditorRenderer> m_editor;
     Pipeline* m_shapePipeline = nullptr;
 
     TextPipeline* m_textPipeline = nullptr;
