@@ -1,0 +1,30 @@
+name: Actions smoke diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: Why the smoke check is being run
+        required: false
+        default: manual diagnostic
+
+permissions:
+  contents: read
+
+jobs:
+  runner-smoke:
+    name: GitHub-hosted runner smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Report runner environment
+        run: |
+          echo "Runner: $RUNNER_NAME"
+          echo "OS: $RUNNER_OS"
+          echo "Arch: $RUNNER_ARCH"
+          uname -a
+      - name: Verify trivial execution
+        run: |
+          test -n "$RUNNER_NAME"
+          test "$RUNNER_OS" = "Linux"
+          echo "Actions runner startup path: OK"
