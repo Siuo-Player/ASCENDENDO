@@ -89,7 +89,7 @@ ou qualquer divisão por intervalos arbitrários de linhas apenas para fazer a m
 Os limiares normativos são:
 
 ```text
-WARNING_BYTES   = 40 * 1024
+WARNING_BYTES    = 40 * 1024
 HARD_LIMIT_BYTES = 48 * 1024
 ```
 
@@ -101,7 +101,7 @@ O CI executa ainda `Tests/Tooling/test_check_source_sizes.py`, que verifica os l
 
 A implementação anterior usava linhas como métrica normativa e bloqueou `main.cpp` ao atingir 402 linhas. Isso revelou uma inconsistência de tooling: o repositório já possuía um checker em KiB com limites de 40/48 KiB, mas o CI executava outro checker baseado em LOC.
 
-A política passa agora a ter uma única unidade física (KiB) e uma única implementação normativa. O incidente não deve ser resolvido comprimindo código artificialmente para passar um contador de linhas.
+A correção não é comprimir `main.cpp` para ficar abaixo de um contador arbitrário. A política agora tem uma única unidade física (KiB) e uma única implementação normativa.
 
 ## Relação com WBS
 
