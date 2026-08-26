@@ -219,7 +219,12 @@ bool RendererFacade::drawFrame(const logic::Player& player,
     }
 
     if (!m_core->endRenderPass(commandBuffer)) return false;
-    return m_core->endFrame(commandBuffer, imageIndex);
+
+    const auto submitStatus = m_core->submitFrame(commandBuffer, imageIndex);
+    if (submitStatus == RendererCore::FrameStatus::SwapchainNeedsRecreate) {
+        return m_core->recreateSwapchain();
+    }
+    return submitStatus == RendererCore::FrameStatus::Ready;
 }
 
 } // namespace gfx
