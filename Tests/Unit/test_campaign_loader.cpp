@@ -64,11 +64,20 @@ TEST_SUITE("Campaign Loader") {
         CHECK(levels.empty());
     }
 
-    TEST_CASE("explicit roots keep results independent of current directory") {
-        const auto levels = core::CampaignLoader::load(
-            "/install/ascendendo/Game/Assets/Levels/campaign.txt",
-            "/install/ascendendo/Game/Assets/Levels");
+    TEST_CASE("explicit roots resolve the campaign independently of current directory") {
+        TempTree temp;
+        const auto campaignFile = temp.root() / "campaign.txt";
+        const auto levelsRoot = temp.root() / "install" / "Game" / "Assets" / "Levels";
 
-        CHECK(levels.empty());
+        std::filesystem::create_directories(levelsRoot);
+        std::ofstream file(campaignFile);
+        REQUIRE(file.is_open());
+        file << "inicio.lvl\n";
+        file.close();
+
+        const auto levels = core::CampaignLoader::load(campaignFile, levelsRoot);
+
+        REQUIRE(levels.size() == 1);
+        CHECK(levels.front() == levelsRoot / "inicio.lvl");
     }
 }
