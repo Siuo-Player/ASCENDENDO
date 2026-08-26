@@ -1,7 +1,9 @@
 #include "doctest/doctest.h"
 #include "Core/KeyBindings.h"
+#include "Logic/InputManager.h"
 
 using namespace core;
+using namespace logic;
 
 TEST_SUITE("KeyBindings: defaults") {
 
