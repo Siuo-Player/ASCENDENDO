@@ -223,13 +223,25 @@ bool VulkanContext::createLogicalDevice(bool enableValidation) {
     ci.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
     ci.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if (vkCreateDevice(m_physicalDevice, &ci, nullptr, &m_device) != VK_SUCCESS) {
+    VkDevice device = VK_NULL_HANDLE;
+    if (vkCreateDevice(m_physicalDevice, &ci, nullptr, &device) != VK_SUCCESS) {
         return false;
     }
 
-    vkGetDeviceQueue(m_device, m_families.graphics, 0, &m_graphicsQueue);
-    vkGetDeviceQueue(m_device, m_families.present, 0, &m_presentQueue);
-    return m_graphicsQueue != VK_NULL_HANDLE && m_presentQueue != VK_NULL_HANDLE;
+    VkQueue graphicsQueue = VK_NULL_HANDLE;
+    VkQueue presentQueue = VK_NULL_HANDLE;
+    vkGetDeviceQueue(device, m_families.graphics, 0, &graphicsQueue);
+    vkGetDeviceQueue(device, m_families.present, 0, &presentQueue);
+
+    if (graphicsQueue == VK_NULL_HANDLE || presentQueue == VK_NULL_HANDLE) {
+        vkDestroyDevice(device, nullptr);
+        return false;
+    }
+
+    m_device = device;
+    m_graphicsQueue = graphicsQueue;
+    m_presentQueue = presentQueue;
+    return true;
 }
 
 bool VulkanContext::supportsRequiredDeviceExtensions(VkPhysicalDevice dev) const {
