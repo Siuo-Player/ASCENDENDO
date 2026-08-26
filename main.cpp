@@ -45,6 +45,23 @@ static const std::string CONTROLS_CFG_PATH = "Development/Settings/controls.cfg"
 
 namespace {
 
+class GlfwRuntime {
+public:
+    GlfwRuntime() : initialized_(glfwInit() == GLFW_TRUE) {}
+
+    ~GlfwRuntime() {
+        if (initialized_) glfwTerminate();
+    }
+
+    GlfwRuntime(const GlfwRuntime&) = delete;
+    GlfwRuntime& operator=(const GlfwRuntime&) = delete;
+
+    bool initialized() const { return initialized_; }
+
+private:
+    bool initialized_ = false;
+};
+
 void setMenuTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window, "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
 }
@@ -62,7 +79,8 @@ void setEditorTitle(GLFWwindow* window) {
 int main() {
     std::cout << "[ASCENDENDO] A iniciar motor...\n";
 
-    if (!glfwInit()) {
+    GlfwRuntime glfw;
+    if (!glfw.initialized()) {
         std::cerr << "[ERRO] GLFW nao conseguiu inicializar.\n";
         return -1;
     }
@@ -379,7 +397,6 @@ int main() {
         vkDeviceWaitIdle(ctx.device());
     }
 
-    glfwTerminate();
     std::cout << "[ASCENDENDO] Motor encerrado com sucesso.\n";
     return 0;
 }
