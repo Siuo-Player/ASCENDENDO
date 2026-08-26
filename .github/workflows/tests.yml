@@ -26,6 +26,9 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
 
+      - name: Test source-size policy
+        run: python3 Tests/Tooling/test_check_source_sizes.py
+
       - name: Check source-file size policy
         run: python3 Development/Tools/check_source_sizes.py
 
