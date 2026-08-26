@@ -17,6 +17,7 @@
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/Player.h"
 #include "Game/Logic/Physics.h"
+#include "Game/Logic/SimulationOrchestrator.h"
 #include "Game/Logic/Level.h"
 #include "Game/Logic/RunHistory.h"
 #include "Game/Logic/EditorSession.h"
@@ -171,6 +172,7 @@ int main() {
 
         Level level;
         PhysicsWorld world;
+        SimulationOrchestrator simulation;
         Camera camera;
         Player player;
         EditorSession editorSession(campaign.size() <= 1);
@@ -253,11 +255,7 @@ int main() {
                     glfwSetWindowTitle(win.handle(),
                         "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
                 } else {
-                    int steps = world.advance(dt);
-                    for (int i = 0; i < steps; ++i) {
-                        player.update(input, world, config::FIXED_STEP);
-                        level.resolveCollision(player.body);
-                    }
+                    simulation.advance(dt, input, player, world, level);
 
                     camera.follow(player.position(), dt);
 
