@@ -6,11 +6,14 @@
 #include "../../Game/Graphics/Swapchain.h"
 #include "../../Game/Graphics/VulkanContext.h"
 #include "../../Game/Graphics/Window.h"
+#include "../../Game/Graphics/Camera.h"
+#include "../../Game/Logic/Player.h"
 
 #include <filesystem>
 #include <vector>
 
 using namespace gfx;
+using namespace logic;
 
 TEST_SUITE("PresentationRuntime") {
     TEST_CASE("optional presentation resources do not gate core renderer") {
@@ -49,6 +52,12 @@ TEST_SUITE("PresentationRuntime") {
         }
 
         CHECK(renderer.isInitialized());
+
+        Player player;
+        Camera camera;
+        CHECK(renderer.drawFrame(player, camera, nullptr,
+                                 GameState::PLAYING, 0, 0.0f));
+
         vkDeviceWaitIdle(ctx.device());
     }
 }
