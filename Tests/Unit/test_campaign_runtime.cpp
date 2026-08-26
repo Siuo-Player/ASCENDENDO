@@ -65,4 +65,35 @@ TEST_SUITE("CampaignRuntime") {
         CHECK(runtime.currentSpawnY() == doctest::Approx(0.0f));
         CHECK(runtime.hasMoreLevels());
     }
+
+    TEST_CASE("Nivel inexistente nao e consumido") {
+        CampaignRuntime runtime({
+            "Game/Assets/Levels/inicio.lvl",
+            "Game/Assets/Levels/nao-existe.lvl"
+        });
+        Level level;
+
+        REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        const auto indexBefore = runtime.currentLevelIndex();
+        const float spawnBefore = runtime.currentSpawnY();
+        const int platformsBefore = level.platformCount();
+
+        CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == indexBefore);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(spawnBefore));
+        CHECK(level.platformCount() == platformsBefore);
+        CHECK(runtime.hasMoreLevels());
+    }
+
+    TEST_CASE("Nivel inicial inexistente nao altera o progresso") {
+        CampaignRuntime runtime({"Game/Assets/Levels/nao-existe.lvl"});
+        Level level;
+        level.addPlatform(0.0f, 0.0f, 16.0f, 16.0f);
+
+        CHECK_FALSE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == 0);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(0.0f));
+        CHECK(level.platformCount() == 0);
+        CHECK(runtime.hasMoreLevels());
+    }
 }
