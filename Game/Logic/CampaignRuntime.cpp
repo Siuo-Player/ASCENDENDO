@@ -1,6 +1,8 @@
 #include "Logic/CampaignRuntime.h"
 #include "Logic/Level.h"
 
+#include <filesystem>
+
 namespace logic {
 
 void CampaignRuntime::reset() {
@@ -13,6 +15,7 @@ bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
     level.clear();
 
     if (m_campaign.empty()) return false;
+    if (!std::filesystem::exists(m_campaign.front())) return false;
 
     m_spawnY = level.appendFromFile(
         m_campaign.front().string(), maxWidth, 0.0f);
@@ -22,6 +25,7 @@ bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
 
 bool CampaignRuntime::streamNextLevel(Level& level, float maxWidth) {
     if (!hasMoreLevels()) return false;
+    if (!std::filesystem::exists(m_campaign[m_nextLevelIndex])) return false;
 
     const float nextSpawnY = level.appendFromFile(
         m_campaign[m_nextLevelIndex].string(), maxWidth, m_spawnY);
