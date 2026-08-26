@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Game/Graphics/GameState.h"
+#include "Graphics/GameState.h"
 
 namespace core {
 
