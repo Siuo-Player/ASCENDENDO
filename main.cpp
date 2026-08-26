@@ -21,6 +21,7 @@
 #include "Game/Logic/Level.h"
 #include "Game/Logic/RunHistory.h"
 #include "Game/Logic/EditorSession.h"
+#include "Game/Logic/CampaignRuntime.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/CampaignLoader.h"
@@ -185,6 +186,7 @@ int main(int argc, char** argv) {
             core::CampaignLoader::load(
                 runtimePaths.campaignFile(),
                 runtimePaths.levelsRoot());
+        CampaignRuntime campaignRuntime(campaign);
 
         std::string campaignID = core::computeCampaignID(levelsDir);
         std::cout << "[ASCENDENDO] Campaign ID: "
@@ -199,8 +201,6 @@ int main(int argc, char** argv) {
         renderer.attachEditorSession(&editorSession);
         core::GameStateMachine stateMachine;
 
-        int currentLevelIndex = 0;
-        float currentSpawnY = 0.0f;
         float elapsedTime = 0.0f;
 
         auto resetGame = [&]() {
@@ -208,16 +208,9 @@ int main(int argc, char** argv) {
             player.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
             camera = gfx::Camera{};
             world = logic::PhysicsWorld{};
-            level.clear();
-            currentLevelIndex = 0;
-            currentSpawnY = 0.0f;
             elapsedTime = 0.0f;
 
-            if (!campaign.empty()) {
-                currentSpawnY = level.appendFromFile(
-                    campaign[0].string(), config::LOGICAL_WIDTH, 0.0f);
-                currentLevelIndex = 1;
-            }
+            campaignRuntime.loadInitialLevel(level, config::LOGICAL_WIDTH);
 
             stateMachine.enterPlaying();
             setPlayingTitle(win.handle());
@@ -279,13 +272,8 @@ int main(int argc, char** argv) {
 
                     camera.follow(player.position(), dt);
 
-                    if (player.position().y > currentSpawnY - config::LOGICAL_HEIGHT) {
-                        if (static_cast<size_t>(currentLevelIndex) < campaign.size()) {
-                            currentSpawnY = level.appendFromFile(
-                                campaign[currentLevelIndex].string(),
-                                config::LOGICAL_WIDTH, currentSpawnY);
-                            currentLevelIndex++;
-                        }
+                    if (player.position().y > campaignRuntime.currentSpawnY() - config::LOGICAL_HEIGHT) {
+                        campaignRuntime.streamNextLevel(level, config::LOGICAL_WIDTH);
                     }
 
                     if (level.hasFlag &&
