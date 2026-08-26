@@ -14,6 +14,8 @@ m_graphicsQueue == VK_NULL_HANDLE
 m_presentQueue  == VK_NULL_HANDLE
 ```
 
+The surrounding `VulkanContext::init()` failure path must remain safely repeatable.
+
 ## Design choice
 
 Keep ownership local to `VulkanContext`. If queue acquisition does not produce both required queue handles, destroy the just-created logical device and clear all queue handles before returning `false`.
@@ -31,3 +33,7 @@ Graphics and presentation families remain independent values. `Swapchain` alread
 - preserve queue-family independence;
 - no `main.cpp` changes;
 - no CI workflow changes.
+
+## Testability note
+
+The exact invalid-queue-handle branch is driver-dependent and cannot be deterministically forced through the public API without mocking Vulkan. The test therefore locks the public queue-family contract, while the cleanup invariant is enforced directly in the implementation.
