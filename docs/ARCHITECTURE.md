@@ -42,7 +42,7 @@ Application
     └── Local user data
 ```
 
-A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente em `main`; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e fechar a fronteira `RenderSnapshot`.
+A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e fechar a fronteira `RenderSnapshot`.
 
 ## Fluxo por frame
 
@@ -72,27 +72,25 @@ O renderer não deve decidir regras de gameplay, editor ou campanha.
 
 ## `main.cpp` e estado da aplicação
 
-`main.cpp` continua a concentrar inicialização, composição do runtime, estados, campanha, física, editor e persistência. Isto é dívida técnica prioritária.
+`main.cpp` ainda concentra inicialização, composição do runtime, estados, campanha, física, editor, streaming, persistência e submissão de frames. Esta é a próxima dívida arquitetural prioritária do Base Engineering Gate.
 
-A direção é extrair gradualmente:
+A extração deve ser incremental:
 
-- `Application`: ciclo de vida e composição;
+- `Application`: ciclo de vida/composição;
 - `GameStateMachine`: estados e transições;
 - `Simulation`: fixed timestep e ticks de gameplay;
 - `EditorSession`: estado/interação do editor;
 - `RendererFacade` / passes: apresentação.
 
-A extração deve ser incremental e testada, não uma reescrita completa do motor.
+A decomposição deve seguir responsabilidades reais e ownership/lifetime, não o limite de linhas. Não fazer uma reescrita completa do motor.
 
-A decomposição deve seguir responsabilidades. O limite de tamanho de ficheiros é apenas um sinal para iniciar esta análise; não é uma razão para criar ficheiros artificiais.
+O work package atual está registado em `docs/WORK_PACKAGE_MAIN_LOOP_DECOMPOSITION.md`.
 
 ## Renderer e `RenderSnapshot`
 
-A arquitetura integrada em `main` já não usa `Renderer.cpp/.h`, mas a fronteira de dados entre runtime e presentation ainda não está completa.
+A arquitetura integrada já não usa `Renderer.cpp/.h`, mas a fronteira de dados entre runtime e presentation ainda não está completa.
 
-Atualmente, `WorldRenderer` recebe diretamente `logic::Player` e `logic::Level`, além da `Camera`. Esta dependência mantém presentation acoplada aos modelos de domínio.
-
-A direção é:
+Atualmente, a presentation continua a receber dados de domínio diretamente em partes do caminho de rendering. A direção é:
 
 ```text
 Player / Level / GameState
@@ -104,22 +102,9 @@ Player / Level / GameState
     rendering passes
 ```
 
-O snapshot contém dados compactos, transitórios e próprios de presentation; não possui Vulkan resources, lógica de jogo nem tipos de domínio.
+O snapshot deve conter dados compactos, transitórios e próprios de presentation; não deve possuir Vulkan resources, lógica de jogo nem tipos de domínio.
 
-PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) é o work item atual desta migração. Até ser integrada, esta fronteira deve ser considerada **em transição**, não concluída.
-
-Exemplo de contrato:
-
-```cpp
-struct RenderSnapshot {
-    CameraRenderData camera;
-    std::vector<PlatformRenderData> platforms;
-    PlayerRenderData player;
-    HudRenderData hud;
-    MenuRenderData menu;
-    EditorRenderData editor;
-};
-```
+O PR #20 foi encerrado/superseded e não é uma tranche ativa. O histórico do PR/commits é suficiente para comparação; não manter uma branch dele apenas como laboratório permanente.
 
 ## Modelo comum de níveis
 
@@ -151,11 +136,11 @@ GameAction
 Gameplay / Editor
 ```
 
-Gameplay não deve consultar `Key::SPACE`, `Key::A`, etc. diretamente. A dívida atual em `Player` deve ser removida antes de funcionalidades de input adicionais.
+Gameplay não deve consultar `Key::SPACE`, `Key::A`, etc. diretamente.
 
 ## Tempo de simulação
 
-O fixed timestep de 60 Hz permanece. O sistema deve, porém, impedir uma recuperação ilimitada depois de um frame muito longo/minimização.
+O fixed timestep de 60 Hz permanece. O sistema deve impedir recuperação ilimitada depois de um frame muito longo/minimização.
 
 Requisitos:
 
@@ -168,7 +153,7 @@ Requisitos:
 
 `Physics` deve possuir a política temporal e o estado físico; `Level` deve fornecer geometria/dados de nível, não concentrar decisões específicas de resposta física.
 
-A resolução atual baseada em penetration depth/velocidade é adequada ao jogo atual, mas deve ser tratada como uma implementação de gameplay, não como um resolvedor geométrico universal. Continuous collision detection só entra quando o design exigir velocidades/entidades que possam sofrer tunneling.
+A resolução atual baseada em penetration depth/velocidade é adequada ao jogo atual, mas deve ser tratada como uma implementação de gameplay, não como um resolvedor geométrico universal.
 
 ## Vulkan
 
@@ -202,11 +187,11 @@ Isto é requisito para a futura build portable.
 
 ## Configuração
 
-`Config.h` é atualmente transversal demais. Novas constantes devem ser organizadas por domínio (`physics`, `render`, `window`, `editor`, `gameplay`). A migração pode ser incremental.
+`Config.h` é atualmente transversal demais. Novas constantes devem ser organizadas por domínio (`physics`, `render`, `window`, `editor`, `gameplay`).
 
 ## Editor
 
-A fronteira atual é a correta:
+A fronteira atual é:
 
 ```text
 InputManager
@@ -218,18 +203,7 @@ EditorInteractionController
 LevelEditorDocument / LevelData
 ```
 
-Operações de edição devem evoluir para comandos transacionais:
-
-```text
-CreatePlatform
-MovePlatform
-ResizePlatform
-DeletePlatform
-        ↓
-undoStack / redoStack
-```
-
-Um drag completo deve ser uma operação lógica única.
+Operações de edição devem evoluir para comandos transacionais. Um drag completo deve ser uma operação lógica única.
 
 ## Testes e CI
 
@@ -244,9 +218,9 @@ Windows build + tests
 Windows game build/link
 ```
 
-O workflow de `main` ainda agrega `make clean`, `make game` e `make tests-verbose` num único step; esta limitação de observabilidade está documentada em `docs/CI.md`.
+O workflow atual já fornece evidência observável de source-size, Vulkan headless, build/testes e campaign validation em Linux. Windows, sanitizers e matriz de hardware continuam a faltar.
 
-Run #281 falhou no step agregado de build/teste, mas a causa detalhada permanece desconhecida sem diagnóstico observável. O número de assertions não é uma métrica suficiente; devem ser cobertas invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
+A suite recente validada contra o estado atual produz **167 test cases e 901 assertions**, mas a contagem não substitui testes de invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
 
 ## Formatos e partilha futura
 
@@ -258,49 +232,3 @@ VERSION 1
 ```
 
 Mapas devem permanecer declarativos, sem scripts, includes, paths arbitrários ou execução de código.
-
-A validação local do EXE é sempre a autoridade final antes de um mapa ser jogável.
-
-## Máquina de estados atual
-
-```text
-PLAYING
-   ├── Pause → PAUSED
-   └── FLAG final → CREDITS → MENU
-
-PAUSED
-   ├── Continue → PLAYING
-   └── Credits → CREDITS → PAUSED
-
-MENU
-   ├── Start → PLAYING
-   ├── Editor → EDITOR
-   └── Credits → CREDITS → MENU
-
-EDITOR
-   └── ESC → MENU
-```
-
-A futura extração para `GameStateMachine` deve manter estas transições e torná-las testáveis sem Vulkan.
-
-## Arquitetura ↔ planeamento
-
-Arquitetura e planeamento são tratados como dois lados da mesma estrutura de engenharia. O work breakdown não deve ser definido independentemente das fronteiras técnicas: mudanças arquiteturais podem criar ou remover work packages, alterar dependências e exigir novos critérios de validação.
-
-```text
-Arquitetura
-   ↕
-WBS / roadmap
-   ↕
-Branch / PR
-   ↕
-Testes + documentação
-```
-
-Cada work package deve declarar as dependências relevantes, os consumidores afetados e o seu critério de saída. Uma dependência não é considerada gerida apenas porque está expressa no código; também é necessário conhecer o impacto da sua alteração sobre consumidores, testes e documentação.
-
-A modularidade deve ser avaliada pela redução de responsabilidades e dependências relevantes, não pelo número de classes. A literatura de socio-technical congruence mostra que modularização técnica não representa por si só todas as dependências de trabalho que exigem coordenação.
-
-Mudanças de arquitetura, de processo ou de gate devem ser documentadas antes da implementação correspondente. Para o processo operacional, ver `docs/DEVELOPMENT_PROTOCOL.md` e `docs/PROJECT_MANAGEMENT.md`.
-
-**Referências:** Tausworthe, *The Work Breakdown Structure in Software Project Management* (1979); Cataldo, Herbsleb & Carley, *Socio-technical congruence* (2008); Bick et al., *Coordination challenges in large-scale software development* (2018); Kruchten et al., *Building up and Exploiting Architectural Knowledge* (2005).
