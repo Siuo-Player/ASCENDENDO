@@ -171,7 +171,7 @@ RendererCore::FrameStatus RendererCore::submitFrame(VkCommandBuffer commandBuffe
     presentInfo.pSwapchains = &swapchain;
     presentInfo.pImageIndices = &imageIndex;
 
-    const VkResult result = vkQueuePresentKHR(m_ctx->graphicsQueue(), &presentInfo);
+    const VkResult result = vkQueuePresentKHR(m_ctx->presentQueue(), &presentInfo);
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         return FrameStatus::SwapchainNeedsRecreate;
     }
