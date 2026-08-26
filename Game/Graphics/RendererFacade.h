@@ -30,7 +30,7 @@ class Camera;
 
 class RendererFacade {
 public:
-    RendererFacade() = default;
+    RendererFacade();
     ~RendererFacade();
 
     RendererFacade(const RendererFacade&) = delete;
