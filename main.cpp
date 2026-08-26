@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
             core::CampaignLoader::load(
                 runtimePaths.campaignFile(),
                 runtimePaths.levelsRoot());
-        const CampaignRuntime campaignRuntime(campaign);
+        CampaignRuntime campaignRuntime(campaign);
 
         std::string campaignID = core::computeCampaignID(levelsDir);
         std::cout << "[ASCENDENDO] Campaign ID: "
@@ -208,11 +208,9 @@ int main(int argc, char** argv) {
             player.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
             camera = gfx::Camera{};
             world = logic::PhysicsWorld{};
-            level.clear();
             elapsedTime = 0.0f;
 
-            CampaignRuntime& runtime = const_cast<CampaignRuntime&>(campaignRuntime);
-            runtime.loadInitialLevel(level, config::LOGICAL_WIDTH);
+            campaignRuntime.loadInitialLevel(level, config::LOGICAL_WIDTH);
 
             stateMachine.enterPlaying();
             setPlayingTitle(win.handle());
@@ -274,9 +272,8 @@ int main(int argc, char** argv) {
 
                     camera.follow(player.position(), dt);
 
-                    CampaignRuntime& runtime = const_cast<CampaignRuntime&>(campaignRuntime);
-                    if (player.position().y > runtime.currentSpawnY() - config::LOGICAL_HEIGHT) {
-                        runtime.streamNextLevel(level, config::LOGICAL_WIDTH);
+                    if (player.position().y > campaignRuntime.currentSpawnY() - config::LOGICAL_HEIGHT) {
+                        campaignRuntime.streamNextLevel(level, config::LOGICAL_WIDTH);
                     }
 
                     if (level.hasFlag &&
