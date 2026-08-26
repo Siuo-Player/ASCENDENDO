@@ -1,0 +1,46 @@
+#include "PresentationRuntime.h"
+
+#include "VulkanContext.h"
+#include "Swapchain.h"
+#include "RenderPass.h"
+#include "RendererFacade.h"
+
+namespace gfx {
+
+bool PresentationRuntime::init(VulkanContext* ctx,
+                               Swapchain* swapchain,
+                               RenderPass* renderPass,
+                               RendererFacade* renderer,
+                               const std::filesystem::path& playerSpritePath) {
+    if (!ctx || !swapchain || !renderPass || !renderer ||
+        !ctx->isInitialized() || !swapchain->isInitialized() ||
+        !renderPass->isInitialized() || !renderer->isInitialized()) {
+        return false;
+    }
+
+    renderer_ = renderer;
+    textReady_ = false;
+    spriteReady_ = false;
+
+    if (textPipeline_.init(ctx, swapchain, renderPass) &&
+        font_.init(ctx, textPipeline_.descriptorSetLayout())) {
+        renderer_->attachText(&textPipeline_, &font_);
+        textReady_ = true;
+    } else {
+        textPipeline_.cleanup();
+        font_.cleanup();
+    }
+
+    if (spritePipeline_.init(ctx, swapchain, renderPass) &&
+        playerSprite_.init(ctx, spritePipeline_.descriptorSetLayout(), playerSpritePath)) {
+        renderer_->attachSprite(&spritePipeline_, &playerSprite_);
+        spriteReady_ = true;
+    } else {
+        spritePipeline_.cleanup();
+        playerSprite_.cleanup();
+    }
+
+    return true;
+}
+
+} // namespace gfx
