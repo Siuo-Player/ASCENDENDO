@@ -48,7 +48,8 @@ TEST_SUITE("PresentationRuntime") {
 
             CHECK(renderer.isInitialized());
             CHECK_FALSE(presentation.spriteReady());
-            CHECK(presentation.textReady() || !presentation.anyReady());
+            const bool textOrNothingReady = presentation.textReady() || !presentation.anyReady();
+            CHECK(textOrNothingReady);
         }
 
         CHECK(renderer.isInitialized());
