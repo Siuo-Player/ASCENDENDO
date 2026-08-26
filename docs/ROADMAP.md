@@ -32,19 +32,33 @@ HISTORICAL   estado anterior
 
 ## Estado de referência — 2026-08-26
 
-`main` contém o hardening 9.6, a consolidação `RendererCore` → passes → `RendererFacade`, o contrato inicial de `RenderSnapshot` e as decomposições já validadas de `FontRenderer`, `SpriteRenderer`, `KeyBindings` tests e `Level` tests.
+`main` contém o hardening incremental 9.6, a consolidação `RendererCore` → passes → `RendererFacade`, o contrato inicial de `RenderSnapshot` e as decomposições validadas de `FontRenderer`, `SpriteRenderer`, testes de `KeyBindings` e testes de `Level`.
 
-O contrato inicial de `RenderSnapshot` está integrado (PR #19), mas a migração geral **continua bloqueada pelo Base Engineering Gate**: a presentation de gameplay ainda possui dependências diretas dos modelos de domínio.
+Também estão integrados:
+
+- `GameStateMachine` e a sua utilização pelo `main.cpp`;
+- `SimulationOrchestrator` e a delegação do fixed-step pelo entry point;
+- ownership de `RendererFacade` baseado em `std::unique_ptr`;
+- lifetime de GLFW protegido por RAII;
+- política única de source-size em **KiB** (`40 KiB` warning / `48 KiB` hard limit), com teste próprio e checker canónico.
+
+A migração geral de `RenderSnapshot` **continua bloqueada pelo Base Engineering Gate**: a presentation de gameplay ainda possui dependências diretas dos modelos de domínio.
 
 ### Evidência recente
 
-- PR #34 — source-size gate corrigido e integrado;
-- PR #36 — RoadMap sincronizado com os estudos;
 - PR #37 — decomposição dos testes de `KeyBindings`, integrada após CI verde;
 - PR #39 — decomposição dos testes de `Level`, integrada após CI verde;
-- CI validou **167/167 test cases e 901/901 assertions**, build do jogo e validação da campanha nos blocos recentes.
+- PR #41 — `GameStateMachine`, integrada após CI verde;
+- PR #42 — contrato adicional de transições, integrado;
+- PR #43 — wiring da `GameStateMachine` no `main.cpp`, integrado;
+- PR #44 — fronteira `SimulationOrchestrator`, integrada;
+- PR #45 — organização/indexação documental, integrada;
+- PR #46 — wiring da simulação no `main.cpp`, integrado;
+- PR #47 — ownership/lifetime work package, integrado;
+- PR #48 — ownership RAII do `RendererFacade`, integrado;
+- PR #49 — política KiB + GLFW RAII, integrado.
 
-O estado deve continuar a ser tratado como evidência Linux/Clang/headless Vulkan. Windows, sanitizers e matriz de hardware continuam fora da evidência automática principal.
+O CI automático validou Linux/Clang/headless Vulkan, build, testes e campanha. A evidência Windows, sanitizers e matriz de hardware continua em falta.
 
 ## Princípio estratégico
 
@@ -72,19 +86,21 @@ O Gate fecha antes de nova feature significativa ou da migração geral de `Rend
 9.6 Base Engineering Gate
 ├── A — processo/documentação/evidência                 ✅
 ├── B — CI observability                                ✅ parcial
-├── C — source-size enforcement                         ✅
+├── C — source-size enforcement                         ✅ KiB
 ├── D — modularidade                                    🔄
-│   ├── FontRenderer                                   ✅
-│   ├── SpriteRenderer                                 ✅
-│   ├── KeyBindings tests                              ✅
-│   ├── Level tests                                    ✅
-│   └── main.cpp architectural decomposition           🔒 próximo
-└── E — Gate review                                    🔒
+│   ├── FontRenderer                                    ✅
+│   ├── SpriteRenderer                                  ✅
+│   ├── KeyBindings tests                               ✅
+│   ├── Level tests                                     ✅
+│   ├── GameStateMachine boundary + wiring              ✅
+│   ├── SimulationOrchestrator + wiring                  ✅
+│   └── main.cpp architectural decomposition             🔄
+└── E — Gate review                                     🔒
 ```
 
 ### Regra de modularidade
 
-Não dividir ficheiros apenas para baixar linhas. Uma divisão exige fronteira de responsabilidade clara e ganho em ownership, testabilidade, diagnóstico ou manutenção. O tamanho é apenas sinal de inspeção.
+Não dividir ficheiros apenas para baixar tamanho. Uma divisão exige fronteira de responsabilidade clara e ganho em ownership, testabilidade, diagnóstico ou manutenção. O tamanho físico em KiB é apenas sinal de inspeção e guardrail de manutenção.
 
 ### Cadeia de evidência
 
@@ -100,45 +116,54 @@ CI verde isolado não fecha o Gate.
 
 ## 9.6 P1 — Fronteiras arquiteturais
 
-### Concluído
+### Concluído nesta tranche de base
 
 - adapter de migração removido;
 - renderer legado removido;
 - `FontRenderer` decomposto;
 - `SpriteRenderer` decomposto/revisto;
 - testes de `KeyBindings` separados por responsabilidade;
-- testes de `Level` separados em geometria, colisão/física e file loading.
+- testes de `Level` separados em geometria, colisão/física e file loading;
+- `GameStateMachine` isolada, testada e ligada ao `main.cpp`;
+- fixed-step delegado a `SimulationOrchestrator`;
+- ownership de `RendererFacade` convertido para RAII;
+- lifetime global de GLFW convertido para RAII;
+- checker de source-size unificado em KiB.
 
-### Próximo: `main.cpp` 🔒
+### Próximo: completar `main.cpp` 🔒
 
-`main.cpp` continua concentrando bootstrap gráfico, carregamento de campanha, configuração, criação do estado de runtime, state machine, simulation loop, editor transitions, persistence e render submission.
+O entry point ainda concentra bootstrap gráfico, carregamento de campanha/configuração, criação de serviços de runtime, editor/campaign orchestration e apresentação.
 
-A decomposição será feita por responsabilidade real, não por número de linhas.
+A decomposição deve continuar por responsabilidade real, preservando a ownership graph existente.
 
-Alvo arquitetural inicial:
+Alvo atual de trabalho:
 
 ```text
 Application/bootstrap
-├── platform/Vulkan bootstrap
+├── platform/GLFW/Vulkan bootstrap
 ├── asset/config/campaign loading
-└── runtime services
-
-GameStateMachine
-├── MENU
-├── PLAYING
-├── PAUSED
-├── CREDITS
-└── EDITOR
+└── runtime service composition
 
 Frame/Runtime loop
 ├── input
-├── fixed-step simulation
 ├── streaming
 ├── state transitions
 └── presentation submission
 ```
 
-O desenho final pode mudar após inspeção de ownership e dependências; esta estrutura é hipótese de trabalho, não decisão irrevogável.
+`GameStateMachine` e `SimulationOrchestrator` já são fronteiras existentes; não devem ser recriadas dentro de uma `Application` monolítica.
+
+### P0 técnico paralelo — Vulkan lifecycle/queues
+
+Antes de fechar o Gate, verificar explicitamente:
+
+- acquire/reset/submit/present sem deadlock em error paths;
+- `VK_ERROR_OUT_OF_DATE_KHR` e `VK_SUBOPTIMAL_KHR` tratados;
+- fence reset apenas quando existe caminho garantido para submissão;
+- graphics queue e present queue não assumidas como a mesma family;
+- capability matrix mínima para queues, extensions, features e surface.
+
+Estes itens são requisitos técnicos do Vulkan e não apenas refatoração estética.
 
 ### Dívida já descoberta nos testes
 
@@ -146,11 +171,11 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 
 ### Depois de `main.cpp`
 
-- RAII/ownership Vulkan;
 - contrato comum de dados de nível entre parser/editor/validator/runtime;
 - Undo/Redo transacional;
 - separação de user data e source tree;
-- limpeza de tooling duplicado.
+- limpeza adicional de tooling duplicado, se algum existir;
+- revisão do Base Engineering Gate.
 
 ## 9.6 P2 — Evidência transversal 🔒
 
@@ -164,7 +189,7 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 - matriz mínima hardware/software;
 - profiling antes de otimização.
 
-Estes itens são importantes para o Gate completo, mas não devem bloquear uma decomposição estrutural pequena quando a propriedade já está claramente isolada e validada no ambiente suportado.
+Estes itens são necessários para o Gate completo, mesmo que uma decomposição pequena possa ser validada primeiro no ambiente suportado.
 
 ## 9.6 P1.9 — RenderSnapshot geral 🔒
 
@@ -216,7 +241,7 @@ player performance
 perceived difficulty
 ```
 
-Agentes automáticos e métricas de PCG não substituem validação humana de player experience.
+O estudo atualizado acrescenta uma cautela importante: um agente automático é um **avaliador com perfil de capacidade/estilo conhecido**, não um substituto universal do jogador humano.
 
 ## Fase 9.7 — Level Editor UX 🔒
 
