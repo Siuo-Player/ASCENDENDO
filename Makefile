@@ -48,10 +48,10 @@ endif
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
 
 # Clang targeting the MSVC ABI must use the same dynamic CRT model as the
-# Visual Studio-built GLFW library staged by Windows CI. Use clang's driver
-# runtime selector so both compile and link phases use the MSVC DLL CRT.
+# Visual Studio-built GLFW library staged by Windows CI. Use clang's native
+# runtime selector; this is the clang++ equivalent of MSVC /MD.
 ifeq ($(PLATFORM),windows)
-    CXXFLAGS_BASE += /MD -fms-runtime-lib=dll
+    CXXFLAGS_BASE += -fms-runtime-lib=dll
 endif
 
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
