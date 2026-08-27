@@ -24,11 +24,11 @@ A execução posterior chegou a compilar e linkar `game.exe` e o executável dos
 
 Na mesma execução, os testes que dependem de Vulkan falharam porque o runner Windows não expunha um ICD/dispositivo utilizável: `VK_ERROR_INCOMPATIBLE_DRIVER (-9)`. Isto é distinto de uma falha de compilação/link e não deve ser resolvido mascarando ou excluindo testes gráficos do full suite.
 
-A CI Linux demonstra o padrão necessário: instala `mesa-vulkan-drivers`, seleciona explicitamente o ICD `lvp_icd.json` e verifica `llvmpipe` antes de executar o suite completo. O loader Vulkan suporta `VK_DRIVER_FILES` como mecanismo explícito para selecionar um manifesto de driver, sendo `VK_ICD_FILENAMES` a forma antiga/deprecated. Portanto, a correção seguinte da tranche fornece uma versão Windows do mesmo princípio através de Lavapipe e fixa o loader no manifesto do driver instalado.
+A CI Linux demonstra o padrão necessário: instala `mesa-vulkan-drivers`, seleciona explicitamente o ICD e verifica `llvmpipe` antes de executar o suite completo. O loader Vulkan suporta `VK_DRIVER_FILES` como mecanismo explícito para selecionar um manifesto de driver. A tranche Windows segue o mesmo princípio através de Lavapipe.
 
-A implementação usa `jakoch/install-vulkan-sdk-action@v1.6.0` com `install_lavapipe: true`, verifica o manifesto em `C:\\lavapipe\\share\\vulkan\\icd.d\\lvp_icd.x86_64.json` e exporta esse caminho em `VK_DRIVER_FILES`. O resultado ainda precisa de validação executável; a ação é uma dependência de CI explicitamente fixada e não uma alteração do runtime distribuído.
+A ação `jakoch/install-vulkan-sdk-action@v1.6.0` foi observada a instalar Lavapipe 25.2.5 sob o hosted tool cache. O caminho é, portanto, descoberto dinamicamente a partir do manifesto efetivamente instalado, em vez de se assumir uma localização ou versão de pacote.
 
-A utilização de `VK_DRIVER_FILES` é intencional: o loader Vulkan documenta esta variável como o mecanismo atual para forçar um manifesto de driver específico; `VK_ICD_FILENAMES` permanece suportado mas está deprecated. 
+A execução subsequente demonstrou ainda que a instalação do SDK expõe `vulkaninfoSDK.exe`, não `vulkaninfo.exe` na localização inicialmente assumida. O workflow foi atualizado para verificar o executável efetivamente disponibilizado pela instalação.
 
 ## Inclui
 
