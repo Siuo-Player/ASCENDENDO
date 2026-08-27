@@ -48,17 +48,6 @@ endif
 # -Werror: um novo warning no codigo do projecto nao pode entrar silenciosamente.
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -MMD -MP
 
-# Clang targeting the MSVC ABI must use the same dynamic CRT model as the
-# Visual Studio-built GLFW library staged by Windows CI. The MSVC environment
-# still contributes default libraries through the linker, so make the intended
-# CRT unambiguous at link time as well as at compile time.
-ifeq ($(PLATFORM),windows)
-    CXXFLAGS_BASE += -fms-runtime-lib=dll
-    LDFLAGS_CRT   := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt -Xlinker /WX
-else
-    LDFLAGS_CRT   :=
-endif
-
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
 ifeq ($(PLATFORM),linux)
     CXXFLAGS_DBG := -g -O0 -DDEBUG -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -80,8 +69,9 @@ TEST_BUILD_DIR := $(BUILD_DIR)/test
 TEST_LOG       := $(BUILD_DIR)/test_results.txt
 
 # ── Includes ──────────────────────────────────────────────────────────────────
-# Recursive assignment is intentional: the directory variables above must be
-# resolved before this value is consumed by platform-specific additions below.
+# Recursive assignment keeps GAME_DIR/EXT_DIR expandable before use below.
+# Third-party headers are treated as system headers so their internal warnings
+# do not become project warnings.
 INCLUDES = -I$(GAME_DIR) -isystem $(EXT_DIR)
 
 # ── Vulkan ────────────────────────────────────────────────────────────────────
@@ -109,6 +99,17 @@ ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
     endif
 endif
 
+# Clang targeting the MSVC ABI must use the same dynamic CRT model as the
+# Visual Studio-built GLFW library staged by Windows CI. The MSVC environment
+# still contributes default libraries through the linker, so make the intended
+# CRT unambiguous at link time as well as at compile time.
+ifeq ($(PLATFORM),windows)
+    CXXFLAGS_BASE += -fms-runtime-lib=dll
+    LDFLAGS_CRT   := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt -Xlinker /WX
+else
+    LDFLAGS_CRT   :=
+endif
+
 # ── Fontes ────────────────────────────────────────────────────────────────────
 GAME_SRCS := $(wildcard $(GAME_DIR)/Core/*.cpp)     \
              $(wildcard $(GAME_DIR)/Graphics/*.cpp) \
@@ -125,32 +126,63 @@ GAME_MAIN_SRC := main.cpp
 GAME_MAIN_OBJ := $(GAME_BUILD_DIR)/main.o
 
 # ── Objects ───────────────────────────────────────────────────────────────────
+# Game e testes usam configurações de compilação diferentes. Separar os objetos
+# evita que objetos compilados com ASan/UBSan sejam reutilizados pelo binário
+# release e elimina mismatches entre compilação e linkagem.
 GAME_OBJS := $(patsubst %.cpp,$(GAME_BUILD_DIR)/%.o,$(GAME_SRCS))
-GAME_OBJS := $(subst /,\\,$(GAME_OBJS))
+TEST_OBJS := $(patsubst %.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SRCS))
+
+# ── Dependencias de headers ───────────────────────────────────────────────────
+DEPS := $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d) $(GAME_MAIN_OBJ:.o=.d)
+-include $(DEPS)
+
+# ── Binários ──────────────────────────────────────────────────────────────────
 GAME_LIB  := $(GAME_BUILD_DIR)/libgame.a
 GAME_BIN  := $(GAME_BUILD_DIR)/game$(EXE_EXT)
-
-TEST_OBJS := $(patsubst %.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SRCS))
-TEST_OBJS := $(subst /,\\,$(TEST_OBJS))
 TEST_BIN  := $(TEST_BUILD_DIR)/tests$(EXE_EXT)
 
-# Linux needs the test binary linked against the game objects; Windows uses
-# the same object set and libraries, but through the MSVC-compatible driver.
-TEST_LINK_DEPS := $(GAME_OBJS)
+ifneq ($(strip $(GAME_OBJS)),)
+    TEST_LINK_DEPS := $(GAME_LIB)
+endif
 
-# ── Dependency files ─────────────────────────────────────────────────────────
--include $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
+# ── Shaders ────────────────────────────────────────────────────────────────────
+GLSLC       := glslc
+SHADER_DIR  := Game/Assets/Shaders
+SHADER_SRCS := $(wildcard $(SHADER_DIR)/*.vert) $(wildcard $(SHADER_DIR)/*.frag)
+SHADER_OBJS := $(patsubst %,%.spv,$(SHADER_SRCS))
 
-# ── Targets ───────────────────────────────────────────────────────────────────
-.PHONY: all game tests tests-fast tests-verbose clean help
+$(SHADER_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
+	@echo "[GLSL] $<"
+	@$(GLSLC) $< -o $@
 
-all: game
+$(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
+	@echo "[GLSL] $<"
+	@$(GLSLC) $< -o $@
 
-# Compile and run the complete TDD test suite.
+.PHONY: shaders
+shaders: $(SHADER_OBJS)
+
+# ── Targets Principais ────────────────────────────────────────────────────────
+.PHONY: all game tests tests-verbose tests-fast clean help
+
+all: help
+
+help:
+	@echo ""
+	@echo "  Vertical Precision Platformer — sistema de build"
+	@echo "  ─────────────────────────────────────────────────"
+	@echo "  make tests         compila e executa testes (silencioso)"
+	@echo "  make tests-verbose compila e executa testes (detalhado)"
+	@echo "  make game          compila o binário do jogo (release)"
+	@echo "  make clean         remove a pasta build/"
+	@echo "  make help          mostra esta mensagem"
+	@echo ""
+
+## tests — compila e corre todos os testes de forma silenciosa (ideal para commits)
 tests: shaders $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
-	@echo "  A executar testes TDD..."
+	@echo "  A executar testes..."
 	@echo "  ==========================================="
 ifeq ($(PLATFORM),windows)
 	@$(RUN_TEST) normal
