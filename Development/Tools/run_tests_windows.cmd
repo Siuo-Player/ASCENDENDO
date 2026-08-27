@@ -1,7 +1,7 @@
 @echo off
 setlocal
 
-set "TEST_EXE=build\tests.exe"
+set "TEST_EXE=build\test\tests.exe"
 set "TEST_LOG=build\test_results.txt"
 set "MODE=%~1"
 

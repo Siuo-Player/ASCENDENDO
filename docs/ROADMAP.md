@@ -61,9 +61,10 @@ A migração geral de `RenderSnapshot` **continua bloqueada pelo Base Engineerin
 - PR #49 — política KiB + GLFW RAII, integrado;
 - PR #69 — wiring de `PresentationRuntime` no `main.cpp`, integrado;
 - PR #70 — cobertura explícita Linux/Clang ASan + UBSan para produção + testes, integrado;
-- PR #72 — primeira extração arquitetural de `main.cpp` para `logic::GameSession`, integrada após `Tests #746` e `Sanitizers #8` verdes.
+- PR #72 — primeira extração arquitetural de `main.cpp` para `logic::GameSession`, integrada após `Tests #746` e `Sanitizers #8` verdes;
+- PR #85 — evidência Windows scoped: runner Windows `windows-2025-vs2026`, Clang/MSVC, Vulkan SDK + Lavapipe, GLFW pinned, `make game`, `make tests`, campanha e artifact de evidência validados no head final `d0d8a4954b73924d91bed444bb9034cb23e52fa6`.
 
-A evidência Linux agora cobre workflow normal, headless Vulkan, campanha e ASan/UBSan. A evidência Windows e a matriz de hardware/capabilities continuam em falta. O endurecimento específico de Vulkan lifecycle/queues também não está demonstrado como concluído.
+A evidência Linux agora cobre workflow normal, headless Vulkan, campanha e ASan/UBSan. A evidência Windows está demonstrada no runner selecionado pelo PR #85. A matriz mais ampla de hardware/capabilities e o endurecimento específico de Vulkan lifecycle/queues continuam sem encerramento global.
 
 ## Princípio estratégico
 
@@ -100,8 +101,8 @@ O Gate fecha antes de nova feature significativa ou da migração geral de `Rend
 │   ├── GameStateMachine boundary + wiring              ✅
 │   ├── SimulationOrchestrator + wiring                 ✅
 │   ├── PresentationRuntime + wiring                    ✅
-│   ├── GameSession runtime/session boundary              ✅
-│   └── remaining main.cpp decomposition                 🔄
+│   ├── GameSession runtime/session boundary            ✅
+│   └── remaining main.cpp decomposition                🔄
 └── E — Gate review                                     🔒
 ```
 
@@ -189,8 +190,8 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 
 ## 9.6 P2 — Evidência transversal 🔒
 
-- Windows build + tests no CI;
-- `make game`/equivalente no Windows;
+- **Windows build + tests no CI** ✅ — PR #85, runner `windows-2025-vs2026`, com software Vulkan Lavapipe e artifact de evidência;
+- `make game`/equivalente no Windows ✅ — PR #85;
 - **Linux ASan/UBSan** ✅ — PR #70, workflow independente, com instrumentação dos objetos de produção `Game` usados pelos testes;
 - replay regression tick-by-tick;
 - property/invariant tests;
@@ -199,7 +200,7 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 - matriz mínima hardware/software;
 - profiling antes de otimização.
 
-O Linux sanitizer gap original está encerrado como evidência. O Gate continua aberto porque Windows, Vulkan failure-path/queue evidence e outras propriedades transversais ainda não foram demonstrados.
+O Linux sanitizer gap original está encerrado como evidência. A evidência Windows está encerrada **apenas no scope do runner/ambiente validado por #85**; não implica compatibilidade universal com qualquer configuração Windows. O Gate continua aberto porque replay determinístico, malformed/error paths, Vulkan failure-path/queue evidence, matriz mais ampla e arquitetura do entry point ainda não foram fechados.
 
 ## 9.6 P1.9 — RenderSnapshot geral 🔒
 
@@ -424,4 +425,4 @@ apagar branch
 abrir próxima branch a partir do main atualizado
 ```
 
-Branch encerrada sem merge não é preservada por padrão. Histórico de PR/commits substitui branches-laboratório permanentes.
+Branch encerrada deve ser removida; histórico permanece em Git/PR.

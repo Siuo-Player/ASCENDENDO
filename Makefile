@@ -95,6 +95,15 @@ ifneq ($(wildcard $(GLFW_DIR)/include/GLFW/glfw3.h),)
     endif
 endif
 
+# Clang targeting the MSVC ABI must use the same dynamic CRT model as the
+# Visual Studio-built GLFW library staged by Windows CI.
+ifeq ($(PLATFORM),windows)
+    CXXFLAGS_BASE += -fms-runtime-lib=dll
+    LDFLAGS_CRT := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt -Xlinker /WX
+else
+    LDFLAGS_CRT :=
+endif
+
 # ── Fontes ────────────────────────────────────────────────────────────────────
 GAME_SRCS := $(wildcard $(GAME_DIR)/Core/*.cpp)     \
              $(wildcard $(GAME_DIR)/Graphics/*.cpp) \
@@ -212,11 +221,11 @@ game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 
 $(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_CRT) $(LDFLAGS_DBG)
 
 $(GAME_BIN): $(GAME_MAIN_OBJ) $(GAME_LIB) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -o $@ $^ $(LDFLAGS_REL)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -o $@ $^ $(LDFLAGS_CRT) $(LDFLAGS_REL)
 
 $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 	@echo "[LIB] $(notdir $@)"

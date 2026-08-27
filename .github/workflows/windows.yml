@@ -1,0 +1,164 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - main
+      - '**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows / Clang / C++20
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
+
+    env:
+      VULKAN_SDK_VERSION: 1.4.309.0
+      GLFW_VERSION: 3.4
+      GLFW_COMMIT: 7b6aead9fb88b3623e3b3725ebb42670cbe4c579
+      LLVM_VERSION: 20.1.8
+
+    steps:
+      - name: Checkout ASCENDENDO
+        uses: actions/checkout@v6
+
+      - name: Install GNU Make
+        shell: pwsh
+        run: choco install make --yes --no-progress
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2.0.9
+        with:
+          version: ${{ env.LLVM_VERSION }}
+          arch: x64
+
+      - name: Install Vulkan SDK and Lavapipe
+        uses: jakoch/install-vulkan-sdk-action@v1.6.0
+        with:
+          vulkan_version: ${{ env.VULKAN_SDK_VERSION }}
+          cache: true
+          install_lavapipe: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure deterministic Vulkan software driver
+        shell: pwsh
+        run: |
+          $toolCache = if ($env:RUNNER_TOOL_CACHE) { $env:RUNNER_TOOL_CACHE } else { 'C:\hostedtoolcache' }
+          $lavapipeRoot = Join-Path $toolCache 'lavapipe'
+          $icd = Get-ChildItem $lavapipeRoot -Recurse -Filter 'lvp_icd.x86_64.json' -File |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $icd) {
+            throw "Lavapipe ICD manifest was not installed below $lavapipeRoot"
+          }
+          "VK_DRIVER_FILES=$icd" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using Vulkan driver manifest: $icd"
+
+      - name: Configure native Visual Studio environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          clang++ --version
+          llvm-ar --version
+          cmake --version
+          make --version
+          if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is not set' }
+          glslc --version
+          if (-not $env:VK_DRIVER_FILES) { throw 'VK_DRIVER_FILES is not set' }
+          Write-Host "VK_DRIVER_FILES=$env:VK_DRIVER_FILES"
+          $vulkanInfo = Get-Command vulkaninfoSDK.exe -ErrorAction Stop
+          Write-Host "vulkaninfoSDK: $($vulkanInfo.Source)"
+          & $vulkanInfo.Source --summary
+
+      - name: Fetch pinned GLFW source
+        shell: pwsh
+        run: |
+          $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
+          git clone --no-checkout https://github.com/glfw/glfw.git $glfwSrc
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW clone failed' }
+          git -C $glfwSrc fetch --depth 1 origin $env:GLFW_COMMIT
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW commit fetch failed' }
+          git -C $glfwSrc checkout --detach $env:GLFW_COMMIT
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW commit checkout failed' }
+          $actual = (git -C $glfwSrc rev-parse HEAD).Trim()
+          if ($actual -ne $env:GLFW_COMMIT) {
+            throw "GLFW commit mismatch: expected $env:GLFW_COMMIT, got $actual"
+          }
+          "GLFW commit: $actual" | Set-Content 'glfw-revision.txt'
+
+      - name: Build GLFW Release dependency
+        shell: pwsh
+        run: |
+          $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
+          $glfwBuild = Join-Path $env:RUNNER_TEMP 'glfw-build'
+          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 18 2026' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+          cmake --build $glfwBuild --config Release --target glfw
+
+          $built = Join-Path $glfwBuild 'src\Release\glfw3.lib'
+          if (-not (Test-Path $built)) {
+            throw "GLFW library not found at $built"
+          }
+
+          New-Item -ItemType Directory -Force -Path 'external\glfw\lib-vc2022' | Out-Null
+          Copy-Item $built 'external\glfw\lib-vc2022\glfw3.lib' -Force
+
+      - name: Record Windows dependency environment
+        shell: pwsh
+        run: |
+          @(
+            "OS: $([System.Environment]::OSVersion.VersionString)",
+            "GLFW version: $env:GLFW_VERSION",
+            "GLFW commit: $env:GLFW_COMMIT",
+            "LLVM version: $env:LLVM_VERSION",
+            "Vulkan SDK version: $env:VULKAN_SDK_VERSION",
+            "VULKAN_SDK: $env:VULKAN_SDK",
+            "Vulkan driver manifest: $env:VK_DRIVER_FILES",
+            "clang++: $(clang++ --version | Select-Object -First 1)",
+            "cmake: $(cmake --version | Select-Object -First 1)",
+            "make: $(make --version | Select-Object -First 1)",
+            "GLFW MSVC runtime: MultiThreadedDLL (/MD)"
+          ) | Set-Content 'windows-environment.txt'
+
+      - name: Test source-size policy
+        shell: pwsh
+        run: python Tests\Tooling\test_check_source_sizes.py
+
+      - name: Check source-file size policy
+        shell: pwsh
+        run: python Development\Tools\check_source_sizes.py
+
+      - name: Build game
+        shell: pwsh
+        run: |
+          make clean
+          make game -j2
+
+      - name: Run full test suite
+        shell: pwsh
+        run: make tests -j2
+
+      - name: Validate active campaign levels
+        shell: pwsh
+        run: python Development\AI_Validation\ai_validator.py --campaign
+
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-build-test-evidence
+          path: |
+            windows-environment.txt
+            glfw-revision.txt
+            build\test_results.txt
+            build\test\tests.exe
+            build\game\game.exe
+          if-no-files-found: error
