@@ -22,6 +22,7 @@ struct GameSessionUpdateResult {
     bool quitRequested = false;
     bool campaignCompleted = false;
     bool runRecorded = false;
+    bool stateChanged = false;
     float completionElapsedSeconds = 0.0f;
 };
 
