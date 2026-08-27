@@ -9,6 +9,7 @@
 // =============================================================================
 
 #include "Logic/InputManager.h"
+#include "Core/KeyBindings.h"
 
 #ifdef GLFW_AVAILABLE
 #define GLFW_INCLUDE_VULKAN
@@ -63,6 +64,26 @@ bool InputManager::isKeyJustReleased(int key) const {
 bool InputManager::isLeft()  const { return isKeyDown(Key::A)     || isKeyDown(Key::LEFT);  }
 bool InputManager::isRight() const { return isKeyDown(Key::D)     || isKeyDown(Key::RIGHT); }
 bool InputManager::isJump()  const { return isKeyDown(Key::SPACE);                          }
+
+TickInput InputManager::tickInput(const core::KeyBindings& bindings,
+                                  std::size_t tickInFrame) const {
+    TickInput result;
+    result.left = core::isActionHeld(bindings, *this, core::GameAction::MoveLeft);
+    result.right = core::isActionHeld(bindings, *this, core::GameAction::MoveRight);
+    result.jumpHeld = core::isActionHeld(bindings, *this, core::GameAction::Jump);
+
+    // GLFW callbacks are sampled once per rendered frame. A frame may then
+    // produce multiple fixed simulation ticks. Edge events therefore belong
+    // to the first semantic tick only; otherwise one physical press could
+    // trigger the same edge action more than once.
+    if (tickInFrame == 0) {
+        result.jumpPressed = core::isActionJustPressed(
+            bindings, *this, core::GameAction::Jump);
+        result.jumpReleased = core::isActionJustReleased(
+            bindings, *this, core::GameAction::Jump);
+    }
+    return result;
+}
 
 void InputManager::injectRawState(bool left, bool right, bool jumpHeld, bool jumpPressed, bool jumpReleased) {
     m_current.clear();
