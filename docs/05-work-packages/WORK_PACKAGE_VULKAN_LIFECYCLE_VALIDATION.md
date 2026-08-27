@@ -34,7 +34,7 @@ A cobertura adicionada demonstrou no CI Linux/headless:
 - criação de uma janela + `VkSurfaceKHR` real;
 - graphics queue e present queue válidas no `VulkanContext`;
 - suporte efetivo da present family à surface através de `vkGetPhysicalDeviceSurfaceSupportKHR`;
-- execução normal e ASan/UBSan do implementation state sem falhas.
+- execução normal e ASan/UBSan sem falhas.
 
 A capability matrix foi **observada no ambiente CI atual**, não universalmente provada para todo hardware possível.
 
@@ -114,9 +114,15 @@ A última linha permanece dívida explícita: sem uma camada de injeção/mockin
 
 ### Evidência final
 
-Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`.
+Commit de código: `8998290fa2ad2d04c5306640553d228406a3543a`.
 
-`Tests #775` e `Sanitizers #17` passaram, incluindo source-size, headless Vulkan e campaign validation. Os commits posteriores desta branch alteraram apenas documentação, sem runtime/build code.
+- `Tests #775` — success;
+- `Sanitizers #17` — success;
+- source-size checks — success;
+- headless Vulkan — success;
+- campaign validation — success.
+
+A atualização documental posterior também passou o workflow normal final `Tests #778` — success. Os commits documentais posteriores não alteraram runtime/build code.
 
 ## Definition of Ready
 
@@ -132,7 +138,7 @@ Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`.
 - [x] capability matrix mínima coberta por testes executáveis;
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
 - [x] normal + ASan/UBSan verdes;
-- [x] documentação de dívida/Vulkan sincronizada;
+- [x] dívida/documentação de Vulkan sincronizada;
 - [ ] PR integrada.
 
 ## Próxima decisão
