@@ -56,12 +56,20 @@ bool VulkanContext::createSurface(VkSurfaceKHR surface) {
 
     if (!reconfigureForSurface()) {
         destroySurface();
+
         // Surface-aware reconfiguration is terminal for this context unless
-        // the caller performs a full shutdown() + init().
+        // the caller performs a full shutdown() + init(). A failure may happen
+        // before the old device is replaced, so normalize and destroy it here
+        // rather than merely dropping the handle.
+        if (m_device != VK_NULL_HANDLE) {
+            vkDeviceWaitIdle(m_device);
+            vkDestroyDevice(m_device, nullptr);
+            m_device = VK_NULL_HANDLE;
+            m_graphicsQueue = VK_NULL_HANDLE;
+            m_presentQueue = VK_NULL_HANDLE;
+        }
+
         m_initialized = false;
-        m_device = VK_NULL_HANDLE;
-        m_graphicsQueue = VK_NULL_HANDLE;
-        m_presentQueue = VK_NULL_HANDLE;
         return false;
     }
     return true;
