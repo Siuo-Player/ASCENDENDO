@@ -136,10 +136,15 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     LevelData data;
     data.name = name;
     data.spawnPosition = m_spawnPosition;
-    data.platforms.reserve(m_platforms.size());
+
+    // The initial ground is implicit in the editor document but was historically
+    // materialized by saveEditorLevel(). Keep it materialized in LevelData too.
+    data.platforms.push_back(m_initialGround);
+    data.platforms.reserve(m_platforms.size() + 1);
     for (const auto& platform : m_platforms) {
         data.platforms.push_back(platform.bounds);
     }
+
     if (m_flag) data.flag = *m_flag;
     return data;
 }
