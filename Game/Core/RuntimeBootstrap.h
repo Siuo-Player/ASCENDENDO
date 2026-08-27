@@ -10,6 +10,7 @@ namespace core {
 
 struct RuntimeBootstrapResult {
     RuntimePaths paths;
+    bool userDirectoriesReady = false;
     std::vector<std::filesystem::path> campaign;
     std::string campaignID;
 
@@ -20,9 +21,8 @@ struct RuntimeBootstrapResult {
 
 class RuntimeBootstrap {
 public:
-    static RuntimeBootstrapResult prepare(
-        const char* argv0,
-        bool* userDirectoriesReady = nullptr);
+    static RuntimeBootstrapResult prepare(RuntimePaths paths);
+    static RuntimeBootstrapResult fromProcess(const char* argv0 = nullptr);
 };
 
 } // namespace core
