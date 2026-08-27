@@ -16,20 +16,20 @@ Unificar a representação declarativa de um nível entre parser/IO, editor e ru
 
 A investigação do estado atual encontrou duas representações concorrentes do mesmo conteúdo:
 
-- `logic::Level` guarda plataformas e flag e também contém o parser textual em `appendFromFile()`;
+- `logic::Level` guarda plataformas e flag e também continha o parser textual em `appendFromFile()`;
 - `logic::LevelEditorDocument` guarda plataformas, spawn e flag para edição;
-- `saveEditorLevel()` serializa diretamente `LevelEditorDocument` para `.lvl`;
-- `CampaignRuntime` manda `Level` interpretar diretamente cada `.lvl`.
+- `saveEditorLevel()` serializava diretamente `LevelEditorDocument` para `.lvl`;
+- `CampaignRuntime` mandava `Level` interpretar diretamente cada `.lvl`.
 
-A diferença não é apenas de API: o editor possui estado declarativo de spawn que o serializer atualmente não persiste, enquanto o runtime recebe apenas plataformas/flag através de parsing direto. Isto cria risco de divergência sem uma representação intermediária única.
+A diferença não é apenas de API: o editor possui estado declarativo de spawn que o serializer não persistia, enquanto o runtime recebia apenas plataformas/flag através de parsing direto. Isto cria risco de divergência sem uma representação intermediária única.
 
 ## Decisão arquitetural
 
 Criar `logic::LevelData` como modelo declarativo local de um único nível, independente de Vulkan/GLFW e sem estado de streaming/runtime.
 
-`LevelData` conterá apenas dados que pertencem ao conteúdo de um nível: nome, plataformas, posição de spawn e flag opcional.
+`LevelData` contém apenas dados que pertencem ao conteúdo de um nível: nome, plataformas, posição de spawn opcional e flag opcional.
 
-A arquitetura será:
+A arquitetura é:
 
 ```text
 .lvl
@@ -39,26 +39,26 @@ LevelData
   └── LevelEditorDocument view
 ```
 
-`Level` continuará responsável pela geometria runtime e pela composição de chunks no mundo, mas deixará de ser o parser principal do formato. `LevelEditorDocument` continuará responsável pelas regras de edição (snap, limites, regra de flag final), usando `LevelData` como representação de conteúdo e não como substituto das invariantes de edição.
+`Level` continua responsável pela geometria runtime e pela composição de chunks no mundo, mas deixa de ser o parser principal do formato. `LevelEditorDocument` continua responsável pelas regras de edição (snap, limites, regra de flag final), expondo uma conversão para `LevelData` sem transferir essas regras ao modelo declarativo.
 
 Offsets Y de campaign/streaming **não** fazem parte de `LevelData`; são responsabilidade de `CampaignRuntime`/`Level` ao compor níveis locais no mundo.
 
 ## Alternativas consideradas
 
-1. Manter `Level` como parser e converter para editor quando necessário — rejeitado porque mantém duas representações concorrentes e preserva parsing acoplado ao runtime.
-2. Fazer `LevelEditorDocument` ser o modelo comum — rejeitado porque contém regras/estado próprios do editor e depende de invariantes de interação que não pertencem ao runtime.
-3. Introduzir um framework genérico de serialization/schema — rejeitado; o formato `.lvl` é simples e específico do projeto e não justifica uma camada genérica.
-4. Incluir `offsetY`/streaming em `LevelData` — rejeitado; isso mistura conteúdo persistido com estado de composição runtime.
+1. Manter `Level` como parser e converter para editor quando necessário — rejeitado porque mantém parsing acoplado ao runtime.
+2. Fazer `LevelEditorDocument` ser o modelo comum — rejeitado porque contém regras/estado próprios do editor.
+3. Introduzir um framework genérico de serialization/schema — rejeitado; o formato `.lvl` é simples e específico do projeto.
+4. Incluir `offsetY`/streaming em `LevelData` — rejeitado; mistura conteúdo persistido com estado runtime.
 
 ## Inclui
 
 - introduzir `LevelData` declarativo;
 - separar parsing/serialização do modelo runtime/editor;
 - adaptar `Level` para consumir `LevelData` e continuar aplicando offset de streaming;
-- adaptar `LevelEditorDocument` para exportar/receber dados declarativos preservando as invariantes de edição;
-- preservar o formato textual atual nesta tranche, sem introduzir versioning ainda;
-- testar round-trip semântico do modelo e os consumidores atuais;
-- sincronizar arquitetura, roadmap e dívida.
+- adaptar `LevelEditorDocument` para exportar dados declarativos;
+- preservar o formato textual histórico nesta tranche, com `SPAWN` opcional e sem `VERSION`;
+- testar round-trip semântico e consumidores atuais;
+- sincronizar documentação após validação.
 
 ## Não inclui
 
@@ -74,7 +74,7 @@ Offsets Y de campaign/streaming **não** fazem parte de `LevelData`; são respon
 
 ```text
 LevelData
- ├── Level parser/serializer
+ ├── LevelDataIO
  ├── Level runtime
  └── LevelEditorDocument
 
@@ -91,6 +91,7 @@ CampaignRuntime
 - `LevelData` não inclui tipos ou ownership de Vulkan/GLFW;
 - dados persistidos descrevem um único nível em coordenadas locais;
 - streaming offset nunca é persistido no `LevelData`;
+- ausência de `SPAWN` é distinta de `SPAWN 0 0`;
 - carregar e serializar preservam semanticamente nome, plataformas, spawn e flag suportados;
 - `Level` mantém as regras atuais de composição em world coordinates;
 - regras editoriais continuam pertencentes ao editor, não ao modelo de transporte.
@@ -99,10 +100,11 @@ CampaignRuntime
 
 | Risco | Impacto | Mitigação | Estado |
 |---|---|---|---|
-| Alterar parsing muda níveis existentes | alto | manter grammar atual e adicionar fixtures de round-trip | aberto |
-| Spawn existente não aparece nos `.lvl` atuais | médio | preservar fallback/default atual e explicitar diferença na documentação | aberto |
-| Mistura entre modelo declarativo e regras editoriais | médio | manter `LevelData` neutro e validação no editor/runtime | aberto |
-| Streaming offset regressa | alto | testes explícitos de composição de chunks com offsets distintos | aberto |
+| Alterar parsing muda níveis existentes | alto | manter grammar atual e adicionar fixtures de round-trip | mitigado; teste adicionado |
+| Spawn existente não aparece nos `.lvl` atuais | médio | `SPAWN` opcional; ficheiros históricos permanecem sem spawn | resolvido por contrato |
+| Mistura entre modelo declarativo e regras editoriais | médio | `LevelData` neutro e validação no editor/runtime | resolvido estruturalmente |
+| Streaming offset regressa | alto | teste explícito de composição com offset | coberto |
+| Mudança inadvertida no header do editor | médio | preservar includes mínimos e CI de compilação | encontrada e corrigida |
 
 ## Validation
 
@@ -113,7 +115,19 @@ CampaignRuntime
 - `make tests` Linux/headless;
 - ASan/UBSan;
 - campaign validation;
-- revisão do dependency map e da ownership graph.
+- revisão do dependency map e ownership graph.
+
+### Falha CI observada e corrigida
+
+**Run:** `33028119249`  
+**Commit:** `f675965b6a73f4cdc71064ce1eff4baa5215cc07`  
+**Failing step:** `Build and run tests in virtual X display`  
+**Classificação:** erro de compilação introduzido pela branch.  
+**Causa confirmada:** `LevelEditor.h` passou temporariamente a incluir `EditorRenderSnapshot.h`, que por sua vez dependia dos tipos `EditorToolMode`/`EditorSizePreset` definidos no mesmo header de editor. Isso criou uma ordem de inclusão circular/indefinida.  
+**Correção:** restaurados os includes mínimos de `LevelEditor.h`: apenas `Physics.h` e `LevelData.h`, mais headers STL necessários.  
+**Próxima validação:** nova execução normal + ASan/UBSan a partir do estado corrigido.
+
+Não foram feitas alterações atribuídas a infraestrutura; o log mostrou compilação falhando em `EditorInteraction.cpp`/`EditorLevelIO.cpp` com tipos desconhecidos concretos.
 
 ## Definition of Ready
 
@@ -125,21 +139,36 @@ CampaignRuntime
 
 ## Definition of Done
 
-- [ ] `LevelData` é o modelo comum declarativo;
-- [ ] parser/serializer deixam de depender diretamente do runtime/editor model;
-- [ ] runtime mantém comportamento de streaming;
-- [ ] editor mantém invariantes existentes;
-- [ ] round-trip e fixtures passam;
-- [ ] normal + ASan/UBSan verdes;
+- [x] `LevelData` é o modelo comum declarativo;
+- [x] parser/serializer deixaram de depender diretamente do runtime/editor model;
+- [x] runtime mantém comportamento de streaming;
+- [x] editor mantém invariantes existentes;
+- [x] round-trip e fixtures foram adicionados;
+- [ ] normal + ASan/UBSan verdes após a correção final;
 - [ ] architecture/roadmap/TECH_DEBT sincronizados;
 - [ ] PR integrada.
 
 ## Alterações durante execução
 
-Registar aqui qualquer descoberta que altere a decisão, especialmente diferenças semânticas entre `.lvl` histórico e o estado editável atual.
+```text
+1. `LevelEditor.h` recebeu includes de apresentação por engano.
+   Evidência: build CI falhou com tipos EditorToolMode/EditorSizePreset desconhecidos.
+   Correção: restaurado header mínimo e desacoplado.
+
+2. `spawnPosition` foi inicialmente modelado como Vec2 obrigatório.
+   Problema: `SPAWN 0 0` seria indistinguível de ausência.
+   Correção: `std::optional<Vec2>` para preservar a semântica.
+
+3. `LevelDataIO` inicialmente rejeitava documentos sem plataformas.
+   Compatibilidade: o parser histórico permitia essa forma.
+   Correção: remoção dessa restrição para não introduzir uma regra nova nesta tranche.
+
+4. `LevelEditorDocument` originalmente serializava implicitamente o chão inicial.
+   Compatibilidade: `toLevelData()` materializa novamente esse chão.
+```
 
 ## Fecho
 
-**Estado:** investigação concluída, implementação por iniciar.
+**Estado:** implementação concluída, em revalidação após correção de compilação.
 
-**Próxima decisão:** implementar `LevelData` com a menor superfície possível e adaptar primeiro IO/parser, depois runtime/editor consumers.
+**Próxima decisão:** confirmar normal + ASan/UBSan. Se ambos passarem, sincronizar os documentos normativos e abrir/integrar a PR. O versionamento do formato permanece separado para a Fase 10.
