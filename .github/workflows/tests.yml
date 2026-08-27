@@ -16,10 +16,11 @@ jobs:
   tests:
     name: Linux / Clang / C++20 / Headless Vulkan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install toolchain and headless graphics dependencies
         run: |
@@ -40,7 +41,8 @@ jobs:
           test -n "$ICD"
           echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
           echo "Using Vulkan ICD: $ICD"
-          vulkaninfo --summary 2>/dev/null | grep -E 'Vulkan Instance Version:|deviceName|driverName|driverInfo' || true
+          vulkaninfo --summary > vulkaninfo-summary.txt 2>&1
+          grep -E 'Vulkan Instance Version:|deviceName|driverName|driverInfo' vulkaninfo-summary.txt
 
       - name: Build and run tests in virtual X display
         shell: bash
@@ -66,13 +68,20 @@ jobs:
           run_quiet tests xvfb-run -a -s '-screen 0 1280x720x24' make tests -j2
 
           echo "[CI] Test summary:"
-          grep -E '\[doctest\] (test cases|assertions|Status:)' build-tests.log || true
+          grep -E '\[doctest\] (test cases|assertions|Status:)' build-tests.log
 
-          rm -f build-clean.log build-game-build.log build-tests.log
-        env:
-          LIBGL_ALWAYS_SOFTWARE: "1"
-          GALLIUM_DRIVER: "llvmpipe"
-          VK_LOADER_DEBUG: "error"
+      - name: Upload Linux CI diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: linux-ci-diagnostics
+          path: |
+            build-clean.log
+            build-game-build.log
+            build-tests.log
+            build\test_results.txt
+            vulkaninfo-summary.txt
+          if-no-files-found: warn
 
       - name: Validate active campaign levels
         run: python3 Development/AI_Validation/ai_validator.py --campaign
