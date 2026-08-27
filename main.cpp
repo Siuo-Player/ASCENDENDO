@@ -98,13 +98,11 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    bool userDirectoriesReady = false;
-    core::RuntimeBootstrapResult bootstrap =
-        core::RuntimeBootstrap::prepare(
-            argc > 0 ? argv[0] : nullptr,
-            &userDirectoriesReady);
+    const core::RuntimeBootstrapResult bootstrap =
+        core::RuntimeBootstrap::fromProcess(
+            argc > 0 ? argv[0] : nullptr);
 
-    if (!userDirectoriesReady) {
+    if (!bootstrap.userDirectoriesReady) {
         std::cerr << "[AVISO] Nao foi possivel preparar completamente o diretorio de dados do utilizador.\n";
     }
 
@@ -162,13 +160,13 @@ int main(int argc, char** argv) {
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
-        const std::string campaignID = bootstrap.campaignID;
         std::cout << "[ASCENDENDO] Campaign ID: "
-                  << (campaignID.empty() ? "(indisponivel)" : campaignID) << "\n";
+                  << (bootstrap.campaignID.empty() ? "(indisponivel)" : bootstrap.campaignID)
+                  << "\n";
 
         GameSession session(
             bootstrap.campaign,
-            campaignID,
+            bootstrap.campaignID,
             bootstrap.runsFile().string());
         Camera camera;
         renderer.attachEditorSession(&session.editorSession());
