@@ -72,8 +72,8 @@ jobs:
           glslc --version
           if (-not $env:VK_DRIVER_FILES) { throw 'VK_DRIVER_FILES is not set' }
           Write-Host "VK_DRIVER_FILES=$env:VK_DRIVER_FILES"
-          Get-Command vulkaninfo.exe | Select-Object -ExpandProperty Source
-          vulkaninfo.exe --summary
+          Get-Command vulkaninfoSDK.exe | Select-Object -ExpandProperty Source
+          vulkaninfoSDK.exe --summary
 
       - name: Fetch pinned GLFW source
         shell: pwsh
