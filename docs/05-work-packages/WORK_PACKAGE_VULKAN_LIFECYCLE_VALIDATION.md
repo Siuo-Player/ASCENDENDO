@@ -6,7 +6,7 @@
 **Subsystem:** `Graphics / Vulkan`
 **Work Package:** `9.6 Vulkan lifecycle + capability validation`
 **Branch:** `feat/9-6-vulkan-lifecycle-validation`
-**PR:** `<to be created>`
+**PR:** `#74`
 
 ## Objetivo
 
@@ -16,28 +16,7 @@ Demonstrar, com evidência executável, que o caminho Vulkan atual respeita as i
 
 O código atual já contém decisões relevantes: graphics e present queues são representadas separadamente; a criação do logical device deduplica families apenas quando são iguais; o swapchain usa concurrent sharing quando são distintas; `VK_ERROR_OUT_OF_DATE_KHR` e `VK_SUBOPTIMAL_KHR` são tratados no acquire/present; e o fence só é reset imediatamente antes de `vkQueueSubmit`.
 
-O problema restante é de **evidência**: os testes atuais demonstram parte destas propriedades com dados sintéticos ou cobrem apenas inicialização básica. O Gate exige evidência da capability matrix e dos invariants do frame lifecycle, não apenas CI verde.
-
-## Observação / evidência atual
-
-`VulkanContext`:
-- rejeita devices sem graphics queue;
-- exige `VK_KHR_swapchain`;
-- para uma surface exige graphics + present queue family;
-- cria uma queue para cada family distinta;
-- não assume que graphics e present são a mesma family.
-
-`RendererCore`:
-- espera o in-flight fence antes do acquire;
-- trata `OUT_OF_DATE`/`SUBOPTIMAL` do acquire;
-- só reseta o fence no caminho de submissão;
-- trata `OUT_OF_DATE`/`SUBOPTIMAL` do present;
-- usa `vkDeviceWaitIdle` antes de cleanup/recreate.
-
-`Swapchain`:
-- valida suporte da present queue à surface;
-- usa `CONCURRENT` quando graphics/present são diferentes;
-- recria image views e recursos dependentes.
+O problema restante era de **evidência**: os testes demonstravam parte destas propriedades com dados sintéticos ou cobriam apenas inicialização básica. O Gate exige evidência da capability matrix e dos invariants do frame lifecycle, não apenas CI verde.
 
 ## Decisão arquitetural
 
@@ -45,22 +24,28 @@ Não introduzir uma nova abstração Vulkan nesta tranche.
 
 Adicionar cobertura de validação diretamente aos testes de integração existentes, expondo apenas os invariants que já fazem parte da API/estado observável de `VulkanContext`/`Swapchain`/`RendererCore`.
 
-A implementação deve preferir testes de capability discovery real e invariantes sobre hardware/software disponível, em vez de mocks que poderiam confirmar apenas a própria implementação.
+A implementação prefere capability discovery real e invariantes sobre hardware/software disponível, em vez de mocks que poderiam confirmar apenas a própria implementação.
 
-## Alternativas consideradas
+## Resultado observado
 
-1. Reescrever `VulkanContext` num novo `DeviceRuntime` — rejeitado; a estrutura atual já separa instance/device/queue e a dívida é sobretudo de demonstração.
-2. Introduzir mocks de Vulkan para simular todos os `VkResult` — rejeitado nesta tranche; exigiria uma camada de abstração que o projeto não possui e aumentaria coupling.
-3. Fechar o item apenas porque CI/headless Vulkan passa — rejeitado; o RoadMap exige capability/error-path evidence adicional.
+A cobertura adicionada foi validada no CI Linux/headless:
 
-## Escopo
+- capability matrix mínima: Vulkan 1.3+, pelo menos uma physical device, `VK_KHR_swapchain` e graphics queue;
+- criação de uma janela + `VkSurfaceKHR` real;
+- graphics queue e present queue válidas no `VulkanContext`;
+- suporte efetivo da present family à surface através de `vkGetPhysicalDeviceSurfaceSupportKHR`;
+- testes normais e ASan/UBSan concluíram com sucesso.
+
+A capability matrix foi **observada no ambiente CI atual**, não universalmente provada para todo hardware possível.
+
+## Scope
 
 ### Inclui
 
 - testes da capability matrix mínima de device/queues/extensions;
 - testes de consistência entre queue families reportadas e estado do context;
 - testes de lifecycle que exercitem inicialização, criação de surface, swapchain e cleanup sem violar ownership;
-- reforço da documentação do comportamento `OUT_OF_DATE`/`SUBOPTIMAL` e fence reset;
+- reforço da evidência de `OUT_OF_DATE`/`SUBOPTIMAL` e fence reset como invariantes estáticos do código;
 - validação Linux normal + ASan/UBSan + campaign validator;
 - revisão da debt/roadmap após a evidência.
 
@@ -88,7 +73,7 @@ RendererFacade / PresentationRuntime
 
 Validation dependencies: Linux Vulkan 1.3+, GLFW/Xvfb, software ICD disponível no CI.
 
-Consumers affected: integration tests and future Gate review only; no gameplay consumer API should change.
+Consumers affected: integration tests and future Gate review only; no gameplay consumer API changed.
 
 ## Invariantes de saída
 
@@ -96,20 +81,28 @@ Consumers affected: integration tests and future Gate review only; no gameplay c
 - quando existe uma surface, present queue é válida para essa surface;
 - graphics/present podem ser families distintas sem alterar a correção do setup;
 - `VK_KHR_swapchain` é requisito explícito;
-- acquire/present não confundem `OUT_OF_DATE`/`SUBOPTIMAL` com sucesso normal;
+- acquire/present tratam `OUT_OF_DATE`/`SUBOPTIMAL` como condições de recreação e não como sucesso normal;
 - fence não é reset antes de existir um caminho de submissão;
 - cleanup ocorre depois de o device ficar idle;
 - recursos dependentes do swapchain não sobrevivem à sua destruição.
 
-## Riscos
+## O que foi realmente demonstrado
 
-| Risco | Probabilidade | Impacto | Mitigação | Estado |
-|---|---|---|---|---|
-| O CI só expõe uma queue family real | médio | médio | complementar capability discovery com invariantes estruturais; não declarar suporte físico não observado como demonstrado | aberto |
-| Um teste passa sem exercitar erro real de acquire/present | médio | médio | separar evidência de implementação existente de execução real de erro; não usar sucesso normal como prova de erro | aberto |
-| Alterar sincronização cria regressão subtil | médio | alto | limitar mudanças de código à mínima necessidade e validar com ASan/UBSan + headless | aberto |
+| Invariante | Tipo de evidência | Resultado |
+|---|---|---|
+| Vulkan ≥ 1.3 | executável, driver CI | ✅ |
+| physical device disponível | executável, driver CI | ✅ |
+| `VK_KHR_swapchain` disponível | executável, driver CI | ✅ |
+| graphics queue disponível | executável, driver CI | ✅ |
+| present family válida para surface | executável, surface real | ✅ |
+| graphics/present não são estruturalmente assumidas iguais | executável + teste estrutural | ✅ |
+| acquire/present OUT_OF_DATE/SUBOPTIMAL tratados | inspeção estática do `RendererCore` | ✅ |
+| fence reset apenas antes de submit | inspeção estática do `RendererCore` | ✅ |
+| reset/submit/present error-path sem deadlock | não há injeção real de `VkResult` nesta tranche | ⚠️ evidência incompleta |
 
-## Validação
+A última linha permanece dívida explícita: sem uma camada de injeção/mocking de Vulkan não é possível transformar todos os `VkResult` adversariais em execução real sem criar uma abstração nova. O código existente continua a tratar os paths previstos e permanece coberto por execução normal + sanitizers.
+
+## Validation
 
 - `Tests/Tooling/test_check_source_sizes.py`;
 - `Development/Tools/check_source_sizes.py`;
@@ -117,7 +110,17 @@ Consumers affected: integration tests and future Gate review only; no gameplay c
 - workflow independente ASan/UBSan;
 - campaign validation;
 - inspeção do diff e da capability evidence;
-- documentar explicitamente quais error paths foram realmente executados e quais permanecem apenas comprovados estaticamente.
+- distinguir explicitamente error paths executados daqueles apenas comprovados por inspeção.
+
+### Evidência final
+
+Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
+
+- `Tests #775` — success;
+- `Sanitizers #17` — success;
+- source-size checks — success;
+- headless Vulkan — success;
+- campaign validation — success.
 
 ## Definition of Ready
 
@@ -130,12 +133,12 @@ Consumers affected: integration tests and future Gate review only; no gameplay c
 
 ## Definition of Done
 
-- [ ] capability matrix mínima coberta por testes executáveis;
-- [ ] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
-- [ ] normal + ASan/UBSan verdes;
-- [ ] documentação de Roadmap/TECH_DEBT/Architecture sincronizada;
-- [ ] PR integrada.
+- [x] capability matrix mínima coberta por testes executáveis;
+- [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
+- [x] normal + ASan/UBSan verdes;
+- [x] documentação de Roadmap/TECH_DEBT/Architecture sincronizada;
+- [x] PR pronta para integração.
 
 ## Próxima decisão
 
-Primeiro adicionar a cobertura de capability discovery e lifecycle observável. Só introduzir alteração de runtime se os testes demonstrarem uma lacuna concreta de comportamento.
+A dívida restante de error-path adversarial é mantida explícita. Não introduzir mocks/abstrações Vulkan apenas para fabricar esses resultados nesta tranche. A próxima revisão do Gate deve decidir se essa evidência adicional justifica uma camada de injeção testável ou se a classificação estática é suficiente para 9.6.
