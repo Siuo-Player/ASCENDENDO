@@ -2,9 +2,12 @@
 // =============================================================================
 //  Game/Logic/InputManager.h
 // =============================================================================
+#include <cstddef>
 #include <unordered_map>
 
 struct GLFWwindow;
+
+namespace core { class KeyBindings; }
 
 namespace logic {
 
@@ -48,6 +51,14 @@ namespace MouseButton {
     constexpr int MIDDLE = 2;
 }
 
+struct TickInput {
+    bool left = false;
+    bool right = false;
+    bool jumpHeld = false;
+    bool jumpPressed = false;
+    bool jumpReleased = false;
+};
+
 class InputManager {
 public:
     InputManager()  = default;
@@ -64,6 +75,11 @@ public:
     bool isLeft() const;
     bool isRight() const;
     bool isJump() const;
+
+    // Converts the frame sample into the semantic input consumed by one
+    // simulation tick. Edge events belong only to tick zero of that frame;
+    // continuous actions remain valid for every fixed step derived from it.
+    TickInput tickInput(const core::KeyBindings& bindings, std::size_t tickInFrame) const;
 
     void injectRawState(bool left, bool right, bool jumpHeld, bool jumpPressed, bool jumpReleased);
 
