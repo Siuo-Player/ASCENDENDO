@@ -10,6 +10,7 @@
 #include "Game/Graphics/Camera.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
+#include "Game/Logic/RunHistory.h"
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/CampaignLoader.h"
 #include "Game/Core/Config.h"
