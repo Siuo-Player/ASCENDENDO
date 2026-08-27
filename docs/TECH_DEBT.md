@@ -13,66 +13,54 @@ A implementação legada `Renderer.cpp/.h` já não está presente em `main`. A 
 
 A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`.
 
-## P0 — tratar antes de continuar a acumular complexidade
+## P0 — estado atual do Gate 9.6
 
-| Área | Problema | Ação | Critério de saída |
-|---|---|---|---|
-| Runtime | `main.cpp` acumula inicialização, bootstrap, frame coordination e apresentação | continuar extraindo responsabilidades incrementais por ownership real | nenhuma regra de runtime sem fronteira própria permanece concentrada sem rationale |
-| Presentation | presentation ainda recebe modelos de domínio diretamente | introduzir `RenderSnapshot`/dados próprios de apresentação | presentation desacoplada dos modelos de domínio para os consumidores migrados |
-| Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
-| Levels / validation | grammar malformed atual é coberta; schema/versioning e semantic validation continuam ausentes | Fase 10: schema explícito, validação semântica, canonicalização | corpus malformed/unknown-version/invalid-domain com política determinística |
-| Levels / domain model | `Level` mistura geometria acumulada com metadata do último chunk | definir owners/invariantes de world/chunk state | contrato formal + testes |
-| Physics / determinism | múltiplos contactos podem depender da ordem das plataformas | decidir propriedade física e cobrir com teste adversarial | resultado determinístico segundo o contrato escolhido |
-| Vulkan | capability assumptions requerem evidência além do happy path | ampliar capability/error-path evidence | matrix e failure policy demonstradas |
-| Vulkan lifecycle | rollback e terminal-state implementados, mas lower-level fault injection continua parcial | criar apenas seams necessários para propriedades de risco elevado | failure policy observável ou limitação documentada |
+| Área | Estado | Saída |
+|---|---|---|
+| GraphicsRuntime rollback | **proven** | PR #81 |
+| VulkanContext terminal failure state | **implemented / partial evidence** | PR #87; fault injection inferior continua limitado |
+| Windows compatibility | **proven for selected runner** | PR #85 |
+| Tick-scoped simulation input | **implemented** | PR #88 |
+| Replay tick representation | **proven for explicit TickInput sequence** | PR #90; não inclui persistence/live sampling |
+| Malformed current grammar | **proven** | PR #91; semantic validation/schema continuam fora |
+| Runtime/main decomposition | partial | continuar por responsabilidade real |
+| Presentation/domain boundary | partial | RenderSnapshot continua bloqueado |
+| Paths/CWD independence | open | resolver executable/asset/user-data roots |
+| Level world/chunk metadata | open | contrato formal e testes |
+| Collision-order determinism | open | propriedade física + teste adversarial |
+| Vulkan queue/capability/error evidence | partial | ampliar evidence matrix |
+| Architecture/ownership final review | open | revisão final antes do Gate |
 
-## P1 — consolidação
+## Regras arquiteturais
 
-| Área | Estado atual |
-|---|---|
-| Windows CI | evidência integrada no PR #85 |
-| Linux ASan/UBSan | workflow independente no PR #70 |
-| Replay representation | TickInput integrado no PR #90 |
-| Malformed current grammar | evidência integrada no PR #91 |
-| Level format versioning | aberto; Fase 10 |
-| Semantic level validation | aberto; Fase 10 |
-| Campaign document/identity | aberto |
-| Vulkan RAII | aberto |
-| Runtime/bootstrap decomposition | guardrails ativos |
-| CI/tooling warnings | dívida separada |
-
-## Regras de arquitetura
-
-1. Renderer não lê input nem altera gameplay.
+1. O renderer não lê input nem altera gameplay.
 2. Gameplay não depende de teclas físicas.
 3. `LevelData` não depende de Vulkan/GLFW.
 4. Dados importáveis permanecem declarativos e sem execução de código.
-5. Runtime não depende de current working directory.
+5. O current working directory não é dependência do runtime.
 6. CI testa o produto, não apenas unit tests.
-7. Causas de falha CI exigem evidência observável.
+7. Causas de falhas CI exigem evidência observável.
 8. `GameSession` é orchestration boundary.
-9. `RuntimeBootstrap` é composição de startup, não service container nem `Application` genérica.
-10. `LevelDataIO` é parser/serializer, não semantic validator ou schema authority.
+9. `RuntimeBootstrap` é composição de startup, não `Application` genérica.
+10. `LevelDataIO` é parser/serializer, não semantic validator nem schema authority.
 11. Ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
 12. Input edge para replay pertence ao tempo de simulação.
 13. `ReplayManager` usa `TickInput`; isso não prova live-input frame-rate independence.
 
-## Gate 9.6
-
-O Gate permanece aberto até haver evidência suficiente para:
+## Gate 9.6 — critérios de fecho
 
 ```text
-Vulkan failure semantics
+Vulkan failure/error semantics com evidência suficiente
 +
-queue/capability assumptions
+queue/capability assumptions evidenciados
 +
-deterministic simulation/replay
+deterministic simulation/replay evidence
 +
-Windows build/test
+Windows build/test evidence real
 +
-malformed/error paths
+malformed/error-path evidence
 +
-architecture/ownership review
+architecture/ownership final review
 ```
 
 A migração geral de `RenderSnapshot` não deve avançar antes do fecho formal do Gate.
@@ -81,12 +69,16 @@ A migração geral de `RenderSnapshot` não deve avançar antes do fecho formal 
 
 ### Windows — PR #85
 
-Build, testes, Vulkan software driver, campaign validation e artefacto foram demonstrados num runner Windows real. A evidência vale para o ambiente selecionado.
+Build, testes, Vulkan software driver, campaign validation e artefacto foram demonstrados num runner Windows real. A evidência aplica-se ao ambiente selecionado; não prova compatibilidade universal.
 
 ### Replay — PR #90
 
-`ReplayManager` armazena e reproduz `TickInput`. Tests, ASan/UBSan e Windows passaram no head validado. A propriedade demonstrada é reprodução de uma sequência explícita de ticks; persistence e live sampling permanecem distintas.
+`ReplayManager` passou a armazenar/reproduzir `TickInput`. Tests, ASan/UBSan e Windows passaram no mesmo head. A propriedade demonstrada é reprodução de uma sequência explícita de ticks; persistence e live sampling continuam distintas.
 
 ### Malformed syntax — PR #91
 
-A gramática atual tem testes para token desconhecido, número inválido, campo truncado, trailing tokens e caso válido. Tests, Sanitizers e Windows passaram no mesmo head. Semantic validation, schema/versioning e canonicalization continuam na Fase 10.
+A gramática atual é testada para rejeição de token desconhecido, número inválido, campo truncado e trailing tokens, além de um caso válido. Tests, Sanitizers e Windows passaram no mesmo head. Semantic validation, schema/versioning e canonicalization seguem para a Fase 10.
+
+### Vulkan — PR #87
+
+`VulkanContext::reconfigureForSurface()` trata falhas como terminais e normaliza device/queue handles e `isInitialized()`. A evidência experimental de falhas inferiores continua limitada porque o projeto não introduziu um framework genérico de fault injection Vulkan.
