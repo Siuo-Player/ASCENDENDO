@@ -11,28 +11,29 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 
 A implementação legada `Renderer.cpp/.h` já não está presente em `main`. A migração para `RendererCore` + passes + `RendererFacade` está integrada.
 
-A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`. PR #20 foi encerrado/superseded; a migração continua uma responsabilidade do roadmap, mas não existe uma branch histórica ativa a manter.
+A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`.
 
 ## P0 — tratar antes de continuar a acumular complexidade
 
 | Área | Problema | Ação | Critério de saída |
 |---|---|---|---|
-| Runtime | `main.cpp` acumula inicialização, bootstrap, frame coordination e apresentação | continuar extraindo responsabilidades incrementais por ownership real | `main.cpp` deixa de concentrar regras de runtime que já têm fronteira própria |
-| Presentation | `RendererFacade`/passes ainda recebem modelos de domínio diretamente | introduzir `RenderSnapshot`/dados de apresentação | presentation recebe dados próprios de apresentação |
+| Runtime | `main.cpp` acumula inicialização, bootstrap, frame coordination e apresentação | continuar extraindo responsabilidades incrementais por ownership real | nenhuma regra de runtime sem fronteira própria permanece concentrada sem rationale |
+| Presentation | presentation ainda recebe modelos de domínio diretamente | introduzir `RenderSnapshot`/dados próprios de apresentação | presentation desacoplada dos modelos de domínio para os consumidores migrados |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
-| Levels / validation | sintaxe desconhecida, números inválidos, campos truncados e trailing tokens da gramática atual são rejeitados; schema/versioning e validação semântica ainda não existem como contrato único | na Fase 10, introduzir envelope/schema explícito, validação semântica e canonicalização | corpus malformed/unknown-version/invalid-domain rejeitado de forma determinística; representação canónica documentada |
-| Levels / domain model | `Level` acumula geometria mundial, mas `name`/`hasFlag`/`flagBounds` representam apenas o chunk mais recentemente anexado | definir formalmente o escopo de world/chunk metadata antes de alterar campos individualmente | estado de mundo e metadata de chunk/entry têm owners e invariantes explícitos |
-| Physics / determinism | `Level::resolveCollision()` pode produzir estados diferentes quando a ordem das plataformas é permutada em situações de múltiplo contacto | decidir contrato de ordem e cobrir com teste adversarial | propriedade física escolhida e evidência determinística |
-| Physics / input | `TickInput` é agora a unidade explícita da simulação e do replay | manter semântica por tick e separar replay de live input sampling | mesma sequência de `TickInput` reproduz o mesmo estado tick-a-tick |
-| Vulkan | seleção de queue/device exige evidência separada de graphics/present/extension/capabilities | ampliar matriz e manter assumptions explícitas | capability matrix mínima demonstrada |
-| Vulkan lifecycle | rollback e terminal-state foram implementados, mas lower-level fault injection continua parcial | aumentar cobertura onde o ambiente permitir; não assumir happy-path como prova de todos os error paths | política pós-falha explicitamente testada ou limitação documentada |
+| Levels / validation | grammar malformed atual é coberta; schema/versioning e semantic validation continuam ausentes | Fase 10: schema explícito, validação semântica, canonicalização | corpus malformed/unknown-version/invalid-domain com política determinística |
+| Levels / domain model | `Level` mistura geometria acumulada com metadata do último chunk | definir owners/invariantes de world/chunk state | contrato formal + testes |
+| Physics / determinism | múltiplos contactos podem depender da ordem das plataformas | decidir propriedade física e cobrir com teste adversarial | resultado determinístico segundo o contrato escolhido |
+| Vulkan | capability assumptions requerem evidência além do happy path | ampliar capability/error-path evidence | matrix e failure policy demonstradas |
+| Vulkan lifecycle | rollback e terminal-state implementados, mas lower-level fault injection continua parcial | criar apenas seams necessários para propriedades de risco elevado | failure policy observável ou limitação documentada |
 
 ## P1 — consolidação
 
 | Área | Estado atual |
 |---|---|
-| Windows CI | evidência integrada no PR #85 para runner Windows selecionado |
+| Windows CI | evidência integrada no PR #85 |
 | Linux ASan/UBSan | workflow independente no PR #70 |
+| Replay representation | TickInput integrado no PR #90 |
+| Malformed current grammar | evidência integrada no PR #91 |
 | Level format versioning | aberto; Fase 10 |
 | Semantic level validation | aberto; Fase 10 |
 | Campaign document/identity | aberto |
@@ -40,50 +41,52 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 | Runtime/bootstrap decomposition | guardrails ativos |
 | CI/tooling warnings | dívida separada |
 
-## Regras arquiteturais
+## Regras de arquitetura
 
-1. O renderer não lê input nem altera gameplay.
+1. Renderer não lê input nem altera gameplay.
 2. Gameplay não depende de teclas físicas.
 3. `LevelData` não depende de Vulkan/GLFW.
-4. Dados importáveis continuam declarativos e sem execução de código.
-5. O current working directory não é uma dependência do runtime.
-6. O CI testa o produto, não apenas testes unitários.
+4. Dados importáveis permanecem declarativos e sem execução de código.
+5. Runtime não depende de current working directory.
+6. CI testa o produto, não apenas unit tests.
 7. Causas de falha CI exigem evidência observável.
-8. `GameSession` é orchestration boundary, não owner de platform/Vulkan/presentation.
-9. `RuntimeBootstrap` é composição de startup, não service container nem `Application` nominal.
-10. `LevelDataIO` é parser/serializer; não é ainda schema authority nem validator semântico.
-11. A ordem de `Level::platforms()` não deve ser tratada como irrelevante para determinismo enquanto a política de múltiplos contactos não estiver definida.
-12. A semântica de input edge para replay pertence ao tempo de simulação.
-13. `ReplayManager` usa `TickInput`; isso não prova independência do live input face ao frame rate.
+8. `GameSession` é orchestration boundary.
+9. `RuntimeBootstrap` é composição de startup, não service container nem `Application` genérica.
+10. `LevelDataIO` é parser/serializer, não semantic validator ou schema authority.
+11. Ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
+12. Input edge para replay pertence ao tempo de simulação.
+13. `ReplayManager` usa `TickInput`; isso não prova live-input frame-rate independence.
 
-## Portões do roadmap
+## Gate 9.6
 
-Antes de avançar para `RenderSnapshot` geral, o Gate 9.6 deve ter:
+O Gate permanece aberto até haver evidência suficiente para:
 
 ```text
-Vulkan failure semantics com evidência suficiente
+Vulkan failure semantics
 +
-queue/capability assumptions evidenciados
+queue/capability assumptions
 +
-deterministic simulation/replay evidence
+deterministic simulation/replay
 +
-Windows build/test evidence real
+Windows build/test
 +
-malformed/error-path evidence
+malformed/error paths
 +
-architecture/ownership final review
+architecture/ownership review
 ```
+
+A migração geral de `RenderSnapshot` não deve avançar antes do fecho formal do Gate.
 
 ## Evidência recente
 
 ### Windows — PR #85
 
-Build, testes, Vulkan software driver, campaign validation e artefacto foram demonstrados num runner Windows real. Esta evidência é válida para o ambiente selecionado e não implica compatibilidade universal de hardware/driver.
+Build, testes, Vulkan software driver, campaign validation e artefacto foram demonstrados num runner Windows real. A evidência vale para o ambiente selecionado.
 
 ### Replay — PR #90
 
-`ReplayManager` passou a armazenar/reproduzir `TickInput`. Tests, ASan/UBSan e Windows passaram no mesmo head. A propriedade demonstrada é reprodução para uma sequência explícita de ticks; persistence e live sampling continuam distintas.
+`ReplayManager` armazena e reproduz `TickInput`. Tests, ASan/UBSan e Windows passaram no head validado. A propriedade demonstrada é reprodução de uma sequência explícita de ticks; persistence e live sampling permanecem distintas.
 
 ### Malformed syntax — PR #91
 
-A gramática atual é testada para rejeição de token desconhecido, número inválido, campo truncado e trailing tokens, além de um caso válido. Tests, Sanitizers e Windows passaram no mesmo head. Semantic validation, schema/versioning e canonicalization permanecem fora desta tranche e seguem a Fase 10.
+A gramática atual tem testes para token desconhecido, número inválido, campo truncado, trailing tokens e caso válido. Tests, Sanitizers e Windows passaram no mesmo head. Semantic validation, schema/versioning e canonicalization continuam na Fase 10.
