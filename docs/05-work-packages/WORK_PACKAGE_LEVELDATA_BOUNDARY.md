@@ -12,15 +12,9 @@
 
 Unificar a representação declarativa de um nível entre parser/IO, editor e runtime através de um `LevelData` independente de Vulkan/GLFW.
 
-## Contexto / descoberta
-
-A investigação do estado atual encontrou duas representações concorrentes do mesmo conteúdo: `logic::Level` fazia parsing textual diretamente, enquanto `logic::LevelEditorDocument` mantinha um modelo de edição separado. O serializer do editor também não persistia spawn. Isto criava risco de divergência.
-
 ## Decisão arquitetural
 
-Criar `logic::LevelData` como modelo declarativo local de um único nível, independente de Vulkan/GLFW e sem estado de streaming/runtime.
-
-`LevelData` contém nome, plataformas, posição de spawn opcional e flag opcional. Offsets Y de campaign/streaming permanecem responsabilidade de `CampaignRuntime`/`Level`.
+Criar `logic::LevelData` como modelo declarativo local de um único nível, independente de Vulkan/GLFW e sem estado de streaming/runtime. O modelo contém nome, plataformas, posição de spawn opcional e flag opcional. Offsets Y de campaign/streaming permanecem responsabilidade de `CampaignRuntime`/`Level`.
 
 ```text
 .lvl
@@ -30,13 +24,6 @@ LevelData
   └── LevelEditorDocument view
 ```
 
-## Alternativas rejeitadas
-
-- manter `Level` como parser principal;
-- usar `LevelEditorDocument` como modelo comum;
-- introduzir framework genérico de serialization;
-- persistir `offsetY` no modelo declarativo.
-
 ## Resultado implementado
 
 - `LevelData` introduzido;
@@ -45,7 +32,7 @@ LevelData
 - editor exporta para `LevelData` antes de serializar;
 - formato histórico `NAME/PLATFORM/FLAG` permanece compatível;
 - `SPAWN` é opcional nesta tranche;
-- versionamento explícito (`VERSION`) permanece na Fase 10.
+- `VERSION` permanece separado para a Fase 10.
 
 ## Invariantes
 
@@ -66,12 +53,10 @@ Evidência CI final:
 - **Sanitizers / run `33028268183` — success**: ASan + UBSan, headless Vulkan e campaign validation;
 - source-size checks passaram nos dois workflows.
 
-Durante a implementação houve duas falhas de compilação reais e corrigidas:
+Durante a implementação houve duas falhas de compilação reais e corrigidas pelos logs dos runners:
 
 1. include excessivo em `LevelEditor.h`, causando tipos `EditorToolMode`/`EditorSizePreset` desconhecidos;
 2. `Tests/Unit/test_level_file_loading.cpp` ainda dependia de `Level::appendFromFile` depois da mudança de API.
-
-Ambas foram diagnosticadas pelos logs dos runners e corrigidas antes do head final.
 
 ## Definition of Done
 
@@ -81,12 +66,13 @@ Ambas foram diagnosticadas pelos logs dos runners e corrigidas antes do head fin
 - [x] editor mantém invariantes existentes;
 - [x] round-trip e fixtures passam;
 - [x] normal + ASan/UBSan verdes;
-- [x] PR #75 validada;
-- [x] PR #75 integrada;
-- [x] versionamento do formato explicitamente mantido para a Fase 10.
+- [x] arquitetura do work package está documentada;
+- [ ] `docs/ROADMAP.md` atualizado no estado normativo final;
+- [ ] `docs/TECH_DEBT.md` atualizado no estado normativo final;
+- [ ] PR #75 integrada.
 
 ## Fecho
 
-**Estado:** concluído.
+**Estado:** implementação e validação concluídas; integração documental final e merge pendentes.
 
-A fronteira `LevelData` está estabelecida. O próximo trabalho do roadmap volta ao `9.6 Base Engineering Gate`: decomposição restante de `main.cpp`, revisão dos P0 Vulkan/runtime e preparação do contrato de validação/versionamento antes do avanço para as fases seguintes.
+A fronteira `LevelData` está estabelecida e validada. Após o merge, o roadmap deve manter a próxima prioridade no `9.6 Base Engineering Gate`, nomeadamente decomposição restante de `main.cpp` e revisão dos P0 Vulkan/runtime. A evolução de schema/versionamento continua reservada à Fase 10.
