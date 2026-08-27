@@ -1,0 +1,124 @@
+name: Windows
+
+on:
+  push:
+    branches:
+      - main
+      - '**'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows / Clang / C++20
+    runs-on: windows-latest
+
+    env:
+      VULKAN_SDK_VERSION: 1.4.309.0
+      GLFW_VERSION: 3.4
+
+    steps:
+      - name: Checkout ASCENDENDO
+        uses: actions/checkout@v4
+
+      - name: Install LLVM and Clang
+        uses: KyleMayes/install-llvm-action@v2.0.9
+        with:
+          version: 19
+          arch: x64
+
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: ${{ env.VULKAN_SDK_VERSION }}
+          cache: true
+
+      - name: Configure native Visual Studio environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Verify toolchain
+        shell: pwsh
+        run: |
+          clang++ --version
+          llvm-ar --version
+          cmake --version
+          gmake --version
+          if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is not set' }
+          glslc --version
+
+      - name: Checkout pinned GLFW source
+        uses: actions/checkout@v4
+        with:
+          repository: glfw/glfw
+          ref: ${{ env.GLFW_VERSION }}
+          path: ${{ runner.temp }}\glfw-src
+          fetch-depth: 1
+
+      - name: Build GLFW Release dependency
+        shell: pwsh
+        run: |
+          $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
+          $glfwBuild = Join-Path $env:RUNNER_TEMP 'glfw-build'
+          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 17 2022' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF
+          cmake --build $glfwBuild --config Release --target glfw
+
+          $built = Join-Path $glfwBuild 'src\Release\glfw3.lib'
+          if (-not (Test-Path $built)) {
+            throw "GLFW library not found at $built"
+          }
+
+          New-Item -ItemType Directory -Force -Path 'external\glfw\lib-vc2022' | Out-Null
+          Copy-Item $built 'external\glfw\lib-vc2022\glfw3.lib' -Force
+
+      - name: Record Windows dependency environment
+        shell: pwsh
+        run: |
+          @(
+            "OS: $([System.Environment]::OSVersion.VersionString)",
+            "GLFW version: $env:GLFW_VERSION",
+            "Vulkan SDK version: $env:VULKAN_SDK_VERSION",
+            "VULKAN_SDK: $env:VULKAN_SDK",
+            "clang++: $(clang++ --version | Select-Object -First 1)",
+            "cmake: $(cmake --version | Select-Object -First 1)",
+            "make: $(gmake --version | Select-Object -First 1)"
+          ) | Set-Content 'windows-environment.txt'
+
+      - name: Test source-size policy
+        shell: pwsh
+        run: python Tests\Tooling\test_check_source_sizes.py
+
+      - name: Check source-file size policy
+        shell: pwsh
+        run: python Development\Tools\check_source_sizes.py
+
+      - name: Build game
+        shell: pwsh
+        run: |
+          gmake clean
+          gmake game -j2
+
+      - name: Run full test suite
+        shell: pwsh
+        run: gmake tests -j2
+
+      - name: Validate active campaign levels
+        shell: pwsh
+        run: python Development\AI_Validation\ai_validator.py --campaign
+
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build-test-evidence
+          path: |
+            windows-environment.txt
+            build\test_results.txt
+            build\test\tests.exe
+            build\game\game.exe
+          if-no-files-found: warn
