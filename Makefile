@@ -47,6 +47,13 @@ endif
 # headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema).
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
 
+# Clang targeting the MSVC ABI must use the same dynamic CRT model as the
+# Visual Studio-built GLFW library staged by Windows CI. Keep this explicit so
+# the executable and the GLFW import/dependency library do not mix CRT modes.
+ifeq ($(PLATFORM),windows)
+    CXXFLAGS_BASE += /MD
+endif
+
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
 ifeq ($(PLATFORM),linux)
     CXXFLAGS_DBG := -g -O0 -DDEBUG -fsanitize=address,undefined -fno-omit-frame-pointer
