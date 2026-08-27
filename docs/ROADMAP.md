@@ -60,7 +60,8 @@ A migração geral de `RenderSnapshot` **continua bloqueada pelo Base Engineerin
 - PR #48 — ownership RAII do `RendererFacade`, integrado;
 - PR #49 — política KiB + GLFW RAII, integrado;
 - PR #69 — wiring de `PresentationRuntime` no `main.cpp`, integrado;
-- PR #70 — cobertura explícita Linux/Clang ASan + UBSan para produção + testes, integrado.
+- PR #70 — cobertura explícita Linux/Clang ASan + UBSan para produção + testes, integrado;
+- PR #72 — primeira extração arquitetural de `main.cpp` para `logic::GameSession`, integrada após `Tests #746` e `Sanitizers #8` verdes.
 
 A evidência Linux agora cobre workflow normal, headless Vulkan, campanha e ASan/UBSan. A evidência Windows e a matriz de hardware/capabilities continuam em falta. O endurecimento específico de Vulkan lifecycle/queues também não está demonstrado como concluído.
 
@@ -99,7 +100,8 @@ O Gate fecha antes de nova feature significativa ou da migração geral de `Rend
 │   ├── GameStateMachine boundary + wiring              ✅
 │   ├── SimulationOrchestrator + wiring                 ✅
 │   ├── PresentationRuntime + wiring                    ✅
-│   └── main.cpp architectural decomposition             🔄
+│   ├── GameSession runtime/session boundary              ✅
+│   └── remaining main.cpp decomposition                 🔄
 └── E — Gate review                                     🔒
 ```
 
@@ -134,30 +136,32 @@ CI verde isolado não fecha o Gate.
 - ownership de `RendererFacade` convertido para RAII;
 - lifetime global de GLFW convertido para RAII;
 - checker de source-size unificado em KiB;
-- `PresentationRuntime` ligado ao entry point, retirando a ownership direta da apresentação do `main.cpp`.
+- `PresentationRuntime` ligado ao entry point, retirando a ownership direta da apresentação do `main.cpp`;
+- `GameSession` isolada e ligada ao entry point, retirando a ownership e política de sessão do `main.cpp`.
 
-### Próximo: completar `main.cpp` 🔒
+### Próximo: continuar decomposição de `main.cpp` 🔒
 
-O entry point ainda concentra bootstrap gráfico, carregamento de campanha/configuração, criação de serviços de runtime, editor/campaign orchestration e apresentação.
+A primeira fronteira foi validada: `GameSession` agora possui `GameStateMachine`, `CampaignRuntime`, `Level`, `PhysicsWorld`, `SimulationOrchestrator`, `Player` e `EditorSession`. `main.cpp` mantém process/GLFW lifetime, runtime-path bootstrap, composição gráfica/apresentação, input polling, `Camera` e frame submission.
 
-A decomposição deve continuar por responsabilidade real, preservando a ownership graph existente.
+A próxima investigação deve mapear o restante bootstrap/configuration antes de extrair uma nova fronteira. Não criar uma `Application` nominal sem uma responsabilidade de composição/lifecycle que seja claramente isolável.
 
-Alvo atual de trabalho:
+Alvo de trabalho:
 
 ```text
-Application/bootstrap
-├── platform/GLFW/Vulkan bootstrap
-├── asset/config/campaign loading
+Process/bootstrap
+├── GLFW lifetime
+├── RuntimePaths/config bootstrap
+├── campaign discovery
 └── runtime service composition
 
-Frame/Runtime loop
-├── input
-├── streaming
-├── state transitions
-└── presentation submission
+Frame composition
+├── input polling
+├── GameSession update
+├── camera/presentation coordination
+└── renderer submission
 ```
 
-`GameStateMachine` e `SimulationOrchestrator` já são fronteiras existentes; não devem ser recriadas dentro de uma `Application` monolítica.
+`GameStateMachine`, `SimulationOrchestrator` e `GameSession` são fronteiras existentes; não devem ser duplicadas dentro de outra classe.
 
 ### P0 técnico paralelo — Vulkan lifecycle/queues
 
@@ -175,7 +179,7 @@ Estes itens são requisitos técnicos do Vulkan e não apenas refatoração est�
 
 Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado separadamente como trabalho de isolamento/concorrência; não deve ser misturado com a decomposição de `Level`.
 
-### Depois de `main.cpp`
+### Depois da decomposição de `main.cpp`
 
 - contrato comum de dados de nível entre parser/editor/validator/runtime;
 - Undo/Redo transacional;

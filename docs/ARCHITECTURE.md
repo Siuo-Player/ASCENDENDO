@@ -9,14 +9,16 @@ O projeto é um **game framework específico do ASCENDENDO**, não uma engine ge
 ## Direção arquitetural
 
 ```text
-Application
+Application / process composition
 ├── Runtime
-│   ├── GameStateMachine
-│   ├── Simulation
-│   │   ├── Physics
+│   ├── GameSession
+│   │   ├── GameStateMachine
+│   │   ├── CampaignRuntime
+│   │   ├── Level
+│   │   ├── PhysicsWorld
+│   │   ├── SimulationOrchestrator
 │   │   ├── Player
-│   │   └── LevelRuntime
-│   ├── Campaign
+│   │   └── EditorSession
 │   └── Replay / RunHistory
 │
 ├── Editor
@@ -44,6 +46,8 @@ Application
 
 A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e fechar a fronteira `RenderSnapshot`.
 
+A primeira extração da entry point é `GameSession`: uma fronteira de runtime sem ownership Vulkan/presentation. A composição global de processo continua fora desta tranche; não existe ainda uma classe `Application` concreta.
+
 ## Fluxo por frame
 
 A direção pretendida é:
@@ -55,9 +59,13 @@ InputManager
       ↓
 GameAction / KeyBindings
       ↓
-GameStateMachine / EditorSession
+GameSession
+  ├── GameStateMachine
+  ├── EditorSession
+  ├── SimulationOrchestrator
+  └── CampaignRuntime
       ↓
-Simulation / LevelData / EditorDocument
+runtime state / render inputs
       ↓
 RenderSnapshot
       ↓
@@ -72,19 +80,31 @@ O renderer não deve decidir regras de gameplay, editor ou campanha.
 
 ## `main.cpp` e estado da aplicação
 
-`main.cpp` ainda concentra inicialização, composição do runtime, estados, campanha, física, editor, streaming, persistência e submissão de frames. Esta é a próxima dívida arquitetural prioritária do Base Engineering Gate.
+`main.cpp` mantém o ciclo de vida do processo, bootstrap gráfico, resolução inicial de caminhos, composição de `GraphicsRuntime`/`PresentationRuntime`, polling de janela e submissão de frames.
 
-A extração deve ser incremental:
+A primeira fronteira de runtime é `logic::GameSession`. Ela concentra o estado mutável de gameplay/editor/campanha e a política de transições que atualmente estavam co-localizados no entry point.
 
-- `Application`: ciclo de vida/composição;
-- `GameStateMachine`: estados e transições;
-- `Simulation`: fixed timestep e ticks de gameplay;
-- `EditorSession`: estado/interação do editor;
-- `RendererFacade` / passes: apresentação.
+```text
+main.cpp
+  ├── process / GLFW lifetime
+  ├── RuntimePaths bootstrap
+  ├── GraphicsRuntime
+  ├── PresentationRuntime
+  ├── InputManager / KeyBindings
+  ├── Camera
+  └── GameSession
+          ├── GameStateMachine
+          ├── CampaignRuntime
+          ├── Level
+          ├── PhysicsWorld
+          ├── SimulationOrchestrator
+          ├── Player
+          └── EditorSession
+```
 
-A decomposição deve seguir responsabilidades reais e ownership/lifetime, não o limite de linhas. Não fazer uma reescrita completa do motor.
+`GameSession` não possui `Window`, `VulkanContext`, `Swapchain`, `RenderPass`, `Pipeline`, `RendererFacade`, `PresentationRuntime` ou `Camera`. Isto evita que a primeira extração misture domínio com ownership de GPU ou apresentação.
 
-O work package atual está registado em `docs/WORK_PACKAGE_MAIN_LOOP_DECOMPOSITION.md`.
+A decomposição deve continuar incrementalmente. `Application` permanece uma direção conceptual, não uma obrigação nominal: só deve ser criada quando existir uma responsabilidade de composição/lifecycle claramente isolável.
 
 ## Renderer e `RenderSnapshot`
 
@@ -104,7 +124,7 @@ Player / Level / GameState
 
 O snapshot deve conter dados compactos, transitórios e próprios de presentation; não deve possuir Vulkan resources, lógica de jogo nem tipos de domínio.
 
-O PR #20 foi encerrado/superseded e não é uma tranche ativa. O histórico do PR/commits é suficiente para comparação; não manter uma branch dele apenas como laboratório permanente.
+O PR #20 foi encerrado/superseded e não é uma tranche ativa. A migração atual deve ser planeada a partir da documentação corrente e não de uma branch histórica permanente.
 
 ## Modelo comum de níveis
 
@@ -196,7 +216,7 @@ A fronteira atual é:
 ```text
 InputManager
     ↓
-EditorSession
+GameSession / EditorSession
     ↓
 EditorInteractionController
     ↓
@@ -218,7 +238,7 @@ Windows build + tests
 Windows game build/link
 ```
 
-O workflow atual já fornece evidência observável de source-size, Vulkan headless, build/testes e campaign validation em Linux. Windows, sanitizers e matriz de hardware continuam a faltar.
+O workflow atual fornece evidência observável de source-size, Vulkan headless, build/testes e campaign validation em Linux. O workflow separado de ASan/UBSan também está integrado e verde. Windows e matriz de hardware continuam a faltar.
 
 A suite recente validada contra o estado atual produz **167 test cases e 901 assertions**, mas a contagem não substitui testes de invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
 

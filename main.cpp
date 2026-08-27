@@ -1,44 +1,31 @@
 // =============================================================================
 //  ASCENDENDO — Entry Point
 //
-//  Runtime state machine: MENU / PLAYING / PAUSED / CREDITS / EDITOR.
+//  Process/bootstrap and frame composition. Runtime session policy lives in
+//  logic::GameSession; graphics/presentation ownership lives in dedicated
+//  runtimes.
 // =============================================================================
-#include "Game/Graphics/Window.h"
-#include "Game/Graphics/VulkanContext.h"
-#include "Game/Graphics/Swapchain.h"
-#include "Game/Graphics/RenderPass.h"
-#include "Game/Graphics/Pipeline.h"
 #include "Game/Graphics/GraphicsRuntime.h"
 #include "Game/Graphics/PresentationRuntime.h"
-#include "Game/Graphics/RendererFacade.h"
 #include "Game/Graphics/Camera.h"
+#include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
-#include "Game/Logic/Player.h"
-#include "Game/Logic/Physics.h"
-#include "Game/Logic/SimulationOrchestrator.h"
-#include "Game/Logic/Level.h"
 #include "Game/Logic/RunHistory.h"
-#include "Game/Logic/EditorSession.h"
-#include "Game/Logic/CampaignRuntime.h"
-#include "Game/Core/Config.h"
 #include "Game/Core/CampaignID.h"
 #include "Game/Core/CampaignLoader.h"
-#include "Game/Core/GameAction.h"
-#include "Game/Core/GameStateMachine.h"
+#include "Game/Core/Config.h"
 #include "Game/Core/KeyBindings.h"
-#include "Game/Core/Viewport.h"
 #include "Game/Core/RuntimePaths.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
-#include <vector>
 #include <string>
+#include <vector>
 
 using namespace gfx;
 using namespace logic;
-
-static const std::string CAMPAIGN_NAME = "Campanha Principal";
 
 namespace {
 
@@ -60,15 +47,49 @@ private:
 };
 
 void setMenuTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
 }
 
 void setPlayingTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | E editor  Q voltar ao menu  ESC pausa");
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | E editor  Q voltar ao menu  ESC pausa");
 }
 
 void setEditorTitle(GLFWwindow* window) {
-    glfwSetWindowTitle(window, "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
+}
+
+void setCreditsTitle(GLFWwindow* window) {
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | Creditos | ESPACO para continuar");
+}
+
+void setPausedTitle(GLFWwindow* window) {
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
+}
+
+void applyStatePresentation(GLFWwindow* window,
+                           GameState state,
+                           GameState previousState,
+                           Camera& camera) {
+    if (state == GameState::EDITOR && previousState != GameState::EDITOR) {
+        camera = gfx::Camera{};
+        setEditorTitle(window);
+    } else if (state == GameState::PLAYING && previousState == GameState::MENU) {
+        camera = gfx::Camera{};
+        setPlayingTitle(window);
+    } else if (state == GameState::MENU) {
+        setMenuTitle(window);
+    } else if (state == GameState::PAUSED) {
+        setPausedTitle(window);
+    } else if (state == GameState::CREDITS) {
+        setCreditsTitle(window);
+    } else if (state == GameState::PLAYING) {
+        setPlayingTitle(window);
+    }
 }
 
 } // namespace
@@ -106,7 +127,6 @@ int main(int argc, char** argv) {
         VulkanContext& ctx = graphics.context();
         Swapchain& swapchain = graphics.swapchain();
         RenderPass& renderPass = graphics.renderPass();
-        Pipeline& pipeline = graphics.pipeline();
         RendererFacade& renderer = graphics.renderer();
         PresentationRuntime presentation;
         InputManager input;
@@ -150,199 +170,66 @@ int main(int argc, char** argv) {
             core::CampaignLoader::load(
                 runtimePaths.campaignFile(),
                 runtimePaths.levelsRoot());
-        CampaignRuntime campaignRuntime(campaign);
 
-        std::string campaignID = core::computeCampaignID(levelsDir);
+        const std::string campaignID = core::computeCampaignID(levelsDir);
         std::cout << "[ASCENDENDO] Campaign ID: "
                   << (campaignID.empty() ? "(indisponivel)" : campaignID) << "\n";
 
-        Level level;
-        PhysicsWorld world;
-        SimulationOrchestrator simulation;
+        GameSession session(campaign, campaignID, runsCsvPath);
         Camera camera;
-        Player player;
-        EditorSession editorSession(campaign.size() <= 1);
-        renderer.attachEditorSession(&editorSession);
-        core::GameStateMachine stateMachine;
-
-        float elapsedTime = 0.0f;
-
-        auto resetGame = [&]() {
-            player = logic::Player{};
-            player.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
-            camera = gfx::Camera{};
-            world = logic::PhysicsWorld{};
-            elapsedTime = 0.0f;
-
-            campaignRuntime.loadInitialLevel(level, config::LOGICAL_WIDTH);
-
-            stateMachine.enterPlaying();
-            setPlayingTitle(win.handle());
-        };
-
-        auto openEditor = [&](GameState returnState) {
-            camera = gfx::Camera{};
-            editorSession.cancelInteraction();
-            stateMachine.enterEditor(returnState);
-            setEditorTitle(win.handle());
-        };
-
-        auto navigate = [&](int delta, int count) {
-            stateMachine.selectRelative(delta, count);
-        };
-
-        auto clickedMenuBox = [&](int count) -> int {
-            if (!input.isMouseButtonJustPressed(MouseButton::LEFT)) return -1;
-            core::LogicalPoint pt = core::windowToLogical(
-                input.cursorX(), input.cursorY(),
-                (int32_t)win.width(), (int32_t)win.height(),
-                config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
-            return core::hitTestMenuBox(pt.x, pt.y, count, config::LOGICAL_WIDTH);
-        };
+        renderer.attachEditorSession(&session.editorSession());
 
         setMenuTitle(win.handle());
-
         auto lastTime = std::chrono::high_resolution_clock::now();
         std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor | Q sair\n";
 
         while (!win.shouldClose()) {
-            auto now = std::chrono::high_resolution_clock::now();
-            float dt = std::chrono::duration<float>(now - lastTime).count();
+            const auto now = std::chrono::high_resolution_clock::now();
+            const float dt = std::chrono::duration<float>(now - lastTime).count();
             lastTime = now;
 
             input.beginFrame();
             win.pollEvents();
 
-            const bool pausePressed = core::isActionJustPressed(bindings, input, core::GameAction::Pause);
-            const bool quitPressed = core::isActionJustPressed(bindings, input, core::GameAction::Quit);
-            const bool openEditorPressed = core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
-            const GameState state = stateMachine.state();
+            const GameState previousState = session.state();
+            const GameSessionUpdateResult result = session.update(
+                dt, input, bindings,
+                static_cast<int32_t>(win.width()),
+                static_cast<int32_t>(win.height()),
+                static_cast<float>(config::LOGICAL_WIDTH),
+                static_cast<float>(config::LOGICAL_HEIGHT));
+            const GameState currentState = session.state();
 
-            if (state == GameState::PLAYING) {
-                elapsedTime += dt;
-
-                if (openEditorPressed) {
-                    openEditor(GameState::PLAYING);
-                } else if (quitPressed) {
-                    editorSession.cancelInteraction();
-                    stateMachine.returnToMenu();
-                    setMenuTitle(win.handle());
-                } else if (pausePressed) {
-                    stateMachine.pause();
-                    glfwSetWindowTitle(win.handle(),
-                        "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
-                } else {
-                    simulation.advance(dt, input, player, world, level);
-
-                    camera.follow(player.position(), dt);
-
-                    if (player.position().y > campaignRuntime.currentSpawnY() - config::LOGICAL_HEIGHT) {
-                        campaignRuntime.streamNextLevel(level, config::LOGICAL_WIDTH);
-                    }
-
-                    if (level.hasFlag &&
-                        PhysicsWorld::collides(player.body.bounds(), level.flagBounds)) {
-                        const bool recorded = logic::recordRun(
-                            runsCsvPath, CAMPAIGN_NAME, campaignID, elapsedTime);
-
-                        std::cout
-                            << "\n============================================\n"
-                            << "  ASCENDENDO -- FIM DA CAMPANHA\n"
-                            << "  Tempo:         " << logic::formatElapsed(elapsedTime) << "\n"
-                            << "  Campaign ID:   " << campaignID << "\n"
-                            << "  Registo:       " << (recorded ? "guardado em " + runsCsvPath
-                                                                 : "FALHOU (verificar permissoes)") << "\n"
-                            << "  Autor:         Rafael Gomes Bernardo\n"
-                            << "  Auxiliado por: Claude (Anthropic)\n"
-                            << "                 Gemini (Google)\n"
-                            << "============================================\n"
-                            << "  Pressiona ESPACO para continuar\n\n";
-
-                        stateMachine.enterCredits(GameState::MENU);
-                        glfwSetWindowTitle(win.handle(),
-                            "ASCENDENDO | Creditos | ESPACO para continuar");
-                    }
-                }
-
-            } else if (state == GameState::PAUSED) {
-                if (pausePressed) {
-                    stateMachine.resume();
-                    setPlayingTitle(win.handle());
-                } else if (quitPressed) {
-                    stateMachine.returnToMenu();
-                    setMenuTitle(win.handle());
-                } else {
-                    int clickedPaused = clickedMenuBox(3);
-                    if (clickedPaused >= 0) stateMachine.select(clickedPaused, 3);
-
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 3);
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 3);
-
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedPaused >= 0) {
-                        if (stateMachine.menuSelection() == 0) {
-                            stateMachine.resume();
-                            setPlayingTitle(win.handle());
-                        } else if (stateMachine.menuSelection() == 1) {
-                            stateMachine.enterCredits(GameState::PAUSED);
-                            glfwSetWindowTitle(win.handle(), "ASCENDENDO | Creditos | ESPACO para continuar");
-                        } else {
-                            stateMachine.returnToMenu();
-                            setMenuTitle(win.handle());
-                        }
-                    }
-                }
-
-            } else if (state == GameState::CREDITS) {
-                if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || pausePressed) {
-                    stateMachine.returnFromCredits();
-                    if (stateMachine.state() == GameState::MENU) setMenuTitle(win.handle());
-                    else if (stateMachine.state() == GameState::PLAYING) setPlayingTitle(win.handle());
-                    else glfwSetWindowTitle(win.handle(),
-                        "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
-                }
-
-            } else if (state == GameState::MENU) {
-                if (quitPressed) {
-                    break;
-                }
-
-                if (openEditorPressed) {
-                    openEditor(GameState::MENU);
-                } else {
-                    int clickedMenu = clickedMenuBox(4);
-                    if (clickedMenu >= 0) stateMachine.select(clickedMenu, 4);
-
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UILeft)) navigate(-1, 4);
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIRight)) navigate(+1, 4);
-
-                    if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) || clickedMenu >= 0) {
-                        if (stateMachine.menuSelection() == 0) {
-                            resetGame();
-                        } else if (stateMachine.menuSelection() == 1) {
-                            openEditor(GameState::MENU);
-                        } else if (stateMachine.menuSelection() == 2) {
-                            stateMachine.enterCredits(GameState::MENU);
-                            glfwSetWindowTitle(win.handle(), "ASCENDENDO | Creditos | ESPACO para continuar");
-                        } else {
-                            break;
-                        }
-                    }
-                }
-
-            } else if (state == GameState::EDITOR) {
-                if (pausePressed) {
-                    editorSession.cancelInteraction();
-                    stateMachine.returnFromEditor();
-                    if (stateMachine.state() == GameState::PLAYING) setPlayingTitle(win.handle());
-                    else setMenuTitle(win.handle());
-                } else {
-                    editorSession.update(input, bindings,
-                                        (int32_t)win.width(), (int32_t)win.height());
-                }
+            if (previousState == GameState::PLAYING && currentState == GameState::PLAYING) {
+                camera.follow(session.player().position(), dt);
             }
 
-            if (!renderer.drawFrame(player, camera, &level, stateMachine.state(),
-                                    stateMachine.menuSelection(), elapsedTime)) {
+            if (result.campaignCompleted) {
+                std::cout
+                    << "\n============================================\n"
+                    << "  ASCENDENDO -- FIM DA CAMPANHA\n"
+                    << "  Tempo:         " << logic::formatElapsed(result.completionElapsedSeconds) << "\n"
+                    << "  Campaign ID:   " << session.campaignID() << "\n"
+                    << "  Registo:       " << (result.runRecorded ? "guardado em " + runsCsvPath
+                                                         : "FALHOU (verificar permissoes)") << "\n"
+                    << "  Autor:         Rafael Gomes Bernardo\n"
+                    << "  Auxiliado por: Claude (Anthropic)\n"
+                    << "                 Gemini (Google)\n"
+                    << "============================================\n"
+                    << "  Pressiona ESPACO para continuar\n\n";
+            }
+
+            if (result.stateChanged) {
+                applyStatePresentation(win.handle(), currentState, previousState, camera);
+            }
+
+            if (result.quitRequested) {
+                break;
+            }
+
+            if (!renderer.drawFrame(session.player(), camera, &session.level(),
+                                    currentState, session.menuSelection(),
+                                    session.elapsedTime())) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }
