@@ -69,7 +69,7 @@ jobs:
         run: |
           $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
           $glfwBuild = Join-Path $env:RUNNER_TEMP 'glfw-build'
-          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 18 2026' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF
+          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 18 2026' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
           cmake --build $glfwBuild --config Release --target glfw
 
           $built = Join-Path $glfwBuild 'src\Release\glfw3.lib'
@@ -91,7 +91,8 @@ jobs:
             "VULKAN_SDK: $env:VULKAN_SDK",
             "clang++: $(clang++ --version | Select-Object -First 1)",
             "cmake: $(cmake --version | Select-Object -First 1)",
-            "make: $(make --version | Select-Object -First 1)"
+            "make: $(make --version | Select-Object -First 1)",
+            "GLFW MSVC runtime: MultiThreadedDLL (/MD)"
           ) | Set-Content 'windows-environment.txt'
 
       - name: Test source-size policy
