@@ -48,10 +48,6 @@ endif
 # -Werror: um novo warning no codigo do projecto nao pode entrar silenciosamente.
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -MMD -MP
 
-# Headers de terceiros sao tratados como system headers para nao transformar
-# warnings internos dessas dependencias num falso alarme do nosso codigo.
-INCLUDES := -I$(GAME_DIR) -isystem $(EXT_DIR)
-
 # Clang targeting the MSVC ABI must use the same dynamic CRT model as the
 # Visual Studio-built GLFW library staged by Windows CI. The MSVC environment
 # still contributes default libraries through the linker, so make the intended
@@ -82,6 +78,11 @@ BUILD_DIR      := build
 GAME_BUILD_DIR := $(BUILD_DIR)/game
 TEST_BUILD_DIR := $(BUILD_DIR)/test
 TEST_LOG       := $(BUILD_DIR)/test_results.txt
+
+# ── Includes ──────────────────────────────────────────────────────────────────
+# Recursive assignment is intentional: the directory variables above must be
+# resolved before this value is consumed by platform-specific additions below.
+INCLUDES = -I$(GAME_DIR) -isystem $(EXT_DIR)
 
 # ── Vulkan ────────────────────────────────────────────────────────────────────
 ifeq ($(PLATFORM),windows)
