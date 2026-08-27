@@ -12,32 +12,34 @@
 
 Transformar o suporte Windows documentado em evidência executável e reproduzível, sem presumir incompatibilidade nem alterar o runtime.
 
-## Descoberta
+## Descobertas e correções observadas
 
-O `Makefile` já possui uma via Windows, e `Development/Tools/run_tests_windows.cmd` executa `build\\tests.exe` quando esse binário existe. Contudo, o workflow atual é exclusivamente Linux e não existe evidência de `make game` + `make tests` em Windows.
+O `Makefile` já possui uma via Windows, mas o repositório não continha `external/glfw/lib-vc2022`. A CI tornou a aquisição e compilação da dependência explícitas.
 
-Além disso, o Makefile referencia `external/glfw/lib-vc2022`, mas esse artefacto pré-compilado não está presente no repositório. A CI torna agora a origem/resolução dessa dependência explícita e reproduzível.
+O runner `windows-2025-vs2026` expôs Visual Studio 18/2026. O workflow foi alinhado com esse generator. A STL do runner rejeitou Clang 19 (`STL1000`), levando à fixação de LLVM/Clang 20.1.8.
 
-A primeira execução encontrou uma incompatibilidade de toolchain: o runner `windows-2025-vs2026` expunha MSVC STL que rejeitava Clang 19 (`STL1000`). O workflow foi então fixado em LLVM/Clang 20.1.8.
+Uma tentativa de usar `/MD` diretamente com o driver GNU-style `clang++` falhou porque a opção foi tratada como nome de ficheiro. A seleção de runtime passou a usar a opção nativa de Clang `-fms-runtime-lib=dll`, mantendo o GLFW em `MultiThreadedDLL`.
 
-A execução seguinte confirmou que GLFW 3.4 podia ser construído no runner com Visual Studio 18/2026, mas o `Makefile` falhou antes do link porque a flag `/MD` foi interpretada pelo driver GNU-style `clang++` como um nome de ficheiro (`no such file or directory: '/MD'`). Esta execução **não estabeleceu uma incompatibilidade CRT entre GLFW e o jogo**. A correção é usar a opção nativa de Clang `-fms-runtime-lib=dll`, equivalente ao runtime DLL `/MD`, enquanto o GLFW continua a ser construído com `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL`.
+A execução posterior chegou a compilar e linkar `game.exe` e o executável dos testes, mas `make tests` falhou no tooling Windows: o `Makefile` produz `build\\test\\tests.exe`, enquanto `Development/Tools/run_tests_windows.cmd` procurava `build\\tests.exe`. Isto é um mismatch de contrato entre consumidor e produtor de testes, não uma falha do runtime Windows.
+
+Também foi observado durante a auditoria de CI que warnings de terceiros e warnings de infraestrutura não devem ser confundidos com warnings do código do projeto. O workflow passou a preservar diagnósticos, e os cabeçalhos de `external/` são tratados como dependência externa.
 
 ## Inclui
 
-- workflow Windows inicial;
+- workflow Windows;
 - aquisição/resolução explícita das dependências necessárias;
 - `make clean`, `make game`, `make tests` em Windows;
 - preservação de logs e versões de ambiente suficientes para diagnóstico;
 - full test mode, não apenas `tests-fast`;
-- documentação da evidência obtida ou da falha observada.
+- documentação da evidência obtida ou das falhas observadas;
+- verificação de contratos entre `Makefile` e ferramentas de teste.
 
 ## Não inclui
 
-- reescrever o Makefile sem necessidade observada;
 - substituir GNU Make por CMake;
 - Windows sanitizer obrigatório nesta tranche;
 - provar compatibilidade universal com todos os drivers/GPU Windows;
-- alterações no código de gameplay/renderer.
+- alterações no código de gameplay/renderer sem evidência específica.
 
 ## Dependências
 
@@ -48,9 +50,10 @@ Windows runner
 → Vulkan SDK
 → glslc
 → GLFW resolvível
-→ matching MSVC CRT (/MD)
+→ matching MSVC CRT
 → make game
 → make tests
+→ campaign validation
 ```
 
 ## Consumidores
@@ -71,6 +74,8 @@ GLSL compiler version
 CRT model for game/GLFW
 make game result
 make tests result
+campaign validation result
+relevant warnings/diagnostics
 ```
 
 Uma execução verde demonstra compatibilidade observada para aquele ambiente. Não demonstra cobertura de todos os ambientes Windows.
@@ -91,5 +96,6 @@ Uma execução verde demonstra compatibilidade observada para aquele ambiente. N
 - [ ] `make game` verde;
 - [ ] `make tests` verde;
 - [ ] logs/artifacts preservados para diagnóstico;
+- [ ] tooling Windows usa o mesmo caminho de teste produzido pelo Makefile;
 - [ ] documentação canónica atualizada;
 - [ ] Gate Windows classificado por evidência real.
