@@ -34,7 +34,7 @@ A cobertura adicionada foi validada no CI Linux/headless:
 - criação de uma janela + `VkSurfaceKHR` real;
 - graphics queue e present queue válidas no `VulkanContext`;
 - suporte efetivo da present family à surface através de `vkGetPhysicalDeviceSurfaceSupportKHR`;
-- testes normais e ASan/UBSan concluíram com sucesso.
+- testes normais e ASan/UBSan concluíram com sucesso no implementation state.
 
 A capability matrix foi **observada no ambiente CI atual**, não universalmente provada para todo hardware possível.
 
@@ -98,7 +98,7 @@ Consumers affected: integration tests and future Gate review only; no gameplay c
 | graphics/present não são estruturalmente assumidas iguais | executável + teste estrutural | ✅ |
 | acquire/present OUT_OF_DATE/SUBOPTIMAL tratados | inspeção estática do `RendererCore` | ✅ |
 | fence reset apenas antes de submit | inspeção estática do `RendererCore` | ✅ |
-| reset/submit/present error-path sem deadlock | não há injeção real de `VkResult` nesta tranche | ⚠️ evidência incompleta |
+| reset/submit/present error-path sem deadlock | sem injeção real de `VkResult` nesta tranche | ⚠️ evidência incompleta |
 
 A última linha permanece dívida explícita: sem uma camada de injeção/mocking de Vulkan não é possível transformar todos os `VkResult` adversariais em execução real sem criar uma abstração nova. O código existente continua a tratar os paths previstos e permanece coberto por execução normal + sanitizers.
 
@@ -112,7 +112,7 @@ A última linha permanece dívida explícita: sem uma camada de injeção/mockin
 - inspeção do diff e da capability evidence;
 - distinguir explicitamente error paths executados daqueles apenas comprovados por inspeção.
 
-### Evidência final
+### Evidência final do implementation state
 
 Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 
@@ -121,6 +121,8 @@ Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 - source-size checks — success;
 - headless Vulkan — success;
 - campaign validation — success.
+
+A documentação posterior na mesma branch não altera runtime/build code. O workflow normal para o estado documental final `eddd1a124d57a5a435d1706c6d6149cbebf061d4` foi disparado e deve terminar antes do merge; a evidência sanitizer do código permaneceu verde no implementation state.
 
 ## Definition of Ready
 
@@ -135,9 +137,10 @@ Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 
 - [x] capability matrix mínima coberta por testes executáveis;
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
-- [x] normal + ASan/UBSan verdes;
-- [x] documentação de Roadmap/TECH_DEBT/Architecture sincronizada;
-- [x] PR pronta para integração.
+- [x] implementation state normal + ASan/UBSan verdes;
+- [x] dívida/documentação de Vulkan sincronizada;
+- [ ] workflow do último commit documental verde;
+- [ ] PR integrada.
 
 ## Próxima decisão
 
