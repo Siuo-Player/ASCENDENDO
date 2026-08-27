@@ -1,5 +1,6 @@
 #include "Logic/CampaignRuntime.h"
 #include "Logic/Level.h"
+#include "Logic/LevelDataIO.h"
 
 #include <filesystem>
 
@@ -14,11 +15,12 @@ bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
     reset();
     level.clear();
 
-    if (m_campaign.empty()) return false;
-    if (!std::filesystem::exists(m_campaign.front())) return false;
+    if (m_campaign.empty() || !std::filesystem::exists(m_campaign.front())) return false;
 
-    m_spawnY = level.appendFromFile(
-        m_campaign.front().string(), maxWidth, 0.0f);
+    const auto data = LevelDataIO::load(m_campaign.front());
+    if (!data) return false;
+
+    m_spawnY = level.appendFromData(*data, maxWidth, 0.0f);
     m_nextLevelIndex = 1;
     return true;
 }
@@ -27,8 +29,10 @@ bool CampaignRuntime::streamNextLevel(Level& level, float maxWidth) {
     if (!hasMoreLevels()) return false;
     if (!std::filesystem::exists(m_campaign[m_nextLevelIndex])) return false;
 
-    const float nextSpawnY = level.appendFromFile(
-        m_campaign[m_nextLevelIndex].string(), maxWidth, m_spawnY);
+    const auto data = LevelDataIO::load(m_campaign[m_nextLevelIndex]);
+    if (!data) return false;
+
+    const float nextSpawnY = level.appendFromData(*data, maxWidth, m_spawnY);
     ++m_nextLevelIndex;
     m_spawnY = nextSpawnY;
     return true;
