@@ -2,75 +2,58 @@
 
 **Bloco do roadmap:** `9.6 Base Engineering Gate`
 
-**Work Package:** `Application / graphics ownership boundary`
+**Work Package:** `9.6 Gate Evidence Sync`
+
+**Branch:** `docs/9-6-gate-evidence-sync`
 
 ## Base confirmada
 
-O `main` atual já integrou:
-
-- source-size gate alinhado com a política documental;
-- decomposição dos testes de `KeyBindings` e `Level`;
-- `GameStateMachine` como dono das transições de runtime;
-- `SimulationOrchestrator` como dono da orquestração fixed-step;
-- `main.cpp` já delega a simulação para `SimulationOrchestrator`.
-
-PR #46 demonstrou a primeira propriedade importante: a entry point deixou de possuir diretamente o ciclo `PhysicsWorld::advance -> Player::update -> Level::resolveCollision`.
+`main` integra PR #70, que adicionou cobertura Linux/Clang com ASan + UBSan sobre os objetos de testes e sobre a biblioteca `Game` ligada aos testes.
 
 ## Descoberta desta tranche
 
-A decomposição seguinte não deve criar uma classe `Application` genérica apenas para reduzir linhas. `Window` e `VulkanContext` são objetos RAII e não-copiáveis, e o seu lifetime é semanticamente relevante para surface/swapchain/device. A composição gráfica deve respeitar essa ownership graph.
+A documentação normativa estava inconsistente: `docs/CODE_SIZE.md` e `Development/Tools/check_source_sizes.py` usam uma política física em KiB, enquanto `DEVELOPMENT_PROTOCOL.md` ainda descrevia uma política histórica baseada em linhas. Além disso, o protocolo ainda descrevia PR #20 como ativo apesar de a documentação de arquitetura já o tratar como encerrado/superseded.
 
 ## Decisão
 
-A próxima fronteira será definida a partir de ownership real:
+Sincronizar os documentos de governação com o estado real de `main`, sem alterar thresholds de source-size nem comportamento do runtime.
+
+A política atual é:
 
 ```text
-Window
-  ↓ creates surface
-VulkanContext
-  ↓ owns device/queues/surface
-Swapchain / render infrastructure
-  ↓
-RendererFacade
+< 40 KiB       normal
+40–47.99 KiB   warning
+>= 48 KiB      error
 ```
 
-A primeira implementação deve criar uma composição pequena, testável e explicitamente não-copiável. Não criar uma abstraction layer Vulkan genérica.
+LOC permanece apenas como diagnóstico.
 
 ## Em escopo
 
-- mapear os objetos gráficos e a ordem de destruição;
-- definir uma fronteira de composição mínima;
-- preservar exatamente o comportamento atual de bootstrap/failure paths;
-- adicionar uma propriedade/invariante testável à nova fronteira;
-- manter `main.cpp` como entry point fino, sem reescrever o renderer.
+- atualizar `DEVELOPMENT_PROTOCOL.md`;
+- atualizar `ROADMAP.md` com a evidência de sanitizer;
+- atualizar `TECH_DEBT.md` com a conclusão da dívida Linux ASan/UBSan;
+- manter `BRANCH_PLAN.md` e o work package sincronizados;
+- preservar explicitamente as dívidas ainda abertas.
 
 ## Fora de escopo
 
-- `RenderSnapshot` geral;
-- novas abstrações genéricas de Vulkan;
-- otimizações;
-- mudanças de gameplay;
-- Campaign Editor;
-- PCG/difficulty systems.
+- Windows CI;
+- Vulkan lifecycle/queue hardening;
+- `main.cpp` decomposition;
+- RenderSnapshot geral;
+- alterações de código/runtime.
 
 ## Validação
 
 ```text
-ownership/lifetime documentados
-→ failure paths preservados
-→ build/tests
-→ headless Vulkan
-→ campaign validation
+PR #70 merged
+→ workflow Tests verde no commit de implementação
+→ workflow Sanitizers verde no commit de implementação
+→ revisão de consistência documental
+→ PR desta tranche
 ```
 
-## Critério de saída
+## Próxima tranche
 
-```text
-nova fronteira possui responsabilidade única
-+ ownership/lifetime explícitos
-+ cópia proibida quando necessário
-+ comportamento/failure paths preservados
-+ teste/invariante relevante
-+ CI verde
-+ ARCHITECTURE/ROADMAP sincronizados
-```
+Após integrar esta sincronização, abrir uma nova branch a partir do `main` atualizado para a decomposição arquitetural de `main.cpp`, começando por uma investigação do ownership graph e dos consumidores reais antes de qualquer extração.
