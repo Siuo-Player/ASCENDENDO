@@ -1,5 +1,7 @@
 #include "doctest/doctest.h"
 #include "Logic/Level.h"
+#include "Logic/LevelDataIO.h"
+
 #include <atomic>
 #include <chrono>
 #include <filesystem>
@@ -44,34 +46,48 @@ private:
     bool valid_ = false;
 };
 
+bool appendFile(Level& level, const std::filesystem::path& path,
+                float maxWidth, float offsetY, float* nextOffset = nullptr) {
+    const auto data = LevelDataIO::load(path);
+    if (!data) return false;
+    const float next = level.appendFromData(*data, maxWidth, offsetY);
+    if (nextOffset) *nextOffset = next;
+    return true;
+}
+
 } // namespace
 
 TEST_SUITE("Level / File Loading") {
-    TEST_CASE("appendFromFile: ficheiro inexistente retorna offsetY inalterado") {
-        Level level;
-        float result = level.appendFromFile("nao_existe_mesmo.lvl", 640.0f, 0.0f);
-        CHECK(result == doctest::Approx(0.0f));
-        CHECK(level.platformCount() == 0);
+    TEST_CASE("ficheiro inexistente nao cria LevelData") {
+        const auto data = LevelDataIO::load("nao_existe_mesmo.lvl");
+        CHECK(!data.has_value());
     }
 
-    TEST_CASE("appendFromFile: PLATFORM carregada com offset Y correto") {
+    TEST_CASE("PLATFORM e carregada com offset Y correto") {
         TempLevelFile tmp("platform", "# teste temporario\nNAME TestPlatform\nPLATFORM 50.0 100.0 100.0 15.0\n");
         REQUIRE(tmp.valid());
 
+        const auto data = LevelDataIO::load(tmp.path());
+        REQUIRE(data.has_value());
+
         Level level;
-        level.appendFromFile(tmp.path().string(), 640.0f, 0.0f);
+        level.appendFromData(*data, 640.0f, 0.0f);
         REQUIRE(level.platformCount() == 1);
         CHECK(level.platforms()[0].bounds.min.x == doctest::Approx(50.0f));
         CHECK(level.platforms()[0].bounds.min.y == doctest::Approx(100.0f));
         CHECK(level.platforms()[0].bounds.max.y == doctest::Approx(115.0f));
     }
 
-    TEST_CASE("appendFromFile: FLAG define hasFlag e flagBounds") {
+    TEST_CASE("FLAG define hasFlag e flagBounds") {
         TempLevelFile tmp("flag", "FLAG 150.0 300.0 40.0 40.0\n");
         REQUIRE(tmp.valid());
 
+        const auto data = LevelDataIO::load(tmp.path());
+        REQUIRE(data.has_value());
+        REQUIRE(data->flag.has_value());
+
         Level level;
-        level.appendFromFile(tmp.path().string(), 640.0f, 0.0f);
+        level.appendFromData(*data, 640.0f, 0.0f);
         CHECK(level.hasFlag == true);
         CHECK(level.flagBounds.min.x == doctest::Approx(150.0f));
         CHECK(level.flagBounds.min.y == doctest::Approx(300.0f));
@@ -79,19 +95,20 @@ TEST_SUITE("Level / File Loading") {
         CHECK(level.flagBounds.max.y == doctest::Approx(340.0f));
     }
 
-    TEST_CASE("appendFromFile: segundo chunk usa offsetY = offsetY_anterior + LOGICAL_HEIGHT") {
+    TEST_CASE("segundo chunk usa offsetY = offsetY anterior + LOGICAL_HEIGHT") {
         TempLevelFile tmp("stack", "PLATFORM 0.0 100.0 200.0 15.0\n");
         REQUIRE(tmp.valid());
 
         Level level;
-        float nextY = level.appendFromFile(tmp.path().string(), 640.0f, 0.0f);
+        float nextY = 0.0f;
+        REQUIRE(appendFile(level, tmp.path(), 640.0f, 0.0f, &nextY));
         CHECK(nextY == doctest::Approx(360.0f));
-        level.appendFromFile(tmp.path().string(), 640.0f, nextY);
+        REQUIRE(appendFile(level, tmp.path(), 640.0f, nextY));
         REQUIRE(level.platformCount() == 2);
         CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(460.0f));
     }
 
-    TEST_CASE("appendFromFile: avanco do chunk e identico mesmo sem plataformas") {
+    TEST_CASE("avanco do chunk e identico mesmo sem plataformas") {
         TempLevelFile tmpEmpty("empty", "# nivel sem plataformas\n");
         TempLevelFile tmpFull(
             "full",
@@ -102,9 +119,14 @@ TEST_SUITE("Level / File Loading") {
         REQUIRE(tmpEmpty.valid());
         REQUIRE(tmpFull.valid());
 
+        const auto emptyData = LevelDataIO::load(tmpEmpty.path());
+        const auto fullData = LevelDataIO::load(tmpFull.path());
+        REQUIRE(emptyData.has_value());
+        REQUIRE(fullData.has_value());
+
         Level levelEmpty, levelFull;
-        float nextEmpty = levelEmpty.appendFromFile(tmpEmpty.path().string(), 640.0f, 0.0f);
-        float nextFull = levelFull.appendFromFile(tmpFull.path().string(), 640.0f, 0.0f);
+        const float nextEmpty = levelEmpty.appendFromData(*emptyData, 640.0f, 0.0f);
+        const float nextFull = levelFull.appendFromData(*fullData, 640.0f, 0.0f);
         CHECK(nextEmpty == doctest::Approx(360.0f));
         CHECK(nextFull == doctest::Approx(360.0f));
         CHECK(nextEmpty == doctest::Approx(nextFull));
