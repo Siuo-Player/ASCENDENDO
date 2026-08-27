@@ -5,6 +5,7 @@
 #include <GLFW/glfw3.h>
 
 #include <filesystem>
+#include <utility>
 
 namespace {
 
@@ -52,8 +53,8 @@ TEST_SUITE("Graphics Runtime") {
         std::filesystem::create_directories(tempRoot, ec);
         REQUIRE_FALSE(ec);
 
-        REQUIRE(std::filesystem::current_path(tempRoot, ec),
-                "failed to switch to temporary working directory");
+        std::filesystem::current_path(tempRoot, ec);
+        REQUIRE_FALSE(ec);
 
         {
             gfx::GraphicsRuntime runtime;
@@ -69,8 +70,8 @@ TEST_SUITE("Graphics Runtime") {
             // Restoring the real project working directory supplies the normal
             // shader files. A second init proves the failed attempt left a
             // neutral state rather than partially-owned graphics resources.
-            REQUIRE(std::filesystem::current_path(originalPath, ec),
-                    "failed to restore project working directory");
+            std::filesystem::current_path(originalPath, ec);
+            REQUIRE_FALSE(ec);
             CHECK(runtime.init(640, 360, "ASCENDENDO retry test"));
             CHECK(runtime.isInitialized());
         }
