@@ -16,7 +16,11 @@ Transformar o suporte Windows documentado em evidência executável e reproduzí
 
 O `Makefile` já possui uma via Windows, e `Development/Tools/run_tests_windows.cmd` executa `build\\tests.exe` quando esse binário existe. Contudo, o workflow atual é exclusivamente Linux e não existe evidência de `make game` + `make tests` em Windows.
 
-Além disso, o Makefile referencia `external/glfw/lib-vc2022`, mas esse artefacto pré-compilado não está presente no repositório. A futura CI deve tornar a origem/resolução dessa dependência explícita e reproduzível.
+Além disso, o Makefile referencia `external/glfw/lib-vc2022`, mas esse artefacto pré-compilado não está presente no repositório. A CI torna agora a origem/resolução dessa dependência explícita e reproduzível.
+
+A primeira execução encontrou um incompatibilidade de toolchain: o runner `windows-2025-vs2026` expunha MSVC STL que rejeitava Clang 19 (`STL1000`). O workflow foi então fixado em LLVM/Clang 20.1.8.
+
+A segunda execução passou a compilar todo o código ASCENDENDO, mas falhou no link por mistura de modelos CRT entre o `glfw3.lib` construído por Visual Studio e os objetos do jogo. O contrato Windows foi tornado explícito: Clang usa `/MD` e o GLFW é construído com `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` (`/MD`).
 
 ## Inclui
 
@@ -44,6 +48,7 @@ Windows runner
 → Vulkan SDK
 → glslc
 → GLFW resolvível
+→ matching MSVC CRT (/MD)
 → make game
 → make tests
 ```
@@ -54,7 +59,7 @@ Windows runner
 
 ## Critério de evidência
 
-A primeira execução deve preservar:
+A execução deve preservar:
 
 ```text
 OS image
@@ -63,6 +68,7 @@ make version
 Vulkan SDK version/path
 GLFW source/version or resolved artefact
 GLSL compiler version
+CRT model for game/GLFW
 make game result
 make tests result
 ```
