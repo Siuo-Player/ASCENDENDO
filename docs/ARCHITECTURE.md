@@ -128,7 +128,7 @@ O PR #20 foi encerrado/superseded e não é uma tranche ativa. A migração atua
 
 ## Modelo comum de níveis
 
-Runtime e editor devem convergir para um `LevelData` declarativo e independente de Vulkan/GLFW:
+Runtime e editor convergem para um `LevelData` declarativo e independente de Vulkan/GLFW:
 
 ```text
 .lvl / campaign source
@@ -138,7 +138,11 @@ Runtime e editor devem convergir para um `LevelData` declarativo e independente 
       └── Editor view
 ```
 
-Isto evita que `Level` e `LevelEditorDocument` evoluam como dois modelos concorrentes do mesmo conteúdo.
+A responsabilidade atual de `LevelDataIO` é **parse/serialize**, não validação de schema completa. O parser não deve ser usado como autoridade de UGC ou como substituto da validação futura.
+
+`Level` é atualmente um **modelo de mundo acumulado**: `appendFromData()` adiciona a geometria de cada chunk a `m_platforms`, usando `LOGICAL_HEIGHT` como avanço vertical. Um objeto `Level` não é semanticamente equivalente a uma única entrada da campanha.
+
+Metadados como `name`, `hasFlag` e `flagBounds` ainda têm escopo de chunk/último `appendFromData()` enquanto a geometria tem escopo do mundo acumulado. Esta assimetria é dívida de modelo e deve ser resolvida por uma decisão de escopo explícita, não por patches de campos isolados.
 
 ## Input
 
@@ -158,6 +162,8 @@ Gameplay / Editor
 
 Gameplay não deve consultar `Key::SPACE`, `Key::A`, etc. diretamente.
 
+As arestas `justPressed`/`justReleased` continuam atualmente amostradas no **render frame**. O fixed-step pode consumir vários ticks por frame; por isso não se deve assumir equivalência entre frame-edge e tick-edge em replay autoritativo. Um futuro contrato tick-exact deve usar um comando indexado por tick ou outra regra temporal explicitamente definida.
+
 ## Tempo de simulação
 
 O fixed timestep de 60 Hz permanece. O sistema deve impedir recuperação ilimitada depois de um frame muito longo/minimização.
@@ -175,6 +181,8 @@ Requisitos:
 
 A resolução atual baseada em penetration depth/velocidade é adequada ao jogo atual, mas deve ser tratada como uma implementação de gameplay, não como um resolvedor geométrico universal.
 
+Importante: a resolução atual percorre plataformas sequencialmente e muta o corpo após cada contacto. Portanto a ordem de `Level::platforms()` é potencialmente parte da função de transição quando existem múltiplos contactos relevantes. Até existir uma decisão formal, não assumir que permutar a representação interna é semanticamente neutro.
+
 ## Vulkan
 
 A seleção de device/queues deve validar explicitamente:
@@ -186,6 +194,8 @@ A seleção de device/queues deve validar explicitamente:
 - surface formats/present modes/capabilities.
 
 Graphics e present podem coincidir ou ser queues diferentes.
+
+A capability matrix executável existente não equivale a cobertura de recovery. `GraphicsRuntime::init()` pode falhar depois de inicializar membros; a política de one-shot/retry e o rollback completo devem ser explicitados antes de depender de reinitialização.
 
 Wrappers Vulkan devem ser não-copiáveis e, quando necessário, movíveis com ownership claro.
 
@@ -204,6 +214,23 @@ user data root
 ```
 
 Isto é requisito para a futura build portable.
+
+## Bootstrap
+
+`RuntimeBootstrap` (PR #76) é uma **fronteira de composição de startup**, não uma nova camada de runtime.
+
+```text
+RuntimePaths
+    + user-data preparation
+    + CampaignLoader
+    + CampaignID
+            ↓
+      RuntimeBootstrapResult
+```
+
+Não deve possuir frame loop, `Camera`, Vulkan, presentation, `GameSession` ou estado mutável de gameplay.
+
+A implementação atual ainda permite que `CampaignLoader` e `CampaignID` interpretem o source da campanha independentemente. O bootstrap reduz acoplamento do `main.cpp`, mas não fecha a arquitetura de campanha. Antes de UGC/web, a campanha deve convergir para uma autoridade documental/canónica comum.
 
 ## Configuração
 
@@ -249,6 +276,18 @@ O formato `.lvl` deve ter versão explícita antes de save/import público:
 ```text
 VERSION 1
 ...
+```
+
+Na Fase 10, o fluxo deve ser:
+
+```text
+parse
+→ validate envelope
+→ identify schema version
+→ migrate known old version
+→ validate migrated representation
+→ normalize
+→ runtime
 ```
 
 Mapas devem permanecer declarativos, sem scripts, includes, paths arbitrários ou execução de código.
