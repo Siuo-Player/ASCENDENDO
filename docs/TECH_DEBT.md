@@ -24,7 +24,7 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
 | Levels | runtime/editor têm modelos separados que representam o mesmo conteúdo | introduzir `LevelData` independente de Vulkan/GLFW | parser, editor e runtime convergem no mesmo modelo |
 | Physics | fixed timestep sem limite de recuperação | limitar passos por frame e/ou `dt` | minimização/lag não provoca centenas de ticks num frame |
-| Vulkan | seleção de queue/device assume demasiado sobre graphics/present | validar extension, capabilities e graphics/present queues separadamente | hardware com queues diferentes é suportado ou rejeitado explicitamente |
+| Vulkan | seleção de queue/device assume demasiado sobre graphics/present | validar extension, capabilities e graphics/present queues separadamente | capability matrix mínima demonstrada; error-path adversarial permanece explicitamente classificado |
 
 ## P1 — tratar durante a consolidação pós-9.4
 
@@ -141,3 +141,11 @@ Windows CI permanece uma dívida independente; não se deve inferir sucesso ou f
 PR #72 extraiu a primeira fronteira de sessão de `main.cpp`. `GameSession` agora possui `GameStateMachine`, `CampaignRuntime`, `Level`, `PhysicsWorld`, `SimulationOrchestrator`, `Player` e `EditorSession`; `main.cpp` permanece responsável pela composição do processo, graphics/presentation, input polling, `Camera` e submissão de frames.
 
 A implementação foi validada por `Tests #746` (`33026510334`) e `Sanitizers #8` (`33026512992`), ambos concluídos com sucesso incluindo build, testes, headless Vulkan e campaign validation. Durante a branch houve uma falha de compilação observável (`33026463141`) causada pela remoção acidental do include explícito de `Logic/RunHistory.h`; a correção foi feita na mesma branch e os checks seguintes ficaram verdes.
+
+## Evidência recente — Vulkan capability matrix
+
+PR #74 adicionou cobertura executável para as capacidades mínimas exigidas pelo runtime: Vulkan 1.3+, physical device, `VK_KHR_swapchain`, graphics queue e suporte real da present queue à `VkSurfaceKHR`. Também verifica que graphics/present queues permanecem representáveis como families distintas.
+
+O commit `8998290fa2ad2d04c5306640553d228406a3543a` passou `Tests #775` e `Sanitizers #17`, incluindo source-size, headless Vulkan e campaign validation.
+
+A dívida Vulkan **não é totalmente encerrada**: os caminhos adversariais reais de `vkAcquireNextImageKHR`, `vkQueueSubmit` e `vkQueuePresentKHR` que retornariam erros específicos não são injetados/executados nesta tranche. Esses invariants ficam classificados como evidência estática baseada na implementação existente. Uma futura camada de teste/injeção só deve ser criada se o benefício justificar a nova abstração.
