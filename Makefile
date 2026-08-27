@@ -45,7 +45,12 @@ endif
 # ── Flags de Compilação ────────────────────────────────────────────────────────
 # -MMD -MP: gera ficheiros .d (dependencias) ao lado de cada .o, listando os
 # headers do PROJECTO incluidos por esse .cpp (nao os headers de sistema).
-CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
+# -Werror: um novo warning no codigo do projecto nao pode entrar silenciosamente.
+CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-parameter -MMD -MP
+
+# Headers de terceiros sao tratados como system headers para nao transformar
+# warnings internos dessas dependencias num falso alarme do nosso codigo.
+INCLUDES := -I$(GAME_DIR) -isystem $(EXT_DIR)
 
 # Clang targeting the MSVC ABI must use the same dynamic CRT model as the
 # Visual Studio-built GLFW library staged by Windows CI. The MSVC environment
@@ -77,9 +82,6 @@ BUILD_DIR      := build
 GAME_BUILD_DIR := $(BUILD_DIR)/game
 TEST_BUILD_DIR := $(BUILD_DIR)/test
 TEST_LOG       := $(BUILD_DIR)/test_results.txt
-
-# ── Includes ──────────────────────────────────────────────────────────────────
-INCLUDES := -I$(GAME_DIR) -I$(EXT_DIR)
 
 # ── Vulkan ────────────────────────────────────────────────────────────────────
 ifeq ($(PLATFORM),windows)
