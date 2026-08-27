@@ -1,87 +1,58 @@
-// =============================================================================
-//  Game/Logic/Level.cpp
-//
-//  @version 7.2
-//  @history
-//    v7.1 — appendFromFile: avanço dinâmico (highestY + 50), nao padronizado
-//    v7.2 — FIX CRITICO: avanço do chunk passa a ser SEMPRE config::LOGICAL_HEIGHT
-//            (uma "tela" exacta por nivel). Antes, o avanço dependia do conteudo
-//            do nivel (highestY+50), o que quebrava o trigger de streaming em
-//            main.cpp (que assume blocos de altura fixa). Agora: chunk N ocupa
-//            sempre [N*LOGICAL_HEIGHT, (N+1)*LOGICAL_HEIGHT) no mundo.
-//            Aviso (cerr) se o conteudo do nivel ultrapassar uma tela de altura.
-// =============================================================================
-
 #include "Logic/Level.h"
 #include "Core/Config.h"
+
 #include <algorithm>
 #include <cmath>
-#include <fstream>
-#include <sstream>
 #include <iostream>
 
 namespace logic {
 
-float Level::appendFromFile(const std::string& filepath, float maxWidth, float offsetY) {
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        std::cerr << "[ERRO] Nao foi possivel abrir o nivel: " << filepath << "\n";
-        return offsetY; // Retorna o offset inalterado
-    }
-
+float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY) {
     hasFlag = false;
+    name = data.name;
+
     float highestY = offsetY;
-    std::string line;
-    int lineNum = 0;
-
-    while (std::getline(file, line)) {
-        lineNum++;
-        if (line.empty() || line[0] == '#') continue; 
-
-        std::istringstream iss(line);
-        std::string type;
-        iss >> type;
-
-        if (type == "NAME") {
-            std::getline(iss >> std::ws, name);
-        } else if (type == "PLATFORM") {
-            float x, y, w, h;
-            if (iss >> x >> y >> w >> h) {
-                float worldY = y + offsetY;
-                if (x < 0.0f || (x + w) > maxWidth) {
-                    std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum 
-                              << ": Plataforma fora dos limites laterais! X=" << x << "\n";
-                }
-                if (y + h > config::LOGICAL_HEIGHT) {
-                    std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum
-                              << ": Plataforma ultrapassa uma tela de altura (Y_local="
-                              << (y + h) << " > " << config::LOGICAL_HEIGHT << ")\n";
-                }
-                addPlatform(x, worldY, w, h);
-                if (worldY + h > highestY) highestY = worldY + h;
-            }
-        } else if (type == "FLAG") {
-            float x, y, w, h;
-            if (iss >> x >> y >> w >> h) {
-                hasFlag = true;
-                flagBounds = AABB{{x, y + offsetY}, {x + w, y + offsetY + h}};
-                if (y + h > config::LOGICAL_HEIGHT) {
-                    std::cerr << "[AVISO] Nivel '" << name << "', Linha " << lineNum
-                              << ": FLAG ultrapassa uma tela de altura (Y_local="
-                              << (y + h) << " > " << config::LOGICAL_HEIGHT << ")\n";
-                }
-            }
+    for (const auto& localBounds : data.platforms) {
+        if (localBounds.min.x < 0.0f || localBounds.max.x > maxWidth) {
+            std::cerr << "[AVISO] Nivel '" << name
+                      << "': Plataforma fora dos limites laterais! X="
+                      << localBounds.min.x << "\n";
         }
-    }
-    
-    std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY << ". O topo do conteudo e " << highestY << "\n";
+        if (localBounds.max.y > config::LOGICAL_HEIGHT) {
+            std::cerr << "[AVISO] Nivel '" << name
+                      << "': Plataforma ultrapassa uma tela de altura (Y_local="
+                      << localBounds.max.y << " > " << config::LOGICAL_HEIGHT << ")\n";
+        }
 
-    // Avanço SEMPRE padronizado: cada nivel ocupa exactamente uma tela.
+        addPlatform(localBounds.min.x,
+                    localBounds.min.y + offsetY,
+                    localBounds.width(),
+                    localBounds.height());
+        highestY = std::max(highestY, localBounds.max.y + offsetY);
+    }
+
+    if (data.flag) {
+        hasFlag = true;
+        flagBounds = AABB{
+            {data.flag->min.x, data.flag->min.y + offsetY},
+            {data.flag->max.x, data.flag->max.y + offsetY}
+        };
+
+        if (data.flag->max.y > config::LOGICAL_HEIGHT) {
+            std::cerr << "[AVISO] Nivel '" << name
+                      << "': FLAG ultrapassa uma tela de altura (Y_local="
+                      << data.flag->max.y << " > " << config::LOGICAL_HEIGHT << ")\n";
+        }
+        highestY = std::max(highestY, data.flag->max.y + offsetY);
+    }
+
+    std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY
+              << ". O topo do conteudo e " << highestY << "\n";
     return offsetY + config::LOGICAL_HEIGHT;
 }
 
 void Level::addPlatform(float x, float y, float w, float h) {
-    m_platforms.push_back({ AABB{ {x, y}, {x + w, y + h} } });
+    m_platforms.push_back({AABB{{x, y}, {x + w, y + h}}});
 }
 
 bool Level::resolveCollision(PhysicsBody& body) const {
@@ -98,41 +69,44 @@ bool Level::resolveCollision(PhysicsBody& body) const {
             if (body.velocity.y <= 0.0f) {
                 body.position.y = platform.bounds.max.y;
                 body.velocity.y = 0.0f;
-                body.isGrounded  = true;
+                body.isGrounded = true;
                 collided = true;
             }
-            continue; 
+            continue;
         }
 
-        float exitLeft  = bodyAABB.max.x  - platform.bounds.min.x;
+        float exitLeft = bodyAABB.max.x - platform.bounds.min.x;
         float exitRight = platform.bounds.max.x - bodyAABB.min.x;
-        float exitUp    = platform.bounds.max.y - bodyAABB.min.y;
-        float exitDown  = bodyAABB.max.y  - platform.bounds.min.y;
+        float exitUp = platform.bounds.max.y - bodyAABB.min.y;
+        float exitDown = bodyAABB.max.y - platform.bounds.min.y;
 
-        float minExitX = std::min(exitLeft,  exitRight);
-        float minExitY = std::min(exitUp,    exitDown);
+        float minExitX = std::min(exitLeft, exitRight);
+        float minExitY = std::min(exitUp, exitDown);
 
-        bool lateralCollision = std::abs(body.velocity.x) > std::abs(body.velocity.y) && minExitX <= minExitY;
+        bool lateralCollision =
+            std::abs(body.velocity.x) > std::abs(body.velocity.y) &&
+            minExitX <= minExitY;
 
         if (lateralCollision) {
-            body.position.x = (exitLeft < exitRight) ? platform.bounds.min.x - body.width : platform.bounds.max.x;                
+            body.position.x =
+                (exitLeft < exitRight)
+                    ? platform.bounds.min.x - body.width
+                    : platform.bounds.max.x;
             body.velocity.x = -body.velocity.x * 0.3f;
             collided = true;
         } else {
             if (exitUp <= exitDown) {
-                if (body.velocity.y <= 0.0f) {          
+                if (body.velocity.y <= 0.0f) {
                     body.position.y = platform.bounds.max.y;
                     body.velocity.y = 0.0f;
-                    body.isGrounded  = true;
+                    body.isGrounded = true;
                     collided = true;
                 }
-            } else {
-                if (body.velocity.y > 0.0f) {           
-                    body.position.y = platform.bounds.min.y - body.height;
-                    body.velocity.y = -body.velocity.y * 0.3f;
-                    body.velocity.x = body.velocity.x * 0.9f; 
-                    collided = true;
-                }
+            } else if (body.velocity.y > 0.0f) {
+                body.position.y = platform.bounds.min.y - body.height;
+                body.velocity.y = -body.velocity.y * 0.3f;
+                body.velocity.x *= 0.9f;
+                collided = true;
             }
         }
     }
