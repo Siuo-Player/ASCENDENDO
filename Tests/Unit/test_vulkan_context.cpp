@@ -79,4 +79,16 @@ TEST_SUITE("VulkanContext") {
         ctx.shutdown();
     }
 
+    // ── Teste 6 ───────────────────────────────────────────────────────────────
+    TEST_CASE("createSurface() rejeita handle nulo sem invalidar contexto") {
+        gfx::VulkanContext ctx;
+        REQUIRE(ctx.init(false));
+
+        CHECK(ctx.createSurface(VK_NULL_HANDLE) == false);
+        CHECK(ctx.isInitialized());
+        CHECK(ctx.device() != VK_NULL_HANDLE);
+
+        ctx.shutdown();
+    }
+
 }
