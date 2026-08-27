@@ -13,7 +13,7 @@ namespace logic {
 struct LevelData {
     std::string name = "Sem Nome";
     std::vector<AABB> platforms;
-    Vec2 spawnPosition{};
+    std::optional<Vec2> spawnPosition;
     std::optional<AABB> flag;
 };
 
