@@ -6,7 +6,7 @@
 **Subsystem:** `Graphics / Platform lifecycle`  
 **Work Package:** `9.6 GLFW lifetime owner`  
 **Branch:** `fix/9-6-glfw-lifetime-owner`  
-**PR:** `<to be created>`
+**PR:** `#73`
 
 ## Objetivo
 
@@ -42,7 +42,8 @@ This preserves the current `main → GraphicsRuntime → Window` ownership graph
 - keep the existing process-level RAII owner in `main.cpp`;
 - document the precondition that `Window::create()` requires GLFW to be initialized;
 - validate graphics startup, tests and headless Vulkan after the change;
-- validate failure cleanup paths where `GraphicsRuntime::init()` returns false.
+- validate failure cleanup paths where `GraphicsRuntime::init()` returns false;
+- give the integration test process an explicit GLFW lifetime owner because integration tests instantiate `Window` directly.
 
 ### Não inclui
 
@@ -60,17 +61,20 @@ main/process
   └── GlfwRuntime (sole GLFW library lifetime owner)
         └── GraphicsRuntime
               └── Window (GLFWwindow resource only)
-                    └── Vulkan surface creation
+
+integration test process
+  └── GlfwTestRuntime (test-process library lifetime owner)
+        └── direct Window/Vulkan integration fixtures
 ```
 
-Consumers: `main.cpp`, `GraphicsRuntime`, `Window`, any future code constructing `Window` directly.  
+Consumers: `main.cpp`, `GraphicsRuntime`, `Window`, `Tests/test_runner.cpp`, integration tests that construct `Window` directly and any future code constructing `Window` directly.  
 Validation dependencies: GLFW headers/library, existing Linux headless workflow, Windows dependency strategy remains separate.
 
 ## Invariants
 
 - GLFW is initialized before any `glfw*` API is used;
-- exactly one process-level owner calls `glfwTerminate()`;
-- `GLFWwindow` is destroyed before GLFW is terminated;
+- exactly one owner initializes/terminates GLFW within each process;
+- `GLFWwindow` resources are destroyed before GLFW is terminated;
 - Vulkan surface/device/instance destruction remains before window destruction through the existing member destruction order;
 - no runtime behavior changes are intended;
 - stub builds remain compile-safe when GLFW is unavailable.
@@ -79,9 +83,10 @@ Validation dependencies: GLFW headers/library, existing Linux headless workflow,
 
 | Risco | Probabilidade | Impacto | Mitigação | Estado |
 |---|---|---|---|---|
-| A direct `Window` user relies on implicit GLFW initialization | baixa | médio | make the precondition explicit and search all consumers before merge | mitigado by repository search |
-| Failure cleanup terminates GLFW before Vulkan/window resources are released | baixa | alto | keep process owner alive until the GraphicsRuntime scope has fully destructed | mitigado by current scope ordering |
-| Stub build behavior changes | baixa | baixo | preserve no-op `Window` methods under `!GLFW_AVAILABLE` | aberto até CI |
+| A direct `Window` user relies on implicit GLFW initialization | baixa | médio | make the precondition explicit and search all consumers before merge | resolved in repository consumers |
+| Failure cleanup terminates GLFW before Vulkan/window resources are released | baixa | alto | keep process owner alive until the GraphicsRuntime scope has fully destructed | validated by scope ordering |
+| Stub build behavior changes | baixa | baixo | preserve no-op `Window` methods under `!GLFW_AVAILABLE` | validated by existing compilation path |
+| Integration tests relied on Window's implicit `glfwInit()` | confirmed | médio | initialize GLFW once in `Tests/test_runner.cpp` | corrected in branch |
 
 ## Validation
 
@@ -91,6 +96,14 @@ Validation dependencies: GLFW headers/library, existing Linux headless workflow,
 - headless Vulkan build/startup;
 - campaign validation;
 - inspect the failure paths of `GraphicsRuntime::init()` to ensure the process-level GLFW owner remains alive until all graphics members have been destroyed.
+
+### First validation failure
+
+CI normal workflow run `33026726288` failed in `make tests -j2`: 11 integration tests that instantiate `gfx::Window` failed at `win.create(...)` because `Window` no longer initializes GLFW implicitly.
+
+The log also shows that `make game -j2` succeeded, source-size checks succeeded and the campaign validator was otherwise reached successfully. The failure was therefore a test-consumer contract issue, not an infrastructure failure.
+
+Correction: `Tests/test_runner.cpp` now owns one `GlfwTestRuntime` for the test process under `GLFW_AVAILABLE`, providing the explicit initialization required by all direct window integration consumers and terminating GLFW only after the test process has finished destroying its local Vulkan/window objects.
 
 ## Definition of Ready
 
@@ -102,9 +115,10 @@ Validation dependencies: GLFW headers/library, existing Linux headless workflow,
 
 ## Definition of Done
 
-- [ ] only process-level RAII owner initializes/terminates GLFW;
-- [ ] `Window` only owns `GLFWwindow*`;
-- [ ] all builds/tests pass;
+- [x] only a process-level owner initializes/terminates GLFW in production;
+- [x] `Window` only owns `GLFWwindow*`;
+- [x] integration tests have an explicit test-process GLFW owner;
+- [ ] all builds/tests pass after final correction;
 - [ ] failure-path cleanup is validated;
 - [ ] docs/architecture/roadmap/tech debt synchronized;
 - [ ] PR merged.
@@ -120,9 +134,15 @@ Local compile-time defect introduced by the branch implementation; not a CI/infr
 
 Correction:
 The implementation was corrected to use `GLFW_RESIZABLE` before validation.
+
+Validation finding:
+After the production build passed, the normal test workflow exposed 11 integration failures because direct Window consumers had relied on Window's former implicit GLFW initialization.
+
+Correction:
+Added one explicit RAII `GlfwTestRuntime` to `Tests/test_runner.cpp` so the test process follows the same single-owner lifetime rule.
 ```
 
 ## Fecho
 
-**Estado:** em execução.  
-**Próxima decisão:** validate the single-owner lifetime and cleanup ordering; if green, integrate the tranche and continue to the remaining Vulkan lifecycle evidence.
+**Estado:** em revalidação.  
+**Próxima decisão:** confirm the corrected normal and sanitizer workflows; only then close and merge the tranche.
