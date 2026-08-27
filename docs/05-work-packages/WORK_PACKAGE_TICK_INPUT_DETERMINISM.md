@@ -14,7 +14,7 @@ Transformar o gap documentado de input frame-scoped versus simulation tick numa 
 
 ## Finding confirmado
 
-`GameSession::update()` entrega um `InputManager` a `SimulationOrchestrator::advance()`. Quando um frame produz vários fixed steps, o mesmo input, incluindo `justPressed`/`justReleased`, é reutilizado em todos os ticks.
+`GameSession::update()` entrega um `InputManager` a `SimulationOrchestrator::advance()`. Quando um frame produz vários fixed steps, o mesmo input, incluindo `justPressed`/`justReleased`, era reutilizado em todos os ticks.
 
 Isto não prova que o jogo seja atualmente não determinístico, mas impede a alegação mais forte de replay tick-exact.
 
@@ -85,12 +85,26 @@ TickInput(tick=1)
 
 ## Definition of Done
 
-- [ ] unidade tick-scoped implementada;
-- [ ] `Player` e `SimulationOrchestrator` migrados;
+- [x] unidade tick-scoped implementada;
+- [x] `Player` e `SimulationOrchestrator` migrados;
 - [ ] testes D2–D4 verdes;
 - [ ] evidência frame-repartition preservada;
 - [ ] documentação canónica atualizada;
 - [ ] PR pronta para merge.
+
+## Falha observada durante validação — 2026-08-27
+
+Os workflows `Tests #1044` e `Sanitizers #102` falharam no passo agregado de build/testes depois da mudança de assinatura de `Player::update`.
+
+A comparação do código confirmou um consumidor antigo em `Tests/Unit/test_player.cpp` que continuava a chamar:
+
+```cpp
+p.update(InputManager, PhysicsWorld, dt);
+```
+
+quando a nova interface exige `TickInput`.
+
+Isto é um failure de consumidor de teste diretamente causado pela alteração de interface, e não uma falha atribuída ao sanitizer/runtime sem evidência adicional. A correção deve substituir essas chamadas por `TickInput` explícito; no caso do rebind, o teste deve continuar a validar a tradução `KeyBindings → TickInput` antes de chamar `Player`.
 
 ## Relação com o Gate 9.6
 
