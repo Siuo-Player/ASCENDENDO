@@ -129,6 +129,15 @@ Fix: restore the explicit `Logic/RunHistory.h` include; no behavioral redesign i
 
 The source-size checks in the same run passed, so this failure was not caused by the size gate.
 
+### Revalidation after fix
+
+After restoring the include, the following runs completed successfully on the corrected branch commit:
+
+- `Tests` run #746 / workflow run `33026510334` — **success**;
+- `Sanitizers` run #8 / workflow run `33026512992` — **success**.
+
+Both workflows completed their build/test paths, source-size checks, headless Vulkan selection, campaign validation and cleanup successfully.
+
 ## Definition of Ready
 
 - [x] objective and scope defined;
@@ -140,13 +149,13 @@ The source-size checks in the same run passed, so this failure was not caused by
 
 ## Definition of Done
 
-- [ ] `GameSession` owns the agreed runtime/session responsibilities;
-- [ ] `main.cpp` no longer owns those session rules;
-- [ ] behavior-preservation tests pass;
-- [ ] Linux/Clang/headless Vulkan CI remains green;
-- [ ] campaign validation remains green;
-- [ ] architecture/roadmap/WP reflect the final ownership model;
-- [ ] no `Application` monolith or RenderSnapshot migration is introduced unintentionally.
+- [x] `GameSession` owns the agreed runtime/session responsibilities;
+- [x] `main.cpp` no longer owns those session rules;
+- [x] behavior-preservation tests pass;
+- [x] Linux/Clang/headless Vulkan CI remains green;
+- [x] campaign validation remains green;
+- [x] architecture/roadmap/WP reflect the final ownership model;
+- [x] no `Application` monolith or RenderSnapshot migration is introduced unintentionally.
 
 ## Evidence / references
 
@@ -157,10 +166,31 @@ The source-size checks in the same run passed, so this failure was not caused by
 - `Game/Graphics/PresentationRuntime.h` — existing presentation ownership boundary;
 - `Game/Core/GameStateMachine.h` — existing state boundary;
 - `Game/Logic/CampaignRuntime.h` — existing campaign boundary;
-- CI run `33026463141` — concrete compile failure and diagnostic above.
+- CI run `33026463141` — concrete compile failure and diagnostic;
+- workflow run `33026510334` — corrected normal validation;
+- workflow run `33026512992` — corrected sanitizer validation.
+
+## Alterações durante execução
+
+```text
+Discovery:
+The runtime/session ownership was coherent, but main.cpp still mixed it with process and presentation composition.
+
+Decision:
+Extract GameSession, not Application.
+
+Failure discovered during validation:
+Missing explicit RunHistory declaration after the extraction.
+
+Correction:
+Restored Logic/RunHistory.h include in main.cpp.
+
+Validation:
+Tests #746 and Sanitizers #8 both completed successfully.
+```
 
 ## Fecho
 
-**Resultado:** em execução; first CI compile failure diagnosed and being corrected in the same branch.  
-**Próxima decisão:** restore the required explicit include, rerun the full validation, and only then assess any remaining behavior or ownership issues.  
-**Dívida residual:** graphics/bootstrap composition, Windows CI, Vulkan lifecycle/queue evidence and full RenderSnapshot boundary remain outside this tranche.
+**Resultado:** concluído.  
+**Critério de saída:** the first main-loop session boundary is merged only after behavior-preservation CI and sanitizer evidence are green.  
+**Dívida residual:** further `main.cpp` decomposition (bootstrap/configuration and frame composition), Windows CI, Vulkan lifecycle/queue evidence and the general RenderSnapshot boundary remain open.
