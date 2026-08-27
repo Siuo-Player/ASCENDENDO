@@ -1,11 +1,12 @@
 // =============================================================================
 //  Tests/Unit/test_replay.cpp
 //
-//  @version 7.0
+//  @version 7.1
 //  @history
 //    v3.3 — criado (testes unitários para o ReplayManager e Save States)
 //    v6.1 — atualizado para garantir isGrounded=true, respeitando a nova física
 //    v7.0 — replay validado com TickInput e estado comparado após cada tick
+//    v7.1 — explicita que grouping evidence usa a mesma sequência semântica
 // =============================================================================
 
 #include "../../external/doctest/doctest.h"
@@ -167,7 +168,7 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         CHECK(replay.preparePlaybackTick(unused) == false);
     }
 
-    TEST_CASE("Reprodução com a mesma sequência semântica é independente de agrupamento") {
+    TEST_CASE("Mesma sequência semântica de ticks é independente de agrupamento externo") {
         const std::vector<TickInput> sequence = {
             TickInput{true, false, true, true, false},
             TickInput{true, false, true, false, false},
@@ -187,8 +188,10 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
             playerA.update(input, worldA, PhysicsWorld::FIXED_STEP);
         }
 
-        // Schedule B: two semantic ticks are grouped as one external frame,
-        // but the simulation still consumes the exact same tick sequence.
+        // Schedule B: the same semantic TickInput sequence is grouped into
+        // two-tick batches. This intentionally does not claim that live
+        // frame-level GLFW edge sampling is frame-rate independent; that is a
+        // separate property from replaying an already semantic tick sequence.
         for (size_t i = 0; i < sequence.size(); i += 2) {
             playerB.update(sequence[i], worldB, PhysicsWorld::FIXED_STEP);
             if (i + 1 < sequence.size()) {
