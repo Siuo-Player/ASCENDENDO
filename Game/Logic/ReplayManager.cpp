@@ -1,9 +1,10 @@
 // =============================================================================
 //  Game/Logic/ReplayManager.cpp
 //
-//  @version 3.3
+//  @version 4.0
 //  @history
 //    v3.3 — criado
+//    v4.0 — gravação/reprodução passa a usar TickInput por tick
 // =============================================================================
 
 #include "Logic/ReplayManager.h"
@@ -23,27 +24,20 @@ bool ReplayManager::loadState(size_t slot, Player& player, PhysicsWorld& world) 
     return true;
 }
 
-void ReplayManager::recordFrame(const Player& player, const PhysicsWorld& world, const InputManager& input) {
+void ReplayManager::recordTick(const Player& player, const PhysicsWorld& world, const TickInput& input) {
+    // Store the pre-tick state so rewind returns to the exact state preceding
+    // the corresponding semantic command.
     m_stateHistory.push_back(GameState{ player, world.accumulator() });
-
-    FrameInput fi;
-    fi.left              = input.isLeft();
-    fi.right             = input.isRight();
-    fi.jumpHeld          = input.isKeyDown(Key::SPACE);
-    fi.jumpPressed       = input.isKeyJustPressed(Key::SPACE);
-    fi.jumpReleased      = input.isKeyJustReleased(Key::SPACE);
-    m_inputHistory.push_back(fi);
+    m_inputHistory.push_back(input);
 }
 
 bool ReplayManager::rewind(Player& player, PhysicsWorld& world) {
     if (m_stateHistory.empty() || m_inputHistory.empty()) return false;
 
-    // 1. LER o estado do topo (o frame exato para onde queremos voltar)
     const GameState& prevState = m_stateHistory.back();
     player = prevState.player;
     world.setAccumulator(prevState.worldAccumulator);
 
-    // 2. APAGAR o estado do topo, para que o próximo rewind volte ainda mais atrás
     m_stateHistory.pop_back();
     m_inputHistory.pop_back();
 
@@ -54,13 +48,12 @@ void ReplayManager::startPlayback() {
     m_playbackIndex = 0;
 }
 
-void ReplayManager::preparePlaybackFrame(InputManager& input) {
-    if (isPlaybackComplete()) return;
+bool ReplayManager::preparePlaybackTick(TickInput& input) {
+    if (isPlaybackComplete()) return false;
 
-    const FrameInput& fi = m_inputHistory[m_playbackIndex];
-    input.injectRawState(fi.left, fi.right, fi.jumpHeld, fi.jumpPressed, fi.jumpReleased);
-    
-    m_playbackIndex++;
+    input = m_inputHistory[m_playbackIndex];
+    ++m_playbackIndex;
+    return true;
 }
 
 void ReplayManager::clearReplay() {
