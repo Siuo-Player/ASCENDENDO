@@ -18,10 +18,12 @@
 namespace gfx {
 
 bool Window::create(uint32_t width, uint32_t height, const char* title) {
-    if (!glfwInit()) return false;
+    // GLFW process lifetime is owned by the application/process boundary.
+    // Window owns only the GLFWwindow resource.
+    if (!glfwGetVersionString()) return false;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);   // sem contexto OpenGL
-    glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);    // fixo por agora (Fase 4: redimensionavel)
+    glfwWindowHint(GLFW.RESIZABLE, GLFW_FALSE);     // fixo por agora (Fase 4: redimensionavel)
 
     // O caller pode passar a resolucao total do monitor. Uma janela normal
     // acrescenta decoracao fora da area cliente, portanto uma janela com
@@ -48,10 +50,7 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
     m_handle = glfwCreateWindow(static_cast<int>(width),
                                 static_cast<int>(height),
                                 title, nullptr, nullptr);
-    if (!m_handle) {
-        glfwTerminate();
-        return false;
-    }
+    if (!m_handle) return false;
 
     m_width  = width;
     m_height = height;
@@ -61,7 +60,6 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
 void Window::destroy() {
     if (m_handle) {
         glfwDestroyWindow(m_handle);
-        glfwTerminate();
         m_handle = nullptr;
         m_width  = 0;
         m_height = 0;
