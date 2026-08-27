@@ -6,8 +6,6 @@
 
 TEST_SUITE("Graphics Runtime") {
     TEST_CASE("owns core graphics resources in dependency order") {
-        REQUIRE(glfwInit() == GLFW_TRUE);
-
         {
             gfx::GraphicsRuntime runtime;
             CHECK(runtime.init(640, 360, "ASCENDENDO test"));
@@ -18,8 +16,6 @@ TEST_SUITE("Graphics Runtime") {
             CHECK(runtime.pipeline().isInitialized());
             CHECK(runtime.renderer().isInitialized());
         }
-
-        glfwTerminate();
     }
 }
 #endif
