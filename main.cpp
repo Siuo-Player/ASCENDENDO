@@ -26,8 +26,6 @@
 using namespace gfx;
 using namespace logic;
 
-static const std::string CAMPAIGN_NAME = "Campanha Principal";
-
 namespace {
 
 class GlfwRuntime {
