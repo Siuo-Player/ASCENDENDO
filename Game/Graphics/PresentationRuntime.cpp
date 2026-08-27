@@ -40,7 +40,7 @@ bool PresentationRuntime::init(VulkanContext* ctx,
     }
 
     if (spritePipeline_.init(ctx, swapchain, renderPass) &&
-        playerSprite_.init(ctx, spritePipeline_.descriptorSetLayout(), playerSpritePath)) {
+        playerSprite_.init(ctx, spritePipeline_.descriptorSetLayout(), playerSpritePath.string())) {
         renderer_->attachSprite(&spritePipeline_, &playerSprite_);
         spriteReady_ = true;
     } else {
