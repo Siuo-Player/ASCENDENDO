@@ -11,15 +11,14 @@ Este documento transforma a revisão de código atual em trabalho rastreável. S
 
 A implementação legada `Renderer.cpp/.h` já não está presente em `main`. A migração para `RendererCore` + passes + `RendererFacade` está integrada.
 
-A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`. PR #20 formaliza a migração desta fronteira e permanece aberta até integração.
+A próxima dívida arquitetural de presentation é a ausência de um `RenderSnapshot` geral: em `main`, `WorldRenderer` ainda recebe diretamente `Player` e `Level`. PR #20 foi encerrado/superseded; a migração continua uma responsabilidade do roadmap, mas não existe uma branch histórica ativa a manter.
 
 ## P0 — tratar antes de continuar a acumular complexidade
 
 | Área | Problema | Ação | Critério de saída |
 |---|---|---|---|
 | CI / evidência | Run #281 falhou no step agregado de build/teste, mas a causa detalhada não está confirmada | obter diagnóstico observável antes de atribuir causalidade e, depois, corrigir/revalidar | causa classificada por evidência e nova execução documentada |
-| Source size | regra normativa de 300/400 linhas não corresponde ao checker de `main`, que ainda usa 30/36 KiB e ignora `main.cpp` | documentar primeiro; migrar checker/workflow num WP próprio | checker verifica política de linhas, inclui `main.cpp`, e CI verde |
-| Runtime | `main.cpp` acumula inicialização, estados, campanha, física, editor e persistência | extrair `Application`, `GameStateMachine` e `Simulation` incrementalmente | `main.cpp` deixa de possuir regras de gameplay/editor |
+| Runtime | `main.cpp` acumula inicialização, estados, campanha, física, editor e persistência | extrair responsabilidades incrementalmente | `main.cpp` deixa de possuir regras de gameplay/editor |
 | Presentation | `RendererFacade`/passes ainda recebem modelos de domínio diretamente | introduzir `RenderSnapshot`/dados de apresentação | presentation recebe dados próprios de apresentação |
 | Input | gameplay ainda pode consultar teclas físicas diretamente | migrar `Player` para `GameAction`/`KeyBindings` | nenhuma regra de gameplay depende de `Key::...` |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
@@ -29,21 +28,21 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 
 ## P1 — tratar durante a consolidação pós-9.4
 
-| Área | Problema | Ação |
-|---|---|---|
-| CI | só Linux é referência de build | adicionar Windows build/tests |
-| CI | sanitizers existem no Makefile mas não são um job obrigatório | job ASan + UBSan |
-| CI | build/game/testes ainda estão agregados em parte do workflow | separar steps para observabilidade e diagnosticar cada fase |
-| Editor | não existe undo/redo | Command Pattern + stacks |
-| Editor | drag deve ser uma operação lógica única | criar transações/comandos begin/update/end |
-| Config | `Config.h` acumula domínios | separar progressivamente physics/render/window/editor/gameplay |
-| Vulkan RAII | wrappers devem garantir ownership explícito | tornar recursos não-copiáveis e movíveis quando apropriado |
-| Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato |
-| Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária |
-| Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste |
-| Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md` a cada bloco |
-| Arquitetura | fronteiras podem ser alteradas sem atualizar WBS/roadmap | tratar mudanças arquiteturais como alteração de planeamento | arquitetura e WBS permanecem congruentes |
-| Coordenação | consumidores e testes podem descobrir uma mudança de interface apenas no fim da branch | manter dependency map no work package | dependências críticas identificadas antes de implementação/merge |
+| Área | Problema | Ação | Estado atual |
+|---|---|---|---|
+| CI | só Linux é referência de build | adicionar Windows build/tests | aberto |
+| CI | sanitizers existem no Makefile mas não eram um job obrigatório | job ASan + UBSan | **Linux concluído no PR #70** |
+| CI | build/game/testes ainda estão agregados em parte do workflow | separar steps para observabilidade e diagnosticar cada fase | parcialmente mitigado; sanitizer já é workflow independente |
+| Editor | não existe undo/redo | Command Pattern + stacks | aberto |
+| Editor | drag deve ser uma operação lógica única | criar transações/comandos begin/update/end | aberto |
+| Config | `Config.h` acumula domínios | separar progressivamente physics/render/window/editor/gameplay | aberto |
+| Vulkan RAII | wrappers devem garantir ownership explícito | tornar recursos não-copiáveis e movíveis quando apropriado | aberto |
+| Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato | aberto |
+| Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária | aberto |
+| Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste | aberto |
+| Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md` a cada bloco | processo ativo |
+| Arquitetura | fronteiras podem ser alteradas sem atualizar WBS/roadmap | tratar mudanças arquiteturais como alteração de planeamento | processo ativo |
+| Coordenação | consumidores e testes podem descobrir uma mudança de interface apenas no fim da branch | manter dependency map no work package | processo ativo |
 
 ## P2 — qualidade, cobertura e performance
 
@@ -72,26 +71,26 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 
 ## Source-size work packages em preparação
 
-A partir do incidente de 2026-08-25, os seguintes alvos estão explicitamente rastreados:
+Os alvos de source-size continuam rastreados como sinais de revisão estrutural:
 
 ```text
 FontRenderer.cpp
-    → 430 linhas históricas → primeiro alvo de decomposição
+    → 430 linhas históricas → decomposto
 
 SpriteRenderer.cpp
     → 332 linhas históricas → investigar coesão antes de dividir
 
 Tests/Unit/test_keybindings.cpp
-    → 305 linhas históricas → dividir por famílias de comportamento se a coesão justificar
+    → 305 linhas históricas → decomposto por responsabilidade
 
 Tests/Unit/test_level.cpp
-    → 326 linhas históricas → dividir por domínio de invariantes/falhas se justificável
+    → 326 linhas históricas → decomposto por responsabilidade
 
 main.cpp
-    → 330 linhas históricas → continuar extração arquitetural, não split artificial
+    → ~330 linhas históricas → continuar extração arquitetural, não split artificial
 ```
 
-A ordem pode mudar apenas por nova evidência documentada.
+A política normativa atual está em `docs/CODE_SIZE.md`: `< 40 KiB` normal, `40–47.99 KiB` warning e `>= 48 KiB` error. LOC é diagnóstico apenas.
 
 ## Regras de arquitetura derivadas da revisão
 
@@ -104,7 +103,7 @@ A ordem pode mudar apenas por nova evidência documentada.
 7. O EXE é a autoridade final de validação de mapas.
 8. O current working directory não é uma dependência do runtime.
 9. O CI testa o produto que será distribuído, não apenas os testes unitários.
-10. A política normativa de modularidade é `<300` normal, `300–399` warning e `>=400` error; o enforcement em `main` ainda precisa de migração do checker.
+10. A política normativa de modularidade é `<40 KiB` normal, `40–47.99 KiB` warning e `>=48 KiB` error; LOC é diagnóstico.
 11. Cada work package deve ter dependências e critérios de saída explícitos.
 12. Alterações que mudem fronteiras arquiteturais devem atualizar o planeamento e a documentação relevante.
 13. Uma dependência técnica deve ser considerada também uma dependência de coordenação quando a sua alteração afeta consumidores, testes ou documentação.
@@ -113,7 +112,7 @@ A ordem pode mudar apenas por nova evidência documentada.
 
 ## Portões do roadmap
 
-Antes de avançar para uma nova tranche arquitetural dependente de presentation, os gates de processo acima devem estar resolvidos ou explicitamente aceites como dívida com risco e condição de revisão.
+Antes de avançar para uma nova tranche arquitetural dependente de presentation, os gates de processo acima devem estar resolvidos ou explicitamente aceites como dívida com risco, condição de revisão e posição no roadmap.
 
 Antes de **11 Partilha/Biblioteca** devem estar resolvidos:
 
@@ -129,3 +128,9 @@ Antes da **release portable** todos os P0 devem estar fechados e os P1 críticos
 ## Governança do roadmap
 
 A lista acima deve ser lida em conjunto com `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md`. Um item de dívida não é apenas uma observação técnica: quando exige trabalho, deve tornar-se um work package rastreável no roadmap ou numa tranche de manutenção.
+
+## Evidência recente — sanitizer
+
+PR #70 adicionou o workflow `.github/workflows/sanitizers.yml`. No commit de implementação `c450f62cd5f3bac4f37e768a34ec17bbcb4a08cd`, o workflow normal `Tests` e o workflow `Sanitizers` terminaram com sucesso. O workflow sanitizer força `CXXFLAGS_REL` a uma configuração ASan/UBSan, fazendo com que a biblioteca `Game` ligada aos testes seja instrumentada, sem alterar as flags normais do build release.
+
+Windows CI permanece uma dívida independente; não se deve inferir sucesso ou falha sem uma estratégia de dependências validada.

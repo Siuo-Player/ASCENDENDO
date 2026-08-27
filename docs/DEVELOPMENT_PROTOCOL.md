@@ -130,18 +130,24 @@ Validation after fix:
 
 The distinction between **likely** and **confirmed** is mandatory. Never infer a compiler/test failure from a generic failed step when the diagnostic is unavailable. In that case the cause remains **unknown**.
 
-### Current CI evidence — 2026-08-25
+### Historical CI evidence — 2026-08-25
 
 Run #281 (`32879936455`) is known to have failed in the aggregate job/step named **Build and run tests in virtual X display**. The source-size gate did not cause this run to fail.
 
-The detailed failure diagnostic has not been recovered from the job log through the available GitHub interface at the time of this update. Therefore:
+The detailed failure diagnostic was not recovered through the available GitHub interface at the time of that historical update. Therefore its confirmed cause remains:
 
 ```text
 Classification: CI build/test failure
 Confirmed cause: UNKNOWN
 ```
 
-No code change may be attributed to a more specific cause until the diagnostic is obtained.
+No code change may be attributed to a more specific cause without diagnostic evidence.
+
+### Current sanitizer evidence — 2026-08-27
+
+PR #70 (`ci(9.6): add production ASan/UBSan coverage`) added an independent Linux/Clang sanitizer workflow. Its implementation commit `c450f62cd5f3bac4f37e768a34ec17bbcb4a08cd` produced successful `Tests` run `33025107053` and successful `Sanitizers` run `33025107141`.
+
+The later documentation-only follow-up was integrated without changing runtime/build source. Windows CI and hardware/capability coverage remain unvalidated.
 
 ### Historical source-size incident
 
@@ -159,22 +165,24 @@ That result is evidence of a maintainability problem in the affected files; it i
 
 ## Source-size and modularity policy
 
-The project policy is intentionally **line-based** because the engineering question is source-structure/cohesion, not encoded byte density:
+The current source-size policy is the one documented by `docs/CODE_SIZE.md` and implemented by `Development/Tools/check_source_sizes.py`:
 
 ```text
-< 300 lines
+< 40 KiB
     normal
 
-300–399
+40–47.99 KiB
     WARNING
-    explicit subdivision plan required
+    explicit assessment of partitioning before accumulating new responsibilities
 
-≥ 400
+≥ 48 KiB
     ERROR
-    CI blocks until subdivided or an explicit exception is documented
+    CI blocks until coherent partitioning or an explicit documented exception
 ```
 
-This threshold is a decision trigger, not a demand for arbitrary splitting. An exception must document:
+The metric is physical UTF-8 file size in KiB. LOC is diagnostic only. Size is a decision trigger for maintainability review, not a demand for arbitrary splitting.
+
+An exception must document:
 
 ```text
 why the file remains cohesive
@@ -186,13 +194,7 @@ when to reconsider
 
 Prefer responsibility-cohesive boundaries. Never create artificial files such as `main1.cpp`, `main2.cpp`, `main3.cpp` solely to reduce metrics.
 
-### Enforcement status
-
-As of `main` at `1573e21c518620188ac47568b99d23327f80a279`, the checked-in `Development/Tools/check_source_sizes.py` still implements the older **KiB-based** rule and scans `Game/` and `Tests/` only. It does not yet include `main.cpp`.
-
-Therefore the line-based policy above is the **normative target**, while the CI implementation remains a follow-up implementation work package. The repository must not claim that the new policy is enforced on `main` until the checker and workflow are actually updated and validated.
-
-The duplicate checker `Development/check_source_size.py` is not present on current `main`; `Development/Tools/check_source_sizes.py` is the current checker path.
+`Development/Tools/check_source_sizes.py` is the canonical checker. The repository must not introduce a second implementation of the same policy.
 
 ## Architecture / WBS consistency
 
@@ -230,7 +232,9 @@ RendererFacade
 World / UI / Editor passes
 ```
 
-On current `main`, `WorldRenderer` still directly receives `logic::Player` and `logic::Level`. Therefore the general `RenderSnapshot` boundary is **not yet complete on `main`**. PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) remains open and is the current implementation record for this migration.
+On current `main`, `WorldRenderer` still directly receives `logic::Player` and `logic::Level`. Therefore the general `RenderSnapshot` boundary is **not yet complete on `main`**.
+
+PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) is historical/closed-superseded; it is not an active implementation record. Use current architecture/work-package documents and the merged commit history for the present migration state.
 
 ## Branch / PR discipline
 

@@ -30,7 +30,7 @@ REFERENCE    fonte externa
 HISTORICAL   estado anterior
 ```
 
-## Estado de referência — 2026-08-26
+## Estado de referência — 2026-08-27
 
 `main` contém o hardening incremental 9.6, a consolidação `RendererCore` → passes → `RendererFacade`, o contrato inicial de `RenderSnapshot` e as decomposições validadas de `FontRenderer`, `SpriteRenderer`, testes de `KeyBindings` e testes de `Level`.
 
@@ -40,7 +40,9 @@ Também estão integrados:
 - `SimulationOrchestrator` e a delegação do fixed-step pelo entry point;
 - ownership de `RendererFacade` baseado em `std::unique_ptr`;
 - lifetime de GLFW protegido por RAII;
-- política única de source-size em **KiB** (`40 KiB` warning / `48 KiB` hard limit), com teste próprio e checker canónico.
+- política única de source-size em **KiB** (`40 KiB` warning / `48 KiB` hard limit), com teste próprio e checker canónico;
+- `PresentationRuntime` ligado ao `main.cpp` sem ownership direto dos pipelines/renderers de apresentação;
+- workflow Linux dedicado de ASan/UBSan que instrumenta também os objetos de produção `Game` usados pelos testes.
 
 A migração geral de `RenderSnapshot` **continua bloqueada pelo Base Engineering Gate**: a presentation de gameplay ainda possui dependências diretas dos modelos de domínio.
 
@@ -56,9 +58,11 @@ A migração geral de `RenderSnapshot` **continua bloqueada pelo Base Engineerin
 - PR #46 — wiring da simulação no `main.cpp`, integrado;
 - PR #47 — ownership/lifetime work package, integrado;
 - PR #48 — ownership RAII do `RendererFacade`, integrado;
-- PR #49 — política KiB + GLFW RAII, integrado.
+- PR #49 — política KiB + GLFW RAII, integrado;
+- PR #69 — wiring de `PresentationRuntime` no `main.cpp`, integrado;
+- PR #70 — cobertura explícita Linux/Clang ASan + UBSan para produção + testes, integrado.
 
-O CI automático validou Linux/Clang/headless Vulkan, build, testes e campanha. A evidência Windows, sanitizers e matriz de hardware continua em falta.
+A evidência Linux agora cobre workflow normal, headless Vulkan, campanha e ASan/UBSan. A evidência Windows e a matriz de hardware/capabilities continuam em falta. O endurecimento específico de Vulkan lifecycle/queues também não está demonstrado como concluído.
 
 ## Princípio estratégico
 
@@ -93,7 +97,8 @@ O Gate fecha antes de nova feature significativa ou da migração geral de `Rend
 │   ├── KeyBindings tests                               ✅
 │   ├── Level tests                                     ✅
 │   ├── GameStateMachine boundary + wiring              ✅
-│   ├── SimulationOrchestrator + wiring                  ✅
+│   ├── SimulationOrchestrator + wiring                 ✅
+│   ├── PresentationRuntime + wiring                    ✅
 │   └── main.cpp architectural decomposition             🔄
 └── E — Gate review                                     🔒
 ```
@@ -128,7 +133,8 @@ CI verde isolado não fecha o Gate.
 - fixed-step delegado a `SimulationOrchestrator`;
 - ownership de `RendererFacade` convertido para RAII;
 - lifetime global de GLFW convertido para RAII;
-- checker de source-size unificado em KiB.
+- checker de source-size unificado em KiB;
+- `PresentationRuntime` ligado ao entry point, retirando a ownership direta da apresentação do `main.cpp`.
 
 ### Próximo: completar `main.cpp` 🔒
 
@@ -181,7 +187,7 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 
 - Windows build + tests no CI;
 - `make game`/equivalente no Windows;
-- ASan/UBSan quando suportado;
+- **Linux ASan/UBSan** ✅ — PR #70, workflow independente, com instrumentação dos objetos de produção `Game` usados pelos testes;
 - replay regression tick-by-tick;
 - property/invariant tests;
 - malformed `.lvl` e error paths;
@@ -189,7 +195,7 @@ Os testes de `appendFromFile` usam nomes temporários fixos. Isto fica registado
 - matriz mínima hardware/software;
 - profiling antes de otimização.
 
-Estes itens são necessários para o Gate completo, mesmo que uma decomposição pequena possa ser validada primeiro no ambiente suportado.
+O Linux sanitizer gap original está encerrado como evidência. O Gate continua aberto porque Windows, Vulkan failure-path/queue evidence e outras propriedades transversais ainda não foram demonstrados.
 
 ## 9.6 P1.9 — RenderSnapshot geral 🔒
 
