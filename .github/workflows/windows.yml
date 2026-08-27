@@ -25,6 +25,10 @@ jobs:
       - name: Checkout ASCENDENDO
         uses: actions/checkout@v4
 
+      - name: Install GNU Make
+        shell: pwsh
+        run: choco install make --yes --no-progress
+
       - name: Install LLVM and Clang
         uses: KyleMayes/install-llvm-action@v2.0.9
         with:
@@ -48,7 +52,7 @@ jobs:
           clang++ --version
           llvm-ar --version
           cmake --version
-          gmake --version
+          make --version
           if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is not set' }
           glslc --version
 
@@ -86,7 +90,7 @@ jobs:
             "VULKAN_SDK: $env:VULKAN_SDK",
             "clang++: $(clang++ --version | Select-Object -First 1)",
             "cmake: $(cmake --version | Select-Object -First 1)",
-            "make: $(gmake --version | Select-Object -First 1)"
+            "make: $(make --version | Select-Object -First 1)"
           ) | Set-Content 'windows-environment.txt'
 
       - name: Test source-size policy
@@ -100,12 +104,12 @@ jobs:
       - name: Build game
         shell: pwsh
         run: |
-          gmake clean
-          gmake game -j2
+          make clean
+          make game -j2
 
       - name: Run full test suite
         shell: pwsh
-        run: gmake tests -j2
+        run: make tests -j2
 
       - name: Validate active campaign levels
         shell: pwsh
