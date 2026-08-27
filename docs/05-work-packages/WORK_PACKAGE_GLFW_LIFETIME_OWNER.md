@@ -14,9 +14,9 @@ Establish exactly one explicit owner for process-wide GLFW initialization/termin
 
 ## Descoberta / evidência
 
-`main.cpp` creates `GlfwRuntime`, which calls `glfwInit()` and later `glfwTerminate()`. `gfx::Window::create()` also calls `glfwInit()`, and `gfx::Window::destroy()` calls `glfwTerminate()`.
+`main.cpp` creates `GlfwRuntime`, which calls `glfwInit()` and later `glfwTerminate()`. `gfx::Window::create()` also called `glfwInit()`, and `gfx::Window::destroy()` called `glfwTerminate()`.
 
-`GraphicsRuntime` already owns `Window` and controls the destruction order of the graphics resource graph. Consequently, GLFW lifetime is currently duplicated across two layers.
+`GraphicsRuntime` already owns `Window` and controls the destruction order of the graphics resource graph. Consequently, GLFW lifetime was duplicated across two layers.
 
 The code path is normally benign because GLFW initialization is idempotent and the outer `GlfwRuntime` is destroyed after `GraphicsRuntime`, but the ownership contract is ambiguous and the second `glfwTerminate()` has no resource ownership associated with it. More importantly, `main.cpp` also calls GLFW APIs directly (`glfwGetPrimaryMonitor`, `glfwSetWindowTitle`) outside `Window`, so the initialization boundary should be explicit at process level.
 
@@ -109,7 +109,20 @@ Validation dependencies: GLFW headers/library, existing Linux headless workflow,
 - [ ] docs/architecture/roadmap/tech debt synchronized;
 - [ ] PR merged.
 
+## Alterações durante execução
+
+```text
+Implementation check:
+A first edit removed nested GLFW init/terminate from Window, but introduced a source typo in the GLFW window hint constant (`GLFW.RESIZABLE`).
+
+Classification:
+Local compile-time defect introduced by the branch implementation; not a CI/infrastructure failure.
+
+Correction:
+The implementation was corrected to use `GLFW_RESIZABLE` before validation.
+```
+
 ## Fecho
 
 **Estado:** em execução.  
-**Próxima decisão:** implement the single-owner lifetime, validate cleanup ordering, then reassess whether remaining Vulkan lifecycle work is still P0.
+**Próxima decisão:** validate the single-owner lifetime and cleanup ordering; if green, integrate the tranche and continue to the remaining Vulkan lifecycle evidence.
