@@ -122,3 +122,27 @@ std::filesystem::path RuntimePaths::levelsRoot() const {
 }
 
 std::filesystem::path RuntimePaths::campaignFile() const {
+    return levelsRoot() / "campaign.txt";
+}
+
+std::filesystem::path RuntimePaths::playerSprite() const {
+    return assetsRoot() / "Sprites" / "personagem.png";
+}
+
+std::filesystem::path RuntimePaths::controlsFile() const {
+    return userDataRoot_ / "Settings" / "controls.cfg";
+}
+
+std::filesystem::path RuntimePaths::runsFile() const {
+    return userDataRoot_ / "Runs" / "runs.csv";
+}
+
+bool RuntimePaths::ensureUserDirectories() const {
+    std::error_code ec;
+    std::filesystem::create_directories(controlsFile().parent_path(), ec);
+    if (ec) return false;
+    std::filesystem::create_directories(runsFile().parent_path(), ec);
+    return !ec;
+}
+
+} // namespace core
