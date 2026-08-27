@@ -1,13 +1,13 @@
 #pragma once
 
 #include "Core/KeyBindings.h"
-#include "Logic/EditorInteraction.h"
 #include "Logic/EditorRenderSnapshot.h"
 #include "Logic/InputManager.h"
 #include "Logic/LevelData.h"
 
 #include <cstddef>
 #include <optional>
+#include <string>
 #include <vector>
 
 namespace logic {
@@ -29,7 +29,6 @@ struct EditorPlatform {
 
 class LevelEditorDocument {
 public:
-    // `finalCampaignLevel` controls the campaign rule for the final flag.
     LevelEditorDocument(bool finalCampaignLevel, const AABB& initialGround);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
