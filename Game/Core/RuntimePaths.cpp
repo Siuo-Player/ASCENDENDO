@@ -55,20 +55,44 @@ std::filesystem::path executableDirectory(const char* argv0) {
     return ec ? std::filesystem::path{} : cwd;
 }
 
+std::string environmentValue(const char* name) {
+#if defined(_WIN32)
+    char* value = nullptr;
+    size_t size = 0;
+    const errno_t result = _dupenv_s(&value, &size, name);
+    if (result != 0 || value == nullptr) {
+        if (value != nullptr) std::free(value);
+        return {};
+    }
+
+    std::string resultValue(value);
+    std::free(value);
+    return resultValue;
+#else
+    const char* value = std::getenv(name);
+    return value != nullptr ? std::string(value) : std::string{};
+#endif
+}
+
 std::filesystem::path userDataDirectory() {
 #if defined(_WIN32)
-    if (const char* localAppData = std::getenv("LOCALAPPDATA"); localAppData && *localAppData) {
+    const std::string localAppData = environmentValue("LOCALAPPDATA");
+    if (!localAppData.empty()) {
         return std::filesystem::path(localAppData) / "ASCENDENDO";
     }
 #elif defined(__APPLE__)
-    if (const char* home = std::getenv("HOME"); home && *home) {
+    const std::string home = environmentValue("HOME");
+    if (!home.empty()) {
         return std::filesystem::path(home) / "Library" / "Application Support" / "ASCENDENDO";
     }
 #else
-    if (const char* stateHome = std::getenv("XDG_STATE_HOME"); stateHome && *stateHome) {
+    const std::string stateHome = environmentValue("XDG_STATE_HOME");
+    if (!stateHome.empty()) {
         return std::filesystem::path(stateHome) / "ASCENDENDO";
     }
-    if (const char* home = std::getenv("HOME"); home && *home) {
+
+    const std::string home = environmentValue("HOME");
+    if (!home.empty()) {
         return std::filesystem::path(home) / ".local" / "state" / "ASCENDENDO";
     }
 #endif
@@ -98,27 +122,3 @@ std::filesystem::path RuntimePaths::levelsRoot() const {
 }
 
 std::filesystem::path RuntimePaths::campaignFile() const {
-    return levelsRoot() / "campaign.txt";
-}
-
-std::filesystem::path RuntimePaths::playerSprite() const {
-    return assetsRoot() / "Sprites" / "personagem.png";
-}
-
-std::filesystem::path RuntimePaths::controlsFile() const {
-    return userDataRoot_ / "Settings" / "controls.cfg";
-}
-
-std::filesystem::path RuntimePaths::runsFile() const {
-    return userDataRoot_ / "Runs" / "runs.csv";
-}
-
-bool RuntimePaths::ensureUserDirectories() const {
-    std::error_code ec;
-    std::filesystem::create_directories(controlsFile().parent_path(), ec);
-    if (ec) return false;
-    std::filesystem::create_directories(runsFile().parent_path(), ec);
-    return !ec;
-}
-
-} // namespace core
