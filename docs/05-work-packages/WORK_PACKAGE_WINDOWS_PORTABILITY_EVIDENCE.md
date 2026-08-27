@@ -20,9 +20,13 @@ O runner `windows-2025-vs2026` expôs Visual Studio 18/2026. O workflow foi alin
 
 Uma tentativa de usar `/MD` diretamente com o driver GNU-style `clang++` falhou porque a opção foi tratada como nome de ficheiro. A seleção de runtime passou a usar a opção nativa de Clang `-fms-runtime-lib=dll`, mantendo o GLFW em `MultiThreadedDLL`.
 
-A execução posterior chegou a compilar e linkar `game.exe` e o executável dos testes, mas `make tests` falhou no tooling Windows: o `Makefile` produz `build\\test\\tests.exe`, enquanto `Development/Tools/run_tests_windows.cmd` procurava `build\\tests.exe`. Isto é um mismatch de contrato entre consumidor e produtor de testes, não uma falha do runtime Windows.
+A execução posterior chegou a compilar e linkar `game.exe` e o executável dos testes, mas `make tests` falhou no tooling Windows: o `Makefile` produz `build\\test\\tests.exe`, enquanto `Development/Tools/run_tests_windows.cmd` procurava `build\\tests.exe`. Isto foi corrigido para o caminho produzido pelo Makefile.
 
-Também foi observado durante a auditoria de CI que warnings de terceiros e warnings de infraestrutura não devem ser confundidos com warnings do código do projeto. O workflow passou a preservar diagnósticos, e os cabeçalhos de `external/` são tratados como dependência externa.
+Na mesma execução, os testes que dependem de Vulkan falharam porque o runner Windows não expunha um ICD/dispositivo utilizável: `VK_ERROR_INCOMPATIBLE_DRIVER (-9)`. Isto é distinto de uma falha de compilação/link e não deve ser resolvido mascarando ou excluindo testes gráficos do full suite.
+
+A CI Linux demonstra o padrão necessário: instala `mesa-vulkan-drivers`, seleciona explicitamente o ICD `lvp_icd.json` e verifica `llvmpipe` antes de executar o suite completo. Portanto, a próxima correção experimental da tranche fornece uma versão Windows do mesmo princípio através de um rasterizer Vulkan por software e força o loader para o manifesto desse driver.
+
+A implementação usa `jakoch/install-vulkan-sdk-action@v1.6.0` com `install_lavapipe: true` e força `VK_DRIVER_FILES` para `C:\\lavapipe\\share\\vulkan\\icd.d\\lvp_icd.x86_64.json`. O resultado ainda precisa de validação executável; esta ação é uma dependência CI explícita e não uma alteração do runtime distribuído.
 
 ## Inclui
 
@@ -32,7 +36,8 @@ Também foi observado durante a auditoria de CI que warnings de terceiros e warn
 - preservação de logs e versões de ambiente suficientes para diagnóstico;
 - full test mode, não apenas `tests-fast`;
 - documentação da evidência obtida ou das falhas observadas;
-- verificação de contratos entre `Makefile` e ferramentas de teste.
+- verificação de contratos entre `Makefile` e ferramentas de teste;
+- evidência Vulkan com driver por software quando o runner não fornece um ICD utilizável.
 
 ## Não inclui
 
@@ -48,6 +53,7 @@ Windows runner
 → LLVM / clang++ / llvm-ar
 → GNU Make
 → Vulkan SDK
+→ Vulkan software ICD resolvível
 → glslc
 → GLFW resolvível
 → matching MSVC CRT
@@ -69,6 +75,7 @@ OS image
 compiler version
 make version
 Vulkan SDK version/path
+Vulkan software driver + manifest path
 GLFW source/version or resolved artefact
 GLSL compiler version
 CRT model for game/GLFW
@@ -87,7 +94,8 @@ Uma execução verde demonstra compatibilidade observada para aquele ambiente. N
 - [x] runner Windows inspecionado;
 - [x] ausência de CI Windows confirmada;
 - [x] GLFW prebuilt path tratado como dependência explícita;
-- [x] não-equivalência entre documentação e evidência executável registada.
+- [x] não-equivalência entre documentação e evidência executável registada;
+- [x] primeiro failure mode Vulkan observado e distinguido de build/link failure.
 
 ## Definition of Done
 
@@ -96,6 +104,8 @@ Uma execução verde demonstra compatibilidade observada para aquele ambiente. N
 - [ ] `make game` verde;
 - [ ] `make tests` verde;
 - [ ] logs/artifacts preservados para diagnóstico;
-- [ ] tooling Windows usa o mesmo caminho de teste produzido pelo Makefile;
+- [x] tooling Windows usa o mesmo caminho de teste produzido pelo Makefile;
+- [ ] software Vulkan driver demonstrado no runner;
+- [ ] full suite verde com Vulkan disponível;
 - [ ] documentação canónica atualizada;
 - [ ] Gate Windows classificado por evidência real.
