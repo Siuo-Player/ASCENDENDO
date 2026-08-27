@@ -44,7 +44,6 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
         }
     }
 
-    if (data.platforms.empty()) return std::nullopt;
     return data;
 }
 
