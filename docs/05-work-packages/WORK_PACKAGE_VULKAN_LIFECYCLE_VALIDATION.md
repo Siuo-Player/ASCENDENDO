@@ -122,7 +122,7 @@ Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 - headless Vulkan — success;
 - campaign validation — success.
 
-A documentação posterior na mesma branch não altera runtime/build code. A integração permanece condicionada ao workflow normal disparado pelo commit documental final.
+A documentação posterior na mesma branch não altera runtime/build code. O workflow do estado documental final deve terminar antes da integração.
 
 ## Definition of Ready
 
@@ -139,7 +139,7 @@ A documentação posterior na mesma branch não altera runtime/build code. A int
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
 - [x] implementation state normal + ASan/UBSan verdes;
 - [x] dívida/documentação de Vulkan sincronizada;
-- [ ] último workflow documental verde;
+- [ ] workflow do último commit documental verde;
 - [ ] PR integrada.
 
 ## Próxima decisão
