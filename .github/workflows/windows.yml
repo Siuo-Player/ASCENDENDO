@@ -68,7 +68,7 @@ jobs:
         run: |
           $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
           $glfwBuild = Join-Path $env:RUNNER_TEMP 'glfw-build'
-          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 17 2022' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF
+          cmake -S $glfwSrc -B $glfwBuild -G 'Visual Studio 18 2026' -A x64 -DGLFW_BUILD_DOCS=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_EXAMPLES=OFF
           cmake --build $glfwBuild --config Release --target glfw
 
           $built = Join-Path $glfwBuild 'src\Release\glfw3.lib'
