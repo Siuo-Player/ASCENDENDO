@@ -15,16 +15,18 @@ permissions:
 jobs:
   windows:
     name: Windows / Clang / C++20
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 20
 
     env:
       VULKAN_SDK_VERSION: 1.4.309.0
       GLFW_VERSION: 3.4
+      GLFW_COMMIT: 7b6aead9fb88b3623e3b3725ebb42670cbe4c579
       LLVM_VERSION: 20.1.8
 
     steps:
       - name: Checkout ASCENDENDO
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install GNU Make
         shell: pwsh
@@ -61,8 +63,17 @@ jobs:
         shell: pwsh
         run: |
           $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
-          git clone --depth 1 --branch $env:GLFW_VERSION https://github.com/glfw/glfw.git $glfwSrc
+          git clone --no-checkout https://github.com/glfw/glfw.git $glfwSrc
           if ($LASTEXITCODE -ne 0) { throw 'GLFW clone failed' }
+          git -C $glfwSrc fetch --depth 1 origin $env:GLFW_COMMIT
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW commit fetch failed' }
+          git -C $glfwSrc checkout --detach $env:GLFW_COMMIT
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW commit checkout failed' }
+          $actual = (git -C $glfwSrc rev-parse HEAD).Trim()
+          if ($actual -ne $env:GLFW_COMMIT) {
+            throw "GLFW commit mismatch: expected $env:GLFW_COMMIT, got $actual"
+          }
+          "GLFW commit: $actual" | Set-Content 'glfw-revision.txt'
 
       - name: Build GLFW Release dependency
         shell: pwsh
@@ -86,6 +97,7 @@ jobs:
           @(
             "OS: $([System.Environment]::OSVersion.VersionString)",
             "GLFW version: $env:GLFW_VERSION",
+            "GLFW commit: $env:GLFW_COMMIT",
             "LLVM version: $env:LLVM_VERSION",
             "Vulkan SDK version: $env:VULKAN_SDK_VERSION",
             "VULKAN_SDK: $env:VULKAN_SDK",
@@ -119,11 +131,12 @@ jobs:
 
       - name: Upload Windows evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: windows-build-test-evidence
           path: |
             windows-environment.txt
+            glfw-revision.txt
             build\test_results.txt
             build\test\tests.exe
             build\game\game.exe
