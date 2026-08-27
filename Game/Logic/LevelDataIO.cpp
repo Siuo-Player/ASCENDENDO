@@ -6,6 +6,15 @@
 
 namespace logic {
 
+namespace {
+
+bool hasTrailingTokens(std::istringstream& input) {
+    std::string extra;
+    return static_cast<bool>(input >> extra);
+}
+
+} // namespace
+
 std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
     std::ifstream file(path);
     if (!file.is_open()) return std::nullopt;
@@ -26,22 +35,26 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
         }
         if (type == "PLATFORM") {
             float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
-            if (!(input >> x >> y >> w >> h)) return std::nullopt;
+            if (!(input >> x >> y >> w >> h) || hasTrailingTokens(input)) return std::nullopt;
             data.platforms.push_back({{x, y}, {x + w, y + h}});
             continue;
         }
         if (type == "FLAG") {
             float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
-            if (!(input >> x >> y >> w >> h)) return std::nullopt;
+            if (!(input >> x >> y >> w >> h) || hasTrailingTokens(input)) return std::nullopt;
             data.flag = AABB{{x, y}, {x + w, y + h}};
             continue;
         }
         if (type == "SPAWN") {
             Vec2 spawn{};
-            if (!(input >> spawn.x >> spawn.y)) return std::nullopt;
+            if (!(input >> spawn.x >> spawn.y) || hasTrailingTokens(input)) return std::nullopt;
             data.spawnPosition = spawn;
             continue;
         }
+
+        // The parser is intentionally strict about the current grammar.
+        // Schema/version and semantic validation remain a later contract.
+        return std::nullopt;
     }
 
     return data;
