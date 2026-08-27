@@ -1,9 +1,6 @@
-// =============================================================================
-//  Game/Logic/LevelEditor.cpp
-// =============================================================================
-
 #include "Logic/LevelEditor.h"
 #include "Core/Config.h"
+
 #include <algorithm>
 #include <cmath>
 
@@ -37,8 +34,6 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
                                          const AABB& initialGround)
     : m_finalCampaignLevel(finalCampaignLevel),
       m_initialGround(initialGround) {
-    // O spawn ocupa o topo do chão inicial. Os limites são arredondados para
-    // dentro do chão, nunca para fora dele.
     m_spawnMinX = ceilToGrid(initialGround.min.x);
     m_spawnMaxX = floorToGrid(initialGround.max.x - config::PLAYER_WIDTH);
     if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
@@ -54,11 +49,11 @@ float LevelEditorDocument::snap(float value) {
 }
 
 Vec2 LevelEditorDocument::snap(const Vec2& point) {
-    return { snapScalar(point.x), snapScalar(point.y) };
+    return {snapScalar(point.x), snapScalar(point.y)};
 }
 
 AABB LevelEditorDocument::snap(const AABB& rect) {
-    return { snap(rect.min), snap(rect.max) };
+    return {snap(rect.min), snap(rect.max)};
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
@@ -74,9 +69,6 @@ bool LevelEditorDocument::validPlatform(const AABB& rect) const {
 
 bool LevelEditorDocument::addPlatform(const AABB& requested,
                                       std::size_t* createdIndex) {
-    // Uma operação que começa fora do canvas é inválida mesmo que o snap
-    // posterior pudesse trazê-la de volta para dentro. A UI, portanto,
-    // pode simplesmente não oferecer esse estado ao utilizador.
     if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
 
     const AABB rect = snap(requested);
@@ -94,14 +86,14 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
     const AABB old = m_platforms[index].bounds;
     const AABB requested = {
         requestedMin,
-        { requestedMin.x + old.width(), requestedMin.y + old.height() },
+        {requestedMin.x + old.width(), requestedMin.y + old.height()},
     };
     if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
 
     const Vec2 newMin = snap(requestedMin);
     const AABB moved = {
         newMin,
-        { newMin.x + old.width(), newMin.y + old.height() },
+        {newMin.x + old.width(), newMin.y + old.height()},
     };
 
     if (!validPlatform(moved)) return false;
@@ -122,7 +114,6 @@ bool LevelEditorDocument::setSpawnX(float requestedX) {
     if (snappedX < m_spawnMinX - EPS || snappedX > m_spawnMaxX + EPS) return false;
 
     m_spawnPosition.x = snappedX;
-    // O Y nunca é controlado pelo utilizador.
     m_spawnPosition.y = snapScalar(m_initialGround.max.y);
     return true;
 }
@@ -141,13 +132,25 @@ bool LevelEditorDocument::setFlag(const AABB& requested) {
     return true;
 }
 
+LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
+    LevelData data;
+    data.name = name;
+    data.spawnPosition = m_spawnPosition;
+    data.platforms.reserve(m_platforms.size());
+    for (const auto& platform : m_platforms) {
+        data.platforms.push_back(platform.bounds);
+    }
+    if (m_flag) data.flag = *m_flag;
+    return data;
+}
+
 Vec2 LevelEditorDocument::presetSize(EditorSizePreset preset) {
     switch (preset) {
-        case EditorSizePreset::SMALL:  return { 64.0f, 16.0f };
-        case EditorSizePreset::MEDIUM: return { 128.0f, 20.0f };
-        case EditorSizePreset::LARGE:  return { 192.0f, 24.0f };
+        case EditorSizePreset::SMALL: return {64.0f, 16.0f};
+        case EditorSizePreset::MEDIUM: return {128.0f, 20.0f};
+        case EditorSizePreset::LARGE: return {192.0f, 24.0f};
     }
-    return { 128.0f, 20.0f };
+    return {128.0f, 20.0f};
 }
 
 } // namespace logic
