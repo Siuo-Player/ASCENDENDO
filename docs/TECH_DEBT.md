@@ -23,8 +23,12 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 | Input | gameplay ainda pode consultar teclas físicas diretamente | migrar `Player` para `GameAction`/`KeyBindings` | nenhuma regra de gameplay depende de `Key::...` |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
 | Levels | runtime/editor têm modelos separados que representam o mesmo conteúdo | introduzir `LevelData` independente de Vulkan/GLFW | parser, editor e runtime convergem no mesmo modelo |
-| Physics | fixed timestep sem limite de recuperação | limitar passos por frame e/ou `dt` | minimização/lag não provoca centenas de ticks num frame |
+| Levels / validation | `LevelDataIO` é parser/serializer, não ainda uma validação de schema: tipos de linha desconhecidos são ignorados e lixo trailing pode sobreviver ao parse | na Fase 10, introduzir envelope/schema explícito, rejeição de sintaxe desconhecida/trailing tokens, validação semântica e canonicalização | corpus malformed/unknown-version/invalid-domain rejeitado de forma determinística; representação canónica documentada |
+| Levels / domain model | `Level` acumula geometria mundial, mas `name`/`hasFlag`/`flagBounds` representam apenas o chunk mais recentemente anexado | definir formalmente o escopo de world/chunk metadata antes de alterar campos individualmente | estado de mundo e metadata de chunk/entry têm owners e invariantes explícitos |
+| Physics / determinism | `Level::resolveCollision()` pode produzir estados diferentes quando a ordem das plataformas é permutada em situações de múltiplo contacto | decidir contrato de ordem: ordem canónica, resolução de contactos determinística, restrição geométrica ou semântica explícita | propriedade escolhida coberta por teste adversarial e replay/differential evidence |
+| Physics / input | `justPressed`/`justReleased` têm semântica de render frame enquanto fixed-step pode executar vários ticks | antes de replay autoritativo/tick-exact, introduzir comando indexado por tick e documentar sampling | mesma sequência de comandos reproduz o mesmo estado tick-a-tick |
 | Vulkan | seleção de queue/device assume demasiado sobre graphics/present | validar extension, capabilities e graphics/present queues separadamente | capability matrix mínima demonstrada; error-path adversarial permanece explicitamente classificado |
+| Vulkan lifecycle | `GraphicsRuntime::init()` pode falhar depois de inicializar membros e não define rollback/retry semantics | decidir explicitamente one-shot ou implementar cleanup/reset retry-safe; não assumir atomicidade | falha de init deixa estado publicado com contrato explícito e retry/recovery testado se suportado |
 
 ## P1 — tratar durante a consolidação pós-9.4
 
@@ -37,12 +41,15 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 | Editor | drag deve ser uma operação lógica única | criar transações/comandos begin/update/end | aberto |
 | Config | `Config.h` acumula domínios | separar progressivamente physics/render/window/editor/gameplay | aberto |
 | Vulkan RAII | wrappers devem garantir ownership explícito | tornar recursos não-copiáveis e movíveis quando apropriado | aberto |
-| Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato | aberto |
+| Levels | formato textual não tem versionamento explícito | introduzir `VERSION` no formato | aberto; não antecipar expansão do syntax surface antes desta decisão |
 | Campaign | `campaign.txt` mistura lista/ordem com futura metadata | definir `CampaignData` quando metadata for necessária | aberto |
+| Campaign / identity | `CampaignLoader` e `CampaignID` ainda interpretam `campaign.txt` e `.lvl` independentemente | definir `CampaignDocument` partilhado ou outra autoridade única; preservar identidade e runtime a partir do mesmo input lógico | aberto; não resolvido pelo `RuntimeBootstrap` |
 | Tests | validator via `system()` pertence a integração/sistema, não unit | mover/categorizar teste | aberto |
 | Gestão | work packages podem existir sem dependências/critério de saída explícitos | aplicar `docs/PROJECT_MANAGEMENT.md` e `docs/DEVELOPMENT_PROTOCOL.md` a cada bloco | processo ativo |
 | Arquitetura | fronteiras podem ser alteradas sem atualizar WBS/roadmap | tratar mudanças arquiteturais como alteração de planeamento | processo ativo |
 | Coordenação | consumidores e testes podem descobrir uma mudança de interface apenas no fim da branch | manter dependency map no work package | processo ativo |
+| Session | `GameSession::update()` reúne state machine, input mapping, streaming, run history e editor transitions | manter como orchestration boundary, mas impedir crescimento indiscriminado; novas capacidades devem ter serviços estreitos | **guardrail** |
+| Bootstrap | `RuntimeBootstrap` pode gradualmente tornar-se service container | limitar a composição de startup data/services; não possuir frame loop, rendering, camera ou gameplay state | **guardrail ativo no PR #76** |
 
 ## P2 — qualidade, cobertura e performance
 
@@ -110,6 +117,10 @@ A política normativa atual está em `docs/CODE_SIZE.md`: `< 40 KiB` normal, `40
 14. `RendererFacadeAdapter` não é uma API suportada do runtime.
 15. Causas de falhas CI não são tratadas como confirmadas sem evidência observável.
 16. `GameSession` é a fronteira atual para estado mutável de gameplay/editor/campanha; não deve absorver ownership de platform, Vulkan, camera ou presentation sem nova decisão documentada.
+17. `LevelDataIO` é atualmente parser/serializer; não deve ser descrito como validator, UGC trust boundary ou schema authority até existir validação explícita.
+18. A ordem de `Level::platforms()` não deve ser tratada como irrelevante para determinismo enquanto a política de resolução de múltiplos contactos não estiver definida.
+19. A semântica de input edge para replay pertence ao tempo de simulação, não deve ser inferida automaticamente do frame de render.
+20. `RuntimeBootstrap` é composição de startup, não um service container nem uma `Application` nominal.
 
 ## Portões do roadmap
 
@@ -125,6 +136,10 @@ Antes de **11 Partilha/Biblioteca** devem estar resolvidos:
 - import/export declarativo e seguro.
 
 Antes da **release portable** todos os P0 devem estar fechados e os P1 críticos devem ter critério de saída documentado.
+
+Para `LevelData`, o ganho da tranche de 9.6 é a convergência de representação; **validação, schema/versioning e canonicalização continuam deliberadamente fora desta tranche e não devem ser inferidos do parser atual**.
+
+Para `Level`/collision, nenhuma correção arbitrária de ordenação deve ser considerada encerramento: a decisão deve especificar a propriedade física desejada e ter evidência correspondente.
 
 ## Governança do roadmap
 
@@ -149,3 +164,20 @@ PR #74 adicionou cobertura executável para as capacidades mínimas exigidas pel
 O commit `8998290fa2ad2d04c5306640553d228406a3543a` passou `Tests #775` e `Sanitizers #17`, incluindo source-size, headless Vulkan e campaign validation.
 
 A dívida Vulkan **não é totalmente encerrada**: os caminhos adversariais reais de `vkAcquireNextImageKHR`, `vkQueueSubmit` e `vkQueuePresentKHR` que retornariam erros específicos não são injetados/executados nesta tranche. Esses invariants ficam classificados como evidência estática baseada na implementação existente. Uma futura camada de teste/injeção só deve ser criada se o benefício justificar a nova abstração.
+
+## Reconciliation — adversarial snapshot 2026-08-27
+
+A revisão adversarial do snapshot upstream confirmou que o avanço de 9.6 é real, mas que algumas fronteiras foram descritas mais fortemente do que o código garante. Esta reconciliação incorpora as seguintes classificações:
+
+- `LevelData` = **parser/serializer**, não validator;
+- `.lvl` versioning = risco de compatibilidade explicitamente adiado para Fase 10;
+- `Level` = **world/chunk accumulation** e não one-to-one com uma campaign level;
+- `name`/`flag` = metadata do chunk mais recente, não metadata do mundo acumulado;
+- collision order = dependência do algoritmo confirmada; contrato físico ainda aberto;
+- input edge = frame-based atualmente; tick-exact replay exige contrato próprio;
+- `GameSession` = orchestration boundary válida, mas com guardrail contra crescimento indiscriminado;
+- `RuntimeBootstrap` = composição startup estreita, não `Application`/service container;
+- Linux ASan/UBSan = evidência forte, mas não substitui Windows/hardware/Vulkan adversarial paths;
+- capability matrix Vulkan ≠ prova de recovery/error-path lifecycle;
+- `CampaignLoader`/`CampaignID` continuam interpretações independentes e devem convergir numa autoridade comum antes da expansão de UGC.
+
