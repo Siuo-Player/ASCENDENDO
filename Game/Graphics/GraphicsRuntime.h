@@ -14,7 +14,7 @@ namespace gfx {
 class GraphicsRuntime {
 public:
     GraphicsRuntime() = default;
-    ~GraphicsRuntime() = default;
+    ~GraphicsRuntime() { cleanup(); }
 
     GraphicsRuntime(const GraphicsRuntime&) = delete;
     GraphicsRuntime& operator=(const GraphicsRuntime&) = delete;
@@ -39,6 +39,8 @@ public:
     bool isInitialized() const;
 
 private:
+    void cleanup();
+
     Window window_;
     VulkanContext context_;
     Swapchain swapchain_;
