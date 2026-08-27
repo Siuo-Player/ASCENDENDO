@@ -48,10 +48,14 @@ endif
 CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Wno-unused-parameter -MMD -MP
 
 # Clang targeting the MSVC ABI must use the same dynamic CRT model as the
-# Visual Studio-built GLFW library staged by Windows CI. Use clang's native
-# runtime selector; this is the clang++ equivalent of MSVC /MD.
+# Visual Studio-built GLFW library staged by Windows CI. The MSVC environment
+# still contributes default libraries through the linker, so make the intended
+# CRT unambiguous at link time as well as at compile time.
 ifeq ($(PLATFORM),windows)
     CXXFLAGS_BASE += -fms-runtime-lib=dll
+    LDFLAGS_CRT   := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt
+else
+    LDFLAGS_CRT   :=
 endif
 
 # Debug: sanitizers só em Linux (suporte limitado no Windows com Clang standalone)
@@ -118,63 +122,32 @@ GAME_MAIN_SRC := main.cpp
 GAME_MAIN_OBJ := $(GAME_BUILD_DIR)/main.o
 
 # ── Objects ───────────────────────────────────────────────────────────────────
-# Game e testes usam configurações de compilação diferentes. Separar os objetos
-# evita que objetos compilados com ASan/UBSan sejam reutilizados pelo binário
-# release e elimina mismatches entre compilação e linkagem.
 GAME_OBJS := $(patsubst %.cpp,$(GAME_BUILD_DIR)/%.o,$(GAME_SRCS))
-TEST_OBJS := $(patsubst %.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SRCS))
-
-# ── Dependencias de headers ───────────────────────────────────────────────────
-DEPS := $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d) $(GAME_MAIN_OBJ:.o=.d)
--include $(DEPS)
-
-# ── Binários ──────────────────────────────────────────────────────────────────
+GAME_OBJS := $(subst /,\\,$(GAME_OBJS))
 GAME_LIB  := $(GAME_BUILD_DIR)/libgame.a
 GAME_BIN  := $(GAME_BUILD_DIR)/game$(EXE_EXT)
+
+TEST_OBJS := $(patsubst %.cpp,$(TEST_BUILD_DIR)/%.o,$(TEST_SRCS))
+TEST_OBJS := $(subst /,\\,$(TEST_OBJS))
 TEST_BIN  := $(TEST_BUILD_DIR)/tests$(EXE_EXT)
 
-ifneq ($(strip $(GAME_OBJS)),)
-    TEST_LINK_DEPS := $(GAME_LIB)
-endif
+# Linux needs the test binary linked against the game objects; Windows uses
+# the same object set and libraries, but through the MSVC-compatible driver.
+TEST_LINK_DEPS := $(GAME_OBJS)
 
-# ── Shaders ────────────────────────────────────────────────────────────────────
-GLSLC       := glslc
-SHADER_DIR  := Game/Assets/Shaders
-SHADER_SRCS := $(wildcard $(SHADER_DIR)/*.vert) $(wildcard $(SHADER_DIR)/*.frag)
-SHADER_OBJS := $(patsubst %,%.spv,$(SHADER_SRCS))
+# ── Dependency files ─────────────────────────────────────────────────────────
+-include $(GAME_OBJS:.o=.d) $(TEST_OBJS:.o=.d)
 
-$(SHADER_DIR)/%.vert.spv: $(SHADER_DIR)/%.vert
-	@echo "[GLSL] $<"
-	@$(GLSLC) $< -o $@
+# ── Targets ───────────────────────────────────────────────────────────────────
+.PHONY: all game tests tests-fast tests-verbose clean help
 
-$(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
-	@echo "[GLSL] $<"
-	@$(GLSLC) $< -o $@
+all: game
 
-.PHONY: shaders
-shaders: $(SHADER_OBJS)
-
-# ── Targets Principais ────────────────────────────────────────────────────────
-.PHONY: all game tests tests-verbose tests-fast clean help
-
-all: help
-
-help:
-	@echo ""
-	@echo "  Vertical Precision Platformer — sistema de build"
-	@echo "  ─────────────────────────────────────────────────"
-	@echo "  make tests         compila e executa testes (silencioso)"
-	@echo "  make tests-verbose compila e executa testes (detalhado)"
-	@echo "  make game          compila o binário do jogo (release)"
-	@echo "  make clean         remove a pasta build/"
-	@echo "  make help          mostra esta mensagem"
-	@echo ""
-
-## tests — compila e corre todos os testes de forma silenciosa (ideal para commits)
+# Compile and run the complete TDD test suite.
 tests: shaders $(TEST_BIN)
 	@echo ""
 	@echo "  ==========================================="
-	@echo "  A executar testes..."
+	@echo "  A executar testes TDD..."
 	@echo "  ==========================================="
 ifeq ($(PLATFORM),windows)
 	@$(RUN_TEST) normal
@@ -219,11 +192,11 @@ game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 
 $(TEST_BIN): $(TEST_OBJS) $(TEST_LINK_DEPS) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_DBG)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_DBG) $(INCLUDES) -o $@ $(TEST_OBJS) $(TEST_LINK_DEPS) $(LDFLAGS_CRT) $(LDFLAGS_DBG)
 
 $(GAME_BIN): $(GAME_MAIN_OBJ) $(GAME_LIB) | $(BUILD_DIR)
 	@echo "[LNK] $(notdir $@)"
-	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -o $@ $^ $(LDFLAGS_REL)
+	@$(CXX) $(CXXFLAGS_BASE) $(CXXFLAGS_REL) $(INCLUDES) -o $@ $^ $(LDFLAGS_CRT) $(LDFLAGS_REL)
 
 $(GAME_LIB): $(GAME_OBJS) | $(BUILD_DIR)
 	@echo "[LIB] $(notdir $@)"
