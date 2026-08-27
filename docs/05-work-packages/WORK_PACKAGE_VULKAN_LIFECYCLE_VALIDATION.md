@@ -140,8 +140,8 @@ A atualização documental posterior também passou o workflow normal final `Tes
 - [x] normal + ASan/UBSan verdes;
 - [x] dívida/documentação de Vulkan sincronizada;
 - [x] workflow final validado em CI;
-- [x] branch pronta para integração;
-- [x] revisão concluída.
+- [x] revisão concluída;
+- [ ] PR integrada.
 
 ## Próxima decisão
 
