@@ -86,3 +86,33 @@ TEST_SUITE("Level / Colisao Lateral") {
         CHECK(body.position.x == doctest::Approx(200.0f));
     }
 }
+
+TEST_SUITE("Level / Collision Order Determinism") {
+    TEST_CASE("same overlapping contact set is invariant to platform order") {
+        Level orderAB;
+        orderAB.addPlatform(100.0f, 50.0f, 100.0f, 100.0f);
+        orderAB.addPlatform(150.0f, 50.0f, 100.0f, 100.0f);
+
+        Level orderBA;
+        orderBA.addPlatform(150.0f, 50.0f, 100.0f, 100.0f);
+        orderBA.addPlatform(100.0f, 50.0f, 100.0f, 100.0f);
+
+        PhysicsBody bodyAB;
+        bodyAB.position = {140.0f, 70.0f};
+        bodyAB.velocity = {200.0f, 0.0f};
+        bodyAB.isGrounded = true;
+
+        PhysicsBody bodyBA = bodyAB;
+
+        const bool collidedAB = orderAB.resolveCollision(bodyAB);
+        const bool collidedBA = orderBA.resolveCollision(bodyBA);
+
+        REQUIRE(collidedAB == true);
+        REQUIRE(collidedBA == true);
+        CHECK(bodyAB.position.x == doctest::Approx(bodyBA.position.x));
+        CHECK(bodyAB.position.y == doctest::Approx(bodyBA.position.y));
+        CHECK(bodyAB.velocity.x == doctest::Approx(bodyBA.velocity.x));
+        CHECK(bodyAB.velocity.y == doctest::Approx(bodyBA.velocity.y));
+        CHECK(bodyAB.isGrounded == bodyBA.isGrounded);
+    }
+}
