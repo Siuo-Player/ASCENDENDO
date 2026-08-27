@@ -6,7 +6,7 @@
 **Subsystem:** `CI / Windows / build portability`  
 **Work Package:** `9.6 Windows executable evidence — scoped`  
 **Branch:** `fix/9-6-windows-evidence-scope-clean`  
-**Base:** `main` @ `e4e1061b0b7d18f31c0893e898f04ed54c94fa25`
+**Base:** `main` @ `38f589e43600c79c9abf7a787f6b4bec59506f07`
 
 ## Objetivo
 
