@@ -114,7 +114,7 @@ A última linha permanece dívida explícita: sem uma camada de injeção/mockin
 
 ### Evidência final do implementation state
 
-Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
+Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 
 - `Tests #775` — success;
 - `Sanitizers #17` — success;
@@ -122,7 +122,7 @@ Commit validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 - headless Vulkan — success;
 - campaign validation — success.
 
-A documentação posterior na mesma branch não altera runtime/build code. O workflow normal para o estado documental final `eddd1a124d57a5a435d1706c6d6149cbebf061d4` foi disparado e deve terminar antes do merge; a evidência sanitizer do código permaneceu verde no implementation state.
+A documentação posterior na mesma branch não altera runtime/build code. O workflow normal do estado documental final foi disparado novamente; a integração fica condicionada à sua conclusão positiva.
 
 ## Definition of Ready
 
@@ -139,7 +139,7 @@ A documentação posterior na mesma branch não altera runtime/build code. O wor
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
 - [x] implementation state normal + ASan/UBSan verdes;
 - [x] dívida/documentação de Vulkan sincronizada;
-- [ ] workflow do último commit documental verde;
+- [ ] último workflow documental verde;
 - [ ] PR integrada.
 
 ## Próxima decisão
