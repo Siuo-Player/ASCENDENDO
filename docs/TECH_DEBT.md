@@ -1,32 +1,45 @@
 # Dívida técnica e revisão arquitetural
 
-Este documento transforma a revisão de código atual em trabalho rastreável. Severidade:
+Este documento transforma a revisão de código atual em trabalho rastreável.
 
-- **P0** — impede evoluir com segurança ou pode causar comportamento incorreto em runtime/release.
-- **P1** — deve ser tratado antes das fases seguintes que dependem dele.
-- **P2** — melhoria importante de manutenção/performance.
-- **P3** — limpeza posterior.
+## Gate 9.6 — estado
 
-## Estado do Gate 9.6
+**OPEN**
 
-| Área | Estado atual | Evidência |
-|---|---|---|
-| GraphicsRuntime rollback | proven | PR #81 |
-| VulkanContext terminal failure state | implemented / partial evidence | PR #87 |
-| Windows compatibility | proven for selected runner | PR #85 |
-| Tick-scoped input | implemented | PR #88 |
-| Replay tick representation | proven for explicit TickInput sequence | PR #90 |
-| Malformed current grammar | proven | PR #91 |
-| Vulkan lower-level failure/error paths | partial | fault injection/capability matrix ainda limitada |
-| Paths/CWD independence | open | runtime roots ainda não demonstrados |
-| Level world/chunk metadata | open | contrato ainda não formalizado |
-| Collision-order determinism | open | propriedade física ainda não escolhida |
-| Presentation/domain boundary | partial | RenderSnapshot geral continua bloqueado |
-| Architecture/ownership final review | open | revisão final pendente |
+### Evidência integrada
 
-## P0 restantes
+- PR #81 — rollback agregado de `GraphicsRuntime`.
+- PR #87 — falhas de reconfiguração de `VulkanContext` tratadas como terminais; lower-level fault injection continua parcial.
+- PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
+- PR #88 — `TickInput` como unidade semântica da simulação.
+- PR #90 — `ReplayManager` alinhado a `TickInput`; prova reprodução de sequência explícita de ticks, não persistence nem live-input frame-rate independence.
+- PR #91 — malformed syntax da gramática atual coberta por testes para token desconhecido, número inválido, campo truncado e trailing tokens.
 
-O Gate só fecha quando existir evidência suficiente para:
+### Gaps restantes
+
+- capability/error evidence Vulkan além do happy path;
+- paths/runtime roots independentes do current working directory;
+- contrato world/chunk metadata de `Level`;
+- determinismo de múltiplos contactos/collision-order;
+- semantic validation/schema/versioning de `LevelData` (Fase 10);
+- revisão final de ownership/architecture.
+
+## Regras
+
+1. Renderer não lê input nem altera gameplay.
+2. Gameplay não depende de teclas físicas.
+3. `LevelData` não depende de Vulkan/GLFW.
+4. Runtime não depende de current working directory.
+5. `RuntimeBootstrap` é composição de startup, não `Application` genérica.
+6. `LevelDataIO` é parser/serializer, não schema authority nem semantic validator.
+7. Ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
+8. Input edge para replay pertence ao tempo de simulação.
+9. `ReplayManager` usa `TickInput`; isso não prova live-input frame-rate independence.
+10. Causas de falha CI exigem evidência observável.
+
+## Fecho do Gate
+
+Antes da migração geral de `RenderSnapshot`, deve existir evidência suficiente para:
 
 ```text
 Vulkan failure/error semantics
@@ -41,38 +54,3 @@ malformed/error paths
 +
 architecture/ownership review
 ```
-
-## Regras arquiteturais
-
-1. O renderer não lê input nem altera gameplay.
-2. Gameplay não depende de teclas físicas.
-3. `LevelData` não depende de Vulkan/GLFW.
-4. Runtime não depende de current working directory.
-5. `RuntimeBootstrap` é composição de startup, não `Application` genérica.
-6. `LevelDataIO` é parser/serializer, não semantic validator nem schema authority.
-7. A ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
-8. Input edge para replay pertence ao tempo de simulação.
-9. `ReplayManager` usa `TickInput`; isso não prova independência do live input face ao frame rate.
-10. Causas de falha CI exigem evidência observável.
-
-## Evidência recente
-
-### Windows — PR #85
-
-Build, testes, Vulkan software driver, campaign validation e artefacto foram demonstrados num runner Windows real. A conclusão limita-se ao ambiente selecionado.
-
-### Replay — PR #90
-
-`ReplayManager` armazena e reproduz `TickInput`; testes Linux, ASan/UBSan e Windows passaram no mesmo head. Persistence e live sampling continuam distintas.
-
-### Malformed syntax — PR #91
-
-A gramática atual rejeita token desconhecido, número inválido, campo truncado e trailing tokens e mantém um caso válido. Tests, Sanitizers e Windows passaram no mesmo head. Semantic validation, schema/versioning e canonicalization seguem para a Fase 10.
-
-### Vulkan — PR #87
-
-Falhas de reconfiguração são tratadas como terminais e handles/estado são normalizados. Fault injection de APIs inferiores continua limitada.
-
-## Não avançar ainda
-
-A migração geral de `RenderSnapshot` permanece bloqueada até a revisão formal e fecho do Gate 9.6.
