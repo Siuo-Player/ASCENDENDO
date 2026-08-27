@@ -56,13 +56,12 @@ jobs:
           if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is not set' }
           glslc --version
 
-      - name: Checkout pinned GLFW source
-        uses: actions/checkout@v4
-        with:
-          repository: glfw/glfw
-          ref: ${{ env.GLFW_VERSION }}
-          path: ${{ runner.temp }}\glfw-src
-          fetch-depth: 1
+      - name: Fetch pinned GLFW source
+        shell: pwsh
+        run: |
+          $glfwSrc = Join-Path $env:RUNNER_TEMP 'glfw-src'
+          git clone --depth 1 --branch $env:GLFW_VERSION https://github.com/glfw/glfw.git $glfwSrc
+          if ($LASTEXITCODE -ne 0) { throw 'GLFW clone failed' }
 
       - name: Build GLFW Release dependency
         shell: pwsh
