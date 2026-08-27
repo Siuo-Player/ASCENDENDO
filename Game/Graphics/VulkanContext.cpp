@@ -118,6 +118,11 @@ bool VulkanContext::reconfigureForSurface() {
         m_presentQueue = VK_NULL_HANDLE;
     }
 
+    // From this point onward the old logical device no longer exists. Keep
+    // isInitialized() consistent with that observable resource state until a
+    // new device has been created successfully.
+    m_initialized = false;
+
     m_physicalDevice = selected;
     m_families = selectedFamilies;
     vkGetPhysicalDeviceProperties(m_physicalDevice, &m_deviceProps);
@@ -125,7 +130,19 @@ bool VulkanContext::reconfigureForSurface() {
     // Recreate the logical device using the surface-aware queue selection.
     // createLogicalDevice() consumes m_families, so graphics and present are
     // both explicitly represented even when they happen to be the same family.
-    return createLogicalDevice(false);
+    if (!createLogicalDevice(false)) {
+        // createLogicalDevice() already destroys a newly-created device when
+        // queue acquisition validation fails. Keep the aggregate invariant
+        // explicit here as well for every failed surface reconfiguration.
+        m_device = VK_NULL_HANDLE;
+        m_graphicsQueue = VK_NULL_HANDLE;
+        m_presentQueue = VK_NULL_HANDLE;
+        m_initialized = false;
+        return false;
+    }
+
+    m_initialized = true;
+    return true;
 }
 
 bool VulkanContext::createInstance(bool enableValidation,
