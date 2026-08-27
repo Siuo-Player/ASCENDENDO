@@ -91,7 +91,7 @@ TEST_SUITE("LevelData") {
         std::filesystem::remove(path);
     }
 
-    TEST_CASE("editor document produz LevelData sem perder spawn e flag") {
+    TEST_CASE("editor document produz LevelData sem perder ground, spawn e flag") {
         logic::LevelEditorDocument document(
             true, {{0.0f, 0.0f}, {640.0f, 20.0f}});
         REQUIRE(document.setSpawnX(48.0f));
@@ -100,7 +100,8 @@ TEST_SUITE("LevelData") {
 
         const logic::LevelData data = document.toLevelData("Editor");
         CHECK(data.name == "Editor");
-        CHECK(data.platforms.size() == 1);
+        REQUIRE(data.platforms.size() == 2);
+        CHECK(data.platforms[0].min.y == doctest::Approx(0.0f));
         REQUIRE(data.spawnPosition.has_value());
         CHECK(data.spawnPosition->x == doctest::Approx(48.0f));
         CHECK(data.spawnPosition->y == doctest::Approx(20.0f));
