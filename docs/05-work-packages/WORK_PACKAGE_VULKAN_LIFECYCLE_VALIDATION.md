@@ -139,6 +139,7 @@ A atualização documental posterior também passou o workflow normal final `Tes
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
 - [x] normal + ASan/UBSan verdes;
 - [x] dívida/documentação de Vulkan sincronizada;
+- [x] workflow final validado em CI;
 - [ ] PR integrada.
 
 ## Próxima decisão
