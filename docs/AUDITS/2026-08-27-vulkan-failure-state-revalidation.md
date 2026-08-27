@@ -1,63 +1,73 @@
 # ASCENDENDO — Revalidation: Vulkan failure-state contract
 
 **Date:** 2026-08-27  
-**Source:** `Siuo-Player/Siuo-Player-PROJECT-STUDIES` PR #8  
-**Observed implementation baseline:** `main` after PR #81  
+**Project:** `Siuo-Player/ASCENDENDO`  
+**Source:** `Siuo-Player-PROJECT-STUDIES` PR #8  
+**Observed upstream main:** `87c195b559c15cf6b548150499a45c7b04a09f85`  
 **Role:** 9.6 Base Engineering Gate evidence
 
-## Revalidation result
+## Finding
 
-The Studies PR identifies two concerns, but current source inspection distinguishes them:
+The PROJECT-STUDIES revalidation confirms that the lower-level `VulkanContext` failure-state gap remains distinct from the aggregate `GraphicsRuntime::init()` rollback addressed by PR #81.
 
-1. **Already fixed in current implementation:** `createLogicalDevice()` destroys the newly-created `VkDevice` when queue-handle validation fails. Therefore the Study's specific device-leak assertion is stale against the current source.
-2. **Still confirmed:** `reconfigureForSurface()` can call `createLogicalDevice()` after destroying the previous device, and may return `false` while `m_initialized` still reflects the previous successful initialization state. `createSurface()` then destroys the surface and returns `false`, but does not normalize `m_initialized` itself.
-
-## Confirmed invariant gap
-
-After a failed surface-aware reconfiguration, `VulkanContext` must not report initialized while its logical device is absent or otherwise invalid.
-
-The relevant state transition is:
+The relevant sequence is:
 
 ```text
-initialized context
-    ↓
-destroy old VkDevice
-    ↓
-reconfigure/createLogicalDevice()
-    ↓
-FAIL
-    ↓
-createSurface() returns false
+GraphicsRuntime::init()
+→ VulkanContext::init()
+→ create surface
+→ VulkanContext::createSurface()
+→ reconfigureForSurface()
+→ createLogicalDevice()
 ```
 
-The object must have an explicitly defined observable state after this failure.
+`reconfigureForSurface()` destroys the existing logical device and clears its handles before attempting recreation. `createLogicalDevice()` can then successfully call `vkCreateDevice()` but return `false` if a required queue handle is `VK_NULL_HANDLE`; that failure path does not itself destroy the newly created device.
 
-## Scope
+## Required invariant
 
-This revalidation does **not** justify a Vulkan transaction framework or queue-selection redesign. The focused next tranche is:
+After any failed logical-device creation attempt following successful `vkCreateDevice()`:
 
 ```text
-failed surface reconfiguration
-→ normalize initialized-state invariant
-→ regression evidence
-→ preserve existing queue/capability policy
+m_device        == VK_NULL_HANDLE
+m_graphicsQueue == VK_NULL_HANDLE
+m_presentQueue  == VK_NULL_HANDLE
 ```
 
-The existing `createLogicalDevice()` rollback on invalid queue handles remains part of the confirmed baseline and should not be reimplemented unnecessarily.
+For failed surface-aware reconfiguration, the context must also expose an `isInitialized()` state consistent with its actual resources and remain safely destructible.
 
-## Roadmap consequence
+## Relationship to PR #81
 
-The 9.6 order remains:
+PR #81 fixes the higher-level aggregate lifecycle:
 
 ```text
-GraphicsRuntime aggregate rollback ✅
-→ VulkanContext state invariant 🔒
-→ Windows/platform evidence 🔒
-→ determinism/error-path evidence 🔒
-→ Base Engineering Gate review 🔒
-→ general RenderSnapshot
+GraphicsRuntime
+→ rollback all owned components
+→ neutral state
+→ retry-safe init
 ```
+
+That does **not** prove that every lower-level `VulkanContext` failure path is transactional. The two concerns remain separate work items:
+
+```text
+GraphicsRuntime aggregate rollback  → PR #81
+VulkanContext device/queue rollback → next focused Vulkan tranche
+```
+
+Do not mark the Vulkan lifecycle gate complete solely because PR #81 passes.
+
+## Scope decision
+
+The smallest next engineering tranche is a focused rollback invariant in `VulkanContext`, not a generic Vulkan transaction framework:
+
+```text
+failure after resource acquisition
+→ local rollback
+→ neutral observable state
+→ regression test
+```
+
+The existing queue/capability selection policy should remain unchanged unless the failure-path analysis proves a separate defect.
 
 ## Provenance
 
-This document deliberately records both the Study finding and the contradictory current-source evidence. It prevents a stale audit statement from becoming an implementation requirement without revalidation.
+This document mirrors the dated revalidation recorded in PROJECT-STUDIES PR #8. The study layer remains read-only with respect to implementation; this file records the finding in the implementation repository so that the RoadMap and subsequent work packages cannot silently lose the distinction.
