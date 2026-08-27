@@ -6,7 +6,7 @@
 **Subsistema:** Runtime  
 **Work Package:** 9.6 — Replay tick evidence  
 **Branch:** `fix/9-6-replay-tick-evidence-20260827`  
-**PR:** próxima PR deste branch
+**PR:** #90
 
 ## Objetivo
 
@@ -28,7 +28,7 @@ mesmo estado inicial
 - manter save-state/rewind existentes sem ampliar o modelo de ownership;
 - permitir playback consumindo `TickInput` diretamente;
 - criar testes que comparem estado por tick entre duas execuções da mesma sequência;
-- criar teste de repartição de ticks em frames diferentes quando a sequência semântica for a mesma;
+- criar teste de agrupamento diferente quando a sequência semântica de `TickInput` for a mesma;
 - atualizar documentação de Gate 9.6 e dívida técnica para distinguir `TickInput` implementado de replay determinístico ainda não demonstrado.
 
 ### Não inclui
@@ -38,7 +38,8 @@ mesmo estado inicial
 - nova classe `Replay`/`ReplaySystem`;
 - RenderSnapshot geral;
 - mudança da física além do necessário para tornar o teste observável;
-- alteração da política de LevelData/schema da Fase 10.
+- alteração da política de LevelData/schema da Fase 10;
+- alegação de que o input live amostrado por frames é independente da taxa de frames quando edge events são envolvidos.
 
 ## Dependências
 
@@ -59,7 +60,7 @@ mesmo estado inicial
 
 - `ReplayManager`;
 - `Tests/Unit/test_replay.cpp`;
-- callers de playback/recording, caso existam;
+- callers de playback/recording existentes, caso surjam;
 - documentação do Gate 9.6.
 
 ### Dependências de validação
@@ -73,10 +74,10 @@ mesmo estado inicial
 
 ```text
 Problema/contexto:
-ReplayManager ainda grava FrameInput diretamente do InputManager, apesar de o gameplay já consumir TickInput.
+ReplayManager gravava FrameInput diretamente do InputManager, apesar de o gameplay já consumir TickInput.
 
 Decisão:
-O replay deve armazenar e reproduzir a unidade semântica TickInput. A fonte do replay não deve voltar a consultar teclas físicas nem depender do agrupamento dos ticks em frames.
+O replay armazena e reproduz a unidade semântica TickInput. A fonte do replay não consulta teclas físicas nem depende do agrupamento dos ticks em frames.
 
 Alternativas consideradas:
 - manter FrameInput: rejeitada, porque preserva a ambiguidade frame/tick;
@@ -86,7 +87,8 @@ Alternativas consideradas:
 Consequências:
 - replay passa a ter semântica compatível com o tempo da simulação;
 - testes podem comparar estados por tick sem GLFW;
-- persistence continua independente.
+- persistence continua independente;
+- frame grouping pode ser testado apenas depois de a entrada estar reduzida à sequência semântica de ticks.
 
 Condição de revisão/remoção:
 Rever se o modelo de `TickInput` mudar ou se uma futura persistência exigir uma representação serializável diferente.
@@ -96,36 +98,38 @@ Rever se o modelo de `TickInput` mudar ou se uma futura persistência exigir uma
 
 | Risco | Probabilidade | Impacto | Mitigação | Estado |
 |---|---|---|---|---|
-| replay antigo assume frame grouping | média | alto | migrar consumidor para `TickInput` | aberto |
-| estados comparados só por posição mascaram divergência | média | alto | snapshotar campos persistentes relevantes | aberto |
-| frame repartition test usar sequências semanticamente diferentes | média | alto | construir explicitamente a mesma sequência de ticks | aberto |
+| replay antigo assume frame grouping | média | alto | migrar consumidor para `TickInput` | mitigado |
+| estados comparados só por posição mascaram divergência | média | alto | snapshotar campos persistentes relevantes | mitigado |
+| frame grouping ser confundido com live-input frame-rate independence | média | alto | documentar explicitamente a fronteira da propriedade | mitigado |
 | persistence ser inferida do replay em memória | média | médio | manter D7 separado | mitigado |
 
 ## Validação
 
 ### Testes automatizados
 
-- replay da mesma sequência em duas instâncias produz estado idêntico após cada tick;
-- edge events são associados ao tick correto;
-- repartição `1+1+1+1` versus `2+2` preserva a sequência semântica e os estados;
-- terminal state/completion, quando parte do estado simulado testável, é reproduzível.
+- replay da mesma sequência em uma segunda execução produz estado idêntico após cada tick;
+- edge events são mantidos como dados explícitos do tick;
+- a mesma sequência semântica de ticks produz o mesmo estado independentemente do agrupamento externo dos calls;
+- sequência vazia não produz ticks;
+- playback além do fim é rejeitado sem mutar estado.
 
 ### Validação manual
 
-- inspeccionar que nenhum gameplay path chama `Key::...` ou `InputManager` a partir de `Player`;
-- verificar que playback não consulta input físico.
+- `Player` não consulta `InputManager` nem teclas físicas;
+- playback não consulta input físico;
+- `ReplayManager` não cria uma nova camada de runtime.
 
 ### Profiling / métricas
 
 - nenhuma otimização é objetivo deste WP;
-- registar apenas custo adicional relevante do armazenamento de `TickInput`, se observável.
+- custo adicional limita-se ao armazenamento de `TickInput` em memória e só será registado se relevante.
 
 ### Failure paths
 
 - sequência vazia;
 - playback além do fim;
-- estado inicial inválido, se suportado pela API atual;
-- replay limpo/reiniciado sem deixar eventos ou índices antigos.
+- replay limpo/reiniciado sem deixar eventos ou índices antigos;
+- persistence continua não validada por este WP.
 
 ## Definition of Ready
 
@@ -138,29 +142,32 @@ Rever se o modelo de `TickInput` mudar ou se uma futura persistência exigir uma
 
 ## Definition of Done
 
-- [ ] implementação concluída dentro do escopo;
-- [ ] testes relevantes passam;
+- [x] implementação concluída dentro do escopo;
+- [ ] testes relevantes passam no head final;
 - [ ] failure paths relevantes foram exercitados;
 - [ ] documentação normativa foi atualizada;
-- [ ] dependências alteradas foram revistas;
-- [ ] dívida técnica criada foi classificada;
-- [ ] critério de saída foi demonstrado;
+- [x] dependências alteradas foram revistas;
+- [x] dívida técnica criada foi classificada;
+- [ ] critério de saída foi demonstrado no head final;
 - [ ] PR pronta para merge sem trabalho essencial oculto.
 
 ## Alterações durante a execução
 
 ```text
 Descoberta:
-ReplayManager atual ainda usa FrameInput + InputManager diretamente.
+ReplayManager usava FrameInput + InputManager diretamente.
 
 Impacto:
-A semântica tick-scoped de #88 não chega ao replay existente.
+A semântica tick-scoped de #88 não chegava ao replay existente.
 
 Decisão tomada:
 Tratar replay determinístico como trabalho próprio do Gate 9.6, separado de persistence.
 
+Nova descoberta:
+Um teste com dois ticks agrupados só prova invariância da mesma sequência semântica de TickInput; não prova que edge events do input live sejam independentes da taxa de frames.
+
 Documentos atualizados:
-Este WP; ROADMAP.md; TECH_DEBT.md; auditoria/validação deste WP.
+Este WP e a evidência do Gate 9.6 devem refletir essa fronteira.
 ```
 
 ## Evidência / referências
@@ -173,5 +180,5 @@ Este WP; ROADMAP.md; TECH_DEBT.md; auditoria/validação deste WP.
 ## Fecho
 
 **Resultado:** `em execução`  
-**Critério de saída:** evidência por tick + frame-repartition test + environment/artifact record  
-**Dívida residual:** persistence D7 e broader replay evidence permanecem separadas
+**Critério de saída:** evidência por tick + agrupamento semântico + environment/artifact record  
+**Dívida residual:** persistence D7, completion/failure replay e live-input frame-rate independence permanecem separadas
