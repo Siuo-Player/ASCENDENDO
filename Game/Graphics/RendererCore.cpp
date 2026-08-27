@@ -184,7 +184,7 @@ bool RendererCore::recreateSwapchain() {
     if (!m_initialized || !m_ctx || !m_swapchain) return false;
 
     VkDevice device = m_ctx->device();
-    if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
+    if (m_waitIdle(device) != VK_SUCCESS) return false;
 
     // From this point onward the old frame resources are deliberately gone.
     // Mark the core inactive before destroying anything so a failed rebuild

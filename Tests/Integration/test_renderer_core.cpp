@@ -30,6 +30,10 @@ private:
     std::filesystem::path previous_;
 };
 
+VkResult failDeviceWaitIdle(VkDevice) {
+    return VK_ERROR_DEVICE_LOST;
+}
+
 } // namespace
 
 TEST_SUITE("RendererCore") {
@@ -86,6 +90,41 @@ TEST_SUITE("RendererCore") {
 
         std::error_code cleanupError;
         std::filesystem::remove_all(temporaryRoot, cleanupError);
+
+        vkDeviceWaitIdle(ctx.device());
+    }
+
+    TEST_CASE("Falha de wait-idle preserva o estado operacional") {
+        Window win;
+        VulkanContext ctx;
+        Swapchain swapchain;
+        RenderPass renderPass;
+        Pipeline pipeline;
+        RendererCore core(&failDeviceWaitIdle);
+
+        REQUIRE(win.create(800, 600, "RendererCore wait-idle failure test"));
+
+        std::vector<const char*> extensions;
+        win.appendRequiredExtensions(extensions);
+        REQUIRE(ctx.init(false, extensions));
+
+        VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
+        REQUIRE(surface != VK_NULL_HANDLE);
+        REQUIRE(ctx.createSurface(surface));
+        REQUIRE(swapchain.init(&ctx, &win));
+        REQUIRE(renderPass.init(&ctx, &swapchain));
+        REQUIRE(pipeline.init(&ctx, &swapchain, &renderPass));
+        REQUIRE(core.init(&ctx, &swapchain, &renderPass, &pipeline));
+
+        const VkExtent2D before = core.swapchainExtent();
+        CHECK(core.isInitialized());
+
+        CHECK_FALSE(core.recreateSwapchain());
+        CHECK(core.isInitialized());
+
+        const VkExtent2D after = core.swapchainExtent();
+        CHECK(after.width == before.width);
+        CHECK(after.height == before.height);
 
         vkDeviceWaitIdle(ctx.device());
     }

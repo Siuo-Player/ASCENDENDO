@@ -5,21 +5,21 @@
 **Roadmap:** 9.6 — Base Engineering Gate  
 **Subsistema:** Presentation / Infrastructure  
 **Work Package:** 9.6 — Vulkan wait-idle failure evidence  
-**Branch:** `docs/9-6-evidence-reconciliation-20260828` (documentation/reconciliation; implementation branch to be created only if a justified test seam is identified)  
+**Branch:** `test/9-6-vulkan-waitidle-failure-20260828`  
 **PR:** pending
 
 ## Objetivo
 
-Clarificar e, quando tecnicamente justificável sem uma mock layer ampla, demonstrar a semântica de falha de `RendererCore::recreateSwapchain()` quando `vkDeviceWaitIdle()` retorna erro.
+Demonstrar, com uma seam de teste mínima e local, a semântica de falha de `RendererCore::recreateSwapchain()` quando `vkDeviceWaitIdle()` retorna erro.
 
 ## Escopo
 
 ### Inclui
 
 - contrato de falha de `vkDeviceWaitIdle()`;
-- comportamento consumidor em `RendererFacade::drawFrame()`;
-- atualização da evidência do Gate 9.6;
-- avaliação explícita da necessidade de um seam de teste.
+- teste direto do estado de `RendererCore` após esse erro;
+- preservação do comportamento consumidor fail-closed já existente;
+- atualização da evidência do Gate 9.6.
 
 ### Não inclui
 
@@ -46,56 +46,55 @@ Clarificar e, quando tecnicamente justificável sem uma mock layer ampla, demons
 ### Consumidores afetados
 
 - `RendererCore`;
-- `RendererFacade`;
-- integração de frame loop em `main.cpp`;
-- testes de lifecycle;
+- teste de lifecycle de `RendererCore`;
 - documentação do Gate.
 
 ### Dependências de validação
 
 - Linux/Clang/headless Vulkan test environment;
-- eventual mecanismo estreito de injeção de `vkDeviceWaitIdle` apenas se o custo e ownership forem justificados.
+- teste com função `vkDeviceWaitIdle` substituída apenas na instância de `RendererCore` usada pelo teste de failure path.
 
 ## Decisões arquiteturais
 
 ```text
 Problema/contexto:
-A falha de vkDeviceWaitIdle() preserva o estado anterior de RendererCore e propaga false até ao frame loop, mas ainda não existe teste que induza especificamente esse VkResult.
+A implementação de produção já retorna false antes de invalidar o estado quando vkDeviceWaitIdle() falha, mas a main não continha uma forma de induzir este VkResult num teste focado.
 
 Decisão:
-Não adicionar uma camada genérica de mocks/fault injection apenas para este finding. Preservar o comportamento fail-closed existente e avaliar primeiro se existe um seam pequeno, local e reutilizável.
+Adicionar um seam mínimo por instância: RendererCore recebe a função vkDeviceWaitIdle usada pela operação de recreateSwapchain(), com a implementação real como default. O teste injeta apenas uma função que devolve um erro Vulkan.
 
 Alternativas consideradas:
 1. mock layer Vulkan transversal — rejeitada por scope excessivo;
-2. ignorar a ausência de teste — rejeitada porque o Gate exige evidência observável;
-3. seam estreito para a chamada wait-idle — permitida apenas se se mantiver confinada ao renderer e melhorar testabilidade real.
+2. não testar o failure path — rejeitada porque o Gate exige evidência observável;
+3. seam estreito por função — escolhido por alterar apenas a dependência necessária e manter a API/ownership local ao RendererCore.
 
 Consequências:
-O Gate continua com uma lacuna de evidência específica, mas a semântica de produção fica explicitamente documentada e não é alterada por abstrações especulativas.
+A produção continua a usar vkDeviceWaitIdle diretamente através da função default. O teste passa a conseguir provar que o estado antigo é preservado quando o wait-idle falha.
 
 Condição de revisão/remoção:
-Reavaliar quando o conjunto de failure-path tests Vulkan justificar um seam partilhado ou quando o Gate exigir um teste executável desta condição.
+Reavaliar se uma futura abstração Vulkan dispatch já fornecer um seam equivalente; não expandir esta técnica para uma framework de mocks.
 ```
 
 ## Riscos
 
 | Risco | Probabilidade | Impacto | Mitigação | Estado |
 |---|---|---|---|---|
-| ausência de teste deixa o failure path parcialmente não demonstrado | alta | alto | manter item explícito no Gate e procurar seam mínimo | aberto |
-| fault injection cresce para infraestrutura genérica | média | alto | limitar qualquer seam ao renderer e a uma necessidade comprovada | mitigado |
-| documentação passa a sugerir robustez superior à evidência | média | alto | separar implementação, comportamento observado e evidência induzida | mitigado |
+| seam ficar maior que a necessidade | baixa | médio | manter apenas uma função e uso local | mitigado |
+| teste provar apenas RendererCore e não o loop completo | média | médio | documentar separadamente o consumer fail-closed já demonstrado por inspeção | aberto |
+| assinatura de Vulkan ser mascarada por wrapper genérico | baixa | médio | manter tipo explícito e implementação default igual a `vkDeviceWaitIdle` | mitigado |
 
 ## Validação
 
 ### Testes automatizados
 
-- teste existente de recreate bem-sucedido permanece verde;
-- eventual teste específico de wait-idle failure, apenas após seam justificado.
+- `RendererCore` continua a passar na recreação normal;
+- novo teste injeta `VK_ERROR_DEVICE_LOST` em `vkDeviceWaitIdle()` e verifica `false` + `isInitialized() == true` + preservação de recursos/estado observável por `swapchainExtent()`;
+- testes normais, ASan/UBSan e Windows devem passar no mesmo commit.
 
 ### Validação manual
 
-- confirmar que `drawFrame()` retorna `false` depois de uma falha de recreação;
-- confirmar que o frame loop não continua para um novo draw/submit após esse retorno.
+- revisar que `RendererFacade::drawFrame()` retorna o resultado de `recreateSwapchain()` sem tentar submeter outro frame;
+- revisar que `main.cpp` interrompe o loop quando `drawFrame()` retorna `false`.
 
 ### Profiling / métricas
 
@@ -103,8 +102,8 @@ Reavaliar quando o conjunto de failure-path tests Vulkan justificar um seam part
 
 ### Failure paths
 
-- `vkDeviceWaitIdle() != VK_SUCCESS` em `RendererCore::recreateSwapchain()`;
-- falha posterior à invalidação de `m_initialized` permanece fail-closed.
+- `vkDeviceWaitIdle() != VK_SUCCESS` no início de `recreateSwapchain()`;
+- falha posterior à invalidação de `m_initialized` continua fail-closed.
 
 ## Definition of Ready
 
@@ -117,9 +116,9 @@ Reavaliar quando o conjunto de failure-path tests Vulkan justificar um seam part
 
 ## Definition of Done
 
-- [ ] implementação concluída dentro do escopo, caso uma implementação seja necessária;
+- [ ] implementação concluída dentro do escopo;
 - [ ] testes relevantes passam;
-- [ ] failure paths relevantes foram exercitados, ou a limitação ficou explicitamente demonstrada;
+- [ ] failure paths relevantes foram exercitados;
 - [ ] documentação normativa foi atualizada;
 - [ ] dependências alteradas foram revistas;
 - [ ] dívida técnica criada foi classificada;
@@ -129,10 +128,10 @@ Reavaliar quando o conjunto de failure-path tests Vulkan justificar um seam part
 ## Alterações durante a execução
 
 ```text
-Descoberta: current main já propaga false de recreateSwapchain() até drawFrame() e o main loop interrompe o ciclo após false.
-Impacto: o finding histórico é mais estreito; não há evidência de continuação para um novo submit nesse caminho.
-Decisão tomada: manter a lacuna como evidência induzida ausente e não introduzir mock infrastructure pesada.
-Documentos atualizados: audit de 2026-08-28 e ROADMAP/TECH_DEBT após esta reconciliação.
+Descoberta: o gap não exige uma mock layer; um único function pointer por RendererCore é suficiente para reproduzir a falha.
+Impacto: a tranche pode transformar a semântica já implementada em evidência executável sem alterar o lifecycle global.
+Decisão tomada: usar seam mínimo local e manter a prova consumer/frame-loop como evidência estrutural separada.
+Documentos atualizados: audit 2026-08-28, ROADMAP e TECH_DEBT já reconciliados em #93.
 ```
 
 ## Evidência / referências
@@ -141,10 +140,10 @@ Documentos atualizados: audit de 2026-08-28 e ROADMAP/TECH_DEBT após esta recon
 - `Game/Graphics/RendererCore.cpp`;
 - `Game/Graphics/RendererFacade.cpp`;
 - `Tests/Integration/test_renderer_core.cpp`;
-- Study `2026-08-27-vulkan-recreate-waitidle-contract.md` como evidência histórica, sempre revalidada contra `main`.
+- Study `2026-08-27-vulkan-recreate-waitidle-contract.md` como evidência histórica revalidada contra `main`.
 
 ## Fecho
 
-**Resultado:** `parcialmente concluído`  
-**Critério de saída:** semântica atual documentada; evidência induzida continua aberta  
-**Dívida residual:** teste executável específico para `vkDeviceWaitIdle()` permanece em aberto
+**Resultado:** `em implementação`  
+**Critério de saída:** teste induzido do erro + estado pós-falha demonstrado + suites CI relevantes verdes  
+**Dívida residual:** consumer/frame-loop failure-path não é diretamente injetado neste teste
