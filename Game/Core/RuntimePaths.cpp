@@ -55,10 +55,24 @@ std::filesystem::path executableDirectory(const char* argv0) {
     return ec ? std::filesystem::path{} : cwd;
 }
 
+#if defined(_WIN32)
+std::filesystem::path windowsUserDataDirectory() {
+    char* value = nullptr;
+    size_t length = 0;
+    if (_dupenv_s(&value, &length, "LOCALAPPDATA") == 0 && value != nullptr && length > 1) {
+        std::filesystem::path result = std::filesystem::path(value) / "ASCENDENDO";
+        std::free(value);
+        return result;
+    }
+    std::free(value);
+    return {};
+}
+#endif
+
 std::filesystem::path userDataDirectory() {
 #if defined(_WIN32)
-    if (const char* localAppData = std::getenv("LOCALAPPDATA"); localAppData && *localAppData) {
-        return std::filesystem::path(localAppData) / "ASCENDENDO";
+    if (const auto localAppData = windowsUserDataDirectory(); !localAppData.empty()) {
+        return localAppData;
     }
 #elif defined(__APPLE__)
     if (const char* home = std::getenv("HOME"); home && *home) {
