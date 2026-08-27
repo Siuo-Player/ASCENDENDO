@@ -18,13 +18,16 @@ class Pipeline;
 
 class RendererCore {
 public:
+    using DeviceWaitIdleFunction = VkResult (*)(VkDevice);
+
     enum class FrameStatus {
         Ready,
         SwapchainNeedsRecreate,
         Fatal,
     };
 
-    RendererCore() = default;
+    explicit RendererCore(DeviceWaitIdleFunction waitIdle = &vkDeviceWaitIdle)
+        : m_waitIdle(waitIdle) {}
     ~RendererCore() { cleanup(); }
 
     RendererCore(const RendererCore&) = delete;
@@ -41,8 +44,12 @@ public:
     FrameStatus submitFrame(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
     // Rebuilds swapchain-dependent resources after OUT_OF_DATE/SUBOPTIMAL.
-    // On failure the core is left explicitly uninitialized so callers cannot
-    // accidentally reuse destroyed synchronization or frame resources.
+    // On failure after wait-idle succeeds, the core is left explicitly
+    // uninitialized so callers cannot accidentally reuse destroyed
+    // synchronization or frame resources.
+    //
+    // If vkDeviceWaitIdle() itself fails, the old resources/state are left
+    // intact and false is returned. The consumer must fail closed.
     bool recreateSwapchain();
 
     VkExtent2D swapchainExtent() const;
@@ -68,6 +75,7 @@ private:
     VkSemaphore m_renderFinishedSemaphore = VK_NULL_HANDLE;
     VkFence m_inFlightFence = VK_NULL_HANDLE;
 
+    DeviceWaitIdleFunction m_waitIdle = &vkDeviceWaitIdle;
     bool m_initialized = false;
 };
 
