@@ -1,8 +1,6 @@
 #pragma once
 
-#include "Core/KeyBindings.h"
-#include "Logic/EditorRenderSnapshot.h"
-#include "Logic/InputManager.h"
+#include "Logic/Physics.h"
 #include "Logic/LevelData.h"
 
 #include <cstddef>
