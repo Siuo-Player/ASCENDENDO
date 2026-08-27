@@ -122,7 +122,7 @@ Commit de código: `8998290fa2ad2d04c5306640553d228406a3543a`.
 - headless Vulkan — success;
 - campaign validation — success.
 
-A atualização documental posterior também passou o workflow normal final `Tests #778` — success. Os commits documentais posteriores não alteraram runtime/build code.
+A atualização documental posterior também passou o workflow normal final `Tests #778` — success. Os commits posteriores desta branch não alteraram runtime/build code.
 
 ## Definition of Ready
 
