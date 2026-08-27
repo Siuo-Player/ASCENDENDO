@@ -28,13 +28,13 @@ A implementação prefere capability discovery real e invariantes sobre hardware
 
 ## Resultado observado
 
-A cobertura adicionada foi validada no CI Linux/headless:
+A cobertura adicionada demonstrou no CI Linux/headless:
 
 - capability matrix mínima: Vulkan 1.3+, pelo menos uma physical device, `VK_KHR_swapchain` e graphics queue;
 - criação de uma janela + `VkSurfaceKHR` real;
 - graphics queue e present queue válidas no `VulkanContext`;
 - suporte efetivo da present family à surface através de `vkGetPhysicalDeviceSurfaceSupportKHR`;
-- testes normais e ASan/UBSan concluíram com sucesso no implementation state.
+- execução normal e ASan/UBSan do implementation state sem falhas.
 
 A capability matrix foi **observada no ambiente CI atual**, não universalmente provada para todo hardware possível.
 
@@ -122,7 +122,7 @@ Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`
 - headless Vulkan — success;
 - campaign validation — success.
 
-A documentação posterior na mesma branch não altera runtime/build code. O workflow normal do estado documental final foi disparado novamente; a integração fica condicionada à sua conclusão positiva.
+A documentação posterior na mesma branch não altera runtime/build code. A integração permanece condicionada ao workflow normal disparado pelo commit documental final.
 
 ## Definition of Ready
 
