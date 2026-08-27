@@ -3,7 +3,7 @@
 //
 //  Process/bootstrap and frame composition. Runtime session policy lives in
 //  logic::GameSession; graphics/presentation ownership lives in dedicated
-//  runtimes.
+//  runtimes. Runtime data bootstrap lives in core::RuntimeBootstrap.
 // =============================================================================
 #include "Game/Graphics/GraphicsRuntime.h"
 #include "Game/Graphics/PresentationRuntime.h"
@@ -11,18 +11,13 @@
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
-#include "Game/Core/CampaignID.h"
-#include "Game/Core/CampaignLoader.h"
+#include "Game/Core/RuntimeBootstrap.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/KeyBindings.h"
-#include "Game/Core/RuntimePaths.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
-#include <filesystem>
 #include <iostream>
-#include <string>
-#include <vector>
 
 using namespace gfx;
 using namespace logic;
@@ -103,22 +98,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    const core::RuntimePaths runtimePaths =
-        core::RuntimePaths::fromProcess(argc > 0 ? argv[0] : nullptr);
-    if (!runtimePaths.ensureUserDirectories()) {
+    bool userDirectoriesReady = false;
+    core::RuntimeBootstrapResult bootstrap =
+        core::RuntimeBootstrap::prepare(
+            argc > 0 ? argv[0] : nullptr,
+            &userDirectoriesReady);
+
+    if (!userDirectoriesReady) {
         std::cerr << "[AVISO] Nao foi possivel preparar completamente o diretorio de dados do utilizador.\n";
-    }
-
-    const std::string levelsDir = runtimePaths.levelsRoot().string();
-    const std::string runsCsvPath = runtimePaths.runsFile().string();
-    const std::string controlsCfgPath = runtimePaths.controlsFile().string();
-
-    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
-    const int screenWidth = mode ? mode->width : 1280;
-    const int screenHeight = mode ? mode->height : 720;
-    if (!mode) {
-        std::cerr << "[AVISO] Nao foi possivel obter o monitor primario; a usar 1280x720.\n";
     }
 
     {
@@ -132,13 +119,21 @@ int main(int argc, char** argv) {
         InputManager input;
         core::KeyBindings bindings;
 
+        const auto primaryMonitor = glfwGetPrimaryMonitor();
+        const auto mode = primaryMonitor ? glfwGetVideoMode(primaryMonitor) : nullptr;
+        const int screenWidth = mode ? mode->width : 1280;
+        const int screenHeight = mode ? mode->height : 720;
+        if (!mode) {
+            std::cerr << "[AVISO] Nao foi possivel obter o monitor primario; a usar 1280x720.\n";
+        }
+
         if (!graphics.init(screenWidth, screenHeight, "ASCENDENDO")) {
             std::cerr << "[ERRO] Nao foi possivel inicializar o subsistema grafico.\n";
             return -1;
         }
 
         if (!presentation.init(&ctx, &swapchain, &renderPass,
-                               &renderer, runtimePaths.playerSprite())) {
+                               &renderer, bootstrap.playerSprite())) {
             std::cerr << "[ERRO] Nao foi possivel inicializar o subsistema de apresentacao.\n";
             return -1;
         }
@@ -159,23 +154,22 @@ int main(int argc, char** argv) {
 
         input.registerWithWindow(win.handle());
 
-        if (bindings.loadFromFile(controlsCfgPath)) {
-            std::cout << "[ASCENDENDO] Controlos carregados de " << controlsCfgPath << ".\n";
+        if (bindings.loadFromFile(bootstrap.controlsFile().string())) {
+            std::cout << "[ASCENDENDO] Controlos carregados de "
+                      << bootstrap.controlsFile().string() << ".\n";
         } else {
-            std::cout << "[ASCENDENDO] " << controlsCfgPath
+            std::cout << "[ASCENDENDO] " << bootstrap.controlsFile().string()
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
-        const std::vector<std::filesystem::path> campaign =
-            core::CampaignLoader::load(
-                runtimePaths.campaignFile(),
-                runtimePaths.levelsRoot());
-
-        const std::string campaignID = core::computeCampaignID(levelsDir);
+        const std::string campaignID = bootstrap.campaignID;
         std::cout << "[ASCENDENDO] Campaign ID: "
                   << (campaignID.empty() ? "(indisponivel)" : campaignID) << "\n";
 
-        GameSession session(campaign, campaignID, runsCsvPath);
+        GameSession session(
+            bootstrap.campaign,
+            campaignID,
+            bootstrap.runsFile().string());
         Camera camera;
         renderer.attachEditorSession(&session.editorSession());
 
@@ -210,7 +204,7 @@ int main(int argc, char** argv) {
                     << "  ASCENDENDO -- FIM DA CAMPANHA\n"
                     << "  Tempo:         " << logic::formatElapsed(result.completionElapsedSeconds) << "\n"
                     << "  Campaign ID:   " << session.campaignID() << "\n"
-                    << "  Registo:       " << (result.runRecorded ? "guardado em " + runsCsvPath
+                    << "  Registo:       " << (result.runRecorded ? "guardado em " + bootstrap.runsFile().string()
                                                          : "FALHOU (verificar permissoes)") << "\n"
                     << "  Autor:         Rafael Gomes Bernardo\n"
                     << "  Auxiliado por: Claude (Anthropic)\n"
