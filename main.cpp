@@ -18,6 +18,7 @@
 
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -42,7 +43,6 @@ public:
 
     bool initialized() const { return initialized_; }
 
-    
 private:
     bool initialized_ = false;
 };
