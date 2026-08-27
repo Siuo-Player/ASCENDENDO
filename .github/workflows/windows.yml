@@ -44,15 +44,17 @@ jobs:
           vulkan_version: ${{ env.VULKAN_SDK_VERSION }}
           cache: true
           install_lavapipe: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure deterministic Vulkan software driver
         shell: pwsh
         run: |
           $toolCache = if ($env:RUNNER_TOOL_CACHE) { $env:RUNNER_TOOL_CACHE } else { 'C:\hostedtoolcache' }
-          $icd = Get-ChildItem (Join-Path $toolCache 'windows\lavapipe') -Recurse -Filter 'lvp_icd.x86_64.json' -File |
+          $lavapipeRoot = Join-Path $toolCache 'lavapipe'
+          $icd = Get-ChildItem $lavapipeRoot -Recurse -Filter 'lvp_icd.x86_64.json' -File |
             Select-Object -First 1 -ExpandProperty FullName
           if (-not $icd) {
-            throw 'Lavapipe ICD manifest was not installed'
+            throw "Lavapipe ICD manifest was not installed below $lavapipeRoot"
           }
           "VK_DRIVER_FILES=$icd" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using Vulkan driver manifest: $icd"
