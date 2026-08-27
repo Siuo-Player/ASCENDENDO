@@ -23,6 +23,7 @@ jobs:
       GLFW_VERSION: 3.4
       GLFW_COMMIT: 7b6aead9fb88b3623e3b3725ebb42670cbe4c579
       LLVM_VERSION: 20.1.8
+      LAVAPIPE_VERSION: 26.1.4
 
     steps:
       - name: Checkout ASCENDENDO
@@ -38,11 +39,23 @@ jobs:
           version: ${{ env.LLVM_VERSION }}
           arch: x64
 
-      - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
+      - name: Install Vulkan SDK and Lavapipe
+        uses: jakoch/install-vulkan-sdk-action@v1.6.0
         with:
-          version: ${{ env.VULKAN_SDK_VERSION }}
+          vulkan_version: ${{ env.VULKAN_SDK_VERSION }}
           cache: true
+          install_lavapipe: true
+          lavapipe_destination: C:\lavapipe
+
+      - name: Configure deterministic Vulkan software driver
+        shell: pwsh
+        run: |
+          $icd = 'C:\lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json'
+          if (-not (Test-Path $icd)) {
+            throw "Lavapipe ICD not found at $icd"
+          }
+          "VK_DRIVER_FILES=$icd" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Using Vulkan driver manifest: $icd"
 
       - name: Configure native Visual Studio environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -58,6 +71,9 @@ jobs:
           make --version
           if (-not $env:VULKAN_SDK) { throw 'VULKAN_SDK is not set' }
           glslc --version
+          if (-not $env:VK_DRIVER_FILES) { throw 'VK_DRIVER_FILES is not set' }
+          Write-Host "VK_DRIVER_FILES=$env:VK_DRIVER_FILES"
+          & "$env:VULKAN_SDK\Bin\vulkaninfo.exe" --summary
 
       - name: Fetch pinned GLFW source
         shell: pwsh
@@ -101,6 +117,8 @@ jobs:
             "LLVM version: $env:LLVM_VERSION",
             "Vulkan SDK version: $env:VULKAN_SDK_VERSION",
             "VULKAN_SDK: $env:VULKAN_SDK",
+            "Lavapipe package version: $env:LAVAPIPE_VERSION",
+            "Vulkan driver manifest: $env:VK_DRIVER_FILES",
             "clang++: $(clang++ --version | Select-Object -First 1)",
             "cmake: $(cmake --version | Select-Object -First 1)",
             "make: $(make --version | Select-Object -First 1)",
