@@ -12,24 +12,21 @@ O Gate permanece **OPEN**.
 
 - PR #81 — rollback agregado de `GraphicsRuntime` em falha de init.
 - PR #87 — `VulkanContext::reconfigureForSurface()` com contrato terminal e estado invalidado após falha.
-- PR #85 — Windows build/test/runtime evidence em runner real com Vulkan software driver.
+- PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
 - PR #88 — `TickInput` como unidade semântica de input da simulação.
-- PR #90 — `ReplayManager` alinhado a `TickInput`; reprodução por sequência explícita de ticks.
-- PR #91 — evidência de malformed syntax para a gramática atual de `LevelDataIO`.
+- PR #90 — `ReplayManager` alinhado a `TickInput` para sequência explícita de ticks.
+- PR #91 — malformed syntax da gramática atual coberta por testes.
 
-### Gaps restantes
+### Gaps ainda bloqueadores
 
-```text
-Vulkan lower-level failure/error evidence
-queue/capability evidence adicional
-live input sampling / replay boundary review
-paths/runtime roots
-Level world/chunk metadata
-collision-order determinism
-architecture/ownership final review
-```
+1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional.
+2. Deterministic simulation/replay além da representação TickInput; live input sampling e persistence permanecem separadas.
+3. Paths/runtime-root independence.
+4. Level world/chunk metadata contract.
+5. Collision-order determinism.
+6. Architecture/ownership final review.
 
-### Ordem
+### Ordem de execução
 
 ```text
 Vulkan/error evidence
@@ -41,21 +38,17 @@ Vulkan/error evidence
 → RenderSnapshot generalization
 ```
 
-Não iniciar a migração geral de `RenderSnapshot` antes do fecho formal do Gate.
+Não avançar para a migração geral de `RenderSnapshot` antes do fecho formal do Gate 9.6.
 
-## Regras permanentes
+## Princípios de execução
 
 ```text
 investigar
 → documentar
-→ atualizar arquitetura/roadmap/tech debt/WP
+→ atualizar roadmap/architecture/tech-debt/WP
 → implementar
 → testar/validar
 → documentar resultado, falhas e próxima decisão
 ```
 
-A decomposição de `main.cpp` é incremental e baseada em ownership/responsabilidade/testabilidade; não criar `Application` genérica apenas para reduzir tamanho.
-
-`RuntimeBootstrap` é composição de startup.
-`LevelDataIO` é parser/serializer até existir schema e semantic validation explícitos.
-`ReplayManager` opera sobre `TickInput`; isso não prova independência do live input face ao frame rate.
+A decomposição de `main.cpp` é incremental e baseada em ownership/responsabilidade/testabilidade; não criar uma `Application` genérica apenas para reduzir linhas.
