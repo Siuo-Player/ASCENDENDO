@@ -3,30 +3,30 @@
 #include "Core/CampaignID.h"
 #include "Core/CampaignLoader.h"
 
+#include <utility>
+
 namespace core {
 
-RuntimeBootstrapResult RuntimeBootstrap::prepare(
-    const char* argv0,
-    bool* userDirectoriesReady) {
+RuntimeBootstrapResult RuntimeBootstrap::prepare(RuntimePaths paths) {
     RuntimeBootstrapResult result{
-        RuntimePaths::fromProcess(argv0),
+        std::move(paths),
+        false,
         {},
         {},
     };
 
-    const bool directoriesReady = result.paths.ensureUserDirectories();
-    if (userDirectoriesReady) {
-        *userDirectoriesReady = directoriesReady;
-    }
-
+    result.userDirectoriesReady = result.paths.ensureUserDirectories();
     result.campaign = CampaignLoader::load(
         result.paths.campaignFile(),
         result.paths.levelsRoot());
-
     result.campaignID = computeCampaignID(
         result.paths.levelsRoot().string());
 
     return result;
+}
+
+RuntimeBootstrapResult RuntimeBootstrap::fromProcess(const char* argv0) {
+    return prepare(RuntimePaths::fromProcess(argv0));
 }
 
 } // namespace core
