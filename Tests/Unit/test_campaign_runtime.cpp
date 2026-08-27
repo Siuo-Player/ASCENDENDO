@@ -1,12 +1,25 @@
 #include "../../external/doctest/doctest.h"
 #include "../../Game/Logic/CampaignRuntime.h"
 #include "../../Game/Logic/Level.h"
+#include "../../Game/Logic/LevelDataIO.h"
 #include "../../Game/Core/Config.h"
 
 #include <filesystem>
+#include <fstream>
 #include <vector>
 
 using namespace logic;
+
+namespace {
+
+void writeLevel(const std::filesystem::path& path, const char* contents) {
+    std::ofstream out(path);
+    REQUIRE(out.is_open());
+    out << contents;
+    REQUIRE(out.good());
+}
+
+} // namespace
 
 TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Reset e nivel inicial preservam progresso deterministico") {
@@ -95,5 +108,23 @@ TEST_SUITE("CampaignRuntime") {
         CHECK(runtime.currentSpawnY() == doctest::Approx(0.0f));
         CHECK(level.platformCount() == 0);
         CHECK(runtime.hasMoreLevels());
+    }
+
+    TEST_CASE("LevelDataIO rejects unknown directives") {
+        const auto path = std::filesystem::temp_directory_path() / "ascendendo-unknown-directive.lvl";
+        writeLevel(path, "NAME Valid\nPLATFORM 0 0 16 16\nUNKNOWN 1 2 3\n");
+
+        CHECK_FALSE(LevelDataIO::load(path).has_value());
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+
+    TEST_CASE("LevelDataIO rejects trailing tokens") {
+        const auto path = std::filesystem::temp_directory_path() / "ascendendo-trailing-tokens.lvl";
+        writeLevel(path, "NAME Valid\nPLATFORM 0 0 16 16 extra\n");
+
+        CHECK_FALSE(LevelDataIO::load(path).has_value());
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
     }
 }
