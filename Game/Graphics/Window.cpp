@@ -1,15 +1,15 @@
 // =============================================================================
-//  Game/Graphics/Window.cpp
+//  ASCENDENDO — Window implementation
+//
+//  GLFW library lifetime is owned by the process boundary. Window owns only
+//  the GLFWwindow resource and therefore assumes GLFW has already been
+//  initialized before create().
 // =============================================================================
-
 #include "Graphics/Window.h"
 
-// =============================================================================
-//  Implementacao Real (requer GLFW instalado em external/glfw/)
-// =============================================================================
 #ifdef GLFW_AVAILABLE
 
-#define GLFW_INCLUDE_VULKAN   // faz GLFW incluir vulkan.h automaticamente
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
@@ -18,16 +18,9 @@
 namespace gfx {
 
 bool Window::create(uint32_t width, uint32_t height, const char* title) {
-    if (!glfwInit()) return false;
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);   // sem contexto OpenGL
-    glfwWindowHint(GLFW_RESIZABLE,  GLFW_FALSE);    // fixo por agora (Fase 4: redimensionavel)
-
-    // O caller pode passar a resolucao total do monitor. Uma janela normal
-    // acrescenta decoracao fora da area cliente, portanto uma janela com
-    // exactamente a resolucao do monitor pode ficar cortada no lado direito.
-    // Limitar a 90% da area do monitor garante que o client area e os borders
-    // conseguem caber mantendo o mesmo rácio pedido.
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
     if (mode && width > 0 && height > 0) {
@@ -48,12 +41,9 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
     m_handle = glfwCreateWindow(static_cast<int>(width),
                                 static_cast<int>(height),
                                 title, nullptr, nullptr);
-    if (!m_handle) {
-        glfwTerminate();
-        return false;
-    }
+    if (!m_handle) return false;
 
-    m_width  = width;
+    m_width = width;
     m_height = height;
     return true;
 }
@@ -61,9 +51,8 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
 void Window::destroy() {
     if (m_handle) {
         glfwDestroyWindow(m_handle);
-        glfwTerminate();
         m_handle = nullptr;
-        m_width  = 0;
+        m_width = 0;
         m_height = 0;
     }
 }
@@ -77,9 +66,9 @@ void Window::pollEvents() {
 }
 
 void Window::appendRequiredExtensions(std::vector<const char*>& out) const {
-    uint32_t     count = 0;
-    const char** exts  = glfwGetRequiredInstanceExtensions(&count);
-    for (uint32_t i = 0; i < count; ++i) out.push_back(exts[i]);
+    uint32_t count = 0;
+    const char** extensions = glfwGetRequiredInstanceExtensions(&count);
+    for (uint32_t i = 0; i < count; ++i) out.push_back(extensions[i]);
 }
 
 VkSurfaceKHR Window::createVulkanSurface(VkInstance instance) const {
@@ -94,19 +83,16 @@ VkSurfaceKHR Window::createVulkanSurface(VkInstance instance) const {
 
 } // namespace gfx
 
-// =============================================================================
-//  Implementacao Stub (GLFW nao disponivel — funcoes safe no-op)
-// =============================================================================
 #else
 
 namespace gfx {
 
-bool         Window::create(uint32_t, uint32_t, const char*) { return false;  }
-void         Window::destroy()                               {}
-bool         Window::shouldClose()                     const { return true;    }
-void         Window::pollEvents()                            {}
-void         Window::appendRequiredExtensions(std::vector<const char*>&) const {}
-VkSurfaceKHR Window::createVulkanSurface(VkInstance)   const { return VK_NULL_HANDLE; }
+bool Window::create(uint32_t, uint32_t, const char*) { return false; }
+void Window::destroy() {}
+bool Window::shouldClose() const { return true; }
+void Window::pollEvents() {}
+void Window::appendRequiredExtensions(std::vector<const char*>&) const {}
+VkSurfaceKHR Window::createVulkanSurface(VkInstance) const { return VK_NULL_HANDLE; }
 
 } // namespace gfx
 
