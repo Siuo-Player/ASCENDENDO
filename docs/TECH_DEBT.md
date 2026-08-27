@@ -18,7 +18,7 @@ A próxima dívida arquitetural de presentation é a ausência de um `RenderSnap
 | Área | Problema | Ação | Critério de saída |
 |---|---|---|---|
 | CI / evidência | Run #281 falhou no step agregado de build/teste, mas a causa detalhada não está confirmada | obter diagnóstico observável antes de atribuir causalidade e, depois, corrigir/revalidar | causa classificada por evidência e nova execução documentada |
-| Runtime | `main.cpp` acumula inicialização, estados, campanha, física, editor e persistência | extrair responsabilidades incrementalmente | `main.cpp` deixa de possuir regras de gameplay/editor |
+| Runtime | `main.cpp` acumula inicialização, bootstrap, frame coordination e apresentação | continuar extraindo responsabilidades incrementais por ownership real | `main.cpp` deixa de concentrar regras de runtime que já têm fronteira própria |
 | Presentation | `RendererFacade`/passes ainda recebem modelos de domínio diretamente | introduzir `RenderSnapshot`/dados de apresentação | presentation recebe dados próprios de apresentação |
 | Input | gameplay ainda pode consultar teclas físicas diretamente | migrar `Player` para `GameAction`/`KeyBindings` | nenhuma regra de gameplay depende de `Key::...` |
 | Paths | runtime usa paths relativos ao current working directory | criar resolução de `executable root`, `asset root` e `user data root` | executar o EXE a partir de qualquer diretório suportado |
@@ -87,7 +87,7 @@ Tests/Unit/test_level.cpp
     → 326 linhas históricas → decomposto por responsabilidade
 
 main.cpp
-    → ~330 linhas históricas → continuar extração arquitetural, não split artificial
+    → ~330 linhas históricas → GameSession extraído; continuar bootstrap/frame composition sem split artificial
 ```
 
 A política normativa atual está em `docs/CODE_SIZE.md`: `< 40 KiB` normal, `40–47.99 KiB` warning e `>= 48 KiB` error. LOC é diagnóstico apenas.
@@ -109,6 +109,7 @@ A política normativa atual está em `docs/CODE_SIZE.md`: `< 40 KiB` normal, `40
 13. Uma dependência técnica deve ser considerada também uma dependência de coordenação quando a sua alteração afeta consumidores, testes ou documentação.
 14. `RendererFacadeAdapter` não é uma API suportada do runtime.
 15. Causas de falhas CI não são tratadas como confirmadas sem evidência observável.
+16. `GameSession` é a fronteira atual para estado mutável de gameplay/editor/campanha; não deve absorver ownership de platform, Vulkan, camera ou presentation sem nova decisão documentada.
 
 ## Portões do roadmap
 
@@ -134,3 +135,9 @@ A lista acima deve ser lida em conjunto com `docs/PROJECT_MANAGEMENT.md` e `docs
 PR #70 adicionou o workflow `.github/workflows/sanitizers.yml`. No commit de implementação `c450f62cd5f3bac4f37e768a34ec17bbcb4a08cd`, o workflow normal `Tests` e o workflow `Sanitizers` terminaram com sucesso. O workflow sanitizer força `CXXFLAGS_REL` a uma configuração ASan/UBSan, fazendo com que a biblioteca `Game` ligada aos testes seja instrumentada, sem alterar as flags normais do build release.
 
 Windows CI permanece uma dívida independente; não se deve inferir sucesso ou falha sem uma estratégia de dependências validada.
+
+## Evidência recente — GameSession
+
+PR #72 extraiu a primeira fronteira de sessão de `main.cpp`. `GameSession` agora possui `GameStateMachine`, `CampaignRuntime`, `Level`, `PhysicsWorld`, `SimulationOrchestrator`, `Player` e `EditorSession`; `main.cpp` permanece responsável pela composição do processo, graphics/presentation, input polling, `Camera` e submissão de frames.
+
+A implementação foi validada por `Tests #746` (`33026510334`) e `Sanitizers #8` (`33026512992`), ambos concluídos com sucesso incluindo build, testes, headless Vulkan e campaign validation. Durante a branch houve uma falha de compilação observável (`33026463141`) causada pela remoção acidental do include explícito de `Logic/RunHistory.h`; a correção foi feita na mesma branch e os checks seguintes ficaram verdes.
