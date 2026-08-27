@@ -24,9 +24,9 @@ A execução posterior chegou a compilar e linkar `game.exe` e o executável dos
 
 Na mesma execução, os testes que dependem de Vulkan falharam porque o runner Windows não expunha um ICD/dispositivo utilizável: `VK_ERROR_INCOMPATIBLE_DRIVER (-9)`. Isto é distinto de uma falha de compilação/link e não deve ser resolvido mascarando ou excluindo testes gráficos do full suite.
 
-A CI Linux demonstra o padrão necessário: instala `mesa-vulkan-drivers`, seleciona explicitamente o ICD `lvp_icd.json` e verifica `llvmpipe` antes de executar o suite completo. Portanto, a próxima correção experimental da tranche fornece uma versão Windows do mesmo princípio através de um rasterizer Vulkan por software e força o loader para o manifesto desse driver.
+A CI Linux demonstra o padrão necessário: instala `mesa-vulkan-drivers`, seleciona explicitamente o ICD `lvp_icd.json` e verifica `llvmpipe` antes de executar o suite completo. O loader Vulkan suporta `VK_DRIVER_FILES` como mecanismo explícito para selecionar um manifesto de driver, sendo `VK_ICD_FILENAMES` a forma antiga/deprecated. Portanto, a correção seguinte da tranche fornece uma versão Windows do mesmo princípio através de Lavapipe e fixa o loader no manifesto do driver instalado. 
 
-A implementação usa `jakoch/install-vulkan-sdk-action@v1.6.0` com `install_lavapipe: true` e força `VK_DRIVER_FILES` para `C:\\lavapipe\\share\\vulkan\\icd.d\\lvp_icd.x86_64.json`. O resultado ainda precisa de validação executável; esta ação é uma dependência CI explícita e não uma alteração do runtime distribuído.
+A implementação usa `jakoch/install-vulkan-sdk-action@v1.6.0` com `install_lavapipe: true`, verifica o manifesto em `C:\\lavapipe\\share\\vulkan\\icd.d\\lvp_icd.x86_64.json` e exporta esse caminho em `VK_DRIVER_FILES`. O resultado ainda precisa de validação executável; a ação é uma dependência de CI explicitamente fixada e não uma alteração do runtime distribuído.
 
 ## Inclui
 
