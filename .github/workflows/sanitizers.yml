@@ -12,10 +12,11 @@ jobs:
   asan-ubsan:
     name: Linux / Clang / ASan + UBSan / Headless Vulkan
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install toolchain and headless graphics dependencies
         run: |
@@ -36,6 +37,8 @@ jobs:
           test -n "$ICD"
           echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
           echo "Using Vulkan ICD: $ICD"
+          vulkaninfo --summary > vulkaninfo-summary.txt 2>&1
+          grep -E 'Vulkan Instance Version:|deviceName|driverName|driverInfo' vulkaninfo-summary.txt
 
       - name: Build and run fully instrumented tests
         shell: bash
@@ -50,6 +53,16 @@ jobs:
           xvfb-run -a -s '-screen 0 1280x720x24' \
             make tests -j2 \
             CXXFLAGS_REL="$SAN_FLAGS"
+
+      - name: Upload sanitizer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: sanitizer-ci-diagnostics
+          path: |
+            build/test_results.txt
+            vulkaninfo-summary.txt
+          if-no-files-found: warn
 
       - name: Validate active campaign levels
         run: python3 Development/AI_Validation/ai_validator.py --campaign
