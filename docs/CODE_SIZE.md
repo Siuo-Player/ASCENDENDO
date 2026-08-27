@@ -1,6 +1,6 @@
 # Regra de tamanho dos ficheiros de código
 
-O ASCENDENDO usa o tamanho físico do ficheiro como **sinal de manutenção e arquitetura**, não como objetivo de produtividade. Um tamanho elevado desencadeia análise de coesão, responsabilidades e coupling; não justifica divisão artificial.
+O ASCENDENDO usa o tamanho físico do ficheiro como **critério objetivo para decidir quando uma responsabilidade deve ser repartida**, tendo como finalidade principal tornar a manutenção e o diagnóstico mais localizados. O tamanho, por si só, não determina onde dividir: a divisão tem de seguir coesão, ownership, dependências e responsabilidades reais.
 
 ## Política normativa
 
@@ -13,10 +13,10 @@ A métrica normativa é o **tamanho físico em KiB**. A contagem de linhas pode 
 | Tamanho físico | Estado | Regra |
 |---:|---|---|
 | `< 40 KiB` | normal | desenvolvimento normal; continuar a avaliar coesão |
-| `40–47.99 KiB` | warning | não adicionar responsabilidades sem plano de subdivisão |
-| `>= 48 KiB` | error | CI deve bloquear até subdivisão ou exceção documentada |
+| `40–47.99 KiB` | warning | iniciar avaliação explícita de particionamento antes de acumular novas responsabilidades |
+| `>= 48 KiB` | error | CI deve bloquear até existir particionamento coerente ou exceção documentada |
 
-Os limiares são bytes físicos (`1 KiB = 1024 bytes`). O objetivo é medir o peso real do artefacto-fonte, evitando que formatação, comentários ou densidade de linhas distorçam a regra física.
+Os limiares são bytes físicos (`1 KiB = 1024 bytes`). Medir o peso real do artefacto evita que formatação, comentários ou densidade de linhas distorçam o critério físico.
 
 ## Métricas complementares
 
@@ -25,11 +25,13 @@ LOC continua útil para diagnóstico e revisão humana, mas não é uma polític
 Assim:
 
 ```text
-peso físico do ficheiro  → KiB → gate
-estrutura do código      → revisão arquitetural
+peso físico do ficheiro  → KiB → decisão de particionamento
+estrutura do código      → revisão arquitetural → onde dividir
 complexidade             → métricas próprias
 LOC                      → diagnóstico auxiliar
 ```
+
+O objetivo do limite é **localizar responsabilidades, manutenção e diagnóstico**. Não é minimizar o número de linhas nem produzir ficheiros pequenos por si só.
 
 ## Exceções
 
@@ -69,7 +71,7 @@ SpriteRenderer
 main.cpp
 ├── process lifetime / composition
 ├── runtime state orchestration
-└── delegation to application/runtime/editor/presentation components
+└── delegation to runtime/editor/presentation components
 ```
 
 Exemplos não aceitáveis:
