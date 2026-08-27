@@ -44,14 +44,14 @@ jobs:
           vulkan_version: ${{ env.VULKAN_SDK_VERSION }}
           cache: true
           install_lavapipe: true
-          lavapipe_destination: C:\lavapipe
 
       - name: Configure deterministic Vulkan software driver
         shell: pwsh
         run: |
-          $icd = 'C:\lavapipe\share\vulkan\icd.d\lvp_icd.x86_64.json'
-          if (-not (Test-Path $icd)) {
-            throw "Lavapipe ICD not found at $icd"
+          $icd = Get-ChildItem 'C:\hostedtoolcache\windows\lavapipe' -Recurse -Filter 'lvp_icd.x86_64.json' -File |
+            Select-Object -First 1 -ExpandProperty FullName
+          if (-not $icd) {
+            throw 'Lavapipe ICD manifest was not installed'
           }
           "VK_DRIVER_FILES=$icd" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Using Vulkan driver manifest: $icd"
@@ -72,7 +72,8 @@ jobs:
           glslc --version
           if (-not $env:VK_DRIVER_FILES) { throw 'VK_DRIVER_FILES is not set' }
           Write-Host "VK_DRIVER_FILES=$env:VK_DRIVER_FILES"
-          & "$env:VULKAN_SDK\Bin\vulkaninfo.exe" --summary
+          Get-Command vulkaninfo.exe | Select-Object -ExpandProperty Source
+          vulkaninfo.exe --summary
 
       - name: Fetch pinned GLFW source
         shell: pwsh
