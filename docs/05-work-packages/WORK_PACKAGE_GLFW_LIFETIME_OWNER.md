@@ -61,13 +61,14 @@ main/process
   └── GlfwRuntime (sole GLFW library lifetime owner)
         └── GraphicsRuntime
               └── Window (GLFWwindow resource only)
+                    └── Vulkan surface creation
 
 integration test process
   └── GlfwTestRuntime (test-process library lifetime owner)
         └── direct Window/Vulkan integration fixtures
 ```
 
-Consumers: `main.cpp`, `GraphicsRuntime`, `Window`, `Tests/test_runner.cpp`, integration tests that construct `Window` directly and any future code constructing `Window` directly.  
+Consumers: `main.cpp`, `GraphicsRuntime`, `Window`, `Tests/test_runner.cpp`, `Tests/Integration/test_graphics_runtime.cpp`, integration tests that construct `Window` directly and any future code constructing `Window` directly.  
 Validation dependencies: GLFW headers/library, existing Linux headless workflow, Windows dependency strategy remains separate.
 
 ## Invariants
@@ -87,6 +88,7 @@ Validation dependencies: GLFW headers/library, existing Linux headless workflow,
 | Failure cleanup terminates GLFW before Vulkan/window resources are released | baixa | alto | keep process owner alive until the GraphicsRuntime scope has fully destructed | validated by scope ordering |
 | Stub build behavior changes | baixa | baixo | preserve no-op `Window` methods under `!GLFW_AVAILABLE` | validated by existing compilation path |
 | Integration tests relied on Window's implicit `glfwInit()` | confirmed | médio | initialize GLFW once in `Tests/test_runner.cpp` | corrected in branch |
+| An integration test terminates the process-wide GLFW runtime midway through the suite | confirmed | médio | remove per-test `glfwInit()`/`glfwTerminate()` and rely on the test-process owner | corrected in branch |
 
 ## Validation
 
@@ -103,7 +105,15 @@ CI normal workflow run `33026726288` failed in `make tests -j2`: 11 integration 
 
 The log also shows that `make game -j2` succeeded, source-size checks succeeded and the campaign validator was otherwise reached successfully. The failure was therefore a test-consumer contract issue, not an infrastructure failure.
 
-Correction: `Tests/test_runner.cpp` now owns one `GlfwTestRuntime` for the test process under `GLFW_AVAILABLE`, providing the explicit initialization required by all direct window integration consumers and terminating GLFW only after the test process has finished destroying its local Vulkan/window objects.
+Correction: `Tests/test_runner.cpp` now owns one `GlfwTestRuntime` for the test process under `GLFW_AVAILABLE`, providing the explicit initialization required by all direct window integration consumers.
+
+### Second validation failure
+
+The next CI normal and sanitizer executions still reported the same 11 `Window` creation failures. Repository inspection identified a remaining test-level owner in `Tests/Integration/test_graphics_runtime.cpp`: that test called `glfwInit()` and later `glfwTerminate()` itself.
+
+Because doctest executes this test before other window consumers, its final `glfwTerminate()` invalidated the process-level test owner for the remainder of the suite. This was a confirmed lifecycle bug in the test composition, not a CI infrastructure failure.
+
+Correction: the test no longer initializes or terminates GLFW. The single `GlfwTestRuntime` in `Tests/test_runner.cpp` now remains the only library lifetime owner for the entire test process.
 
 ## Definition of Ready
 
@@ -129,17 +139,20 @@ Correction: `Tests/test_runner.cpp` now owns one `GlfwTestRuntime` for the test 
 Implementation check:
 A first edit removed nested GLFW init/terminate from Window, but introduced a source typo in the GLFW window hint constant (`GLFW.RESIZABLE`).
 
-Classification:
-Local compile-time defect introduced by the branch implementation; not a CI/infrastructure failure.
-
 Correction:
 The implementation was corrected to use `GLFW_RESIZABLE` before validation.
 
-Validation finding:
-After the production build passed, the normal test workflow exposed 11 integration failures because direct Window consumers had relied on Window's former implicit GLFW initialization.
+Validation finding #1:
+The first CI revalidation exposed 11 integration failures because direct Window consumers relied on Window's former implicit GLFW initialization.
 
-Correction:
-Added one explicit RAII `GlfwTestRuntime` to `Tests/test_runner.cpp` so the test process follows the same single-owner lifetime rule.
+Correction #1:
+Added one explicit RAII `GlfwTestRuntime` to `Tests/test_runner.cpp`.
+
+Validation finding #2:
+A subsequent run still exposed the same failures because `Tests/Integration/test_graphics_runtime.cpp` independently called `glfwTerminate()` after its test.
+
+Correction #2:
+Removed the test-level GLFW initialization/termination so the test runner remains the sole process owner.
 ```
 
 ## Fecho
