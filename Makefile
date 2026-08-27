@@ -54,7 +54,7 @@ CXXFLAGS_BASE := -std=c++20 -Wall -Wextra -Wpedantic -Werror -Wno-unused-paramet
 # CRT unambiguous at link time as well as at compile time.
 ifeq ($(PLATFORM),windows)
     CXXFLAGS_BASE += -fms-runtime-lib=dll
-    LDFLAGS_CRT   := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt
+    LDFLAGS_CRT   := -Xlinker /NODEFAULTLIB:libcmt -Xlinker /DEFAULTLIB:msvcrt -Xlinker /WX
 else
     LDFLAGS_CRT   :=
 endif
