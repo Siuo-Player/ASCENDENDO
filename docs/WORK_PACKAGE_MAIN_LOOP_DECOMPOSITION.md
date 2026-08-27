@@ -6,7 +6,7 @@
 **Subsystem:** `Runtime`  
 **Work Package:** `9.6 Main Loop / GameSession Boundary`  
 **Branch:** `refactor/9-6-game-session-boundary`  
-**PR:** `<to be created>`
+**PR:** `#72`
 
 ## Discovery
 
@@ -113,6 +113,22 @@ Consumers affected: `main.cpp`, runtime tests and any future runtime code that a
 
 The refactor must preserve current executable behavior and all existing tests. Additional tests should target `GameSession` state transitions and reset/streaming behavior without coupling tests to graphics implementation details.
 
+### First validation failure
+
+CI run `33026463141` (`Tests`, run #743) failed during `make game -j2` in the `game-build` step.
+
+Observed diagnostic:
+
+```text
+main.cpp:210:54: error: no member named 'formatElapsed' in namespace 'logic'
+```
+
+Classification: compile failure.  
+Confirmed cause: `main.cpp` stopped including `Logic/RunHistory.h` while moving persistence policy into `GameSession`; `logic::formatElapsed` is still declared by that header and is intentionally retained in the entry-point completion message.  
+Fix: restore the explicit `Logic/RunHistory.h` include; no behavioral redesign is required.
+
+The source-size checks in the same run passed, so this failure was not caused by the size gate.
+
 ## Definition of Ready
 
 - [x] objective and scope defined;
@@ -125,7 +141,7 @@ The refactor must preserve current executable behavior and all existing tests. A
 ## Definition of Done
 
 - [ ] `GameSession` owns the agreed runtime/session responsibilities;
-- [ ] `main.cpp` no longer owns those gameplay/editor/session rules;
+- [ ] `main.cpp` no longer owns those session rules;
 - [ ] behavior-preservation tests pass;
 - [ ] Linux/Clang/headless Vulkan CI remains green;
 - [ ] campaign validation remains green;
@@ -140,10 +156,11 @@ The refactor must preserve current executable behavior and all existing tests. A
 - `Game/Graphics/GraphicsRuntime.h` — existing graphics ownership boundary;
 - `Game/Graphics/PresentationRuntime.h` — existing presentation ownership boundary;
 - `Game/Core/GameStateMachine.h` — existing state boundary;
-- `Game/Logic/CampaignRuntime.h` — existing campaign boundary.
+- `Game/Logic/CampaignRuntime.h` — existing campaign boundary;
+- CI run `33026463141` — concrete compile failure and diagnostic above.
 
 ## Fecho
 
-**Resultado:** em execução.  
-**Próxima decisão:** implement the `GameSession` boundary, then validate behavior before considering any broader bootstrap/Application extraction.  
+**Resultado:** em execução; first CI compile failure diagnosed and being corrected in the same branch.  
+**Próxima decisão:** restore the required explicit include, rerun the full validation, and only then assess any remaining behavior or ownership issues.  
 **Dívida residual:** graphics/bootstrap composition, Windows CI, Vulkan lifecycle/queue evidence and full RenderSnapshot boundary remain outside this tranche.
