@@ -9,11 +9,13 @@
 namespace logic {
 
 int SimulationOrchestrator::advance(float dt, const InputManager& input,
+                                     const core::KeyBindings& bindings,
                                      Player& player, PhysicsWorld& world,
                                      Level& level) const {
     const int steps = world.advance(dt);
     for (int i = 0; i < steps; ++i) {
-        player.update(input, world, config::FIXED_STEP);
+        const TickInput tickInput = input.tickInput(bindings, static_cast<std::size_t>(i));
+        player.update(tickInput, world, config::FIXED_STEP);
         level.resolveCollision(player.body);
     }
     return steps;

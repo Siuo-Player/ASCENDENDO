@@ -8,6 +8,7 @@
 
 #include "doctest/doctest.h"
 #include "Logic/InputManager.h"
+#include "Core/KeyBindings.h"
 
 using namespace logic;
 
@@ -38,8 +39,8 @@ TEST_SUITE("InputManager") {
 
         input.beginFrame();
 
-        CHECK(input.isKeyDown(Key::SPACE)        == true);  // ainda premido
-        CHECK(input.isKeyJustPressed(Key::SPACE)  == false); // ja consumido
+        CHECK(input.isKeyDown(Key::SPACE)        == true);
+        CHECK(input.isKeyJustPressed(Key::SPACE)  == false);
         CHECK(input.isKeyJustReleased(Key::SPACE) == false);
     }
 
@@ -77,12 +78,54 @@ TEST_SUITE("InputManager") {
     TEST_CASE("REPEAT nao altera justPressed apos beginFrame") {
         InputManager input;
         input.onKeyEvent(Key::D, Action::PRESS);
-        input.beginFrame(); // consome o justPressed
+        input.beginFrame();
 
-        input.onKeyEvent(Key::D, Action::REPEAT); // manter premida
+        input.onKeyEvent(Key::D, Action::REPEAT);
 
         CHECK(input.isKeyDown(Key::D)        == true);
-        CHECK(input.isKeyJustPressed(Key::D)  == false); // nao e novo press
+        CHECK(input.isKeyJustPressed(Key::D)  == false);
+    }
+
+    TEST_CASE("tickInput atribui edge events apenas ao primeiro tick do frame") {
+        InputManager input;
+        core::KeyBindings bindings;
+        input.onKeyEvent(Key::SPACE, Action::PRESS);
+
+        const TickInput first = input.tickInput(bindings, 0);
+        const TickInput second = input.tickInput(bindings, 1);
+
+        CHECK(first.jumpHeld == true);
+        CHECK(first.jumpPressed == true);
+        CHECK(second.jumpHeld == true);
+        CHECK(second.jumpPressed == false);
+    }
+
+    TEST_CASE("tickInput preserva acoes continuas em todos os ticks") {
+        InputManager input;
+        core::KeyBindings bindings;
+        input.onKeyEvent(Key::D, Action::PRESS);
+
+        const TickInput first = input.tickInput(bindings, 0);
+        const TickInput second = input.tickInput(bindings, 1);
+        const TickInput third = input.tickInput(bindings, 2);
+
+        CHECK(first.right == true);
+        CHECK(second.right == true);
+        CHECK(third.right == true);
+    }
+
+    TEST_CASE("tickInput de release tambem e consumido apenas no primeiro tick") {
+        InputManager input;
+        core::KeyBindings bindings;
+        input.onKeyEvent(Key::SPACE, Action::PRESS);
+        input.onKeyEvent(Key::SPACE, Action::RELEASE);
+
+        const TickInput first = input.tickInput(bindings, 0);
+        const TickInput second = input.tickInput(bindings, 1);
+
+        CHECK(first.jumpHeld == false);
+        CHECK(first.jumpReleased == true);
+        CHECK(second.jumpReleased == false);
     }
 
 }

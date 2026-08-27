@@ -70,7 +70,7 @@ GameSessionUpdateResult GameSession::update(float dt,
         } else if (pausePressed) {
             stateMachine_.pause();
         } else {
-            simulation_.advance(dt, input, player_, world_, level_);
+            simulation_.advance(dt, input, bindings, player_, world_, level_);
 
             if (player_.position().y >
                 campaignRuntime_.currentSpawnY() - logicalHeight) {

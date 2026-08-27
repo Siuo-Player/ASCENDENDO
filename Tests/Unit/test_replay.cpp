@@ -24,9 +24,9 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
 
         player.body.position = { 150.0f, 80.0f };
         player.body.velocity = { 200.0f, -50.0f };
-        player.body.isGrounded = true; // NOVA FÍSICA: garantir contacto com o chão
-        player.jumpCharge    = 0.75f;
-        player.isCharging    = true;
+        player.body.isGrounded = true;
+        player.jumpCharge = 0.75f;
+        player.isCharging = true;
         world.advance(0.025f);
 
         float originalAcc = world.accumulator();
@@ -34,8 +34,8 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
 
         player.body.position = { 999.0f, 999.0f };
         player.body.velocity = { 0.0f, 0.0f };
-        player.jumpCharge    = 0.0f;
-        player.isCharging    = false;
+        player.jumpCharge = 0.0f;
+        player.isCharging = false;
         world.advance(0.1f);
 
         bool success = replay.loadState(1, player, world);
@@ -45,9 +45,9 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         CHECK(player.body.position.y == 80.0f);
         CHECK(player.body.velocity.x == 200.0f);
         CHECK(player.body.velocity.y == -50.0f);
-        CHECK(player.jumpCharge      == 0.75f);
-        CHECK(player.isCharging      == true);
-        CHECK(world.accumulator()    == originalAcc);
+        CHECK(player.jumpCharge == 0.75f);
+        CHECK(player.isCharging == true);
+        CHECK(world.accumulator() == originalAcc);
     }
 
     TEST_CASE("Continuous Recording e Rewind Frame-by-Frame") {
@@ -56,20 +56,20 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         InputManager input;
         ReplayManager replay;
 
-        player.body.isGrounded = true; // NOVA FÍSICA: Se não estiver no chão, não se pode mover no X!
+        player.body.isGrounded = true;
+        input.injectRawState(false, true, false, false, false);
+        const TickInput tickInput{input.isLeft(), input.isRight(), input.isJump(), false, false};
 
-        input.injectRawState(false, true, false, false, false); // D / RIGHT ativo
-        
         replay.recordFrame(player, world, input);
-        player.update(input, world, PhysicsWorld::FIXED_STEP);
+        player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
         Vec2 posFrame1 = player.position();
 
         replay.recordFrame(player, world, input);
-        player.update(input, world, PhysicsWorld::FIXED_STEP);
+        player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
         Vec2 posFrame2 = player.position();
 
         replay.recordFrame(player, world, input);
-        player.update(input, world, PhysicsWorld::FIXED_STEP);
+        player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
 
         CHECK(replay.getReplayLength() == 3);
 
@@ -88,19 +88,19 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         InputManager inputRecording;
         ReplayManager replay;
 
-        playerRecording.body.isGrounded = true; // NOVA FÍSICA: Chão!
+        playerRecording.body.isGrounded = true;
 
         inputRecording.injectRawState(true, false, true, true, false);
         replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(inputRecording, worldRecording, PhysicsWorld::FIXED_STEP);
+        playerRecording.update(TickInput{true, false, true, true, false}, worldRecording, PhysicsWorld::FIXED_STEP);
 
         inputRecording.injectRawState(true, false, true, false, false);
         replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(inputRecording, worldRecording, PhysicsWorld::FIXED_STEP);
+        playerRecording.update(TickInput{true, false, true, false, false}, worldRecording, PhysicsWorld::FIXED_STEP);
 
         inputRecording.injectRawState(true, false, false, false, true);
         replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(inputRecording, worldRecording, PhysicsWorld::FIXED_STEP);
+        playerRecording.update(TickInput{true, false, false, false, true}, worldRecording, PhysicsWorld::FIXED_STEP);
 
         Vec2 finalRecordingPos = playerRecording.position();
         Vec2 finalRecordingVel = playerRecording.velocity();
@@ -108,15 +108,22 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         PhysicsWorld worldPlayback;
         Player playerPlayback;
         InputManager inputPlayback;
-        
-        playerPlayback.body.isGrounded = true; // NOVA FÍSICA: Chão!
+
+        playerPlayback.body.isGrounded = true;
 
         replay.startPlayback();
         REQUIRE(replay.isPlaybackComplete() == false);
 
         while (!replay.isPlaybackComplete()) {
             replay.preparePlaybackFrame(inputPlayback);
-            playerPlayback.update(inputPlayback, worldPlayback, PhysicsWorld::FIXED_STEP);
+            const TickInput tickInput{
+                inputPlayback.isLeft(),
+                inputPlayback.isRight(),
+                inputPlayback.isJump(),
+                inputPlayback.isKeyJustPressed(Key::SPACE),
+                inputPlayback.isKeyJustReleased(Key::SPACE)
+            };
+            playerPlayback.update(tickInput, worldPlayback, PhysicsWorld::FIXED_STEP);
         }
 
         CHECK(playerPlayback.position().x == finalRecordingPos.x);

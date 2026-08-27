@@ -21,7 +21,7 @@ public:
         body.height = config::PLAYER_HEIGHT;
     }
 
-    void update(const InputManager& input, PhysicsWorld& world, float dt);
+    void update(const TickInput& input, PhysicsWorld& world, float dt);
 
     Vec2  position()    const { return body.position; }
     Vec2  velocity()    const { return body.velocity; }
@@ -31,8 +31,8 @@ public:
 private:
     bool m_didJump = false;
 
-    void applyHorizontalMovement(const InputManager& input);
-    void updateJumpCharge(const InputManager& input, float dt);
+    void applyHorizontalMovement(const TickInput& input);
+    void updateJumpCharge(const TickInput& input, float dt);
 };
 
 } // namespace logic

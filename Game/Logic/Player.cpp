@@ -4,59 +4,35 @@
 
 #include "Logic/Player.h"
 #include "Core/Config.h"
-#include "Core/KeyBindings.h"
 
 namespace logic {
 
-namespace {
-const core::KeyBindings& defaultBindings() {
-    static const core::KeyBindings bindings;
-    return bindings;
-}
-
-const core::KeyBindings& activeBindings() {
-    if (const core::KeyBindings* bindings = core::KeyBindings::active()) {
-        return *bindings;
-    }
-    return defaultBindings();
-}
-}
-
-void Player::update(const InputManager& input, PhysicsWorld& world, float dt) {
+void Player::update(const TickInput& input, PhysicsWorld& world, float dt) {
     applyHorizontalMovement(input);
     updateJumpCharge(input, dt);
     world.step(body, dt);
 }
 
-void Player::applyHorizontalMovement(const InputManager& input) {
-    const auto& bindings = activeBindings();
-
+void Player::applyHorizontalMovement(const TickInput& input) {
     if (body.isGrounded) {
         m_didJump = false;
-        if (core::isActionHeld(bindings, input, core::GameAction::MoveLeft) &&
-            !core::isActionHeld(bindings, input, core::GameAction::MoveRight)) {
+        if (input.left && !input.right) {
             body.velocity.x = -config::PLAYER_MOVE_SPEED;
-            facingDirection  = -1.0f;
-        } else if (core::isActionHeld(bindings, input, core::GameAction::MoveRight) &&
-                   !core::isActionHeld(bindings, input, core::GameAction::MoveLeft)) {
+            facingDirection = -1.0f;
+        } else if (input.right && !input.left) {
             body.velocity.x = config::PLAYER_MOVE_SPEED;
-            facingDirection  = 1.0f;
+            facingDirection = 1.0f;
         } else {
             body.velocity.x = 0.0f;
         }
     }
 }
 
-void Player::updateJumpCharge(const InputManager& input, float dt) {
-    const auto& bindings = activeBindings();
-    const bool jumpHeld = core::isActionHeld(bindings, input, core::GameAction::Jump);
-    const bool jumpDown = core::isActionJustPressed(bindings, input, core::GameAction::Jump);
-    const bool jumpUp   = core::isActionJustReleased(bindings, input, core::GameAction::Jump);
-
+void Player::updateJumpCharge(const TickInput& input, float dt) {
     const float COS60 = 0.5f;
     const float SIN60 = 0.866f;
 
-    if (body.isGrounded && jumpDown && jumpUp) {
+    if (body.isGrounded && input.jumpPressed && input.jumpReleased) {
         body.velocity.y = config::PLAYER_MIN_JUMP * SIN60;
         body.velocity.x = config::PLAYER_MIN_JUMP * COS60 * facingDirection;
         body.isGrounded = false;
@@ -66,13 +42,13 @@ void Player::updateJumpCharge(const InputManager& input, float dt) {
         return;
     }
 
-    if (body.isGrounded && jumpHeld) {
+    if (body.isGrounded && input.jumpHeld) {
         isCharging = true;
         jumpCharge += dt / config::PLAYER_CHARGE_TIME;
         if (jumpCharge > 1.0f) jumpCharge = 1.0f;
     }
 
-    if (jumpUp) {
+    if (input.jumpReleased) {
         if (isCharging && body.isGrounded) {
             const float totalForce = config::PLAYER_MIN_JUMP +
                 (config::PLAYER_MAX_JUMP - config::PLAYER_MIN_JUMP) * jumpCharge;
