@@ -18,9 +18,9 @@ O `Makefile` já possui uma via Windows, e `Development/Tools/run_tests_windows.
 
 Além disso, o Makefile referencia `external/glfw/lib-vc2022`, mas esse artefacto pré-compilado não está presente no repositório. A CI torna agora a origem/resolução dessa dependência explícita e reproduzível.
 
-A primeira execução encontrou um incompatibilidade de toolchain: o runner `windows-2025-vs2026` expunha MSVC STL que rejeitava Clang 19 (`STL1000`). O workflow foi então fixado em LLVM/Clang 20.1.8.
+A primeira execução encontrou uma incompatibilidade de toolchain: o runner `windows-2025-vs2026` expunha MSVC STL que rejeitava Clang 19 (`STL1000`). O workflow foi então fixado em LLVM/Clang 20.1.8.
 
-A segunda execução passou a compilar todo o código ASCENDENDO, mas falhou no link por mistura de modelos CRT entre o `glfw3.lib` construído por Visual Studio e os objetos do jogo. O contrato Windows foi tornado explícito: Clang usa `/MD` e o GLFW é construído com `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL` (`/MD`).
+A execução seguinte confirmou que GLFW 3.4 podia ser construído no runner com Visual Studio 18/2026, mas o `Makefile` falhou antes do link porque a flag `/MD` foi interpretada pelo driver GNU-style `clang++` como um nome de ficheiro (`no such file or directory: '/MD'`). Esta execução **não estabeleceu uma incompatibilidade CRT entre GLFW e o jogo**. A correção é usar a opção nativa de Clang `-fms-runtime-lib=dll`, equivalente ao runtime DLL `/MD`, enquanto o GLFW continua a ser construído com `CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL`.
 
 ## Inclui
 
