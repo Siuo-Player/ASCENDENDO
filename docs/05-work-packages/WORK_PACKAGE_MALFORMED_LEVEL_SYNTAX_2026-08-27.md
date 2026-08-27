@@ -5,8 +5,8 @@
 **Roadmap:** 9.6 — Evidência transversal  
 **Subsistema:** Runtime / Levels  
 **Work Package:** 9.6 — Malformed level syntax evidence  
-**Branch:** `fix/9-6-vulkan-reconfigure-terminal-contract-20260827`  
-**PR:** replacement for superseded PR #91
+**Branch:** `fix/9-6-vulkan-reconfigure-terminal-contract-20260827` (historical implementation branch)  
+**PR:** #92 (replacement for superseded PR #91)
 
 ## Objetivo
 
@@ -35,10 +35,16 @@ O teste cobre token desconhecido, número inválido, campo truncado, trailing to
 
 Os ficheiros temporários são únicos por execução e removidos no destrutor do fixture.
 
+A evidência foi integrada pela PR #92 sobre a `main` atual. A PR #91 foi superseded por divergência com a documentação/base entretanto atualizada e não contém a evidência final integrada.
+
 ## Critério de saída
 
 Suite normal, ASan/UBSan e Windows devem passar no mesmo commit. O resultado fecha apenas a evidência de malformed syntax; semantic validation permanece aberta.
 
 ## Estado
 
-`em validação`
+`concluído — evidência integrada em #92`
+
+## Evidência residual
+
+Não existe, nesta tranche, qualquer afirmação de schema authority, semantic validation ou canonicalization.

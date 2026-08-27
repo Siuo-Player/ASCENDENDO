@@ -15,11 +15,11 @@ O Gate permanece **OPEN**.
 - PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
 - PR #88 — `TickInput` como unidade semântica de input da simulação.
 - PR #90 — `ReplayManager` alinhado a `TickInput` para sequência explícita de ticks.
-- PR #91 — malformed syntax da gramática atual coberta por testes.
+- PR #92 — malformed syntax da gramática atual coberta por testes; PR #91 foi superseded e não contém a evidência integrada.
 
 ### Gaps ainda bloqueadores
 
-1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional.
+1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional, incluindo failure-path evidence específica para `vkDeviceWaitIdle()`.
 2. Deterministic simulation/replay além da representação TickInput; live input sampling e persistence permanecem separadas.
 3. Paths/runtime-root independence.
 4. Level world/chunk metadata contract.

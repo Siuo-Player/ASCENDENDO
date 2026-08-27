@@ -13,11 +13,11 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 - PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
 - PR #88 — `TickInput` como unidade semântica da simulação.
 - PR #90 — `ReplayManager` alinhado a `TickInput`; prova reprodução de sequência explícita de ticks, não persistence nem live-input frame-rate independence.
-- PR #91 — malformed syntax da gramática atual coberta por testes para token desconhecido, número inválido, campo truncado e trailing tokens.
+- PR #92 — malformed syntax da gramática atual coberta por testes para token desconhecido, número inválido, campo truncado e trailing tokens. PR #91 foi superseded.
 
 ### Gaps restantes
 
-- capability/error evidence Vulkan além do happy path;
+- capability/error evidence Vulkan além do happy path, incluindo teste/failure-path evidence específico para `vkDeviceWaitIdle()`;
 - paths/runtime roots independentes do current working directory;
 - contrato world/chunk metadata de `Level`;
 - determinismo de múltiplos contactos/collision-order;
@@ -36,6 +36,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 8. Input edge para replay pertence ao tempo de simulação.
 9. `ReplayManager` usa `TickInput`; isso não prova live-input frame-rate independence.
 10. Causas de falha CI exigem evidência observável.
+11. A ausência de um fault-injection seam não pode ser tratada como prova de que um failure path passou; implementation semantics e executable evidence permanecem estados distintos.
 
 ## Fecho do Gate
 
