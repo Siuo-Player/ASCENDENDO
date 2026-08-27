@@ -112,17 +112,11 @@ A última linha permanece dívida explícita: sem uma camada de injeção/mockin
 - inspeção do diff e da capability evidence;
 - distinguir explicitamente error paths executados daqueles apenas comprovados por inspeção.
 
-### Evidência final do implementation state
+### Evidência final
 
-Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`
+Commit de código validado: `8998290fa2ad2d04c5306640553d228406a3543a`.
 
-- `Tests #775` — success;
-- `Sanitizers #17` — success;
-- source-size checks — success;
-- headless Vulkan — success;
-- campaign validation — success.
-
-A documentação posterior na mesma branch não altera runtime/build code. O workflow do estado documental final deve terminar antes da integração.
+`Tests #775` e `Sanitizers #17` passaram, incluindo source-size, headless Vulkan e campaign validation. Os commits posteriores desta branch alteraram apenas documentação, sem runtime/build code.
 
 ## Definition of Ready
 
@@ -137,9 +131,8 @@ A documentação posterior na mesma branch não altera runtime/build code. O wor
 
 - [x] capability matrix mínima coberta por testes executáveis;
 - [x] lifecycle invariants cobertos ou explicitamente classificados como apenas estáticos;
-- [x] implementation state normal + ASan/UBSan verdes;
-- [x] dívida/documentação de Vulkan sincronizada;
-- [ ] workflow do último commit documental verde;
+- [x] normal + ASan/UBSan verdes;
+- [x] documentação de dívida/Vulkan sincronizada;
 - [ ] PR integrada.
 
 ## Próxima decisão
