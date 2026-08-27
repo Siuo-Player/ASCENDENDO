@@ -56,6 +56,12 @@ bool VulkanContext::createSurface(VkSurfaceKHR surface) {
 
     if (!reconfigureForSurface()) {
         destroySurface();
+        // Surface-aware reconfiguration is terminal for this context unless
+        // the caller performs a full shutdown() + init().
+        m_initialized = false;
+        m_device = VK_NULL_HANDLE;
+        m_graphicsQueue = VK_NULL_HANDLE;
+        m_presentQueue = VK_NULL_HANDLE;
         return false;
     }
     return true;
@@ -111,7 +117,18 @@ bool VulkanContext::reconfigureForSurface() {
     if (selected == VK_NULL_HANDLE) return false;
 
     if (m_device != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(m_device);
+        const VkResult waitResult = vkDeviceWaitIdle(m_device);
+        // A failed wait is terminal as well: the old device cannot be
+        // considered safely reusable for another surface configuration.
+        if (waitResult != VK_SUCCESS) {
+            vkDestroyDevice(m_device, nullptr);
+            m_device = VK_NULL_HANDLE;
+            m_graphicsQueue = VK_NULL_HANDLE;
+            m_presentQueue = VK_NULL_HANDLE;
+            m_initialized = false;
+            return false;
+        }
+
         vkDestroyDevice(m_device, nullptr);
         m_device = VK_NULL_HANDLE;
         m_graphicsQueue = VK_NULL_HANDLE;
@@ -125,7 +142,16 @@ bool VulkanContext::reconfigureForSurface() {
     // Recreate the logical device using the surface-aware queue selection.
     // createLogicalDevice() consumes m_families, so graphics and present are
     // both explicitly represented even when they happen to be the same family.
-    return createLogicalDevice(false);
+    if (!createLogicalDevice(false)) {
+        m_initialized = false;
+        m_device = VK_NULL_HANDLE;
+        m_graphicsQueue = VK_NULL_HANDLE;
+        m_presentQueue = VK_NULL_HANDLE;
+        return false;
+    }
+
+    m_initialized = true;
+    return true;
 }
 
 bool VulkanContext::createInstance(bool enableValidation,
