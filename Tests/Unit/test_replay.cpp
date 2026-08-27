@@ -1,10 +1,12 @@
 // =============================================================================
 //  Tests/Unit/test_replay.cpp
 //
-//  @version 6.1
+//  @version 7.1
 //  @history
 //    v3.3 — criado (testes unitários para o ReplayManager e Save States)
 //    v6.1 — atualizado para garantir isGrounded=true, respeitando a nova física
+//    v7.0 — replay validado com TickInput e estado comparado após cada tick
+//    v7.1 — explicita que grouping evidence usa a mesma sequência semântica
 // =============================================================================
 
 #include "../../external/doctest/doctest.h"
@@ -12,8 +14,46 @@
 #include "../../Game/Logic/Player.h"
 #include "../../Game/Logic/InputManager.h"
 #include "../../Game/Logic/ReplayManager.h"
+#include <vector>
 
 using namespace logic;
+
+namespace {
+
+struct PlayerSnapshot {
+    Vec2 position;
+    Vec2 velocity;
+    bool grounded;
+    float jumpCharge;
+    bool charging;
+    float accumulator;
+};
+
+PlayerSnapshot snapshot(const Player& player, const PhysicsWorld& world) {
+    return {
+        player.position(),
+        player.velocity(),
+        player.body.isGrounded,
+        player.jumpCharge,
+        player.isCharging,
+        world.accumulator()
+    };
+}
+
+void checkSnapshot(const PlayerSnapshot& expected,
+                   const Player& actualPlayer,
+                   const PhysicsWorld& actualWorld) {
+    CHECK(actualPlayer.position().x == expected.position.x);
+    CHECK(actualPlayer.position().y == expected.position.y);
+    CHECK(actualPlayer.velocity().x == expected.velocity.x);
+    CHECK(actualPlayer.velocity().y == expected.velocity.y);
+    CHECK(actualPlayer.body.isGrounded == expected.grounded);
+    CHECK(actualPlayer.jumpCharge == expected.jumpCharge);
+    CHECK(actualPlayer.isCharging == expected.charging);
+    CHECK(actualWorld.accumulator() == expected.accumulator);
+}
+
+} // namespace
 
 TEST_SUITE("Fase 3.3 — Save States & Replay System") {
 
@@ -29,7 +69,7 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         player.isCharging = true;
         world.advance(0.025f);
 
-        float originalAcc = world.accumulator();
+        const float originalAcc = world.accumulator();
         replay.saveState(1, player, world);
 
         player.body.position = { 999.0f, 999.0f };
@@ -38,7 +78,7 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         player.isCharging = false;
         world.advance(0.1f);
 
-        bool success = replay.loadState(1, player, world);
+        const bool success = replay.loadState(1, player, world);
         REQUIRE(success == true);
 
         CHECK(player.body.position.x == 150.0f);
@@ -50,85 +90,133 @@ TEST_SUITE("Fase 3.3 — Save States & Replay System") {
         CHECK(world.accumulator() == originalAcc);
     }
 
-    TEST_CASE("Continuous Recording e Rewind Frame-by-Frame") {
+    TEST_CASE("Continuous Recording e Rewind por tick") {
         PhysicsWorld world;
         Player player;
-        InputManager input;
         ReplayManager replay;
 
         player.body.isGrounded = true;
-        input.injectRawState(false, true, false, false, false);
-        const TickInput tickInput{input.isLeft(), input.isRight(), input.isJump(), false, false};
+        const TickInput tickInput{false, true, false, false, false};
 
-        replay.recordFrame(player, world, input);
+        replay.recordTick(player, world, tickInput);
         player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
-        Vec2 posFrame1 = player.position();
+        const Vec2 posTick1 = player.position();
 
-        replay.recordFrame(player, world, input);
+        replay.recordTick(player, world, tickInput);
         player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
-        Vec2 posFrame2 = player.position();
+        const Vec2 posTick2 = player.position();
 
-        replay.recordFrame(player, world, input);
+        replay.recordTick(player, world, tickInput);
         player.update(tickInput, world, PhysicsWorld::FIXED_STEP);
 
         CHECK(replay.getReplayLength() == 3);
 
-        bool rew1 = replay.rewind(player, world);
+        const bool rew1 = replay.rewind(player, world);
         CHECK(rew1 == true);
-        CHECK(player.position() == posFrame2);
+        CHECK(player.position() == posTick2);
 
-        bool rew2 = replay.rewind(player, world);
+        const bool rew2 = replay.rewind(player, world);
         CHECK(rew2 == true);
-        CHECK(player.position() == posFrame1);
+        CHECK(player.position() == posTick1);
     }
 
-    TEST_CASE("Determinismo de Replay — Reprodução Exata de Sequência") {
+    TEST_CASE("Replay determinístico — estado reproduzido após cada tick") {
         PhysicsWorld worldRecording;
         Player playerRecording;
-        InputManager inputRecording;
         ReplayManager replay;
-
         playerRecording.body.isGrounded = true;
 
-        inputRecording.injectRawState(true, false, true, true, false);
-        replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(TickInput{true, false, true, true, false}, worldRecording, PhysicsWorld::FIXED_STEP);
+        const std::vector<TickInput> sequence = {
+            TickInput{true, false, true, true, false},
+            TickInput{true, false, true, false, false},
+            TickInput{true, false, true, false, false},
+            TickInput{true, false, false, false, true},
+            TickInput{false, false, false, false, false}
+        };
 
-        inputRecording.injectRawState(true, false, true, false, false);
-        replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(TickInput{true, false, true, false, false}, worldRecording, PhysicsWorld::FIXED_STEP);
+        std::vector<PlayerSnapshot> expectedStates;
+        expectedStates.reserve(sequence.size());
 
-        inputRecording.injectRawState(true, false, false, false, true);
-        replay.recordFrame(playerRecording, worldRecording, inputRecording);
-        playerRecording.update(TickInput{true, false, false, false, true}, worldRecording, PhysicsWorld::FIXED_STEP);
+        for (const TickInput& input : sequence) {
+            replay.recordTick(playerRecording, worldRecording, input);
+            playerRecording.update(input, worldRecording, PhysicsWorld::FIXED_STEP);
+            expectedStates.push_back(snapshot(playerRecording, worldRecording));
+        }
 
-        Vec2 finalRecordingPos = playerRecording.position();
-        Vec2 finalRecordingVel = playerRecording.velocity();
+        REQUIRE(replay.getReplayLength() == sequence.size());
 
         PhysicsWorld worldPlayback;
         Player playerPlayback;
-        InputManager inputPlayback;
-
         playerPlayback.body.isGrounded = true;
 
         replay.startPlayback();
-        REQUIRE(replay.isPlaybackComplete() == false);
+        for (size_t tick = 0; tick < expectedStates.size(); ++tick) {
+            TickInput playbackInput{};
+            REQUIRE(replay.preparePlaybackTick(playbackInput) == true);
+            CHECK(playbackInput.left == sequence[tick].left);
+            CHECK(playbackInput.right == sequence[tick].right);
+            CHECK(playbackInput.jumpHeld == sequence[tick].jumpHeld);
+            CHECK(playbackInput.jumpPressed == sequence[tick].jumpPressed);
+            CHECK(playbackInput.jumpReleased == sequence[tick].jumpReleased);
 
-        while (!replay.isPlaybackComplete()) {
-            replay.preparePlaybackFrame(inputPlayback);
-            const TickInput tickInput{
-                inputPlayback.isLeft(),
-                inputPlayback.isRight(),
-                inputPlayback.isJump(),
-                inputPlayback.isKeyJustPressed(Key::SPACE),
-                inputPlayback.isKeyJustReleased(Key::SPACE)
-            };
-            playerPlayback.update(tickInput, worldPlayback, PhysicsWorld::FIXED_STEP);
+            playerPlayback.update(playbackInput, worldPlayback, PhysicsWorld::FIXED_STEP);
+            checkSnapshot(expectedStates[tick], playerPlayback, worldPlayback);
         }
 
-        CHECK(playerPlayback.position().x == finalRecordingPos.x);
-        CHECK(playerPlayback.position().y == finalRecordingPos.y);
-        CHECK(playerPlayback.velocity().x == finalRecordingVel.x);
-        CHECK(playerPlayback.velocity().y == finalRecordingVel.y);
+        CHECK(replay.isPlaybackComplete() == true);
+        TickInput unused{};
+        CHECK(replay.preparePlaybackTick(unused) == false);
+    }
+
+    TEST_CASE("Mesma sequência semântica de ticks é independente de agrupamento externo") {
+        const std::vector<TickInput> sequence = {
+            TickInput{true, false, true, true, false},
+            TickInput{true, false, true, false, false},
+            TickInput{true, false, false, false, true},
+            TickInput{false, true, false, false, false}
+        };
+
+        PhysicsWorld worldA;
+        PhysicsWorld worldB;
+        Player playerA;
+        Player playerB;
+        playerA.body.isGrounded = true;
+        playerB.body.isGrounded = true;
+
+        // Schedule A: one semantic tick at a time.
+        for (const TickInput& input : sequence) {
+            playerA.update(input, worldA, PhysicsWorld::FIXED_STEP);
+        }
+
+        // Schedule B: the same semantic TickInput sequence is grouped into
+        // two-tick batches. This intentionally does not claim that live
+        // frame-level GLFW edge sampling is frame-rate independent; that is a
+        // separate property from replaying an already semantic tick sequence.
+        for (size_t i = 0; i < sequence.size(); i += 2) {
+            playerB.update(sequence[i], worldB, PhysicsWorld::FIXED_STEP);
+            if (i + 1 < sequence.size()) {
+                playerB.update(sequence[i + 1], worldB, PhysicsWorld::FIXED_STEP);
+            }
+        }
+
+        CHECK(playerB.position().x == playerA.position().x);
+        CHECK(playerB.position().y == playerA.position().y);
+        CHECK(playerB.velocity().x == playerA.velocity().x);
+        CHECK(playerB.velocity().y == playerA.velocity().y);
+        CHECK(playerB.body.isGrounded == playerA.body.isGrounded);
+        CHECK(playerB.jumpCharge == playerA.jumpCharge);
+        CHECK(playerB.isCharging == playerA.isCharging);
+        CHECK(worldB.accumulator() == worldA.accumulator());
+    }
+
+    TEST_CASE("Replay vazio não produz ticks") {
+        ReplayManager replay;
+        TickInput input{};
+
+        replay.startPlayback();
+
+        CHECK(replay.getReplayLength() == 0);
+        CHECK(replay.isPlaybackComplete() == true);
+        CHECK(replay.preparePlaybackTick(input) == false);
     }
 }
