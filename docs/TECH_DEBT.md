@@ -112,6 +112,29 @@ Foi criado `Game/Graphics/PresentationConfig.h` para configuração exclusivamen
 - campaign validation: success;
 - teste independente de `PresentationConfig.h` compilou e verificou valores representativos.
 
+## Semantic LevelData geometry validation — em implementação
+
+A auditoria da Fase 10 encontrou um gap concreto entre sintaxe e semântica: `LevelDataIO` rejeita tokens/linhas inválidos, mas podia aceitar `PLATFORM`/`FLAG` com largura ou altura zero/negativa, produzindo AABBs degeneradas ou invertidas antes do runtime.
+
+**Issue:** #142  
+**Branch:** `refactor/leveldata-semantic-validation-20260828`  
+**Estado:** implementation in progress
+
+### Decisão
+
+Introduzir `Game/Logic/LevelDataValidator.h/.cpp` como boundary semântico independente. A primeira regra é estritamente geométrica:
+
+```text
+platform.width() > 0
+platform.height() > 0
+flag.width() > 0
+flag.height() > 0
+```
+
+`CampaignRuntime` valida o documento imediatamente após `LevelDataIO::load()` e antes de `Level::appendFromData()`.
+
+A tranche mantém schema/versioning, migration e bounds policy fora de escopo.
+
 ## RenderSnapshot — primeira tranche concluída
 
 A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129 e completada com a remoção do acoplamento `RendererFacade → EditorSession` no PR #132.
@@ -126,7 +149,8 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 
 ## Outras dívidas explicitamente adiadas
 
-- semantic validation/schema/versioning de `LevelData` — Fase 10;
+- schema versioning/migration de `LevelData` — só após requisito real de compatibilidade/importação;
+- semantic invariants adicionais de `LevelData` sem requisito/evidência;
 - replay persistence;
 - live-input frame-rate independence;
 - terminal/result replay;
@@ -150,13 +174,13 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 13. Logic/Core não deve depender de tipos concretos de presentation quando apenas dados/contratos mínimos são necessários.
 14. Gameplay deve depender de contratos semânticos de input, não do armazenamento/callbacks de input físico.
 15. Configuração visual deve pertencer à camada de presentation; Core conserva apenas configuração necessária para contratos lógicos/gameplay.
+16. LevelData semantic validation deve permanecer separada do parser sintático e ser aplicada antes do runtime consumir geometria.
 
 ## Próximo passo
 
 ```text
-revisão final de ownership/arquitetura
-→ identificar apenas findings concretos
-→ abrir work package com contrato mínimo
-→ validar em Linux + ASan/UBSan + Windows
+validar Issue #142
+→ Linux normal + ASan/UBSan + Windows
 → merge e reconciliar documentação
+→ voltar à auditoria final da Fase 10
 ```
