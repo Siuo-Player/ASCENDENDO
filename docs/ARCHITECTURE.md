@@ -67,7 +67,7 @@ GameSession
       ↓
 render-state extraction
       ↓
-RenderSnapshot
+RenderSnapshot / EditorRenderSnapshot
       ↓
 RendererFacade
       ↓
@@ -82,7 +82,7 @@ O renderer não deve decidir regras de gameplay, editor ou campanha.
 
 `main.cpp` mantém o ciclo de vida do processo, bootstrap gráfico, resolução inicial de caminhos, composição de `GraphicsRuntime`/`PresentationRuntime`, polling de janela e submissão de frames.
 
-A primeira fronteira de runtime é `logic::GameSession`. Ela concentra o estado mutável de gameplay/editor/campanha e a política de transições que atualmente estavam co-localizados no entry point.
+A primeira fronteira de runtime é `logic::GameSession`. Ela concentra o estado mutável de gameplay/editor/campanha e a política de transições que anteriormente estavam co-localizados no entry point.
 
 ```text
 main.cpp
@@ -108,11 +108,13 @@ A decomposição deve continuar incrementalmente. `Application` permanece uma di
 
 ## Renderer e `RenderSnapshot`
 
-O Gate 9.6 está formalmente fechado. A primeira tranche da migração `RenderSnapshot` foi integrada no PR #129.
+O Gate 9.6 está formalmente fechado. A primeira tranche da migração `RenderSnapshot` foi integrada no PR #129 e o acesso indireto `RendererFacade → EditorSession` foi removido no PR #132.
 
 ### Estado atual
 
-O world/player path de `RendererFacade::drawFrame()` e `WorldRenderer::draw()` já recebe um `gfx::RenderSnapshot` em vez de consultar diretamente `logic::Player` e `logic::Level`. `EditorRenderSnapshot` continua a ser um contrato local separado para o editor.
+O world/player path de `RendererFacade::drawFrame()` e `WorldRenderer::draw()` recebe `gfx::RenderSnapshot`. O editor fornece `logic::EditorRenderSnapshot` já materializado antes da chamada da facade.
+
+`RendererFacade` não possui nem consulta `logic::EditorSession`; a composição é responsável por capturar o snapshot apropriado para o estado de rendering.
 
 ### Fronteira atual
 
@@ -121,21 +123,24 @@ Player / Level runtime state
           ↓
   RenderSnapshotBuilder
           ↓
-     RenderSnapshot
+     gfx::RenderSnapshot
           ↓
  RendererFacade / WorldRenderer
 ```
 
-`RenderSnapshot` é um value object transitório de presentation. Não contém:
+Para o editor:
 
-- tipos de domínio (`Player`, `Level`, `Vec2`);
-- `Camera` ou referências a objetos vivos;
-- Vulkan handles/resources;
-- ownership;
-- lógica de gameplay;
-- estado sem consumidor concreto no presentation path.
+```text
+EditorSession
+      ↓
+EditorRenderSnapshot
+      ↓
+RendererFacade / EditorRenderer
+```
 
-A primeira tranche ficou deliberadamente limitada ao world/player path. O contrato efetivamente implementado é:
+`RenderSnapshot` e `EditorRenderSnapshot` são value objects transitórios de presentation. Não contêm recursos Vulkan nem ownership.
+
+### Contrato do world path
 
 ```text
 RenderSnapshot
@@ -148,15 +153,25 @@ A `Camera` permanece separada por ser estado de presentation e transformação w
 
 ### Regra de construção
 
-A construção do snapshot copia/transforma estado existente; não introduz regras novas de physics, gameplay ou campaign. O resultado é determinístico para o mesmo estado de runtime.
+A construção de snapshots copia/transforma estado existente; não introduz regras novas de physics, gameplay ou campaign. A captura ocorre na composição, antes do rendering.
 
-`main.cpp` constrói o snapshot apenas nos estados `PLAYING`/`PAUSED`, quando o world path é consumido. Outros estados não fazem a cópia da geometria do mundo.
+Não criar um snapshot global único apenas para uniformizar interfaces. Um novo snapshot é justificado apenas por redução verificável de acoplamento, melhoria de testabilidade ou contrato necessário entre subsistemas.
 
-### Próxima expansão
+## Shared Vulkan image upload
 
-A existência desta fronteira não implica um snapshot global único. `UiRenderer`, editor e outros passes devem ser avaliados individualmente. Um novo snapshot só deve ser criado quando a separação trouxer uma redução verificável de acoplamento, melhorar testabilidade ou estabelecer um contrato necessário entre subsistemas.
+Existe uma duplicação concreta entre `FontRendererGpu` e `SpriteRendererGpu` na infraestrutura de upload de imagens Vulkan. Esta é uma dívida de implementação/ownership, não uma consequência do limite físico de ficheiro.
 
-Não migrar editor, menus, replay e world rendering numa única mudança apenas para obter uma interface uniforme.
+A decisão registada para o Issue #23 é um **primitive estreito de upload/creation de imagem Vulkan**:
+
+```text
+FontRendererGpu ─┐
+                 ├→ shared Vulkan image upload primitive
+SpriteRendererGpu┘
+```
+
+O primitive poderá criar e inicializar a imagem, memória, image view e sampler e executar o staging/upload comum. O formato e filtro continuam explícitos. Descriptor pools/sets continuam específicos de cada renderer.
+
+O primitive não terá cache global, `TextureManager`, política de assets ou ownership persistente escondido.
 
 ## Modelo comum de níveis
 
