@@ -60,7 +60,9 @@ InputManager
       ↓
 GameAction / KeyBindings
       ↓
-GameSession
+semantic TickInput
+      ↓
+GameSession / SimulationOrchestrator
   ├── GameStateMachine
   ├── EditorSession
   ├── SimulationOrchestrator
@@ -76,6 +78,8 @@ World / UI / Editor passes
       ↓
 Vulkan
 ```
+
+`TickInput` é um value object semântico da simulação. `InputManager` é responsável pela tradução de input físico/configurado para esse contrato; consumidores de gameplay não devem depender do armazenamento ou callbacks de `InputManager` apenas para conhecer o tipo.
 
 O renderer não deve decidir regras de gameplay, editor ou campanha.
 
@@ -216,8 +220,12 @@ KeyBindings
    ↓
 GameAction
    ↓
+semantic TickInput
+   ↓
 Gameplay / Editor
 ```
+
+`TickInput` pertence a `Game/Logic` como contrato semântico da simulação. `Player` recebe esse value object e não inclui `InputManager.h`. Assim, o ator de gameplay não depende do armazenamento de input físico, callbacks GLFW ou mapeamento de teclas para conhecer a sua interface de update.
 
 Gameplay não deve consultar `Key::SPACE`, `Key::A`, etc. diretamente.
 
