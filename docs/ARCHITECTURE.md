@@ -159,19 +159,28 @@ Não criar um snapshot global único apenas para uniformizar interfaces. Um novo
 
 ## Shared Vulkan image upload
 
-Existe uma duplicação concreta entre `FontRendererGpu` e `SpriteRendererGpu` na infraestrutura de upload de imagens Vulkan. Esta é uma dívida de implementação/ownership, não uma consequência do limite físico de ficheiro.
+PR #133 concluiu a duplicação concreta entre `FontRendererGpu` e `SpriteRendererGpu` na infraestrutura de upload de imagens Vulkan.
 
-A decisão registada para o Issue #23 é um **primitive estreito de upload/creation de imagem Vulkan**:
+A fronteira é um **primitive estreito e stateless** em `Game/Graphics/VulkanImageUpload.h/.cpp`:
 
 ```text
 FontRendererGpu ─┐
-                 ├→ shared Vulkan image upload primitive
+                 ├→ VulkanImageUpload
 SpriteRendererGpu┘
 ```
 
-O primitive poderá criar e inicializar a imagem, memória, image view e sampler e executar o staging/upload comum. O formato e filtro continuam explícitos. Descriptor pools/sets continuam específicos de cada renderer.
+O primitive centraliza staging, memória host-visible, criação/binding de `VkImage`, memória device-local, command pool/buffer one-shot, transitions, copy, image view, sampler e failure cleanup.
 
-O primitive não terá cache global, `TextureManager`, política de assets ou ownership persistente escondido.
+O primitive recebe `VkFormat` e `VkFilter` explicitamente e devolve os handles ao consumer. O consumer mantém ownership dos handles e o descriptor setup específico. Não existe cache global, `TextureManager` ou ownership persistente escondido.
+
+Comportamento específico preservado:
+
+```text
+FontRendererGpu   → R8_UNORM        + LINEAR
+SpriteRendererGpu → R8G8B8A8_UNORM + NEAREST
+```
+
+A abstração deve permanecer restrita aos dois consumidores comprovados; novos parâmetros/políticas só entram após nova evidência de duplicação concreta.
 
 ## Modelo comum de níveis
 
