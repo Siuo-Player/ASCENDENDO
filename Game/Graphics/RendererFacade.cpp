@@ -11,7 +11,6 @@
 #include "Graphics/Pipeline.h"
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
-#include "Logic/EditorSession.h"
 
 #include <memory>
 
@@ -52,7 +51,6 @@ void RendererFacade::cleanup() {
     m_core.reset();
 
     m_shapePipeline = nullptr;
-    m_editorSession = nullptr;
     m_editorSnapshotPtr = nullptr;
     m_editorSnapshot = {};
     m_textPipeline = nullptr;
@@ -73,22 +71,12 @@ void RendererFacade::attachSprite(SpritePipeline* spritePipeline, SpriteRenderer
 }
 
 void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot) {
-    m_editorSession = nullptr;
     if (!snapshot) {
+        m_editorSnapshot = {};
         m_editorSnapshotPtr = nullptr;
         return;
     }
     m_editorSnapshot = *snapshot;
-    m_editorSnapshotPtr = &m_editorSnapshot;
-}
-
-void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
-    m_editorSession = session;
-    if (!session) {
-        m_editorSnapshotPtr = nullptr;
-        return;
-    }
-    m_editorSnapshot = session->renderSnapshot();
     m_editorSnapshotPtr = &m_editorSnapshot;
 }
 
@@ -98,11 +86,6 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
                                int menuSelection,
                                float elapsedSeconds) {
     if (!m_initialized || !m_core || !m_shapes || !m_shapePipeline) return false;
-
-    if (state == RenderState::EDITOR && m_editorSession) {
-        m_editorSnapshot = m_editorSession->renderSnapshot();
-        m_editorSnapshotPtr = &m_editorSnapshot;
-    }
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
     uint32_t imageIndex = 0;
