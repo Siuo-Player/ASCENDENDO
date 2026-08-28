@@ -306,6 +306,16 @@ EditorInteractionController
 LevelEditorDocument / LevelData
 ```
 
+`EditorInteractionController` pertence a `Game/Logic` e não deve depender de tipos concretos da camada `Game/Graphics`. A conversão cursor lógico → cursor de mundo recebe apenas a posição da câmara necessária para essa operação; a `Camera` permanece uma responsabilidade de presentation/composição.
+
+```text
+presentation/composition
+        ↓ camera position
+Game/Logic/EditorInteraction
+```
+
+Esta fronteira mantém a política de interação testável sem depender estruturalmente de Vulkan/presentation.
+
 Operações de edição devem evoluir para comandos transacionais. Um drag completo deve ser uma operação lógica única.
 
 ## Testes e CI
