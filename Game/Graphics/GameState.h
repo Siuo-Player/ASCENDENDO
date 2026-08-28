@@ -1,14 +1,10 @@
 #pragma once
 
+#include "Core/GameState.h"
+
 namespace gfx {
 
-// Runtime state shared by the game loop and rendering layer.
-enum class GameState {
-    PLAYING,
-    PAUSED,
-    CREDITS,
-    MENU,
-    EDITOR,
-};
+// Compatibility alias. The canonical state contract belongs to Core.
+using GameState = core::GameState;
 
 } // namespace gfx
