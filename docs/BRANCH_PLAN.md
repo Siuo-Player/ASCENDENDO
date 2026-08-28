@@ -1,37 +1,76 @@
 # Plano da branch atual
 
-**Bloco do roadmap:** `Post-Gate 9.6 architecture / ownership boundaries`
+**Bloco do roadmap:** `Fase 10 / LevelData semantic validation`
 
-**Work Package concluído:** `Presentation-owned configuration`
+**Work Package:** `Semantic LevelData geometry validation`
 
-**Issue:** `#140`
+**Issue:** `#142`
 
-**Branch de implementação:** `refactor/presentation-config-boundary-20260828`
+**Branch de implementação:** `refactor/leveldata-semantic-validation-20260828`
 
-## Resultado
+## Contexto
 
-O finding foi resolvido no PR #141. A configuração exclusivamente visual passou para `Game/Graphics/PresentationConfig.h`; `Game/Core/Config.h` ficou restrito a dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
+A auditoria encontrou um gap entre parsing sintático e semântica de geometria: `LevelDataIO` aceitava plataformas/flags com largura ou altura zero/negativa.
 
-A alteração preservou os valores numéricos usados pela apresentação e removeu apenas `CAMERA_SPEED` e `CAMERA_OFFSET_Y`, que não tinham consumidores efetivos na implementação atual.
+## Decisão
+
+Introduzir `LevelDataValidator` como boundary semântico independente:
 
 ```text
-Core/Config
-  → logical/gameplay semantics
-
-Graphics/PresentationConfig
-  → visual presentation policy
+LevelDataIO
+  parse
+    ↓
+LevelDataValidator
+  validate
+    ↓
+CampaignRuntime
+  append/use
 ```
+
+A única regra nova desta tranche é extensão estritamente positiva para plataformas e flag.
+
+## Escopo
+
+- `Game/Logic/LevelDataValidator.h/.cpp`;
+- validação após `LevelDataIO::load()` em `CampaignRuntime`;
+- testes unitários das invariantes;
+- testes de integração para entrada inicial/chunk inválido não consumido;
+- documentação Fase 10.
+
+## Fora de escopo
+
+- schema/versionamento;
+- migration;
+- política de bounds do nível;
+- física/colisão;
+- redesign de `Level`;
+- mudança do formato válido existente.
 
 ## Validação
 
-- Linux / Clang / C++20 / Headless Vulkan: **success**
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**
-- Windows / Clang / C++20: **success**
-- source-size: **success**
-- campaign validation: **success**
+```text
+validator unit tests
+→ malformed campaign-runtime tests
+→ Linux normal/headless Vulkan
+→ ASan/UBSan
+→ Windows
+→ source-size/campaign validation
+```
 
-**Merge:** `6885ae63f0aacab16be1505643182d25378c1747`
+## Critério de saída
+
+```text
+invalid geometry rejected before runtime append
++ valid campaign preserved
++ no progress consumed on rejected chunk
++ three mandatory CI gates green
++ documentation synchronized
+```
+
+## Estado atual
+
+`IMPLEMENTED — pending PR/CI validation`
 
 ## Próxima decisão
 
-Voltar à auditoria de ownership/arquitetura. Só abrir nova tranche para coupling concreto com contrato mínimo verificável; a duplicação de parsing `CampaignLoader`/`CampaignID` permanece apenas potencial enquanto não houver divergência observável.
+Após o #142, continuar a Fase 10 apenas para invariantes semanticamente demonstráveis. Schema/versioning fica reservado para um requisito real de compatibilidade/importação.
