@@ -85,8 +85,7 @@ void EditorSession::updateCursor(const InputManager& input,
 
     // Level Editor = exactly one 640x360 screen. There is no camera transform
     // here: cursor coordinates and rendered geometry share the same space.
-    const gfx::Camera fixedCamera{};
-    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, fixedCamera).world;
+    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, {0.0f, 0.0f}).world;
 }
 
 void EditorSession::updateKeyboard(const InputManager& input,
@@ -123,55 +122,3 @@ void EditorSession::updateMouse(const InputManager& input) {
 
     if (rightPressed) {
         cancelInteraction();
-        return;
-    }
-
-    if (leftPressed) {
-        m_pressedWorld = m_cursor.world;
-
-        if (m_controller.beginMove(m_cursor.world)) {
-            m_leftDragActive = true;
-            return;
-        }
-
-        if (m_controller.toolMode() == EditorToolMode::STAMP) {
-            m_controller.stampAt(m_cursor.world);
-            return;
-        }
-
-        m_leftDragActive = true;
-        m_controller.clearSelection();
-        return;
-    }
-
-    if (leftHeld && m_leftDragActive &&
-        m_controller.mode() == EditorMouseMode::MOVING)
-        m_controller.updateMove(m_cursor.world);
-
-    if (leftReleased && m_leftDragActive) {
-        if (m_controller.mode() == EditorMouseMode::MOVING) {
-            m_controller.updateMove(m_cursor.world);
-            m_controller.endMove();
-        } else if (m_controller.toolMode() == EditorToolMode::DRAG) {
-            m_controller.dragFromTo(m_pressedWorld, m_cursor.world);
-        }
-        m_leftDragActive = false;
-    }
-}
-
-void EditorSession::update(const InputManager& input,
-                           const core::KeyBindings& bindings,
-                           int32_t windowWidth,
-                           int32_t windowHeight) {
-    updateCursor(input, windowWidth, windowHeight);
-    updateKeyboard(input, bindings);
-    updateMouse(input);
-}
-
-void EditorSession::cancelInteraction() {
-    m_leftDragActive = false;
-    m_controller.endMove();
-    m_controller.clearSelection();
-}
-
-} // namespace logic
