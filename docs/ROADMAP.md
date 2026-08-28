@@ -22,6 +22,8 @@ O Gate permanece **OPEN**.
 - PR #99 — licença MIT do projeto e fronteiras de licenciamento de terceiros.
 - PR #100 — caracterização por permutação da ordem de contactos de colisão.
 - PR #101 — documentação do resultado observado da caracterização de collision-order.
+- PR #102 — reconciliação canónica do Gate após #100/#101.
+- PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
 
 ### Estado reconciliado de replay
 
@@ -33,22 +35,26 @@ A implementação de produção não foi alterada. O teste de PR #100 executou o
 
 Esta evidência fecha apenas o **cenário exercitado**. Não estabelece invariância universal para todas as combinações de contactos possíveis. Um requisito mais forte ou um counterexample adicional justificaria um novo WP.
 
+### Runtime-root independence — estado correto
+
+PR #105 adicionou teste que executa `RuntimePaths::fromProcess(nullptr)` a partir de dois current working directories temporários diferentes e compara o executable root e os caminhos derivados de assets/levels/sprite. A evidência foi executada através dos três checks obrigatórios.
+
+Esta tranche demonstra a independência de CWD para o comportamento atual de resolução de root do processo nos targets suportados. Não define uma nova política de packaging, bundles ou deployment.
+
 ### Gaps ainda bloqueadores
 
 1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional além dos caminhos agora demonstrados.
-2. Runtime-root independence.
-3. Level world/chunk metadata contract.
-4. Revisão final de collision-order policy apenas se surgir requisito/counterexample além do cenário já exercitado.
-5. Semantic Level validation/schema/versioning (Fase 10).
-6. Architecture/ownership final review.
-7. Propriedades de replay separadas que não pertencem ao WP atual: terminal/result replay, persistence e live-input frame-rate independence.
+2. Level world/chunk metadata contract.
+3. Revisão final de collision-order policy apenas se surgir requisito/counterexample além do cenário já exercitado.
+4. Semantic Level validation/schema/versioning (Fase 10).
+5. Architecture/ownership final review.
+6. Propriedades de replay separadas que não pertencem ao WP atual: terminal/result replay, persistence e live-input frame-rate independence.
 
 ### Ordem de execução
 
 ```text
 Vulkan/error evidence residual
 → replay review residual
-→ paths/runtime roots
 → world/chunk metadata contract
 → architecture/ownership review
 → Gate decision
