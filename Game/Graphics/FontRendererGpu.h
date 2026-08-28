@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Graphics/VulkanImageUpload.h"
+
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
@@ -29,17 +31,10 @@ public:
     bool isInitialized() const { return m_initialized; }
 
 private:
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags props) const;
-    bool createAtlasImage(const std::vector<uint8_t>& pixels,
-                          uint32_t atlasWidth,
-                          uint32_t atlasHeight);
     bool createDescriptorSet(VkDescriptorSetLayout layout);
 
     VulkanContext* m_ctx = nullptr;
-    VkImage m_image = VK_NULL_HANDLE;
-    VkDeviceMemory m_imageMemory = VK_NULL_HANDLE;
-    VkImageView m_imageView = VK_NULL_HANDLE;
-    VkSampler m_sampler = VK_NULL_HANDLE;
+    VulkanImageResource m_atlas{};
     VkDescriptorPool m_descPool = VK_NULL_HANDLE;
     VkDescriptorSet m_descSet = VK_NULL_HANDLE;
     bool m_initialized = false;
