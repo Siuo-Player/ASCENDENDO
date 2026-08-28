@@ -10,6 +10,7 @@
 #include "Game/Graphics/Camera.h"
 #include "Game/Graphics/RenderState.h"
 #include "Game/Graphics/RenderSnapshot.h"
+#include "Game/Graphics/RenderSnapshotBuilder.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
