@@ -24,10 +24,24 @@ O Gate permanece **OPEN**.
 - PR #101 — documentação do resultado observado da caracterização de collision-order.
 - PR #102 — reconciliação canónica do Gate após #100/#101.
 - PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
+- PR #108 — classificação dos failure/error paths Vulkan residuais.
+- PR #109 — contrato pós-`vkQueueSubmit`: semântica terminal/fail-closed no design atual.
+- PR #113 — caracterização documental do contrato `LevelData → Level → CampaignRuntime`.
+- PR #114 — characterization tests desse contrato, sem alterar semântica de produção.
+- PR #115 — isolamento dos residuais de replay/input.
+- PR #116 — characterization executável da fronteira frame → `TickInput`.
 
 ### Estado reconciliado de replay
 
-O teste atual demonstra replay tick-semantic e comparação de estado por tick, incluindo invariância da mesma sequência `TickInput` sob agrupamento externo diferente. Isto **não** demonstra live-input frame-rate independence, terminal/result replay completo de `GameSession` ou persistence.
+A evidência atual demonstra replay tick-semantic, comparação de estado por tick e o contrato da fronteira de input em que edges são emitidos apenas no primeiro tick de cada frame, enquanto ações held permanecem disponíveis nos ticks derivados do mesmo frame.
+
+Isto **não** demonstra:
+
+- live-input frame-rate independence para diferentes cadências reais de render/eventos;
+- terminal/result replay completo de `GameSession`;
+- persistence/serialization de replay.
+
+Estas são capacidades/propriedades distintas e não devem ser colapsadas em uma única claim de “replay completo”.
 
 ### Collision-order — estado correto
 
@@ -39,26 +53,52 @@ Esta evidência fecha apenas o **cenário exercitado**. Não estabelece invariâ
 
 PR #105 adicionou teste que executa `RuntimePaths::fromProcess(nullptr)` a partir de dois current working directories temporários diferentes e compara o executable root e os caminhos derivados de assets/levels/sprite. A evidência foi executada através dos três checks obrigatórios.
 
-Esta tranche demonstra a independência de CWD para o comportamento atual de resolução de root do processo nos targets suportados. Não define uma nova política de packaging, bundles ou deployment.
+Esta tranche demonstra a independência de CWD para o caminho de resolução de root do processo atualmente exercitado nos targets suportados. Não define uma nova política de packaging, bundles ou deployment.
 
-### Gaps ainda bloqueadores
+### World/chunk metadata — estado correto
 
-1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional além dos caminhos agora demonstrados.
-2. Level world/chunk metadata contract.
-3. Revisão final de collision-order policy apenas se surgir requisito/counterexample além do cenário já exercitado.
-4. Semantic Level validation/schema/versioning (Fase 10).
-5. Architecture/ownership final review.
-6. Propriedades de replay separadas que não pertencem ao WP atual: terminal/result replay, persistence e live-input frame-rate independence.
+PRs #113/#114 já caracterizaram e protegeram o comportamento atual:
+
+- `LevelData` representa dados locais do chunk;
+- `offsetY` é aplicado durante a composição;
+- a geometria acumula em `Level`;
+- a metadata `flag` é singular e pode ser sobrescrita pelo chunk seguinte;
+- `spawnPosition` é lido no `LevelData`, mas não é materializado como metadata persistente de `Level`.
+
+Este contrato está agora **caracterizado**, mas não é um modelo semântico geral de chunks. Schema/versioning e um modelo mais forte de metadata permanecem Fase 10 salvo novo requisito.
+
+### Vulkan — estado reconciliado
+
+O bloco residual já não deve ser tratado como “todos os `VkResult` ainda precisam de fault injection”.
+
+- #94 fornece evidência executável para `vkDeviceWaitIdle()`.
+- #108 classificou os restantes paths por contrato.
+- #109 estabeleceu que falha de `vkQueueSubmit` após reset do fence é terminal/fail-closed no design atual: o frame falhado não é recuperado em processo e o runtime abandona o loop.
+
+Permanece necessária uma **revisão final de capability/queue/synchronization assumptions**, não uma cobertura artificial de cada branch de erro.
+
+### Gaps ainda bloqueadores do Gate
+
+1. Revisão final de Vulkan capability/queue/synchronization assumptions e limites da evidência atual.
+2. Revisão final de architecture/ownership após as mudanças já integradas.
+3. Disposição explícita das propriedades de replay que são ou não requisitos do Gate: terminal/result e live-input frame-rate independence.
+4. Decisão formal de fecho do Gate 9.6.
+
+Ficam deliberadamente fora do Gate, salvo requisito novo:
+
+- semantic Level validation/schema/versioning (Fase 10);
+- replay persistence/serialization;
+- generalização de `RenderSnapshot` antes do fecho do Gate.
 
 ### Ordem de execução
 
 ```text
-Vulkan/error evidence residual
-→ replay review residual
-→ world/chunk metadata contract
-→ architecture/ownership review
-→ Gate decision
+revisão final Vulkan capability/queue/synchronization
+→ revisão final architecture/ownership
+→ disposição explícita dos residuais de replay
+→ Gate 9.6 decision
 → RenderSnapshot generalization
+→ Fase 10 semantic Level/schema/versioning
 ```
 
 Não avançar para a migração geral de `RenderSnapshot` antes do fecho formal do Gate 9.6.
