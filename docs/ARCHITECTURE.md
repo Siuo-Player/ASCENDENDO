@@ -197,11 +197,32 @@ Runtime e editor convergem para um `LevelData` declarativo e independente de Vul
 .lvl / campaign source
         ↓
       LevelData
-      ├── Runtime view
-      └── Editor view
+        ↓
+LevelDataValidator
+        ↓
+   runtime/editor use
 ```
 
-A responsabilidade atual de `LevelDataIO` é **parse/serialize**, não validação de schema completa. O parser não deve ser usado como autoridade de UGC ou como substituto da validação futura.
+`LevelDataIO` continua responsável por **parse/serialize sintático**. A semântica mínima atual é verificada separadamente por `LevelDataValidator` antes de `CampaignRuntime` consumir a geometria.
+
+### Boundary semântica atual
+
+```text
+LevelDataIO
+  parse
+    ↓
+LevelDataValidator
+  validate geometry invariants
+    ↓
+CampaignRuntime
+  append/use
+```
+
+A primeira invariável implementada é simples e independente de schema: cada plataforma e flag deve possuir largura e altura estritamente positivas. Isto impede AABBs degeneradas/invertidas de entrarem no `Level` acumulado.
+
+Uma entrada inválida não deve avançar o progresso da campanha nem alterar a geometria acumulada. Esta propriedade é caracterizada por testes de `CampaignRuntime`.
+
+Isto **não** transforma `LevelDataValidator` em autoridade de versionamento/schema completo. Envelope, versão, migration e normalização continuam reservados para um requisito posterior.
 
 `Level` é atualmente um **modelo de mundo acumulado**: `appendFromData()` adiciona a geometria de cada chunk a `m_platforms`, usando `LOGICAL_HEIGHT` como avanço vertical. Um objeto `Level` não é semanticamente equivalente a uma única entrada da campanha.
 
