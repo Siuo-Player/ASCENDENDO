@@ -42,14 +42,14 @@ Revisar as evidências já integradas e determinar, com critérios explícitos, 
 ### Produz para
 
 - decisão de fecho do Gate 9.6;
-- próximo bloco arquitetural de `RenderSnapshot`.
+- próximos blocos de modularidade e presentation.
 
 ### Consumidores afetados
 
 - roadmap;
 - technical debt;
 - architecture;
-- future RenderSnapshot work packages.
+- future modularity work packages.
 
 ### Dependências de validação
 
@@ -62,20 +62,20 @@ Revisar as evidências já integradas e determinar, com critérios explícitos, 
 
 ```text
 Problema/contexto:
-A arquitetura de presentation ainda não possui uma fronteira RenderSnapshot completa, enquanto os documentos históricos podem sugerir que essa ausência é um blocker automático do Gate.
+A arquitetura de presentation não possuía uma fronteira RenderSnapshot completa, enquanto documentos históricos podiam sugerir que essa ausência era um blocker automático do Gate.
 
 Decisão:
-A ausência de uma fronteira RenderSnapshot completa permanece dívida arquitetural conhecida, mas não é blocker de 9.6 se os requisitos de 9.6 forem demonstrados e a decisão estiver explicitamente registada.
+O Gate 9.6 foi fechado depois de demonstrados os seus requisitos. RenderSnapshot e outras capacidades futuras ficaram como blocos independentes, cada um com evidência própria.
 
 Alternativas consideradas:
-1. adiar o Gate até completar RenderSnapshot;
-2. fechar o Gate e tratar RenderSnapshot como próximo bloco independente.
+1. adiar o Gate até completar as refatorações;
+2. fechar o Gate e tratar as refatorações como dívida explícita.
 
 Consequências:
 A progressão fica baseada no contrato real do Gate, evitando transformar arquitetura futura em requisito implícito.
 
 Condição de revisão/remoção:
-Reabrir o finding se surgir requisito concreto que torne a separação de presentation necessária para uma propriedade de 9.6.
+Reabrir o finding apenas se surgir requisito concreto que torne uma capacidade posterior necessária para uma claim do Gate.
 ```
 
 ## Riscos
@@ -132,38 +132,38 @@ Foram revistos explicitamente:
 - [x] roadmap/tech debt atualizados;
 - [x] evidência final documentada;
 - [x] decisão de Gate demonstrada;
-- [x] PR #118 mergeada sem trabalho essencial oculto.
+- [x] PR #118 mergeada sem trabalho essencial oculto;
+- [x] posterior RenderSnapshot/editor boundary já integrada sem reabrir o Gate.
 
 ## Alterações durante a execução
 
 ```text
 Descoberta:
-Os Studies mais recentes estavam stale relativamente a #116. O upstream atual foi usado como estado operacional.
+Os Studies datados de 2026-08-28 ficaram stale relativamente ao upstream posterior.
 
 Impacto:
 A leitura dos Studies não pode substituir a reconciliação com a main atual.
 
 Decisão tomada:
-Este WP usa o GitHub atual como estado e os Studies como fonte consultiva/metodológica.
+Este WP usa o GitHub atual como estado operacional e os Studies como fonte consultiva/metodológica.
 
 Resultado adicional:
-PR #118 integrou a revisão final; esta tranche de fecho converte agora READY FOR FORMAL CLOSE em CLOSED.
+A main integrou PR #129 (world/player RenderSnapshot), PR #132 (remoção do acoplamento RendererFacade → EditorSession) e respetiva documentação.
 
 Documentos atualizados:
-ROADMAP / TECH_DEBT / WORK PACKAGE / AUDIT
+ROADMAP / TECH_DEBT / ARCHITECTURE / DEVELOPMENT_PROTOCOL / BRANCH_PLAN
 ```
 
 ## Evidência / referências
 
-- `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_LATEST.md`;
-- `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_FINAL-RECONCILIATION.md`;
-- VulkanContext/Swapchain/GraphicsRuntime/PresentationRuntime atuais;
-- PRs integradas listadas neste WP;
-- PR #118 e os três workflows obrigatórios do seu head.
+- `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_LATEST.md` — snapshot consultivo, agora parcialmente stale;
+- `ROADMAP`, `TECH_DEBT`, `ARCHITECTURE`, `DEVELOPMENT_PROTOCOL` atuais;
+- PR #118, #119, #129 e #132;
+- workflows obrigatórios dos heads validados.
 
 ## Fecho
 
-**Resultado:** `CLOSED`  
-**Critério de saída:** todas as claims do Gate têm estado explícito e nenhuma capacidade futura é tratada como blocker sem requisito.  
-**Dívida residual:** `RenderSnapshot boundary, replay persistence/live-input independence, LevelData semantic/schema work`  
-**Próximo bloco:** `RenderSnapshot/domain-presentation boundary`
+**Resultado:** `CLOSED`
+**Critério de saída:** todas as claims do Gate têm estado explícito e nenhuma capacidade posterior é tratada como blocker sem requisito.
+**Dívida residual:** replay persistence/live-input independence, LevelData semantic/schema work e modularidade de infraestrutura não necessária para o Gate.
+**Próximo bloco:** `D.0 — shared Vulkan image upload primitive (#23)`
