@@ -6,70 +6,48 @@
 
 **Issue:** `#23`
 
-**Branch:** `refactor/shared-vulkan-image-upload-20260828`
+**Branch de implementação:** `refactor/shared-vulkan-image-upload-20260828`
+**PR:** `#133`
 
-## Base confirmada
+## Resultado
 
-`main` integra:
-
-- `GameSession` como fronteira de estado de sessão sem ownership Vulkan/presentation;
-- `GraphicsRuntime` como dono do stack gráfico;
-- `PresentationRuntime` como dono dos recursos de texto/sprite;
-- `gfx::RenderSnapshot` para o world/player path;
-- `EditorRenderSnapshot` materializado na composição antes do rendering;
-- Gate 9.6 formalmente `CLOSED`;
-- PR #129 e PR #132 integrados com os três workflows obrigatórios verdes.
+`DONE — PR #133 integrado como e3871bc935dfa52124ec5244ddbb04714caec161`
 
 ## Descoberta
 
-`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` contêm duas implementações muito semelhantes do mesmo ciclo de vida Vulkan para imagens. A duplicação é concreta e independente do limite físico de ficheiro.
+`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` continham duas implementações semelhantes do ciclo de vida Vulkan para imagens: staging, memória, imagem, command buffer one-shot, transitions, copy, view e sampler.
 
-## Decisão arquitetural
+## Decisão
 
-Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**.
+Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**. O primitive não é `TextureManager`, não possui cache global e não absorve descriptor policy.
 
-A opção A mantém duplicação de lifecycle/failure handling. A opção C (`TextureManager`) é especulativa para os consumidores atuais e adicionaria ownership/política não justificadas.
-
-## Contrato pretendido
+## Contrato implementado
 
 ```text
 FontRendererGpu ─┐
-                 ├→ shared Vulkan image upload primitive
+                 ├→ VulkanImageUpload
 SpriteRendererGpu┘
 ```
 
-O primitive cria a imagem, memória, image view e sampler, executa staging/upload e transitions comuns e devolve os handles ao consumidor. Não mantém ownership persistente depois do retorno.
-
-`format` e `filter` permanecem explícitos. Descriptor pools/sets continuam nos consumidores.
+`format` e `filter` permanecem explícitos. O primitive devolve `VkImage`, `VkDeviceMemory`, `VkImageView` e `VkSampler`; o consumer mantém ownership e configura os descriptors específicos.
 
 ## Validação
 
-```text
-baseline
-→ primitive + failure cleanup
-→ FontRendererGpu
-→ SpriteRendererGpu
-→ game build + tests
-→ sanitizers
-→ Windows
-→ documentação final
-```
+Os três workflows obrigatórios do head validado passaram:
 
-## Critério de saída
+- Linux / Clang / C++20 / Headless Vulkan;
+- Linux / Clang / ASan + UBSan / Headless Vulkan;
+- Windows / Clang / C++20.
 
-```text
-primitive estreito e justificado
-+ ownership explícito
-+ ambos os consumidores migrados sem regressão
-+ failure paths limpos
-+ testes/build/CI verdes
-+ docs sincronizados
-```
+Também passaram source-size, full tests, Vulkan headless e campaign validation nos jobs correspondentes.
 
-## Dívida / condição de revisão
+## Mudanças
 
-Se o primitive começar a acumular políticas específicas de outros recursos, a abstração será revista antes de adicionar parâmetros genéricos.
+A infraestrutura duplicada foi removida dos dois consumidores. Os formatos/filtros existentes foram preservados:
+
+- Font: `R8_UNORM` + `LINEAR`;
+- Sprite: `R8G8B8A8_UNORM` + `NEAREST`.
 
 ## Próximo dependente
 
-Após este WP, reconsiderar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` com base nas responsabilidades que permanecerem depois da remoção da infraestrutura Vulkan duplicada.
+Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` com base nas responsabilidades restantes. Não introduzir abstrações genéricas sem novos consumidores e evidência.

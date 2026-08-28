@@ -30,7 +30,7 @@ O fecho formal segue a integração da revisão final do Gate (PR #118) e a conf
 - PR #114 — characterization tests desse contrato.
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
-- PR #117 — reconciliação canónica do roadmap/tech debt com os Studies e a `main` real.
+- PR #117 — reconciliação do roadmap/technical debt com os Studies e a `main` real.
 - PR #118 — revisão final do Gate.
 - PR #119 — fecho formal do Gate 9.6.
 
@@ -101,52 +101,44 @@ O world snapshot é construído apenas em `PLAYING`/`PAUSED`. O editor fornece o
 
 `DONE — world/player + editor presentation boundaries`
 
-## Shared Vulkan image upload — próxima tranche
+## Shared Vulkan image upload — concluído
 
-A investigação dos consumidores de GPU encontrou duplicação concreta entre `FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` na sequência de staging/upload e criação de recursos de imagem Vulkan. O ficheiro não precisa atingir 48 KiB para justificar a revisão: a dívida aqui é duplicação de responsabilidade e de failure cleanup.
+PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreito para o lifecycle comum de criação/upload de imagens Vulkan de `FontRendererGpu` e `SpriteRendererGpu`.
 
-### Decisão
+### Centralizado
 
-Escolhida a opção B do Issue #23: **primitive estreito de upload/creation de imagem Vulkan**.
+- staging buffer e memória host-visible;
+- criação/binding de `VkImage` e memória device-local;
+- command pool/buffer one-shot;
+- image layout transitions;
+- `vkCmdCopyBufferToImage`;
+- `VkImageView`;
+- `VkSampler`;
+- cleanup de recursos parcialmente criados.
 
-O primitive deverá:
+### Mantido nos consumidores
 
-- criar e inicializar `VkImage`, memória, `VkImageView` e `VkSampler`;
-- gerir staging e one-time commands;
-- aplicar as transitions necessárias;
-- devolver os handles ao consumidor;
-- limpar temporários e recursos parcialmente criados em failure paths;
-- receber formato e filtro explicitamente.
+- `VkFormat`;
+- `VkFilter`;
+- dados de origem;
+- descriptor pools/sets;
+- descriptor policy;
+- ownership dos handles devolvidos.
 
-Descriptor pools/sets continuam nos consumidores. Não será criado `TextureManager`, cache global ou asset manager como efeito colateral desta tranche.
+Comportamento preservado:
 
-### Ownership
+- Font: `R8_UNORM` + `LINEAR`;
+- Sprite: `R8G8B8A8_UNORM` + `NEAREST`.
 
-```text
-shared primitive
-    ↓ creates
-returned resource handles
-    ↓ owned by
-FontRendererGpu / SpriteRendererGpu
-```
+PR #133 foi integrado como `e3871bc935dfa52124ec5244ddbb04714caec161`. Os workflows obrigatórios Linux normal, Linux ASan/UBSan e Windows passaram, incluindo source-size, full tests, headless Vulkan e campaign validation.
 
-O primitive não mantém estado persistente nem ownership oculto depois da operação.
+### Estado
 
-### Validação planeada
+`DONE`
 
-- baseline dos dois consumidores;
-- testes de preconditions/failure cleanup;
-- build de game;
-- testes existentes de rendering;
-- Linux headless Vulkan;
-- ASan/UBSan;
-- Windows/Clang;
-- source-size;
-- atualização final da arquitetura e WPs.
+### Próxima análise
 
-### Condição de revisão
-
-Se a API começar a acumular políticas específicas de outros tipos de recurso, parar e rever a abstração antes de adicionar parâmetros genéricos.
+Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` agora que o lifecycle Vulkan duplicado foi removido. Não criar novas abstrações sem duplicação concreta e consumidores demonstráveis.
 
 ## Outras dívidas explicitamente adiadas
 
@@ -169,14 +161,13 @@ Se a API começar a acumular políticas específicas de outros tipos de recurso,
 9. CI failure causes exigem evidência observável.
 10. Implementation semantics e executable evidence continuam estados distintos.
 11. Presentation recebe dados necessários para rendering, não o modelo mutável de gameplay/editor.
+12. Shared Vulkan primitives devem permanecer estreitos e não absorver políticas específicas sem nova evidência.
 
 ## Próximo passo
 
 ```text
-Issue #23 decision B
-→ implement shared Vulkan image upload primitive
-→ migrate FontRendererGpu
-→ migrate SpriteRendererGpu
-→ validate
-→ update debt/architecture/WP
+PR #133 integrado
+→ reavaliar #22 FontRenderer decomposition
+→ investigar SpriteRenderer
+→ só depois decidir novas extrações ou otimizações
 ```
