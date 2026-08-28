@@ -1,14 +1,15 @@
 #pragma once
 // =============================================================================
-// Game/Graphics/WorldRenderer.h
+//  Game/Graphics/WorldRenderer.h
 //
-// Pass de cena jogável: plataformas, FLAG e jogador.
-// Não conhece GameState, menus ou editor.
+//  Pass de cena jogável: plataformas, FLAG e jogador.
+//  Não conhece GameState, menus, editor ou modelos de domínio.
 // =============================================================================
+
+#include "Core/RenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 
-namespace logic { class Player; class Level; }
 namespace gfx {
 class Camera;
 class Pipeline;
@@ -21,9 +22,8 @@ public:
     void draw(VkCommandBuffer cmd,
               const Pipeline& shapePipeline,
               const ShapeRenderer& shapes,
-              const logic::Player& player,
+              const core::RenderSnapshot& snapshot,
               const Camera& camera,
-              const logic::Level* level,
               SpritePipeline* spritePipeline = nullptr,
               SpriteRenderer* sprite = nullptr) const;
 };
