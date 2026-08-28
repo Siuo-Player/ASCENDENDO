@@ -14,7 +14,7 @@ namespace gfx {
 void WorldRenderer::draw(VkCommandBuffer cmd,
                          const Pipeline& shapePipeline,
                          const ShapeRenderer& shapes,
-                         const core::RenderSnapshot& snapshot,
+                         const RenderSnapshot& snapshot,
                          const Camera& camera,
                          SpritePipeline* spritePipeline,
                          SpriteRenderer* sprite) const {
@@ -67,7 +67,7 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
         sprite->draw(cmd, spritePipeline->layout(),
                      player.bounds.x, player.bounds.y,
                      player.bounds.width, player.bounds.height,
-                     player.facingLeft,
+                     player.facingDirection < 0.0f,
                      1.0f, 1.0f, 1.0f, 1.0f,
                      camera.position.x, camera.position.y);
         shapes.bind(cmd, shapePipeline);
