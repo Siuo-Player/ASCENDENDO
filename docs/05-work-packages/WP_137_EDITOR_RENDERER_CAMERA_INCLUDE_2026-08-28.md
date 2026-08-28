@@ -1,21 +1,35 @@
 # Work Package — EditorRenderer concrete Camera include
 
-**Issue:** #137
+**Tracking:** PR #136 follow-up CI finding
 
 ## Context
 
-PR #136 exposed a compilation failure in `Game/Graphics/EditorRenderer.cpp`: the implementation instantiates `Camera`, while `ShapeRenderer.h` only provides a forward declaration.
+PR #136 expôs uma falha de compilação em `Game/Graphics/EditorRenderer.cpp`: a implementação instancia `Camera`, enquanto `ShapeRenderer.h` fornece apenas uma forward declaration.
+
+## Evidence
+
+O compilador reportou tipo incompleto em:
+
+```text
+const Camera fixedCamera{};
+```
+
+A definição concreta deve ser incluída diretamente pelo ficheiro que instancia o tipo.
 
 ## Decision
 
-Include `Graphics/Camera.h` directly in `EditorRenderer.cpp`.
+Incluir `Graphics/Camera.h` diretamente em `EditorRenderer.cpp`.
 
 ## Scope
 
-- add the direct include;
-- no behavior changes;
-- no changes to `Camera` or renderer ownership.
+- adicionar o include direto;
+- nenhuma alteração de comportamento;
+- nenhuma alteração a `Camera` ou ownership do renderer.
 
 ## Validation
 
-Run Linux normal, Linux ASan/UBSan and Windows required workflows.
+Executar os três workflows obrigatórios Linux normal, Linux ASan/UBSan e Windows.
+
+## Nota de integração
+
+A correção foi aplicada na própria branch do #136 porque o erro bloqueava a validação dessa tranche e o change é mecanicamente independente da alteração de Logic. O finding permanece explicitamente registado como CI follow-up, sem criar um tracker inexistente.
