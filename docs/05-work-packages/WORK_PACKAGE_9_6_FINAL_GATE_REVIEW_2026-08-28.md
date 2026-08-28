@@ -1,0 +1,160 @@
+# Work Package — final Gate 9.6 review
+
+## Identificação
+
+**Roadmap:** `9.6 Base Engineering Gate`
+**Subsistema:** `Infrastructure / Runtime / Presentation`
+**Work Package:** `9.6 final capability, ownership and Gate disposition review`
+**Branch:** `docs/9-6-final-gate-review-20260828`
+**PR:** `TBD`
+
+## Objetivo
+
+Revisar as evidências já integradas e determinar, com critérios explícitos, se o Gate 9.6 ainda possui blockers reais ou se as incertezas restantes são decisões/capacidades futuras fora do Gate.
+
+## Escopo
+
+### Inclui
+
+- revisão de capability/queue/synchronization assumptions de Vulkan;
+- revisão de ownership e fronteiras arquiteturais atuais;
+- disposição explícita das propriedades residuais de replay;
+- confirmação da matriz mínima de CI e da política `Protect main`;
+- decisão formal sobre o estado do Gate 9.6.
+
+### Não inclui
+
+- migração geral de `RenderSnapshot`;
+- nova fault-injection framework Vulkan;
+- implementação de replay persistence;
+- implementação de live-input frame-rate independence;
+- schema/versioning ou semantic validation de `LevelData`;
+- otimização de performance sem baseline medida.
+
+## Dependências
+
+### Depende de
+
+- PRs #76, #81, #85, #87, #88, #90, #92, #94, #95, #99, #100, #101, #102, #105, #108, #109, #113, #114, #115, #116 e #117;
+- `PROJECT-STUDIES/ASCENDENDO` como fonte consultiva;
+- `docs/ROADMAP.md`, `docs/TECH_DEBT.md`, `docs/ARCHITECTURE.md` e `docs/PRODUCT_DECISIONS.md`.
+
+### Produz para
+
+- decisão de fecho do Gate 9.6;
+- próximo bloco arquitetural de `RenderSnapshot`, se o Gate for fechado.
+
+### Consumidores afetados
+
+- roadmap;
+- technical debt;
+- architecture;
+- future RenderSnapshot work packages.
+
+### Dependências de validação
+
+- Linux normal;
+- Linux ASan/UBSan;
+- Windows/Clang;
+- observação dos contratos Vulkan e ownership no código atual.
+
+## Decisões arquiteturais
+
+```text
+Problema/contexto:
+A arquitetura de presentation ainda não possui uma fronteira RenderSnapshot completa, enquanto os documentos históricos podem sugerir que essa ausência é um blocker automático do Gate.
+
+Decisão:
+A ausência de uma fronteira RenderSnapshot completa permanece dívida arquitetural conhecida, mas não é blocker de 9.6 se os requisitos de 9.6 forem demonstrados e a decisão estiver explicitamente registada.
+
+Alternativas consideradas:
+1. adiar o Gate até completar RenderSnapshot;
+2. fechar o Gate e tratar RenderSnapshot como próximo bloco independente.
+
+Consequências:
+A progressão fica baseada no contrato real do Gate, evitando transformar arquitetura futura em requisito implícito.
+
+Condição de revisão/remoção:
+Reabrir o finding se surgir requisito concreto que torne a separação de presentation necessária para uma propriedade de 9.6.
+```
+
+## Riscos
+
+| Risco | Probabilidade | Impacto | Mitigação | Estado |
+|---|---|---|---|---|
+| Snapshot/documento histórico fica stale | média | médio | fonte GitHub atual + audit dated | mitigado |
+| Claim de replay é sobredeclarada | média | alto | separar propriedades | mitigado |
+| Coverage Vulkan vira checkbox de fault injection | média | médio | revisar contratos, não branches | mitigado |
+| RenderSnapshot vira blocker artificial | baixa | alto | disposição explícita no Gate | mitigado |
+
+## Validação
+
+### Testes automatizados
+
+Os testes já integrados nas PRs referenciadas continuam a constituir a evidência executável do Gate.
+
+### Validação manual
+
+Revisão do código atual e da ownership graph de `main.cpp`, `GraphicsRuntime`, `VulkanContext`, `Swapchain`, `PresentationRuntime` e `RendererFacade`.
+
+### Profiling / métricas
+
+Nenhuma otimização proposta nesta tranche; profiling não é critério de saída.
+
+### Failure paths
+
+Revisar explicitamente:
+
+- `vkDeviceWaitIdle()`;
+- `vkQueueSubmit()`;
+- queue-family/present support;
+- swapchain surface capabilities;
+- GraphicsRuntime aggregate rollback.
+
+## Definition of Ready
+
+- [x] objetivo e escopo definidos;
+- [x] documentos normativos consultados;
+- [x] dependências críticas identificadas;
+- [x] critério de saída definido;
+- [x] estratégia de validação definida;
+- [x] riscos relevantes registados.
+
+## Definition of Done
+
+- [ ] capability/queue/synchronization assumptions revistas;
+- [ ] ownership/architecture revista;
+- [ ] claims de replay explicitamente classificadas como Gate ou futuras;
+- [ ] roadmap/tech debt atualizados;
+- [ ] evidência final documentada;
+- [ ] decisão de Gate demonstrada;
+- [ ] PR pronta para merge sem trabalho essencial oculto.
+
+## Alterações durante a execução
+
+```text
+Descoberta:
+Os Studies mais recentes ainda descrevem #116 como aberta por serem snapshots datados. O upstream atual já integra #117.
+
+Impacto:
+A leitura do snapshot não pode ser usada como estado operacional atual sem reconciliação.
+
+Decisão tomada:
+Este WP usa o GitHub atual como estado e usa os Studies apenas para identificar perguntas metodológicas.
+
+Documentos atualizados:
+ROADMAP / TECH_DEBT / ARCHITECTURE
+```
+
+## Evidência / referências
+
+- `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_LATEST.md`;
+- `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_FINAL-RECONCILIATION.md`;
+- VulkanContext/Swapchain/GraphicsRuntime/PresentationRuntime atuais;
+- PRs integradas listadas neste WP.
+
+## Fecho
+
+**Resultado:** `review pending`  
+**Critério de saída:** todas as claims do Gate têm estado explícito e nenhuma capacidade futura é tratada como blocker sem requisito.  
+**Dívida residual:** `RenderSnapshot boundary, replay persistence/live-input independence, LevelData semantic/schema work`
