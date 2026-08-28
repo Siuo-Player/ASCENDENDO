@@ -5,13 +5,12 @@ using namespace logic;
 
 TEST_SUITE("Fase 9.4 — EditorInteractionController") {
 
-TEST_CASE("cursor logical -> world usa exatamente o offset da camera") {
+TEST_CASE("cursor logical -> world usa exatamente a posição da camera") {
     LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
     EditorInteractionController controller(doc);
-    gfx::Camera camera;
-    camera.position = {32.0f, 64.0f};
+    const Vec2 cameraPosition{32.0f, 64.0f};
 
-    const EditorCursor c = controller.cursorFromLogical({100.0f, 20.0f}, camera);
+    const EditorCursor c = controller.cursorFromLogical({100.0f, 20.0f}, cameraPosition);
 
     CHECK(c.logical.x == doctest::Approx(100.0f));
     CHECK(c.logical.y == doctest::Approx(20.0f));

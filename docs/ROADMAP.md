@@ -16,49 +16,52 @@ O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #
 
 A primeira tranche separou o world/player path do domínio através de `gfx::RenderSnapshot` e `RenderSnapshotBuilder`. O editor passou a materializar `EditorRenderSnapshot` na composição e `RendererFacade` deixou de depender diretamente de `EditorSession`.
 
-## Next Modularity Block — Shared Vulkan image upload
+## Shared Vulkan image upload
 
 **Issue:** #23  
 **Implementation:** PR #133  
 **Merge:** `e3871bc935dfa52124ec5244ddbb04714caec161`  
 **Estado:** **COMPLETED**
 
+A duplicação de lifecycle Vulkan entre `FontRendererGpu` e `SpriteRendererGpu` foi centralizada em `Game/Graphics/VulkanImageUpload.h/.cpp`, preservando `VkFormat`, `VkFilter`, descriptor policy e ownership nos consumidores.
+
+## EditorInteraction layer boundary
+
+**Issue:** #135  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_EDITOR_INTERACTION_LAYER_BOUNDARY_2026-08-28.md`  
+**Estado:** **READY FOR IMPLEMENTATION**
+
 ### Descoberta
 
-`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` duplicavam o lifecycle comum de upload de imagens Vulkan: staging, memory allocation, image creation/binding, command buffer one-shot, transitions, copy, image view, sampler e cleanup.
+`Game/Logic/EditorInteraction.h` ainda inclui `Graphics/Camera.h` e expõe `cursorFromLogical(..., const gfx::Camera&)`. A implementação usa somente `camera.position`, criando uma dependência de presentation desnecessária dentro da lógica do editor.
 
 ### Decisão
 
-Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**. Não foi criado `TextureManager`, cache global ou asset abstraction.
+Substituir `const gfx::Camera&` por `const Vec2& cameraPosition`. A `Camera` permanece propriedade da presentation; a composição fornece apenas o dado necessário para converter coordenadas lógicas em coordenadas de mundo.
 
 ```text
-FontRendererGpu ─┐
-                 ├→ VulkanImageUpload
-SpriteRendererGpu┘
+logical cursor + camera position
+→ world cursor
 ```
 
-`VkFormat` e `VkFilter` continuam explícitos. Descriptor pools/sets continuam nos consumidores. O ownership dos handles devolvidos continua nos consumidores.
+### Escopo
 
-### Resultado
+- remover a dependência `Game/Logic → Game/Graphics/Camera`;
+- preservar exatamente a transformação cursor→world;
+- adaptar consumers/tests;
+- validar build, sanitizers e Windows;
+- sincronizar documentação.
 
-`Game/Graphics/VulkanImageUpload.h/.cpp` centraliza o lifecycle comum. Os consumidores preservam:
+### Fora de escopo
 
-- Font: `R8_UNORM` + `LINEAR`;
-- Sprite: `R8G8B8A8_UNORM` + `NEAREST`.
+- mudança de `Camera`;
+- mudança do sistema de coordenadas;
+- mudança da interação do editor;
+- nova abstração genérica de transformação.
 
-### Evidência
+## Próximo alvo após #135
 
-Os três workflows obrigatórios passaram no head validado de #133:
-
-- Linux / Clang / C++20 / Headless Vulkan;
-- Linux / Clang / ASan + UBSan / Headless Vulkan;
-- Windows / Clang / C++20.
-
-Também passaram source-size, full tests, headless Vulkan e campaign validation.
-
-## Próximo alvo
-
-Reavaliar **#22 `FontRenderer decomposition`** e a decomposição de `SpriteRenderer` agora que a infraestrutura Vulkan duplicada foi removida. A próxima decisão deve partir das responsabilidades que restaram, não de uma meta arbitrária de tamanho.
+Reavaliar as restantes dependências entre `Game/Logic` e `Game/Graphics` com o mesmo critério: só remover coupling quando existir dependência concreta e o contrato mínimo puder ser expresso sem introduzir abstração artificial.
 
 ## Fase 10
 

@@ -85,8 +85,7 @@ void EditorSession::updateCursor(const InputManager& input,
 
     // Level Editor = exactly one 640x360 screen. There is no camera transform
     // here: cursor coordinates and rendered geometry share the same space.
-    const gfx::Camera fixedCamera{};
-    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, fixedCamera).world;
+    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, {0.0f, 0.0f}).world;
 }
 
 void EditorSession::updateKeyboard(const InputManager& input,

@@ -6,12 +6,11 @@
 namespace logic {
 
 EditorCursor EditorInteractionController::cursorFromLogical(const Vec2& logical,
-                                                              const gfx::Camera& camera) const {
-    // O renderer usa coordenadas logicas com origem no canto superior esquerdo
-    // e a camera como offset de mundo. O mesmo referencial evita drift entre
-    // desenho e clique.
-    return {logical, {logical.x + camera.position.x,
-                      logical.y + camera.position.y}};
+                                                              const Vec2& cameraPosition) const {
+    // A câmara permanece uma preocupação de presentation. A lógica recebe
+    // apenas a posição necessária para converter coordenadas lógicas em mundo.
+    return {logical, {logical.x + cameraPosition.x,
+                      logical.y + cameraPosition.y}};
 }
 
 std::size_t EditorInteractionController::hitPlatform(const Vec2& world) const {

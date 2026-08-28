@@ -1,53 +1,81 @@
 # Plano da branch atual
 
-**Bloco do roadmap:** `9.6 Base Engineering Gate → D — modularity work packages`
+**Bloco do roadmap:** `Post-Gate 9.6 architecture / editor boundaries`
 
-**Work Package:** `D.0 — shared Vulkan image upload primitive`
+**Work Package:** `EditorInteraction presentation-independent input boundary`
 
-**Issue:** `#23`
+**Issue:** `#135`
 
-**Branch de implementação:** `refactor/shared-vulkan-image-upload-20260828`
-**PR:** `#133`
+**Branch de implementação:** `refactor/editor-interaction-layer-boundary-20260828`
 
-## Resultado
+## Contexto
 
-`DONE — PR #133 integrado como e3871bc935dfa52124ec5244ddbb04714caec161`
+`Game/Logic/EditorInteraction.h` dependia diretamente de `Graphics/Camera.h` através de `cursorFromLogical(..., const gfx::Camera&)`.
 
 ## Descoberta
 
-`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` continham duas implementações semelhantes do ciclo de vida Vulkan para imagens: staging, memória, imagem, command buffer one-shot, transitions, copy, view e sampler.
+A implementação utiliza apenas `camera.position.x` e `camera.position.y`. O tipo `gfx::Camera` não acrescenta informação necessária à política de interação.
+
+Durante a validação do PR #136, o mesmo princípio foi encontrado em `EditorSession.cpp`: a sessão do editor criava `gfx::Camera` apenas para obter a posição zero de uma câmara fixa da tela lógica. `EditorSession` já documenta que não possui estado de câmera.
 
 ## Decisão
 
-Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**. O primitive não é `TextureManager`, não possui cache global e não absorve descriptor policy.
-
-## Contrato implementado
+Usar `const Vec2& cameraPosition` como contrato mínimo em `EditorInteractionController` e passar `Vec2{0.0f, 0.0f}` desde `EditorSession`, mantendo a regra de que Camera pertence a presentation/composição.
 
 ```text
-FontRendererGpu ─┐
-                 ├→ VulkanImageUpload
-SpriteRendererGpu┘
+logical cursor + camera position
+→ world cursor
 ```
 
-`format` e `filter` permanecem explícitos. O primitive devolve `VkImage`, `VkDeviceMemory`, `VkImageView` e `VkSampler`; o consumer mantém ownership e configura os descriptors específicos.
+No editor de tela única, a posição da câmara é `{0,0}`.
+
+## Escopo
+
+- remover `Graphics/Camera.h` de `EditorInteraction.h`;
+- alterar implementação e consumidores;
+- remover o uso desnecessário de `gfx::Camera` em `EditorSession.cpp`;
+- preservar exatamente a transformação cursor→world;
+- manter characterization tests;
+- validar build, sanitizers e Windows.
+
+## Fora de escopo
+
+- `Camera`;
+- sistema de coordenadas;
+- comportamento STAMP/DRAG/move/delete;
+- GLFW/Vulkan;
+- novas abstrações genéricas.
 
 ## Validação
 
-Os três workflows obrigatórios do head validado passaram:
+```text
+header dependency removed
+→ compile consumers
+→ cursor→world characterization
+→ full tests
+→ ASan/UBSan
+→ Windows
+→ global dependency audit
+```
 
-- Linux / Clang / C++20 / Headless Vulkan;
-- Linux / Clang / ASan + UBSan / Headless Vulkan;
-- Windows / Clang / C++20.
+## Critério de saída
 
-Também passaram source-size, full tests, Vulkan headless e campaign validation nos jobs correspondentes.
+```text
+Game/Logic/EditorInteraction sem Graphics/Camera include
++ EditorSession sem uso de gfx::Camera
++ API usa somente Vec2 para camera position
++ comportamento preservado
++ nenhum consumidor antigo
++ CI obrigatório verde
++ documentação sincronizada
+```
 
-## Mudanças
+## Estado atual
 
-A infraestrutura duplicada foi removida dos dois consumidores. Os formatos/filtros existentes foram preservados:
+`IMPLEMENTED — pending CI validation`
 
-- Font: `R8_UNORM` + `LINEAR`;
-- Sprite: `R8G8B8A8_UNORM` + `NEAREST`.
+O PR #136 revelou ainda um include concreto ausente em `EditorRenderer.cpp`; a correção foi aplicada na mesma branch porque é necessária para restaurar a compilação dos três targets obrigatórios.
 
-## Próximo dependente
+## Próxima decisão
 
-Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` com base nas responsabilidades restantes. Não introduzir abstrações genéricas sem novos consumidores e evidência.
+Depois de integrar #135, auditar os restantes includes cruzados `Game/Logic ↔ Game/Graphics` antes de abrir outra tranche. Só remover dependências com evidência de coupling e contrato mínimo claro.

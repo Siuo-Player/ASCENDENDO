@@ -7,7 +7,6 @@
 //  testes unitários sem GPU.
 // =============================================================================
 
-#include "Graphics/Camera.h"
 #include "Logic/LevelEditor.h"
 
 #include <cstddef>
@@ -31,8 +30,10 @@ public:
     explicit EditorInteractionController(LevelEditorDocument& document)
         : m_document(document) {}
 
+    // Camera remains a presentation concern; Logic receives only the
+    // position needed to map logical cursor coordinates into world space.
     EditorCursor cursorFromLogical(const Vec2& logical,
-                                   const gfx::Camera& camera) const;
+                                   const Vec2& cameraPosition) const;
 
     // Devolve platformCount() quando nada foi encontrado.
     std::size_t hitPlatform(const Vec2& world) const;
