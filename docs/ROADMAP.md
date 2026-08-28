@@ -176,24 +176,49 @@ Graphics/PresentationConfig
 - source-size e campaign validation: **success**;
 - issue #140 fechado como completed após integração.
 
-## Próximo alvo — revisão final de ownership/arquitetura
+## Fase 10 — Semantic LevelData validation
 
-Os findings concretos recentes estão encerrados:
+### Semantic geometry invariants — em implementação
+
+**Issue:** #142  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_LEVELDATA_SEMANTIC_VALIDATION_2026-08-28.md`  
+**Implementation:** `refactor/leveldata-semantic-validation-20260828`  
+**Estado:** **IN IMPLEMENTATION**
+
+### Descoberta
+
+`LevelDataIO` já rejeita sintaxe desconhecida, tokens inválidos, truncamento e trailing tokens, mas ainda aceitava `PLATFORM`/`FLAG` com largura ou altura `<= 0`. Isto produz geometria degenerada/invertida antes de chegar ao modelo `Level`.
+
+### Decisão
+
+Manter parse e semântica separados:
 
 ```text
-EditorInteraction → Camera dependency          DONE (#136)
-GameStateMachine → Graphics/GameState          DONE (#137)
-Player → InputManager para TickInput           DONE (#139)
-Core::Config → presentation policy              DONE (#141)
+LevelDataIO
+  parse
+    ↓
+LevelDataValidator
+  validate
+    ↓
+CampaignRuntime
+  append/use
 ```
 
-A próxima etapa volta à auditoria global. A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável. Não criar uma `Application` genérica, nem novas divisões de configuração, apenas por organização.
+A primeira regra semanticamente exigida é extensão estritamente positiva para plataformas e flag. Bounds policy, schema versioning e migration ficam fora desta tranche.
+
+### Critério
+
+Nenhum documento semanticamente inválido deve ser acrescentado ao `Level`; uma entrada inválida não deve avançar `currentLevelIndex`, `m_spawnY` nem a geometria acumulada.
+
+## Próximo alvo — revisão final de ownership/arquitetura
+
+Após o #142, a Fase 10 só avança para invariantes adicionais quando houver requisito/evidência concreta. Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
+
+A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável.
+
+Não criar uma `Application` genérica, nem novas divisões de configuração, apenas por organização.
 
 Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
-
-## Fase 10
-
-Semantic `LevelData` validation/schema/versioning permanece separado do bloco de presentation e só avança quando a evidência/requisito correspondente o justificar.
 
 ## Princípios de execução
 
