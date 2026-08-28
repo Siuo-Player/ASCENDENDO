@@ -3,70 +3,45 @@
 **Roadmap:** Gate 9.6 — Base Engineering Gate  
 **Subsystem:** Graphics / Vulkan lifecycle  
 **Status:** INVESTIGATED / DECISION PENDING  
-**Date:** 2026-08-28  
+**Date:** 2026-08-28
 
 ## Problem
 
-Gate 9.6 still has a residual evidence gap around lower-level Vulkan failure paths. The implementation handles multiple `VkResult` values, but implementation coverage and executable fault-path evidence are distinct properties.
+Gate 9.6 retains an evidence gap around lower-level Vulkan failure paths. The implementation handles multiple `VkResult` values, but explicit handling is not identical to executable fault-path evidence.
 
-## Current implementation evidence
+## Current implementation
 
-`RendererCore::beginFrame()` explicitly classifies failures from `vkWaitForFences`, `vkAcquireNextImageKHR`, `vkResetCommandBuffer`, and image-index bounds.
+`RendererCore::beginFrame()` classifies `vkWaitForFences`, `vkAcquireNextImageKHR`, `vkResetCommandBuffer`, and image-index errors. `submitFrame()` classifies `vkResetFences`, `vkQueueSubmit`, and `vkQueuePresentKHR`. `VulkanContext::reconfigureForSurface()` checks device enumeration, surface suitability, `vkDeviceWaitIdle`, logical-device creation and queue acquisition.
 
-`RendererCore::submitFrame()` explicitly classifies `vkResetFences`, `vkQueueSubmit`, and `vkQueuePresentKHR`. The submit path resets the in-flight fence immediately before submission and treats `vkQueueSubmit` failure as terminal for the current frame.
-
-`VulkanContext::reconfigureForSurface()` explicitly checks physical-device enumeration, surface suitability/capabilities, `vkDeviceWaitIdle`, logical-device creation, and queue acquisition.
-
-`vkDeviceWaitIdle()` failure already has executable integration evidence from PR #94.
+`vkDeviceWaitIdle()` failure already has executable evidence through PR #94.
 
 ## Classification
 
-### A — executablely evidenced
+**Executablely evidenced:** `vkDeviceWaitIdle()` in swapchain recreation.
 
-`vkDeviceWaitIdle()` in `RendererCore::recreateSwapchain()`.
+**Explicit fail-closed, not fault-injected:** wait-for-fences, acquire-next-image fatal results, reset-command-buffer, reset-fences, queue-submit, fatal queue-present, and resource-creation failures.
 
-### B — explicit fail-closed behavior without fault injection
-
-- `vkWaitForFences`;
-- `vkAcquireNextImageKHR` non-recreation failure;
-- `vkResetCommandBuffer`;
-- `vkResetFences`;
-- `vkQueueSubmit`;
-- fatal `vkQueuePresentKHR`;
-- framebuffer/command-pool/command-buffer/synchronization-object creation failures.
-
-### C — capability/configuration evidence
-
-- graphics/present queue-family compatibility;
-- required device/surface capabilities;
-- deterministic software Vulkan driver setup already exercised by CI.
+**Positive capability/configuration evidence:** queue-family compatibility, required device/surface capabilities and deterministic software Vulkan setup.
 
 ## Decision
 
-Do not introduce a general Vulkan mocking framework and do not add fault injection merely to increase branch-count coverage.
+Do not introduce a general Vulkan mocking framework or fault-inject every API solely for branch-count coverage.
 
-A new executable seam is justified only if it proves a lifecycle or ownership invariant that cannot be established convincingly from the current implementation plus ordinary integration evidence.
+The next high-value question is the `vkQueueSubmit` post-failure contract because the in-flight fence is reset immediately before submission. The relevant question is whether the failure leaves ambiguous synchronization/resource state at the caller boundary, or whether the current fail-closed path is already sufficient.
 
-The highest-value next question remains `vkQueueSubmit`: because the in-flight fence is reset immediately before submission, the post-failure synchronization contract deserves explicit investigation before any implementation seam is added.
-
-## Remaining evidence question
-
-Determine whether `vkQueueSubmit` failure creates an observable ambiguous state at `RendererCore`/`RendererFacade`, or whether the current fail-closed behavior and application termination path are already sufficient evidence.
-
-Only an evidence-backed invariant should produce a follow-up implementation WP.
+Only an observable invariant that remains unproved should justify a new minimal seam.
 
 ## Non-goals
 
-- Vulkan mock framework;
-- global function substitution;
-- renderer redesign;
-- transactional swapchain rebuild;
-- RenderSnapshot migration;
-- gameplay changes.
+- no global Vulkan substitution;
+- no renderer redesign;
+- no transactional swapchain rewrite;
+- no RenderSnapshot migration;
+- no gameplay changes.
 
 ## Provenance
 
-- `Game/Graphics/RendererCore.cpp` at current `main` `bec96c3...`;
+- `Game/Graphics/RendererCore.cpp` at `main` `bec96c3...`;
 - `Game/Graphics/RendererFacade.cpp`;
 - `Tests/Integration/test_renderer_core.cpp`;
 - `PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_1329.md`;
@@ -74,4 +49,4 @@ Only an evidence-backed invariant should produce a follow-up implementation WP.
 
 ## Conclusion
 
-The current implementation demonstrates explicit fail-closed handling for the inspected Vulkan result paths. Remaining debt is evidence breadth and precise queue/capability contract definition, not a confirmed production defect.
+The current code demonstrates explicit fail-closed treatment of the inspected Vulkan results. The residual debt is evidence breadth and precise queue/capability contract definition, not a confirmed production defect.
