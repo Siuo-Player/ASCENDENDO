@@ -129,9 +129,50 @@ A `Camera` permanece separada como objeto de presentation; não faz parte do sna
 - migração automática de todos os passes;
 - otimização de baixo nível sem baseline.
 
-## Próximo bloco arquitetural
+## Next Modularity Block — Shared Vulkan image upload
 
-Os restantes presentation consumers devem ser inventariados individualmente. A existência do primeiro snapshot não implica que `UiRenderer`, editor ou outros passes devam partilhar o mesmo contrato. Cada novo snapshot deve nascer apenas quando existir um benefício arquitetural/testável demonstrável.
+**Issue:** #23  
+**Branch:** `refactor/shared-vulkan-image-upload-20260828`  
+**Estado:** **READY FOR IMPLEMENTATION**
+
+### Descoberta
+
+`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` duplicam a mesma sequência de staging, memory allocation, image creation/binding, one-time command submission, image layout transitions, copy-to-image, image view, sampler e cleanup. A duplicação existe mesmo sem o ficheiro atingir o hard limit de 48 KiB.
+
+### Decisão
+
+Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**. O primitive não será um `TextureManager`, não terá cache global e não absorverá descriptor policy.
+
+```text
+FontRendererGpu ─┐
+                 ├→ shared Vulkan image upload primitive
+SpriteRendererGpu┘
+```
+
+`format` e `filter` permanecem parâmetros explícitos. O consumer continua proprietário dos recursos retornados e do descriptor setup específico.
+
+### Dependências
+
+- `VulkanContext`;
+- `FontRendererGpu`;
+- `SpriteRendererGpu`;
+- #22 `FontRenderer decomposition` como dependente posterior;
+- documentação de modularidade e source-size.
+
+### Validação
+
+```text
+baseline / comportamento atual
+→ primitive + failure cleanup
+→ FontRendererGpu
+→ SpriteRendererGpu
+→ game build + tests
+→ sanitizers
+→ Windows
+→ documentação final
+```
+
+A abstração deve ser abandonada/revista caso comece a acumular políticas específicas não demonstradas pelos dois consumidores atuais.
 
 ## Fase 10
 
