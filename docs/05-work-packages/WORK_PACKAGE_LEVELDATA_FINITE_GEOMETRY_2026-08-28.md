@@ -1,38 +1,61 @@
-# Work Package — LevelData finite geometry
+# Work Package — LevelData finite geometry validation
 
-**Issue:** #144
+## Identificação
+
+**Roadmap:** `Fase 10 / LevelData semantic validation`
+**Work Package:** `Finite LevelData geometry boundary`
+**Issue:** `#144`
+**Implementation branch:** `refactor/leveldata-finite-geometry-20260828`
 
 ## Contexto
 
-A validação semântica #142 passou a exigir extensões estritamente positivas para plataformas e flag. A revisão seguinte encontrou a propriedade já exigida pela arquitetura da simulação: nenhum `NaN`/`Inf` deve atravessar a fronteira de dados para o runtime.
+A tranche #142 passou a rejeitar plataformas e flags com largura ou altura não positiva. A arquitetura do ASCENDENDO também estabelece que valores `NaN`/`Inf` não devem entrar na simulação.
 
 ## Decisão
 
-Estender a boundary `LevelDataValidator` com uma regra mínima e independente do parser:
+Estender a mesma boundary semântica, sem alterar o parser, para exigir coordenadas finitas em `PLATFORM` e `FLAG`:
 
 ```text
-all AABB coordinates are finite
+min.x, min.y, max.x, max.y são finitos
 + width > 0
 + height > 0
 ```
 
-Isto cobre plataformas e flag.
+O fluxo permanece:
+
+```text
+LevelDataIO
+  parse
+    ↓
+LevelDataValidator
+  validate
+    ↓
+CampaignRuntime
+  append/use
+```
+
+## Escopo
+
+- usar `std::isfinite` no `LevelDataValidator`;
+- rejeitar coordenadas não finitas de plataformas e flag;
+- adicionar testes para `NaN` e `±Inf`;
+- preservar assets válidos e a semântica existente.
 
 ## Fora de escopo
 
-- schema/versionamento;
+- schema versioning;
 - migration;
 - bounds policy;
+- `SPAWN` validation enquanto não houver consumidor runtime;
 - redesign de `Level`;
-- physics/collision changes;
-- mudanças no grammar parser.
+- alterações de física/collision.
 
 ## Critério de saída
 
 ```text
 non-finite geometry rejected before runtime append
-+ valid campaign unchanged
-+ focused semantic tests
-+ Linux normal / ASan-UBSan / Windows green
-+ campaign validation green
++ positive finite geometry remains valid
++ no valid asset changes
++ mandatory CI gates green
++ documentation synchronized
 ```

@@ -2,61 +2,62 @@
 
 **Bloco do roadmap:** `Fase 10 / LevelData semantic validation`
 
-**Work Package concluído:** `Semantic LevelData geometry validation`
+**Work Package:** `Finite LevelData geometry boundary`
 
-**Issue:** `#142`
+**Issue:** `#144`
 
-**PR:** `#143`
+**Branch de implementação:** `refactor/leveldata-finite-geometry-20260828`
 
-**Branch de implementação:** `refactor/leveldata-semantic-validation-20260828`
+## Contexto
 
-## Resultado
+A tranche #142 passou a rejeitar plataformas e flags com largura ou altura não positiva. A arquitetura do ASCENDENDO também estabelece que valores `NaN`/`Inf` não devem entrar na simulação.
 
-A tranche introduziu `LevelDataValidator` como boundary semântico independente do parser. `CampaignRuntime` agora valida o documento imediatamente após `LevelDataIO::load()` e antes de fazer `appendFromData()`.
+## Decisão
 
-A regra semântica introduzida é deliberadamente mínima:
-
-```text
-PLATFORM width  > 0
-PLATFORM height > 0
-FLAG     width  > 0
-FLAG     height > 0
-```
-
-Assim, o fluxo passa a ser:
+Estender a mesma boundary semântica, sem alterar o parser, para exigir coordenadas finitas em `PLATFORM` e `FLAG`:
 
 ```text
-LevelDataIO
-  parse
-    ↓
-LevelDataValidator
-  validate
-    ↓
-CampaignRuntime
-  append/use
+min.x, min.y, max.x, max.y são finitos
++ width > 0
++ height > 0
 ```
 
-## Validação
+## Escopo
 
-- validator unit tests: **success**
-- malformed campaign-runtime tests: **success**
-- Linux / Clang / C++20 / Headless Vulkan: **success**
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**
-- Windows / Clang / C++20: **success**
-- source-size: **success**
-- campaign validation: **success**
-
-**Merge:** `2ef4c1b4c25bbfe862ad8c05edad8f8438741835`
+- `Game/Logic/LevelDataValidator`;
+- rejeitar coordenadas não finitas de plataformas e flag;
+- testes para `NaN` e `±Inf`;
+- preservar assets válidos e comportamento existente.
 
 ## Fora de escopo
 
 - schema/versionamento;
 - migration;
-- política geral de bounds do nível;
-- física/colisão;
+- bounds policy;
+- `SPAWN` validation sem consumidor runtime;
 - redesign de `Level`;
-- mudança do formato válido existente.
+- física/collision.
 
-## Próxima decisão
+## Validação
 
-Continuar a Fase 10 apenas quando existir outra invariável semântica demonstrável. Schema/versioning permanece separado e só avança quando houver requisito real de compatibilidade/importação.
+```text
+validator unit tests
+→ Linux normal/headless Vulkan
+→ ASan/UBSan
+→ Windows
+→ source-size/campaign validation
+```
+
+## Critério de saída
+
+```text
+finite + positive geometry accepted
++ NaN/Inf geometry rejected before runtime append
++ no valid asset changes
++ three mandatory CI gates green
++ documentation synchronized
+```
+
+## Estado atual
+
+`IMPLEMENTED — pending PR/CI validation`
