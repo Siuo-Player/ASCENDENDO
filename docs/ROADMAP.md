@@ -67,17 +67,21 @@ Durante o primeiro ciclo de CI foi encontrado e corrigido o include concreto aus
 - mudança da interação do editor;
 - nova abstração genérica de transformação.
 
-## Estado da auditoria arquitetural pós-#136
+## GameState ownership boundary
 
-Foi encontrado um novo coupling concreto: `Game/Core/GameStateMachine.h` dependia de `Graphics/GameState.h`, embora `GameState` seja apenas um enum de estado de runtime sem dados de rendering. O finding foi formalizado no **Issue #137**.
+**Issue:** #137  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_CORE_GAMESTATE_BOUNDARY_2026-08-28.md`  
+**Implementation:** PR #137  
+**Merge:** `b9f0d0021bef341327bfde1cdd02d2be8171e0ba`  
+**Estado:** **COMPLETED**
 
-### Próximo work package
+### Descoberta
 
-**Issue:** #137 — `refactor: move GameState definition out of Graphics`
+`Game/Core/GameStateMachine.h` dependia de `Graphics/GameState.h`, embora `GameState` seja apenas um enum de estado de runtime. Isso colocava um contrato de Core sob ownership de Graphics sem necessidade.
 
-**Decisão:** canonicalizar o enum em `Game/Core/GameState.h`, fazer `Graphics/GameState.h` apenas reexportar um alias compatível `gfx::GameState`, e migrar `GameStateMachine` para o tipo `core::GameState`.
+### Decisão
 
-**Objetivo arquitetural:**
+A definição canónica passou para `Game/Core/GameState.h`. `Game/Graphics/GameState.h` ficou como alias explícito de compatibilidade (`gfx::GameState = core::GameState`), enquanto `GameStateMachine`, `GameSession`, `main.cpp` e os testes passaram a usar diretamente `core::GameState`.
 
 ```text
 Core state contract
@@ -87,15 +91,36 @@ GameSession / state machine
 Presentation
 ```
 
-em vez de:
+Os estados e as transições não foram alterados.
+
+### Evidência
+
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size e campaign validation: **success**;
+- `static_assert` confirma a identidade de tipo entre `gfx::GameState` e `core::GameState`;
+- issue #137 fechado como completed após integração.
+
+## Próximo alvo — revisão final de ownership/arquitetura
+
+Os dois findings concretos desta tranche foram resolvidos:
 
 ```text
-Core / Logic
-        ↓
-Graphics-owned state contract
+EditorInteraction → Camera dependency       DONE (#136)
+GameStateMachine → Graphics/GameState       DONE (#137)
 ```
 
-A mudança não altera os estados nem o comportamento de transição e não introduz uma abstração genérica de state machine.
+A próxima etapa não deve ser mais uma movimentação de tipos por estética. Deve ser uma revisão global de ownership, especialmente em `main.cpp`, `GameSession`, RuntimeBootstrap e Presentation, procurando responsabilidades duplicadas ou fronteiras que possam ser testadas isoladamente.
+
+Só abrir nova tranche quando existir:
+
+1. finding concreto;
+2. contrato mínimo claro;
+3. mudança semântica explicitamente preservada;
+4. evidência executável que possa validar a decisão.
+
+Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
 
 ## Fase 10
 
