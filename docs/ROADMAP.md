@@ -178,20 +178,21 @@ Graphics/PresentationConfig
 
 ## Fase 10 — Semantic LevelData validation
 
-### Semantic geometry invariants — em implementação
+### Semantic geometry invariants — concluído
 
 **Issue:** #142  
 **WP:** `docs/05-work-packages/WORK_PACKAGE_LEVELDATA_SEMANTIC_VALIDATION_2026-08-28.md`  
 **Implementation:** `refactor/leveldata-semantic-validation-20260828`  
-**Estado:** **IN IMPLEMENTATION**
+**Merge:** `2ef4c1b4c25bbfe862ad8c05edad8f8438741835`  
+**Estado:** **COMPLETED**
 
 ### Descoberta
 
-`LevelDataIO` já rejeita sintaxe desconhecida, tokens inválidos, truncamento e trailing tokens, mas ainda aceitava `PLATFORM`/`FLAG` com largura ou altura `<= 0`. Isto produz geometria degenerada/invertida antes de chegar ao modelo `Level`.
+`LevelDataIO` era estrito quanto à sintaxe, mas aceitava `PLATFORM`/`FLAG` com largura ou altura `<= 0`. Isso permitia geometria degenerada/invertida chegar ao modelo `Level`.
 
 ### Decisão
 
-Manter parse e semântica separados:
+Foi criada uma boundary semântica independente do parser:
 
 ```text
 LevelDataIO
@@ -204,15 +205,33 @@ CampaignRuntime
   append/use
 ```
 
-A primeira regra semanticamente exigida é extensão estritamente positiva para plataformas e flag. Bounds policy, schema versioning e migration ficam fora desta tranche.
+A primeira regra é deliberadamente mínima: plataformas e flags devem ter largura e altura estritamente positivas.
 
-### Critério
+### Evidência
 
-Nenhum documento semanticamente inválido deve ser acrescentado ao `Level`; uma entrada inválida não deve avançar `currentLevelIndex`, `m_spawnY` nem a geometria acumulada.
+- `LevelDataValidator` valida `width > 0` e `height > 0` para plataformas e flag;
+- `CampaignRuntime` valida imediatamente após o parse e antes de `appendFromData()`;
+- testes verificam rejeição de geometria zero/negativa;
+- testes verificam que um chunk inválido não avança índice, spawn ou geometria acumulada;
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size e campaign validation: **success**;
+- issue #142 fechado como completed após integração.
 
-## Próximo alvo — revisão final de ownership/arquitetura
+### Fora de escopo
 
-Após o #142, a Fase 10 só avança para invariantes adicionais quando houver requisito/evidência concreta. Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
+- schema/versionamento;
+- migration;
+- política geral de bounds;
+- redesign de `Level`;
+- física/colisão.
+
+## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
+
+Após o #142, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+
+Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
 
 A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável.
 
