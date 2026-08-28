@@ -2,29 +2,17 @@
 
 **Bloco do roadmap:** `Post-Gate 9.6 architecture / ownership boundaries`
 
-**Work Package:** `Core-owned GameState contract`
+**Work Package concluído:** `Core-owned GameState contract`
 
 **Issue:** `#137`
 
 **Branch de implementação:** `refactor/core-gamestate-boundary-20260828`
 
-## Contexto
+## Resultado
 
-A auditoria pós-PR #136 encontrou uma dependência estrutural concreta: `Game/Core/GameStateMachine.h` incluía `Graphics/GameState.h` e expunha `gfx::GameState` como contrato da máquina de estados.
+O finding foi resolvido no PR #137. A definição canónica de `GameState` passou para `Game/Core/GameState.h`; `Game/Graphics/GameState.h` permanece apenas como alias compatível `gfx::GameState = core::GameState`, e os consumidores internos foram migrados para `core::GameState`.
 
-`GameState` é apenas um enum de estado de runtime. Não contém dados de rendering nem exige ownership de Graphics.
-
-## Decisão
-
-Mover a definição canónica para `Game/Core/GameState.h`.
-
-`Game/Graphics/GameState.h` continua disponível como alias explícito:
-
-```cpp
-using GameState = core::GameState;
-```
-
-Isto preserva consumidores existentes enquanto inverte a dependência estrutural para:
+A direção resultante é:
 
 ```text
 Core state contract
@@ -34,50 +22,25 @@ GameSession / state machine
 Presentation
 ```
 
-## Escopo
-
-- adicionar `Core/GameState.h`;
-- migrar `GameStateMachine.h/.cpp` para `core::GameState`;
-- manter `gfx::GameState` como alias compatível;
-- adicionar characterization compile-time;
-- atualizar arquitetura, roadmap e dívida técnica;
-- validar todos os workflows obrigatórios.
-
-## Fora de escopo
-
-- alterar os cinco estados existentes;
-- alterar transições;
-- alterar rendering/Vulkan;
-- criar abstrações genéricas;
-- redesenhar `main.cpp`.
-
 ## Validação
 
-```text
-Core header ownership
-→ type-identity compatibility
-→ state-machine characterization
-→ Linux normal
-→ ASan/UBSan
-→ Windows
-→ source-size/campaign validation
-```
+- Linux / Clang / C++20 / Headless Vulkan: **success**
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**
+- Windows / Clang / C++20: **success**
+- source-size: **success**
+- campaign validation: **success**
 
-## Critério de saída
-
-```text
-Game/Core/GameStateMachine sem include de Graphics/GameState
-+ definição canónica em Core
-+ gfx::GameState type-identical
-+ comportamento preservado
-+ CI obrigatório verde
-+ documentação sincronizada
-```
-
-## Estado atual
-
-`IMPLEMENTED — pending PR/CI validation`
+**Merge:** `b9f0d0021bef341327bfde1cdd02d2be8171e0ba`
 
 ## Próxima decisão
 
-Depois do #137, voltar à revisão final de ownership/arquitetura. Só abrir nova tranche de desacoplamento quando houver um finding concreto e um contrato mínimo comprovável.
+Voltar à revisão final de ownership/arquitetura. Só abrir nova tranche quando existir um finding concreto com coupling observável e um contrato mínimo verificável. A próxima auditoria deve começar por `main.cpp`, `GameSession` e composição/startup, mas não deve presumir que uma extração de `Application` seja necessária.
+
+```text
+investigar
+→ documentar
+→ confirmar finding
+→ implementar menor mudança suficiente
+→ validar
+→ reconciliar documentação
+```
