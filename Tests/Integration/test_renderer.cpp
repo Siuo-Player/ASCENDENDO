@@ -12,7 +12,10 @@
 #include "../../Game/Graphics/Pipeline.h"
 #include "../../Game/Graphics/RendererFacade.h"
 #include "../../Game/Graphics/Camera.h"
+#include "../../Game/Graphics/GameState.h"
+#include "../../Game/Graphics/RenderSnapshotBuilder.h"
 #include "../../Game/Logic/Player.h"
+#include "../../Game/Logic/Level.h"
 #include "../../Game/Logic/Physics.h"
 #include "../../Game/Core/Config.h"
 #include <vector>
@@ -22,7 +25,7 @@ using namespace logic;
 
 TEST_SUITE("Renderer") {
 
-    TEST_CASE("drawFrame: Fisica e Player injetados (Cair no chao)") {
+    TEST_CASE("drawFrame: snapshot permanece válido durante a simulacao") {
         Window        win;
         VulkanContext ctx;
         Swapchain     swapchain;
@@ -45,6 +48,7 @@ TEST_SUITE("Renderer") {
         REQUIRE(renderer.init(&ctx, &swapchain, &renderPass, &pipeline));
 
         Player player;
+        Level level;
         PhysicsWorld world;
         Camera camera;
 
@@ -61,9 +65,9 @@ TEST_SUITE("Renderer") {
         for (int i = 0; i < FRAMES; ++i) {
             win.pollEvents();
             world.step(player.body, config::FIXED_STEP);
+            const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
 
-            if (renderer.drawFrame(player, camera, nullptr,
-                                   GameState::PLAYING, 0,
+            if (renderer.drawFrame(snapshot, camera, RenderState::PLAYING, 0,
                                    i * config::FIXED_STEP)) {
                 ++successFrames;
             } else {
