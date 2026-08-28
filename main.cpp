@@ -233,8 +233,10 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            const RenderSnapshot renderSnapshot =
-                buildRenderSnapshot(session.player(), session.level());
+            RenderSnapshot renderSnapshot;
+            if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
+                renderSnapshot = buildRenderSnapshot(session.player(), session.level());
+            }
 
             if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),
                                     session.menuSelection(), session.elapsedTime())) {
