@@ -5,131 +5,87 @@
 **Roadmap:** 9.6 — Evidência transversal  
 **Subsistema:** Runtime  
 **Work Package:** 9.6 — Replay tick evidence  
-**Branch:** `fix/9-6-replay-tick-evidence-20260827`  
+**Branch:** `fix/9-6-replay-tick-evidence-20260827` (histórica)  
 **PR:** #90
 
 ## Objetivo
 
-Alinhar o subsistema `ReplayManager` com a unidade semântica `TickInput` introduzida no PR #88 e produzir evidência reproduzível de determinismo por tick, sem criar uma nova abstração `Replay` e sem iniciar a migração geral de `RenderSnapshot`.
-
-O resultado observável esperado é:
-
-```text
-mesmo estado inicial
-+ mesma sequência de TickInput por tick
-→ mesmo estado de simulação por tick
-```
+Alinhar `ReplayManager` com `TickInput` e demonstrar que a mesma sequência semântica de comandos, partindo do mesmo estado, reproduz o mesmo estado de simulação por tick.
 
 ## Escopo
 
 ### Inclui
 
-- substituir a representação de replay que depende diretamente de `InputManager` por uma sequência explícita de `TickInput`;
-- manter save-state/rewind existentes sem ampliar o modelo de ownership;
-- permitir playback consumindo `TickInput` diretamente;
-- criar testes que comparem estado por tick entre duas execuções da mesma sequência;
-- criar teste de agrupamento diferente quando a sequência semântica de `TickInput` for a mesma;
-- atualizar documentação de Gate 9.6 e dívida técnica para distinguir `TickInput` implementado de replay determinístico ainda não demonstrado.
+- replay baseado em `TickInput`;
+- comparação de estado tick-by-tick;
+- invariância da mesma sequência semântica sob agrupamento externo diferente;
+- failure paths do replay em memória.
 
 ### Não inclui
 
-- formato persistente novo para replay;
-- gravação em ficheiro ou interoperabilidade de replay;
-- nova classe `Replay`/`ReplaySystem`;
-- RenderSnapshot geral;
-- mudança da física além do necessário para tornar o teste observável;
-- alteração da política de LevelData/schema da Fase 10;
-- alegação de que o input live amostrado por frames é independente da taxa de frames quando edge events são envolvidos.
+- persistência de replay;
+- live-input frame-rate independence;
+- replay completo de terminal/result de `GameSession`;
+- migração geral de `RenderSnapshot`.
 
 ## Dependências
 
 ### Depende de
 
 - PR #88 / contrato `TickInput`;
-- `SimulationOrchestrator` fixed-step atual;
-- estado atual de `ReplayManager` e seus testes;
-- `PROJECT-STUDIES/ASCENDENDO/RESEARCH_INBOX/2026-08-27-deterministic-input-replay-evidence-matrix.md`.
+- `SimulationOrchestrator` fixed-step;
+- `ReplayManager` e testes unitários.
 
 ### Produz para
 
-- Gate 9.6 — evidência de determinismo/replay;
-- futura persistência de replay, caso venha a ser aprovada;
-- eventual RenderSnapshot, que exige gameplay deterministicamente reproduzível.
+- Gate 9.6 — evidência de determinismo/replay.
 
 ### Consumidores afetados
 
 - `ReplayManager`;
 - `Tests/Unit/test_replay.cpp`;
-- callers de playback/recording existentes, caso surjam;
-- documentação do Gate 9.6.
+- documentação do Gate.
 
 ### Dependências de validação
 
-- Linux normal + headless Vulkan;
+- Linux normal/headless Vulkan;
 - Linux ASan/UBSan;
 - Windows CI;
-- testes determinísticos sem dependência de GLFW real.
+- execução sem dependência de GLFW real.
 
 ## Decisões arquiteturais
 
 ```text
 Problema/contexto:
-ReplayManager gravava FrameInput diretamente do InputManager, apesar de o gameplay já consumir TickInput.
+A representação anterior ligava replay a FrameInput/InputManager.
 
 Decisão:
-O replay armazena e reproduz a unidade semântica TickInput. A fonte do replay não consulta teclas físicas nem depende do agrupamento dos ticks em frames.
+O replay armazena e reproduz TickInput. Edge events são dados explícitos do tick.
 
 Alternativas consideradas:
-- manter FrameInput: rejeitada, porque preserva a ambiguidade frame/tick;
-- introduzir ReplaySystem novo: rejeitada por ausência de responsabilidade adicional demonstrada;
-- persistir imediatamente em ficheiro: adiada, porque persistence é uma propriedade distinta (D7).
+- manter FrameInput: rejeitada;
+- criar ReplaySystem novo: rejeitada;
+- persistir imediatamente: adiada para a propriedade D7.
 
-Consequências:
-- replay passa a ter semântica compatível com o tempo da simulação;
-- testes podem comparar estados por tick sem GLFW;
-- persistence continua independente;
-- frame grouping pode ser testado apenas depois de a entrada estar reduzida à sequência semântica de ticks.
-
-Condição de revisão/remoção:
-Rever se o modelo de `TickInput` mudar ou se uma futura persistência exigir uma representação serializável diferente.
+Condição de revisão:
+Rever se TickInput mudar ou a futura persistência exigir outra representação.
 ```
-
-## Riscos
-
-| Risco | Probabilidade | Impacto | Mitigação | Estado |
-|---|---|---|---|---|
-| replay antigo assume frame grouping | média | alto | migrar consumidor para `TickInput` | mitigado |
-| estados comparados só por posição mascaram divergência | média | alto | snapshotar campos persistentes relevantes | mitigado |
-| frame grouping ser confundido com live-input frame-rate independence | média | alto | documentar explicitamente a fronteira da propriedade | mitigado |
-| persistence ser inferida do replay em memória | média | médio | manter D7 separado | mitigado |
 
 ## Validação
 
 ### Testes automatizados
 
-- replay da mesma sequência em uma segunda execução produz estado idêntico após cada tick;
-- edge events são mantidos como dados explícitos do tick;
-- a mesma sequência semântica de ticks produz o mesmo estado independentemente do agrupamento externo dos calls;
-- sequência vazia não produz ticks;
+- mesma sequência reproduz estado após cada tick;
+- `jumpPressed`/`jumpReleased` são preservados;
+- a mesma sequência semântica agrupada de forma diferente produz o mesmo estado;
+- replay vazio não produz ticks;
 - playback além do fim é rejeitado sem mutar estado.
-
-### Validação manual
-
-- `Player` não consulta `InputManager` nem teclas físicas;
-- playback não consulta input físico;
-- `ReplayManager` não cria uma nova camada de runtime.
-
-### Profiling / métricas
-
-- nenhuma otimização é objetivo deste WP;
-- custo adicional limita-se ao armazenamento de `TickInput` em memória e só será registado se relevante.
 
 ### Failure paths
 
 - sequência vazia;
-- playback além do fim;
-- replay limpo/reiniciado sem deixar eventos ou índices antigos;
-- persistence continua não validada por este WP.
+- fim do playback;
+- limpeza/reset do replay.
 
 ## Definition of Ready
 
@@ -143,42 +99,33 @@ Rever se o modelo de `TickInput` mudar ou se uma futura persistência exigir uma
 ## Definition of Done
 
 - [x] implementação concluída dentro do escopo;
-- [ ] testes relevantes passam no head final;
-- [ ] failure paths relevantes foram exercitados;
-- [ ] documentação normativa foi atualizada;
-- [x] dependências alteradas foram revistas;
-- [x] dívida técnica criada foi classificada;
-- [ ] critério de saída foi demonstrado no head final;
-- [ ] PR pronta para merge sem trabalho essencial oculto.
+- [x] testes relevantes integrados na `main`;
+- [x] failure paths em memória cobertos;
+- [x] documentação sincronizada com a implementação atual;
+- [x] dependências revistas;
+- [x] dívida residual classificada;
+- [x] critério de saída do WP demonstrado.
 
 ## Alterações durante a execução
 
-```text
-Descoberta:
-ReplayManager usava FrameInput + InputManager diretamente.
+Em 2026-08-28 a matriz de Studies de 2026-08-27 foi revalidada contra `main` após #88, #90 e #94. O estado original dos Studies era anterior a estas integrações e, por isso, D2/D3/D5 já não devem ser classificados como não demonstrados.
 
-Impacto:
-A semântica tick-scoped de #88 não chegava ao replay existente.
+O teste de agrupamento prova apenas uma sequência **já reduzida a TickInput**. Não prova que a captura de input live através de frames GLFW seja independente da taxa de frames.
 
-Decisão tomada:
-Tratar replay determinístico como trabalho próprio do Gate 9.6, separado de persistence.
-
-Nova descoberta:
-Um teste com dois ticks agrupados só prova invariância da mesma sequência semântica de TickInput; não prova que edge events do input live sejam independentes da taxa de frames.
-
-Documentos atualizados:
-Este WP e a evidência do Gate 9.6 devem refletir essa fronteira.
-```
+Também não existe neste WP replay do resultado terminal completo de `GameSession` nem persistence.
 
 ## Evidência / referências
 
+- `docs/AUDITS/2026-08-28-replay-evidence-reconciliation.md`;
+- `Game/Logic/ReplayManager.cpp`;
+- `Tests/Unit/test_replay.cpp`;
 - `PROJECT-STUDIES/ASCENDENDO/RESEARCH_INBOX/2026-08-27-deterministic-input-replay-evidence-matrix.md`;
 - `PROJECT-STUDIES/ASCENDENDO/RESEARCH_INBOX/2026-08-27-deterministic-replay-input-contract-study.md`;
-- `Game/Logic/ReplayManager.*` no `main` antes deste WP;
-- PR #88 — `TickInput`.
+- PR #88;
+- PR #90.
 
 ## Fecho
 
-**Resultado:** `em execução`  
-**Critério de saída:** evidência por tick + agrupamento semântico + environment/artifact record  
-**Dívida residual:** persistence D7, completion/failure replay e live-input frame-rate independence permanecem separadas
+**Resultado:** `concluído — evidência de replay tick-semantic integrada`  
+**Critério de saída:** reprodução tick-by-tick e invariância da mesma sequência semântica sob agrupamento externo diferente  
+**Dívida residual:** terminal/result replay, persistence e live-input frame-rate independence permanecem propriedades separadas

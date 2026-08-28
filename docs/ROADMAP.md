@@ -14,24 +14,31 @@ O Gate permanece **OPEN**.
 - PR #87 — `VulkanContext::reconfigureForSurface()` com contrato terminal e estado invalidado após falha.
 - PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
 - PR #88 — `TickInput` como unidade semântica de input da simulação.
-- PR #90 — `ReplayManager` alinhado a `TickInput` para sequência explícita de ticks.
-- PR #92 — malformed syntax da gramática atual coberta por testes; PR #91 foi superseded e não contém a evidência integrada.
+- PR #90 — `ReplayManager` alinhado a `TickInput`.
+- PR #92 — malformed syntax da gramática atual coberta por testes; PR #91 foi superseded.
+- PR #94 — failure-path evidence específica para `vkDeviceWaitIdle()` em `RendererCore`.
+
+### Estado reconciliado de replay
+
+O teste atual demonstra replay tick-semantic e comparação de estado por tick, incluindo invariância da mesma sequência `TickInput` sob agrupamento externo diferente. Isto **não** demonstra live-input frame-rate independence, terminal/result replay completo de `GameSession` ou persistence.
 
 ### Gaps ainda bloqueadores
 
-1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional, incluindo failure-path evidence específica para `vkDeviceWaitIdle()`.
-2. Deterministic simulation/replay além da representação TickInput; live input sampling e persistence permanecem separadas.
-3. Paths/runtime-root independence.
-4. Level world/chunk metadata contract.
-5. Collision-order determinism.
+1. Vulkan lower-level failure/error evidence e queue/capability evidence adicional além dos caminhos agora demonstrados.
+2. Runtime-root independence.
+3. Level world/chunk metadata contract.
+4. Collision-order determinism.
+5. Semantic Level validation/schema/versioning (Fase 10).
 6. Architecture/ownership final review.
+7. Propriedades de replay separadas que não pertencem ao WP atual: terminal/result replay, persistence e live-input frame-rate independence.
 
 ### Ordem de execução
 
 ```text
-Vulkan/error evidence
-→ determinism/replay review
+Vulkan/error evidence residual
+→ replay review residual
 → paths/runtime roots
+→ collision-order determinism
 → semantic Level validation (Fase 10)
 → architecture/ownership review
 → Gate decision
