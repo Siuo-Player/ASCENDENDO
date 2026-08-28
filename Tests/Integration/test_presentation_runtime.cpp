@@ -7,7 +7,6 @@
 #include "../../Game/Graphics/VulkanContext.h"
 #include "../../Game/Graphics/Window.h"
 #include "../../Game/Graphics/Camera.h"
-#include "../../Game/Graphics/GameState.h"
 #include "../../Game/Graphics/RenderSnapshotBuilder.h"
 #include "../../Game/Logic/Player.h"
 #include "../../Game/Logic/Level.h"
