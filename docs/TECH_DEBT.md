@@ -30,7 +30,7 @@ O fecho formal segue a integração da revisão final do Gate (PR #118) e a conf
 - PR #114 — characterization tests desse contrato.
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
-- PR #117 — reconciliação do roadmap/technical debt com os Studies e a `main` real.
+- PR #117 — reconciliação canónica do roadmap/tech debt com os Studies e a `main` real.
 - PR #118 — revisão final do Gate.
 - PR #119 — fecho formal do Gate 9.6.
 
@@ -50,7 +50,7 @@ Não provado e explicitamente não necessário para este Gate:
 
 ## RenderSnapshot — primeira tranche concluída
 
-A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129.
+A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129 e completada com a remoção do acoplamento `RendererFacade → EditorSession` no PR #132.
 
 ### Contrato atual
 
@@ -61,7 +61,7 @@ RenderSnapshot
 └── flag { visible, x, y, width, height }
 ```
 
-O snapshot reutiliza o contrato já existente em `Game/Graphics/RenderSnapshot.h` e permanece um value object de presentation, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
+O snapshot reutiliza o contrato existente em `Game/Graphics/RenderSnapshot.h` e permanece um value object de presentation, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
 
 ### Fronteira implementada
 
@@ -75,25 +75,78 @@ RenderSnapshotBuilder
 RendererFacade / WorldRenderer
 ```
 
-`WorldRenderer` e o world path de `RendererFacade` já não recebem diretamente `Player`/`Level`.
+Para o editor:
 
-A `Camera` permanece separada da snapshot por ser estado de presentation e transformação world→NDC.
+```text
+EditorSession
+      ↓
+EditorRenderSnapshot
+      ↓
+RendererFacade / EditorRenderer
+```
+
+`RendererFacade` não mantém nem consulta `EditorSession` mutável durante `drawFrame()`.
 
 ### Regra de custo
 
-O snapshot é construído apenas em `PLAYING`/`PAUSED`. Em outros estados o world pass não é consumido, pelo que não se copia a geometria do nível desnecessariamente.
+O world snapshot é construído apenas em `PLAYING`/`PAUSED`. O editor fornece o seu snapshot apenas em `EDITOR`.
 
 ### Validação
 
-O PR #129 foi integrado após os workflows obrigatórios passarem. Os testes cobrem composição do snapshot, geometria de plataformas/flag, direção visual e independência perante alterações posteriores no runtime.
+- PR #129 integrado com workflows obrigatórios verdes;
+- PR #132 integrado com `Tests`, `Sanitizers` e `Windows` verdes;
+- testes caracterizam cópia independente e API da facade sem `EditorSession`.
 
 ### Estado
 
-`DONE — first world/player presentation boundary`
+`DONE — world/player + editor presentation boundaries`
 
-### Próxima análise
+## Shared Vulkan image upload — próxima tranche
 
-Os restantes presentation consumers devem ser avaliados separadamente. `UiRenderer`, editor e outros passes só devem receber snapshots próprios se a análise dos dados realmente consumidos justificar a fronteira.
+A investigação dos consumidores de GPU encontrou duplicação concreta entre `FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` na sequência de staging/upload e criação de recursos de imagem Vulkan. O ficheiro não precisa atingir 48 KiB para justificar a revisão: a dívida aqui é duplicação de responsabilidade e de failure cleanup.
+
+### Decisão
+
+Escolhida a opção B do Issue #23: **primitive estreito de upload/creation de imagem Vulkan**.
+
+O primitive deverá:
+
+- criar e inicializar `VkImage`, memória, `VkImageView` e `VkSampler`;
+- gerir staging e one-time commands;
+- aplicar as transitions necessárias;
+- devolver os handles ao consumidor;
+- limpar temporários e recursos parcialmente criados em failure paths;
+- receber formato e filtro explicitamente.
+
+Descriptor pools/sets continuam nos consumidores. Não será criado `TextureManager`, cache global ou asset manager como efeito colateral desta tranche.
+
+### Ownership
+
+```text
+shared primitive
+    ↓ creates
+returned resource handles
+    ↓ owned by
+FontRendererGpu / SpriteRendererGpu
+```
+
+O primitive não mantém estado persistente nem ownership oculto depois da operação.
+
+### Validação planeada
+
+- baseline dos dois consumidores;
+- testes de preconditions/failure cleanup;
+- build de game;
+- testes existentes de rendering;
+- Linux headless Vulkan;
+- ASan/UBSan;
+- Windows/Clang;
+- source-size;
+- atualização final da arquitetura e WPs.
+
+### Condição de revisão
+
+Se a API começar a acumular políticas específicas de outros tipos de recurso, parar e rever a abstração antes de adicionar parâmetros genéricos.
 
 ## Outras dívidas explicitamente adiadas
 
@@ -101,7 +154,7 @@ Os restantes presentation consumers devem ser avaliados separadamente. `UiRender
 - replay persistence;
 - live-input frame-rate independence;
 - terminal/result replay;
-- restantes presentation paths, caso uma análise específica mostre necessidade de snapshots adicionais.
+- future presentation snapshots apenas quando houver benefício verificável.
 
 ## Regras preservadas
 
@@ -115,13 +168,15 @@ Os restantes presentation consumers devem ser avaliados separadamente. `UiRender
 8. `ReplayManager` usa `TickInput`.
 9. CI failure causes exigem evidência observável.
 10. Implementation semantics e executable evidence continuam estados distintos.
-11. Presentation deve receber dados necessários para rendering, não o modelo mutável de gameplay, quando a fronteira snapshot estiver disponível.
+11. Presentation recebe dados necessários para rendering, não o modelo mutável de gameplay/editor.
 
 ## Próximo passo
 
 ```text
-PR #129 integrado
-→ inventariar restantes presentation consumers
-→ decidir snapshots específicos por consumer
-→ só então implementar nova tranche
+Issue #23 decision B
+→ implement shared Vulkan image upload primitive
+→ migrate FontRendererGpu
+→ migrate SpriteRendererGpu
+→ validate
+→ update debt/architecture/WP
 ```
