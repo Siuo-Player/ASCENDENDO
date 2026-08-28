@@ -6,7 +6,7 @@
 **Subsistema:** Runtime / Physics  
 **Work Package:** 9.6 — Collision-order determinism  
 **Branch:** `test/9-6-collision-order-permutation-20260828-v2`  
-**PR:** pending
+**PR:** `#100`
 
 ## Objetivo
 
@@ -41,7 +41,7 @@ Determinar por evidência se `Level::resolveCollision()` produz o mesmo estado l
 ### Produz para
 
 - Gate 9.6 — decisão sobre determinismo de contactos;
-- eventual WP de correção, apenas se a experiência demonstrar ordem-dependência.
+- eventual WP de correção, apenas se uma investigação futura demonstrar divergência adicional relevante.
 
 ### Consumidores afetados
 
@@ -69,8 +69,12 @@ Alternativas consideradas:
 - introduzir imediatamente um solver de contactos novo: rejeitada por scope excessivo sem contraexemplo;
 - teste de permutação: escolhida como intervenção mínima.
 
-Condição de revisão:
-Se existir divergência observável, desenhar primeiro o contrato de resolução antes de alterar o algoritmo.
+Resultado:
+O cenário exercitado não apresentou divergência observável entre A→B e B→A.
+A conclusão permanece limitada ao cenário testado; não é assumida permutation invariance universal.
+
+Condição de reabertura:
+Um requisito mais forte ou um counterexample reproduzível em configuração adicional justifica novo WP antes de alterar o solver.
 ```
 
 ## Riscos
@@ -79,7 +83,7 @@ Se existir divergência observável, desenhar primeiro o contrato de resolução
 |---|---|---|---|---|
 | caso testado não representar todos os contactos reais | média | alto | limitar a conclusão ao domínio exercitado | aberto |
 | resultado positivo ser confundido com prova universal | média | alto | conclusão explicitamente limitada | mitigado |
-| investigação evoluir para rewrite sem finding | média | alto | nenhum código de produção antes de contraexemplo/decisão | mitigado |
+| investigação evoluir para rewrite sem finding | baixa | alto | nenhum código de produção foi alterado | mitigado |
 
 ## Validação
 
@@ -88,11 +92,17 @@ Se existir divergência observável, desenhar primeiro o contrato de resolução
 - executar duas ordens para o mesmo conjunto de plataformas;
 - comparar posição, velocidade e grounded.
 
-### Failure paths
+### Resultado observado
 
-- contacto sem colisão;
-- dois contactos sobrepostos;
-- múltiplas mutações na mesma etapa.
+- Linux / Clang / C++20 / Headless Vulkan: `success`;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: `success`;
+- Windows / Clang / C++20: `success`;
+- Linux: 229/229 test cases e 1311/1311 assertions;
+- Windows: evidence artifact produzido.
+
+### Interpretação
+
+Não foi observada divergência no conjunto de contactos exercitado. Isso demonstra apenas a invariância observada para esse caso, não uma propriedade universal sobre toda a gama de contactos possíveis.
 
 ## Definition of Ready
 
@@ -105,28 +115,31 @@ Se existir divergência observável, desenhar primeiro o contrato de resolução
 
 ## Definition of Done
 
-- [ ] teste de permutação integrado;
-- [ ] resultado observado documentado;
-- [ ] correção implementada apenas se necessária;
-- [ ] testes/CI relevantes passam;
-- [ ] Gate matrix atualizada;
-- [ ] dívida residual classificada.
+- [x] teste de permutação integrado;
+- [x] resultado observado documentado em `docs/AUDITS/2026-08-28-collision-order-result.md`;
+- [x] correção de produção não necessária para o caso exercitado;
+- [x] testes/CI relevantes passaram;
+- [x] roadmap/gate matrix reconciliados;
+- [x] dívida residual classificada como alegação global ainda não demonstrada.
 
 ## Alterações durante a execução
 
-A branch é deliberadamente baseada na `main` atual (`5edab5b...`). A PR anterior #97 foi fechada por stale baseline; este WP evita carregar a história de branch antiga.
+A branch foi reconstruída sobre a `main` atual para evitar a baseline stale de #97. O resultado positivo não alterou a implementação de produção.
 
 ## Evidência / referências
 
-- `docs/AUDITS/2026-08-28-collision-order-investigation.md` (estudo original);
+- PR #100;
+- PR #101;
+- `docs/AUDITS/2026-08-28-collision-order-revalidation.md`;
+- `docs/AUDITS/2026-08-28-collision-order-result.md`;
 - `Game/Logic/Level.cpp`;
 - `Tests/Unit/test_level_collision.cpp`;
 - `docs/ROADMAP.md`;
-- `docs/TECH_DEBT.md`;
-- `PROJECT-STUDIES/ASCENDENDO/RESEARCH_INBOX/2026-08-27-next-9-6-runtime-bootstrap-gate.md`.
+- `docs/TECH_DEBT.md`.
 
 ## Fecho
 
-**Resultado:** `em investigação`  
-**Critério de saída:** resultado reproduzível de uma propriedade de permutação ou contraexemplo concreto  
-**Dívida residual:** sem alteração de produção antes da decisão baseada em evidência
+**Resultado:** `validado — cenário específico`  
+**Propriedade universal:** `não demonstrada`  
+**Produção:** sem alteração  
+**Próxima decisão:** seguir para a evidência residual de Vulkan/error-path, salvo novo requisito ou counterexample de collision-order.
