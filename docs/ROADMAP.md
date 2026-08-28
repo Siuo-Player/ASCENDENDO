@@ -219,17 +219,38 @@ A primeira regra é deliberadamente mínima: plataformas e flags devem ter largu
 - source-size e campaign validation: **success**;
 - issue #142 fechado como completed após integração.
 
+### Semantic finite-geometry extension — concluído
+
+**Issue:** #144  
+**Implementation:** PR #145  
+**Merge:** `34c96b83573add90bd1f3d238f62d8f37ba3c9a9`  
+**Estado:** **COMPLETED**
+
+A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`FLAG`, além das extensões não-positivas já validadas pela tranche #143.
+
+### Evidência
+
+- `LevelDataValidator` exige `std::isfinite(min/max x/y)`;
+- a validação continua separada do parser sintático;
+- testes cobrem `NaN`, `+Inf` e `-Inf`;
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size e campaign validation: **success**.
+
 ### Fora de escopo
 
 - schema/versionamento;
 - migration;
 - política geral de bounds;
 - redesign de `Level`;
-- física/colisão.
+- física/colisão;
+
+A extensão finita não altera estes limites de escopo.
 
 ## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
 
-Após o #142, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+Após #145, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
 
 Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
 

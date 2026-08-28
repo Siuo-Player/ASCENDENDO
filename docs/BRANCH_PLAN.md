@@ -41,11 +41,11 @@ min.x, min.y, max.x, max.y são finitos
 ## Validação
 
 ```text
-validator unit tests
-→ Linux normal/headless Vulkan
-→ ASan/UBSan
-→ Windows
-→ source-size/campaign validation
+validator unit tests                  success
+Linux normal/headless Vulkan          success
+ASan/UBSan                            success
+Windows                               success
+source-size/campaign validation       success
 ```
 
 ## Critério de saída
@@ -60,4 +60,4 @@ finite + positive geometry accepted
 
 ## Estado atual
 
-`IMPLEMENTED — pending PR/CI validation`
+`COMPLETED — PR #145 merged as 34c96b83573add90bd1f3d238f62d8f37ba3c9a9`
