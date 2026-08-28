@@ -15,14 +15,12 @@ Classificar os restantes caminhos de erro Vulkan e decidir quais requerem evidê
 ## Escopo
 
 ### Inclui
-
 - inventário dos `VkResult` relevantes em `RendererCore` e `VulkanContext`;
 - distinção entre implementação fail-closed e evidência executável;
 - identificação do próximo boundary de maior valor para evidência;
 - registo da decisão antes de qualquer alteração de produção.
 
 ### Não inclui
-
 - mock framework Vulkan;
 - substituição global de funções Vulkan;
 - redesign do renderer;
@@ -33,13 +31,11 @@ Classificar os restantes caminhos de erro Vulkan e decidir quais requerem evidê
 ## Dependências
 
 ### Depende de
-
 - PR #94 — `vkDeviceWaitIdle()` failure evidence;
 - current `RendererCore` / `VulkanContext` implementation;
 - `PROJECT-STUDIES/ASCENDENDO` current-state research.
 
 ### Produz para
-
 - eventual WP de `vkQueueSubmit` failure contract;
 - Gate 9.6 evidence matrix.
 
