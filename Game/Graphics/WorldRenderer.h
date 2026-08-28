@@ -6,7 +6,7 @@
 //  Não conhece GameState, menus, editor ou modelos de domínio.
 // =============================================================================
 
-#include "Core/RenderSnapshot.h"
+#include "Graphics/RenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 
@@ -22,7 +22,7 @@ public:
     void draw(VkCommandBuffer cmd,
               const Pipeline& shapePipeline,
               const ShapeRenderer& shapes,
-              const core::RenderSnapshot& snapshot,
+              const RenderSnapshot& snapshot,
               const Camera& camera,
               SpritePipeline* spritePipeline = nullptr,
               SpriteRenderer* sprite = nullptr) const;
