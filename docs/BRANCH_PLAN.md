@@ -1,97 +1,163 @@
 # Plano da branch atual
 
-**Bloco do roadmap:** `9.6 Base Engineering Gate`
+**Bloco do roadmap:** `9.6 Base Engineering Gate → D — modularity work packages`
 
-**Work Package:** `9.6 Main Loop / GameSession Boundary`
+**Work Package:** `D.0 — shared Vulkan image upload primitive`
 
-**Branch:** `refactor/9-6-game-session-boundary`
+**Issue:** `#23`
+
+**Branch:** `refactor/shared-vulkan-image-upload-20260828`
 
 ## Base confirmada
 
 `main` integra:
 
-- `GameStateMachine` como dono das transições de estado;
-- `SimulationOrchestrator` como dono da orquestração fixed-step;
-- `GraphicsRuntime` como dono do core gráfico e da sua ownership graph;
+- `GameSession` como fronteira de estado de sessão sem ownership Vulkan/presentation;
+- `GraphicsRuntime` como dono do stack gráfico;
 - `PresentationRuntime` como dono dos recursos de texto/sprite;
-- `RuntimePaths` para asset/user-data roots;
-- PR #70 com evidência Linux ASan/UBSan explícita.
+- `gfx::RenderSnapshot` para o world/player path;
+- `EditorRenderSnapshot` materializado na composição antes do rendering;
+- Gate 9.6 formalmente `CLOSED`;
+- PR #129 e PR #132 integrados com os três workflows obrigatórios verdes.
 
-## Descoberta desta tranche
+## Descoberta
 
-`main.cpp` ainda cria e coordena diretamente `Level`, `PhysicsWorld`, `SimulationOrchestrator`, `Player`, `CampaignRuntime` e `EditorSession`, além de aplicar a política de estados. Estes objetos têm um lifetime de sessão coerente e não dependem de ownership Vulkan para existir.
-
-A investigação também mostrou que `InputManager` já é uma fronteira de input com conhecimento de GLFW e que `Camera`/renderer pertencem à apresentação. Colocá-los dentro de uma nova `Application` nesta fase misturaria responsabilidades.
-
-## Decisão
-
-A primeira extração será `logic::GameSession`.
+`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` contêm duas implementações muito semelhantes do mesmo ciclo de vida Vulkan para imagens:
 
 ```text
-GameSession
-├── GameStateMachine
-├── CampaignRuntime
-├── Level
-├── PhysicsWorld
-├── SimulationOrchestrator
-├── Player
-└── EditorSession
+findMemoryType
+→ staging buffer / host-visible memory
+→ image allocation/binding
+→ one-time command buffer
+→ layout transition
+→ vkCmdCopyBufferToImage
+→ layout transition
+→ image view
+→ sampler
+→ descriptor resource setup
+→ cleanup
 ```
 
-`GameSession` não possui `Window`, `VulkanContext`, `Swapchain`, `RenderPass`, `Pipeline`, `RendererFacade`, `PresentationRuntime` ou `Camera`.
+A duplicação é real independentemente do limite físico de ficheiro. As diferenças observadas são propriedades específicas dos consumidores:
 
-A entry point mantém process/GLFW lifetime, bootstrap de caminhos, composição gráfica/apresentação, polling de janela e submissão de frame. Um `Application` nominal fica adiado até existir uma fronteira de bootstrap/lifecycle justificável por ownership real.
+- fonte: `VK_FORMAT_R8_UNORM` + filtro `LINEAR`;
+- sprite: `VK_FORMAT_R8G8B8A8_UNORM` + filtro `NEAREST`.
+
+## Decisão arquitetural
+
+Escolhida a opção **B — primitive estreito de upload/creation de imagem Vulkan**.
+
+### Alternativas
+
+**A — manter duplicação**
+
+Rejeitada: mantém duas implementações da mesma sequência de ownership/lifecycle e duplica futuras correções.
+
+**B — primitive estreito**
+
+Escolhida: remove a duplicação comprovada sem esconder as propriedades específicas de cada recurso.
+
+**C — `TextureManager` genérico**
+
+Rejeitada: introduziria cache, ownership e política de recursos não justificados pelos consumidores atuais.
+
+## Contrato pretendido
+
+```text
+FontRendererGpu ─┐
+                 ├→ shared Vulkan image upload primitive
+SpriteRendererGpu┘
+```
+
+O primitive:
+
+- cria a imagem, memória, image view e sampler;
+- executa staging/upload e as transitions comuns;
+- devolve os handles ao consumidor;
+- não mantém ownership persistente depois do retorno;
+- limpa integralmente recursos temporários em qualquer failure path;
+- recebe `format` e `filter` explicitamente;
+- mantém usage limitado ao caso atualmente comprovado (`TRANSFER_DST | SAMPLED`).
+
+Os descriptor pools/sets continuam nos consumidores, porque o binding/layout de descriptor pertence aos pipelines específicos de fonte e sprite.
+
+## Ownership
+
+```text
+shared primitive
+    cria
+    ↓
+resource handles
+    ↓
+consumer owns
+    ↓
+consumer cleanup / primitive destruction helper
+```
+
+Não existe `TextureManager`, cache global ou ownership escondido.
 
 ## Em escopo
 
-- implementar `GameSession` sem alterar regras de gameplay;
-- mover ownership e estado de sessão reais para a nova fronteira;
-- mover a política de transições associada a esses objetos;
-- preservar streaming, reset, completion, run history e editor return state;
-- adicionar testes da nova fronteira;
-- atualizar documentação após validação.
+- implementar o primitive estreito;
+- migrar `FontRendererGpu`;
+- migrar `SpriteRendererGpu` quando a mesma fronteira continuar tecnicamente limpa;
+- manter exatamente os formatos/filtros atuais;
+- testar argumentos inválidos e integrar com os testes Vulkan existentes;
+- documentar ownership/failure paths;
+- atualizar arquitetura/dívida/WP.
 
 ## Fora de escopo
 
-- `Application` monolítica;
-- RenderSnapshot geral;
-- input-system redesign;
-- graphics/Vulkan lifecycle redesign;
-- gameplay/physics tuning;
-- save/schema redesign;
-- performance optimization.
+- `TextureManager`;
+- asset manager;
+- cache de texturas;
+- alteração de sampler/filter semantics;
+- mudança de shaders/pipelines;
+- otimização de performance sem profiling;
+- alteração de gameplay/editor.
 
 ## Dependências
 
-```text
-GraphicsRuntime ──→ Window/Vulkan/RendererFacade
-PresentationRuntime ──→ presentation resources
-InputManager + KeyBindings ──→ GameSession update
-Camera ──→ presentation
-GameSession ──→ stateful gameplay/editor runtime
-```
+- `VulkanContext` atual;
+- `FontRendererGpu`;
+- `SpriteRendererGpu`;
+- `docs/CODE_SIZE.md`;
+- `docs/DEVELOPMENT_PROTOCOL.md`;
+- Issue #22 como consumidor posterior.
 
 ## Validação
 
-```text
-unit tests da GameSession
-→ make tests
-→ Linux/Clang/headless Vulkan
-→ campaign validation
-→ revisão da ownership graph
-```
+### Before
+
+- confirmar duplicação e diferenças entre os dois consumidores;
+- preservar formato, filter e lifecycle atuais;
+- validar baseline com os workflows existentes.
+
+### After
+
+- uma implementação comum do upload;
+- ownership sem ambiguidades;
+- descriptor setup permanece específico;
+- texto e sprite mantêm comportamento;
+- game build + tests + sanitizers + Windows verdes;
+- source-size sem alterações artificiais.
 
 ## Critério de saída
 
 ```text
-GameSession owns the agreed session state
-+ main.cpp no longer owns those session rules
-+ behavior preserved by tests
-+ CI green
-+ architecture/roadmap/WP synchronized
-+ no new Application/RenderSnapshot coupling
+primitive estreito e justificado
++ ownership explícito
++ FontRendererGpu migrado
++ SpriteRendererGpu migrado, se a fronteira se mantiver coesa
++ failure paths limpos
++ testes/build/CI verdes
++ docs sincronizados
 ```
 
-## Próxima decisão
+## Dívida / condição de revisão
 
-Depois desta tranche, reavaliar o que resta em `main.cpp`: bootstrap/configuration, frame-loop/presentation submission e qualquer dependência residual. Só então decidir se outra fronteira é necessária.
+Nenhuma dívida aceite por omissão. Se o primitive começar a acumular políticas específicas de novos tipos de recurso, a abstração deve ser revista antes de adicionar parâmetros genéricos.
+
+## Próximo dependente
+
+Após este WP, reconsiderar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` apenas com base nas responsabilidades que permanecerem após a remoção da infraestrutura Vulkan partilhada.
