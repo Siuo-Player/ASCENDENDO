@@ -7,7 +7,7 @@
 #include "Graphics/SpritePipeline.h"
 #include "Graphics/SpriteRenderer.h"
 #include "Graphics/Camera.h"
-#include "Core/Config.h"
+#include "Graphics/PresentationConfig.h"
 
 namespace gfx {
 
@@ -26,9 +26,9 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         platform.x, platform.y,
                         platform.width, platform.height,
-                        config::COLOR_PLATFORM_R,
-                        config::COLOR_PLATFORM_G,
-                        config::COLOR_PLATFORM_B,
+                        presentation::COLOR_PLATFORM_R,
+                        presentation::COLOR_PLATFORM_G,
+                        presentation::COLOR_PLATFORM_B,
                         1.0f, &camera);
     }
 
@@ -39,9 +39,9 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         midX - 2.0f, bounds.y,
                         4.0f, bounds.height,
-                        config::COLOR_FLAG_POLE_R,
-                        config::COLOR_FLAG_POLE_G,
-                        config::COLOR_FLAG_POLE_B,
+                        presentation::COLOR_FLAG_POLE_R,
+                        presentation::COLOR_FLAG_POLE_G,
+                        presentation::COLOR_FLAG_POLE_B,
                         1.0f, &camera);
 
         const float flagWidth = bounds.width * 0.45f;
@@ -49,9 +49,9 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         midX + 2.0f, bounds.y + bounds.height - flagHeight,
                         flagWidth, flagHeight,
-                        config::COLOR_FLAG_R,
-                        config::COLOR_FLAG_G,
-                        config::COLOR_FLAG_B,
+                        presentation::COLOR_FLAG_R,
+                        presentation::COLOR_FLAG_G,
+                        presentation::COLOR_FLAG_B,
                         1.0f, &camera);
         shapes.drawRect(cmd, shapePipeline,
                         midX + 2.0f,
@@ -75,9 +75,9 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
         shapes.drawRect(cmd, shapePipeline,
                         player.bounds.x, player.bounds.y,
                         player.bounds.width, player.bounds.height,
-                        config::COLOR_PLAYER_R,
-                        config::COLOR_PLAYER_G,
-                        config::COLOR_PLAYER_B,
+                        presentation::COLOR_PLAYER_R,
+                        presentation::COLOR_PLAYER_G,
+                        presentation::COLOR_PLAYER_B,
                         1.0f, &camera);
     }
 }
