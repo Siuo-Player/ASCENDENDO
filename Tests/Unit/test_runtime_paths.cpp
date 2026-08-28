@@ -27,6 +27,22 @@ private:
     std::filesystem::path root_;
 };
 
+class CurrentPathGuard {
+public:
+    explicit CurrentPathGuard(const std::filesystem::path& path)
+        : previous_(std::filesystem::current_path()) {
+        std::filesystem::current_path(path);
+    }
+
+    ~CurrentPathGuard() {
+        std::error_code ec;
+        std::filesystem::current_path(previous_, ec);
+    }
+
+private:
+    std::filesystem::path previous_;
+};
+
 } // namespace
 
 TEST_SUITE("Runtime Paths") {
@@ -62,5 +78,28 @@ TEST_SUITE("Runtime Paths") {
 
         CHECK(paths.campaignFile() == std::filesystem::path("/install/ascendendo/Game/Assets/Levels/campaign.txt"));
         CHECK(paths.controlsFile() == std::filesystem::path("/user/ascendendo/Settings/controls.cfg"));
+    }
+
+    TEST_CASE("process paths are independent of current directory") {
+        TempTree temp;
+        const auto firstWorkingDirectory = temp.root() / "first-cwd";
+        const auto secondWorkingDirectory = temp.root() / "second-cwd";
+        REQUIRE(std::filesystem::create_directories(firstWorkingDirectory));
+        REQUIRE(std::filesystem::create_directories(secondWorkingDirectory));
+
+        core::RuntimePaths firstPaths = [&] {
+            CurrentPathGuard guard(firstWorkingDirectory);
+            return core::RuntimePaths::fromProcess(nullptr);
+        }();
+        core::RuntimePaths secondPaths = [&] {
+            CurrentPathGuard guard(secondWorkingDirectory);
+            return core::RuntimePaths::fromProcess(nullptr);
+        }();
+
+        CHECK(firstPaths.executableRoot() == secondPaths.executableRoot());
+        CHECK(firstPaths.assetsRoot() == secondPaths.assetsRoot());
+        CHECK(firstPaths.levelsRoot() == secondPaths.levelsRoot());
+        CHECK(firstPaths.campaignFile() == secondPaths.campaignFile());
+        CHECK(firstPaths.playerSprite() == secondPaths.playerSprite());
     }
 }
