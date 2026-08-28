@@ -6,7 +6,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 
 **CLOSED**
 
-O fecho formal segue a integração da revisão final do Gate (PR #118) e confirma que não existe blocker técnico restante dentro do escopo 9.6.
+O fecho formal segue a integração da revisão final do Gate (PR #118) e a confirmação formal (PR #119); não existe blocker técnico restante dentro do escopo 9.6.
 
 ### Evidência integrada
 
@@ -23,17 +23,18 @@ O fecho formal segue a integração da revisão final do Gate (PR #118) e confir
 - PR #100 — caracterização de collision-order por permutação.
 - PR #101 — documentação do resultado de collision-order.
 - PR #102 — reconciliação canónica do Gate após #100/#101.
-- PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
+- PR #105 — evidência executável de independência do current working directory nos targets suportados.
 - PR #108 — classificação dos failure/error paths Vulkan residuais.
-- PR #109 — contrato pós-`vkQueueSubmit`: semântica terminal/fail-closed no design atual.
+- PR #109 — contrato pós-`vkQueueSubmit`: semântica terminal/fail-closed.
 - PR #113 — caracterização documental do contrato `LevelData → Level → CampaignRuntime`.
 - PR #114 — characterization tests desse contrato.
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
 - PR #117 — reconciliação do roadmap/technical debt com os Studies e a `main` real.
-- PR #118 — revisão final de Vulkan capability/queue/synchronization, architecture/ownership e disposição dos claims residuais de replay.
+- PR #118 — revisão final do Gate.
+- PR #119 — fecho formal do Gate 9.6.
 
-### Replay
+## Replay
 
 Provado:
 
@@ -41,55 +42,51 @@ Provado:
 - comparação de estado por tick;
 - fronteira frame → `TickInput`.
 
-Não provado e explicitamente não necessário para este Gate segundo a revisão final:
+Não provado e explicitamente não necessário para este Gate:
 
 - live-input frame-rate independence;
 - terminal/result replay de uma sessão completa;
 - replay persistence/serialization.
 
-### Collision-order
+## RenderSnapshot — dívida arquitetural ativa
 
-A evidência permanece limitada ao cenário exercitado. Universal permutation invariance não é uma claim do projeto neste momento.
+`RendererFacade` e `WorldRenderer` ainda atravessam a fronteira de presentation com `logic::Player`, `logic::Level` e `Camera`. Esta dívida passa agora a ser um work package arquitetural dedicado após o Gate 9.6.
 
-### Runtime-root
+**Issue:** #122  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_RENDERSNAPSHOT_BOUNDARY_2026-08-28.md`  
+**Branch:** `docs/render-snapshot-wp-20260828`
 
-A independência de CWD está evidenciada para `RuntimePaths::fromProcess(nullptr)` nos targets exercitados. Packaging/deployment e fallbacks não exercitados continuam fora desta claim.
+### Contrato inicial
 
-### World/chunk
+```text
+RenderSnapshot
+├── camera { x, y }
+├── player { x, y, width, height, facingLeft }
+├── platforms[] { x, y, width, height }
+└── flag { visible, x, y, width, height }
+```
 
-O comportamento atual está caracterizado por #113/#114. O modelo mais forte de metadata e schema/versioning permanece Fase 10.
+O contrato deve permanecer mínimo: adicionar dados apenas quando um pass de presentation os consumir. Não transportar tipos de domínio, handles Vulkan, ownership, estado mutável ou lógica de gameplay.
 
-### Vulkan
+### Exit criteria
 
-A revisão final confirmou que:
+```text
+snapshot como value object de presentation
++ sem tipos de domínio
++ sem Vulkan ownership
++ builder explícito/determinístico
++ WorldRenderer sem Player/Level
++ comportamento preservado
++ testes/build/CI
+```
 
-- queue selection distingue graphics e present capabilities;
-- `VK_KHR_swapchain` é requisito do logical device;
-- surface support/capabilities/formats/present modes são verificadas pelo caminho de swapchain;
-- `vkDeviceWaitIdle()` failure e `vkQueueSubmit()` post-failure têm contratos explícitos;
-- não existe requisito atual que justifique fault injection genérica de todas as branches.
+## Outras dívidas explicitamente adiadas
 
-### Architecture / ownership
-
-`GameSession` mantém estado de sessão sem ownership gráfico. `GraphicsRuntime` mantém o ownership agregado do stack gráfico e o cleanup em ordem inversa. `PresentationRuntime` mantém os recursos de presentation e attachments não-owning.
-
-`RendererFacade` ainda recebe `logic::Player`/`logic::Level` diretamente em parte do caminho. A migração geral para `RenderSnapshot` permanece dívida arquitetural futura, não blocker do Gate 9.6.
-
-Não foi encontrada responsabilidade adicional que justifique uma `Application` genérica nesta revisão.
-
-## Gaps restantes após o fecho
-
-Nenhum blocker técnico de 9.6 permanece.
-
-Fora do Gate / próximos blocos:
-
-- generalização de `RenderSnapshot` e separação domain/presentation;
-- semantic validation/schema/versioning de `LevelData` (Fase 10);
+- semantic validation/schema/versioning de `LevelData` — Fase 10;
 - replay persistence;
 - live-input frame-rate independence;
-- terminal/result replay de uma sessão completa.
-
-Estas capacidades futuras só devem ser promovidas a requisitos quando existir uma decisão de produto explícita.
+- terminal/result replay;
+- decomposição de `FontRenderer` e `SpriteRenderer` em WPs separados quando a análise de coesão/coupling justificar a mudança.
 
 ## Regras preservadas
 
@@ -103,14 +100,14 @@ Estas capacidades futuras só devem ser promovidas a requisitos quando existir u
 8. `ReplayManager` usa `TickInput`.
 9. CI failure causes exigem evidência observável.
 10. Implementation semantics e executable evidence continuam estados distintos.
+11. Presentation deve receber dados necessários para renderização, não o modelo mutável de gameplay, quando a fronteira snapshot estiver disponível.
 
 ## Próximo bloco
-
-O próximo trabalho arquitetural pode iniciar independentemente do fecho de 9.6:
 
 ```text
 RenderSnapshot/domain-presentation boundary
 → dedicated work package
 → implementation
 → validation
+→ decidir expansão para restantes presentation paths
 ```
