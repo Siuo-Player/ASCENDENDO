@@ -58,6 +58,20 @@ Game/Graphics/GameState.h
 - campaign validation: success;
 - `static_assert` confirmou identidade de tipo entre `gfx::GameState` e `core::GameState`.
 
+## Semantic TickInput boundary — em validação
+
+A auditoria pós-#137 encontrou um coupling menor mas concreto: `Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para obter `TickInput`. `Player` não usa callbacks, key codes, mouse state, `GLFWwindow` ou `KeyBindings`; consome somente os cinco campos semânticos de um tick de simulação.
+
+**Issue:** #138  
+**Branch:** `refactor/semantic-tick-input-boundary-20260828`  
+**Estado:** implementation in progress
+
+### Decisão
+
+`TickInput` foi extraído para `Game/Logic/TickInput.h`. `InputManager` continua a produzir o contrato a partir do input físico/configurado, enquanto `Player` depende apenas do value object semântico.
+
+O tipo permanece em `Logic`, não em `Core`, porque a evidência atual não justifica torná-lo um contrato transversal da aplicação.
+
 ## RenderSnapshot — primeira tranche concluída
 
 A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129 e completada com a remoção do acoplamento `RendererFacade → EditorSession` no PR #132.
@@ -93,13 +107,13 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 11. Presentation recebe dados necessários para rendering, não o modelo mutável de gameplay/editor.
 12. Shared Vulkan primitives devem permanecer estreitos e não absorver políticas específicas sem nova evidência.
 13. Logic/Core não deve depender de tipos concretos de presentation quando apenas dados/contratos mínimos são necessários.
+14. Gameplay deve depender de contratos semânticos de input, não do armazenamento/callbacks de input físico.
 
 ## Próximo passo
 
 ```text
-revisão final de ownership/arquitetura
-→ identificar apenas findings concretos
-→ abrir work package com contrato mínimo
-→ validar em Linux + ASan/UBSan + Windows
+validar Issue #138
+→ Linux normal + ASan/UBSan + Windows
 → merge e reconciliar documentação
+→ voltar à revisão final de ownership/arquitetura
 ```

@@ -4,7 +4,7 @@
 // =============================================================================
 
 #include "Logic/Physics.h"
-#include "Logic/InputManager.h"
+#include "Logic/TickInput.h"
 #include "Core/Config.h"
 
 namespace logic {

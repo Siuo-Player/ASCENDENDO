@@ -2,6 +2,8 @@
 // =============================================================================
 //  Game/Logic/InputManager.h
 // =============================================================================
+#include "Logic/TickInput.h"
+
 #include <cstddef>
 #include <unordered_map>
 
@@ -50,14 +52,6 @@ namespace MouseButton {
     constexpr int RIGHT  = 1;
     constexpr int MIDDLE = 2;
 }
-
-struct TickInput {
-    bool left = false;
-    bool right = false;
-    bool jumpHeld = false;
-    bool jumpPressed = false;
-    bool jumpReleased = false;
-};
 
 class InputManager {
 public:
