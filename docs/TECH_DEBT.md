@@ -83,15 +83,17 @@ O tipo permanece em `Logic`, não em `Core`, porque a evidência atual não just
 - campaign validation: success;
 - `Player.h` deixou de incluir `InputManager.h`.
 
-## Presentation configuration boundary — em validação
+## Presentation configuration boundary — concluído
 
 A auditoria pós-#139 encontrou `Game/Core/Config.h` a misturar constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependiam do header de Core para cores, clear colors e espaçamento visual.
 
 Também foram identificadas `CAMERA_SPEED` e `CAMERA_OFFSET_Y` como constantes sem uso efetivo na implementação atual.
 
 **Issue:** #140  
+**PR:** #141  
 **Branch:** `refactor/presentation-config-boundary-20260828`  
-**Estado:** implementation in progress
+**Merge:** `6885ae63f0aacab16be1505643182d25378c1747`  
+**Estado:** **DONE**
 
 ### Decisão
 
@@ -99,17 +101,16 @@ Foi criado `Game/Graphics/PresentationConfig.h` para configuração exclusivamen
 
 `Core/Config.h` mantém dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
 
-A alteração pretende preservar todos os valores numéricos e separar ownership:
-
-```text
-Core/Config
-  → logical/gameplay semantics
-
-Graphics/PresentationConfig
-  → visual presentation policy
-```
-
 `CAMERA_SPEED` e `CAMERA_OFFSET_Y` foram removidos porque o código efetivo não os consome: `Camera::follow()` já possui default explícito de speed e calcula o offset a partir da altura lógica.
+
+### Validação
+
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- source-size: success;
+- campaign validation: success;
+- teste independente de `PresentationConfig.h` compilou e verificou valores representativos.
 
 ## RenderSnapshot — primeira tranche concluída
 
@@ -153,8 +154,9 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 ## Próximo passo
 
 ```text
-validar Issue #140
-→ Linux normal + ASan/UBSan + Windows
+revisão final de ownership/arquitetura
+→ identificar apenas findings concretos
+→ abrir work package com contrato mínimo
+→ validar em Linux + ASan/UBSan + Windows
 → merge e reconciliar documentação
-→ voltar à revisão final de ownership/arquitetura
 ```
