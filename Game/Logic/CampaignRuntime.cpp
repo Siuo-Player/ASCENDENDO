@@ -1,6 +1,7 @@
 #include "Logic/CampaignRuntime.h"
 #include "Logic/Level.h"
 #include "Logic/LevelDataIO.h"
+#include "Logic/LevelDataValidator.h"
 
 #include <filesystem>
 
@@ -18,7 +19,7 @@ bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
     if (m_campaign.empty() || !std::filesystem::exists(m_campaign.front())) return false;
 
     const auto data = LevelDataIO::load(m_campaign.front());
-    if (!data) return false;
+    if (!data || !LevelDataValidator::validate(*data)) return false;
 
     m_spawnY = level.appendFromData(*data, maxWidth, 0.0f);
     m_nextLevelIndex = 1;
@@ -30,7 +31,7 @@ bool CampaignRuntime::streamNextLevel(Level& level, float maxWidth) {
     if (!std::filesystem::exists(m_campaign[m_nextLevelIndex])) return false;
 
     const auto data = LevelDataIO::load(m_campaign[m_nextLevelIndex]);
-    if (!data) return false;
+    if (!data || !LevelDataValidator::validate(*data)) return false;
 
     const float nextSpawnY = level.appendFromData(*data, maxWidth, m_spawnY);
     ++m_nextLevelIndex;
