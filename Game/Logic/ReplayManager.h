@@ -10,7 +10,7 @@
 #pragma once
 #include "Logic/Player.h"
 #include "Logic/Physics.h"
-#include "Logic/InputManager.h"
+#include "Logic/TickInput.h"
 #include <cstddef>
 #include <unordered_map>
 #include <vector>
