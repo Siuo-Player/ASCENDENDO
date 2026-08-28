@@ -125,4 +125,44 @@ TEST_SUITE("LevelData") {
         CHECK(data.platforms[0].min.y == doctest::Approx(20.0f));
         CHECK(data.flag->min.y == doctest::Approx(300.0f));
     }
+
+    TEST_CASE("runtime caracteriza metadata singular por chunk") {
+        logic::Level firstChunk;
+        logic::LevelData first;
+        first.name = "First";
+        first.flag = logic::AABB{{10.0f, 20.0f}, {20.0f, 30.0f}};
+        first.spawnPosition = logic::Vec2{32.0f, 30.0f};
+        first.platforms.push_back({{0.0f, 0.0f}, {640.0f, 20.0f}});
+
+        logic::LevelData second;
+        second.name = "Second";
+        second.flag = logic::AABB{{100.0f, 40.0f}, {110.0f, 50.0f}};
+        second.platforms.push_back({{0.0f, 0.0f}, {640.0f, 20.0f}});
+
+        const float nextOffset = firstChunk.appendFromData(first, 640.0f, 0.0f);
+        REQUIRE(firstChunk.hasFlag);
+        CHECK(firstChunk.flagBounds.min.y == doctest::Approx(20.0f));
+        CHECK(first.spawnPosition->y == doctest::Approx(30.0f));
+
+        firstChunk.appendFromData(second, 640.0f, nextOffset);
+        REQUIRE(firstChunk.hasFlag);
+        CHECK(firstChunk.flagBounds.min.y == doctest::Approx(nextOffset + 40.0f));
+        CHECK(firstChunk.platformCount() == 2);
+    }
+
+    TEST_CASE("runtime nao materializa spawn como metadata de mundo") {
+        logic::LevelData data;
+        data.name = "Spawned";
+        data.spawnPosition = logic::Vec2{48.0f, 20.0f};
+        data.platforms.push_back({{0.0f, 0.0f}, {640.0f, 20.0f}});
+
+        logic::Level level;
+        const float nextOffset = level.appendFromData(data, 640.0f, 360.0f);
+
+        CHECK(nextOffset == doctest::Approx(720.0f));
+        CHECK(level.platformCount() == 1);
+        CHECK_FALSE(level.hasFlag);
+        CHECK(data.spawnPosition->x == doctest::Approx(48.0f));
+        CHECK(data.spawnPosition->y == doctest::Approx(20.0f));
+    }
 }
