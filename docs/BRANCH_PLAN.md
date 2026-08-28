@@ -91,7 +91,7 @@ resource handles
     ↓
 consumer owns
     ↓
-consumer cleanup / primitive destruction helper
+consumer cleanup
 ```
 
 Não existe `TextureManager`, cache global ou ownership escondido.
@@ -100,9 +100,10 @@ Não existe `TextureManager`, cache global ou ownership escondido.
 
 - implementar o primitive estreito;
 - migrar `FontRendererGpu`;
-- migrar `SpriteRendererGpu` quando a mesma fronteira continuar tecnicamente limpa;
+- migrar `SpriteRendererGpu`;
 - manter exatamente os formatos/filtros atuais;
-- testar argumentos inválidos e integrar com os testes Vulkan existentes;
+- testar preconditions e failure cleanup;
+- integrar com os testes Vulkan existentes;
 - documentar ownership/failure paths;
 - atualizar arquitetura/dívida/WP.
 
@@ -148,7 +149,7 @@ Não existe `TextureManager`, cache global ou ownership escondido.
 primitive estreito e justificado
 + ownership explícito
 + FontRendererGpu migrado
-+ SpriteRendererGpu migrado, se a fronteira se mantiver coesa
++ SpriteRendererGpu migrado
 + failure paths limpos
 + testes/build/CI verdes
 + docs sincronizados
