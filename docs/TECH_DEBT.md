@@ -4,13 +4,15 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 
 ## Gate 9.6 — estado
 
-**OPEN**
+**READY FOR FORMAL CLOSE**
+
+O estado `CLOSED` só deve ser escrito depois de a decisão desta tranche ser integrada na `main`.
 
 ### Evidência integrada
 
 - PR #76 — `RuntimeBootstrap` como composição de startup, sem `Application` genérica.
 - PR #81 — rollback agregado de `GraphicsRuntime`.
-- PR #87 — falhas de reconfiguração de `VulkanContext` tratadas como terminais; lower-level fault evidence continua parcial.
+- PR #87 — falhas de reconfiguração de `VulkanContext` tratadas como terminais.
 - PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
 - PR #88 — `TickInput` como unidade semântica da simulação.
 - PR #90 — `ReplayManager` alinhado a `TickInput`.
@@ -18,98 +20,93 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 - PR #94 — failure-path evidence específica para `vkDeviceWaitIdle()` em `RendererCore`.
 - PR #95 — reconciliação do replay contra o `main` atual.
 - PR #99 — licença MIT do projeto e fronteiras de licenciamento de terceiros.
-- PR #100 — caracterização de collision-order por permutação, sem alteração da física de produção.
-- PR #101 — documentação do resultado da caracterização.
+- PR #100 — caracterização de collision-order por permutação.
+- PR #101 — documentação do resultado de collision-order.
 - PR #102 — reconciliação canónica do Gate após #100/#101.
 - PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
 - PR #108 — classificação dos failure/error paths Vulkan residuais.
 - PR #109 — contrato pós-`vkQueueSubmit`: semântica terminal/fail-closed no design atual.
 - PR #113 — caracterização documental do contrato `LevelData → Level → CampaignRuntime`.
-- PR #114 — characterization tests desse contrato, sem alterar semântica de produção.
+- PR #114 — characterization tests desse contrato.
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
+- PR #117 — reconciliação do roadmap/technical debt com os Studies e a `main` real.
 
-### Estado residual de replay
+### Replay
 
-A evidência atual demonstra:
+Provado:
 
 - replay tick-semantic;
 - comparação de estado por tick;
-- fronteira frame → `TickInput` com edges restritas ao primeiro tick do frame e ações held disponíveis nos ticks seguintes do mesmo frame.
+- fronteira frame → `TickInput`.
 
-Permanecem separadas e abertas:
+Não provado e explicitamente não necessário para este Gate segundo a revisão atual:
 
 - live-input frame-rate independence;
-- terminal/result replay completo de `GameSession`;
-- persistence/replay serialization.
+- terminal/result replay de uma sessão completa;
+- replay persistence/serialization.
 
-Nenhuma destas propriedades deve ser inferida apenas da passagem dos testes existentes.
+### Collision-order
 
-### Estado de collision-order
+A evidência permanece limitada ao cenário exercitado. Universal permutation invariance não é uma claim do projeto neste momento.
 
-O caso exercitado por #100 não apresentou divergência entre as duas ordens testadas. Isso é evidência limitada ao conjunto de contactos e estado inicial usados no teste; não deve ser transformado em uma alegação universal de permutation invariance.
+### Runtime-root
 
-### Estado runtime-root
+A independência de CWD está evidenciada para `RuntimePaths::fromProcess(nullptr)` nos targets exercitados. Packaging/deployment e fallbacks não exercitados continuam fora desta claim.
 
-PR #105 demonstrou por teste que `RuntimePaths::fromProcess(nullptr)` produz o mesmo executable root e paths derivados de assets/levels/sprite quando a chamada ocorre sob dois current working directories distintos nos ambientes da matriz CI. Esta evidência não define uma política de packaging/deployment futura nem elimina limites não exercitados do fallback de `argv0`.
+### World/chunk
 
-### Estado world/chunk
+O comportamento atual está caracterizado por #113/#114. O modelo mais forte de metadata e schema/versioning permanece Fase 10.
 
-PRs #113/#114 já caracterizaram e protegeram o comportamento atual de composição. Portanto este assunto deixa de ser um finding não caracterizado do Gate e passa a ser um contrato documentado.
+### Vulkan
 
-O modelo atual continua deliberadamente limitado: `flag` é metadata singular e `spawnPosition` não é materializado como metadata persistente de `Level`. Um modelo semântico geral de chunks e schema/versioning pertencem à Fase 10, salvo requisito novo.
+A revisão final confirmou que:
 
-### Estado Vulkan
+- queue selection distingue graphics e present capabilities;
+- `VK_KHR_swapchain` é requisito do logical device;
+- surface support/capabilities/formats/present modes são verificadas pelo caminho de swapchain;
+- `vkDeviceWaitIdle()` failure e `vkQueueSubmit()` post-failure têm contratos explícitos;
+- não existe requisito atual que justifique fault injection genérica de todas as branches.
 
-- #94 fornece evidência executável para `vkDeviceWaitIdle()`.
-- #108 classifica os restantes paths por contrato, evitando uma matriz artificial de fault injection.
-- #109 estabelece que falha de `vkQueueSubmit` depois de reset do fence é terminal/fail-closed no design atual; não existe promessa de recuperação em processo da frame falhada.
+### Architecture / ownership
 
-O gap restante é uma revisão de capability/queue/synchronization assumptions e da suficiência da evidência atual, não a obrigação de testar cada `VkResult` isoladamente.
+`GameSession` mantém estado de sessão sem ownership gráfico. `GraphicsRuntime` mantém o ownership agregado do stack gráfico e o cleanup em ordem inversa. `PresentationRuntime` mantém os recursos de presentation e attachments não-owning.
 
-## Gaps restantes
+`RendererFacade` ainda recebe `logic::Player`/`logic::Level` diretamente em parte do caminho. A migração geral para `RenderSnapshot` permanece dívida arquitetural futura, não blocker do Gate 9.6.
 
-1. revisão final das assumptions de capability/queue/synchronization de Vulkan;
-2. revisão final de ownership/architecture;
-3. disposição explícita sobre se terminal/result replay e live-input frame-rate independence são requisitos de Gate;
-4. decisão formal de fecho do Gate 9.6.
+Não foi encontrada responsabilidade adicional que justifique uma `Application` genérica nesta revisão.
 
-Ficam fora do Gate, salvo requisito novo:
+## Gaps restantes após a revisão
+
+Nenhum blocker técnico novo de 9.6 foi identificado. O único trabalho do bloco corrente é integrar a decisão final e converter `READY FOR FORMAL CLOSE` em `CLOSED`.
+
+Fora do Gate:
 
 - semantic validation/schema/versioning de `LevelData` (Fase 10);
-- replay persistence/serialization;
-- generalização de `RenderSnapshot` antes do fecho do Gate.
+- replay persistence;
+- live-input frame-rate independence;
+- generalização de `RenderSnapshot` até este Gate estar fechado.
 
-## Regras
+## Regras preservadas
 
 1. Renderer não lê input nem altera gameplay.
 2. Gameplay não depende de teclas físicas.
 3. `LevelData` não depende de Vulkan/GLFW.
-4. Runtime não depende de current working directory para a resolução de paths de processo atualmente exercitada.
+4. Runtime não depende de CWD na claim exercitada.
 5. `RuntimeBootstrap` é composição de startup, não `Application` genérica.
-6. `LevelDataIO` é parser/serializer, não schema authority nem semantic validator.
-7. Ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
-8. Input edge para replay pertence ao tempo de simulação.
-9. `ReplayManager` usa `TickInput`; isto não prova live-input frame-rate independence.
-10. Causas de falha CI exigem evidência observável.
-11. Implementation semantics e executable evidence permanecem estados distintos.
+6. `LevelDataIO` continua parser/serializer, não schema authority.
+7. Ordem de `Level::platforms()` não é assumida irrelevante sem evidência.
+8. `ReplayManager` usa `TickInput`.
+9. CI failure causes exigem evidência observável.
+10. Implementation semantics e executable evidence continuam estados distintos.
 
-## Fecho do Gate
+## Próximo bloco
 
-Antes da migração geral de `RenderSnapshot`, deve existir evidência suficiente para:
+Depois do fecho formal de 9.6:
 
 ```text
-Vulkan failure/error semantics
-+
-queue/capability assumptions
-+
-deterministic simulation/replay
-+
-Windows build/test
-+
-malformed/error paths
-+
-architecture/ownership review
-+
-explicit disposition of remaining replay claims
+RenderSnapshot/domain-presentation boundary
+→ dedicated work package
+→ implementation
+→ validation
 ```
