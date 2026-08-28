@@ -25,6 +25,7 @@
 
 using namespace gfx;
 using namespace logic;
+using core::GameState;
 
 namespace {
 

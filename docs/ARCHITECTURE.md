@@ -33,6 +33,7 @@ Application / process composition
 │   └── RendererFacade / Vulkan passes
 │
 ├── Core
+│   ├── GameState / state-machine contract
 │   ├── ViewportTransform
 │   ├── Input / GameAction / KeyBindings
 │   ├── domain configuration
@@ -103,6 +104,8 @@ main.cpp
 ```
 
 `GameSession` não possui `Window`, `VulkanContext`, `Swapchain`, `RenderPass`, `Pipeline`, `RendererFacade`, `PresentationRuntime` ou `Camera`. Isto evita que a primeira extração misture domínio com ownership de GPU ou apresentação.
+
+O contrato de estado pertence a Core: `Game/Core/GameState.h` contém a definição canónica de `GameState`. `Game/Graphics/GameState.h` permanece apenas como alias de compatibilidade para consumidores gráficos existentes. Assim, a direção de dependência é `Core → Presentation`, e não `Core → Graphics`.
 
 A decomposição deve continuar incrementalmente. `Application` permanece uma direção conceptual, não uma obrigação nominal: só deve ser criada quando existir uma responsabilidade de composição/lifecycle claramente isolável.
 

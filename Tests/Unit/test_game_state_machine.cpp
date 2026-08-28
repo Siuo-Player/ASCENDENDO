@@ -1,8 +1,14 @@
 #include "doctest/doctest.h"
 #include "Core/GameStateMachine.h"
+#include "Graphics/GameState.h"
 
+#include <type_traits>
+
+using core::GameState;
 using core::GameStateMachine;
-using gfx::GameState;
+
+static_assert(std::is_same_v<gfx::GameState, core::GameState>,
+              "Graphics GameState must remain a compatibility alias for Core state");
 
 TEST_SUITE("GameStateMachine") {
     TEST_CASE("starts in requested state") {

@@ -21,7 +21,7 @@ void GameSession::beginPlaying(float logicalWidth) {
     resetGame(logicalWidth);
 }
 
-void GameSession::openEditor(gfx::GameState returnState) noexcept {
+void GameSession::openEditor(core::GameState returnState) noexcept {
     editorSession_.cancelInteraction();
     stateMachine_.enterEditor(returnState);
 }
@@ -49,7 +49,7 @@ GameSessionUpdateResult GameSession::update(float dt,
                                              float logicalWidth,
                                              float logicalHeight) {
     GameSessionUpdateResult result;
-    const gfx::GameState currentState = stateMachine_.state();
+    const core::GameState currentState = stateMachine_.state();
 
     const bool pausePressed =
         core::isActionJustPressed(bindings, input, core::GameAction::Pause);
@@ -59,11 +59,11 @@ GameSessionUpdateResult GameSession::update(float dt,
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
 
     switch (currentState) {
-    case gfx::GameState::PLAYING:
+    case core::GameState::PLAYING:
         elapsedTime_ += dt;
 
         if (openEditorPressed) {
-            openEditor(gfx::GameState::PLAYING);
+            openEditor(core::GameState::PLAYING);
         } else if (quitPressed) {
             editorSession_.cancelInteraction();
             stateMachine_.returnToMenu();
@@ -83,12 +83,12 @@ GameSessionUpdateResult GameSession::update(float dt,
                 result.completionElapsedSeconds = elapsedTime_;
                 result.runRecorded = logic::recordRun(
                     runsCsvPath_, "Campanha Principal", campaignID_, elapsedTime_);
-                stateMachine_.enterCredits(gfx::GameState::MENU);
+                stateMachine_.enterCredits(core::GameState::MENU);
             }
         }
         break;
 
-    case gfx::GameState::PAUSED: {
+    case core::GameState::PAUSED: {
         if (pausePressed) {
             stateMachine_.resume();
             break;
@@ -114,7 +114,7 @@ GameSessionUpdateResult GameSession::update(float dt,
             if (stateMachine_.menuSelection() == 0) {
                 stateMachine_.resume();
             } else if (stateMachine_.menuSelection() == 1) {
-                stateMachine_.enterCredits(gfx::GameState::PAUSED);
+                stateMachine_.enterCredits(core::GameState::PAUSED);
             } else {
                 stateMachine_.returnToMenu();
             }
@@ -122,21 +122,21 @@ GameSessionUpdateResult GameSession::update(float dt,
         break;
     }
 
-    case gfx::GameState::CREDITS:
+    case core::GameState::CREDITS:
         if (core::isActionJustPressed(bindings, input, core::GameAction::UIConfirm) ||
             pausePressed) {
             stateMachine_.returnFromCredits();
         }
         break;
 
-    case gfx::GameState::MENU: {
+    case core::GameState::MENU: {
         if (quitPressed) {
             result.quitRequested = true;
             break;
         }
 
         if (openEditorPressed) {
-            openEditor(gfx::GameState::MENU);
+            openEditor(core::GameState::MENU);
             break;
         }
 
@@ -156,9 +156,9 @@ GameSessionUpdateResult GameSession::update(float dt,
             if (stateMachine_.menuSelection() == 0) {
                 resetGame(logicalWidth);
             } else if (stateMachine_.menuSelection() == 1) {
-                openEditor(gfx::GameState::MENU);
+                openEditor(core::GameState::MENU);
             } else if (stateMachine_.menuSelection() == 2) {
-                stateMachine_.enterCredits(gfx::GameState::MENU);
+                stateMachine_.enterCredits(core::GameState::MENU);
             } else {
                 result.quitRequested = true;
             }
@@ -166,7 +166,7 @@ GameSessionUpdateResult GameSession::update(float dt,
         break;
     }
 
-    case gfx::GameState::EDITOR:
+    case core::GameState::EDITOR:
         if (pausePressed) {
             editorSession_.cancelInteraction();
             stateMachine_.returnFromEditor();

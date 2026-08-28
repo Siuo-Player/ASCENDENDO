@@ -42,7 +42,7 @@ public:
     GameSession& operator=(GameSession&&) = delete;
 
     void beginPlaying(float logicalWidth);
-    void openEditor(gfx::GameState returnState) noexcept;
+    void openEditor(core::GameState returnState) noexcept;
 
     GameSessionUpdateResult update(float dt,
                                    const InputManager& input,
@@ -52,7 +52,7 @@ public:
                                    float logicalWidth,
                                    float logicalHeight);
 
-    gfx::GameState state() const noexcept { return stateMachine_.state(); }
+    core::GameState state() const noexcept { return stateMachine_.state(); }
     int menuSelection() const noexcept { return stateMachine_.menuSelection(); }
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }

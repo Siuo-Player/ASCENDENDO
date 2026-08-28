@@ -20,12 +20,34 @@ Commit: 6b4a4a23eefaee81f0a9feccf886d9f83181c04f
 Failing step: game build / instrumented test build
 Observed evidence: Game/Graphics/EditorRenderer.cpp:39 instancia `const Camera fixedCamera{}` enquanto apenas `ShapeRenderer.h` fornece a forward declaration `class Camera;`.
 Classification: CI build failure
-Likely cause: missing direct include of the concrete Camera definition.
 Confirmed cause: missing direct include of `Graphics/Camera.h` in `EditorRenderer.cpp`.
-Scope relation: `EditorRenderer.cpp` is outside the intended #135/#136 change; the failure does not originate in the editor-Logic boundary change.
-Fix: separate issue/PR to add the direct include.
-Validation: rerun Linux normal, Linux ASan/UBSan and Windows after the fix.
+Scope relation: `EditorRenderer.cpp` is outside the intended #135/#136 change.
+Resolution: direct include added in PR #136 branch before merge.
+Validation: Linux normal, Linux ASan/UBSan and Windows all passed on the validated PR head.
 ```
+
+## EditorInteraction layer boundary — concluído
+
+PR #136 removeu a dependência concreta `Game/Logic/EditorInteraction → Game/Graphics/Camera`.
+
+O contrato passou a receber apenas `Vec2 cameraPosition`, preservando a transformação `logical + cameraPosition`. `EditorSession` também deixou de instanciar `gfx::Camera` para o editor de tela única e passa `{0,0}`. A mudança foi validada pelos três workflows obrigatórios.
+
+## GameState ownership — Issue #137
+
+Foi encontrado um novo coupling concreto durante a auditoria pós-#136:
+
+```text
+Game/Core/GameStateMachine.h
+        ↓
+Game/Graphics/GameState.h
+```
+
+`GameState` contém apenas estados de runtime (`PLAYING`, `PAUSED`, `CREDITS`, `MENU`, `EDITOR`) e não contém dados de rendering. Não existe razão estrutural para que o estado pertença a `Graphics`.
+
+**Decision:** canonicalizar a definição em `Game/Core/GameState.h`. `Graphics/GameState.h` passa a ser somente um alias compatível `gfx::GameState = core::GameState`, permitindo migrar os consumidores sem churn desnecessário. `GameStateMachine` passa a usar diretamente `core::GameState`.
+
+**Issue:** #137  
+**Estado:** implementation branch created; CI validation pending.
 
 ## RenderSnapshot — primeira tranche concluída
 
@@ -61,12 +83,14 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 10. Implementation semantics e executable evidence continuam estados distintos.
 11. Presentation recebe dados necessários para rendering, não o modelo mutável de gameplay/editor.
 12. Shared Vulkan primitives devem permanecer estreitos e não absorver políticas específicas sem nova evidência.
-13. Logic não deve depender de tipos concretos de presentation quando apenas os dados mínimos são necessários.
+13. Logic/Core não deve depender de tipos concretos de presentation quando apenas dados/contratos mínimos são necessários.
 
 ## Próximo passo
 
 ```text
-corrigir EditorRenderer include blocker
-→ concluir PR #136
-→ varrer restantes dependências Logic → Graphics
+validar Issue #137
+→ migrar Core/GameState sem alteração semântica
+→ CI Linux normal + ASan/UBSan + Windows
+→ se verde, merge e reconciliar documentação
+→ voltar à revisão final de ownership/arquitetura
 ```
