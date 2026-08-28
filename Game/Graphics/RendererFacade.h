@@ -4,7 +4,7 @@
 // =============================================================================
 
 #include "Graphics/RenderState.h"
-#include "Core/RenderSnapshot.h"
+#include "Graphics/RenderSnapshot.h"
 #include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
@@ -45,7 +45,7 @@ public:
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
     void attachEditorSession(const logic::EditorSession* session);
 
-    bool drawFrame(const core::RenderSnapshot& snapshot,
+    bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
                    RenderState state,
                    int menuSelection = 0,
