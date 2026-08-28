@@ -22,31 +22,63 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 - PR #101 — documentação do resultado da caracterização.
 - PR #102 — reconciliação canónica do Gate após #100/#101.
 - PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
+- PR #108 — classificação dos failure/error paths Vulkan residuais.
+- PR #109 — contrato pós-`vkQueueSubmit`: semântica terminal/fail-closed no design atual.
+- PR #113 — caracterização documental do contrato `LevelData → Level → CampaignRuntime`.
+- PR #114 — characterization tests desse contrato, sem alterar semântica de produção.
+- PR #115 — isolamento dos residuais de replay/input.
+- PR #116 — characterization executável da fronteira frame → `TickInput`.
 
 ### Estado residual de replay
 
-A evidência atual demonstra replay tick-semantic e comparação de estado por tick sob agrupamento externo diferente da mesma sequência `TickInput`. Permanecem separadas e abertas:
+A evidência atual demonstra:
+
+- replay tick-semantic;
+- comparação de estado por tick;
+- fronteira frame → `TickInput` com edges restritas ao primeiro tick do frame e ações held disponíveis nos ticks seguintes do mesmo frame.
+
+Permanecem separadas e abertas:
 
 - live-input frame-rate independence;
 - terminal/result replay completo de `GameSession`;
 - persistence/replay serialization.
 
-### Estado residual de collision-order
+Nenhuma destas propriedades deve ser inferida apenas da passagem dos testes existentes.
+
+### Estado de collision-order
 
 O caso exercitado por #100 não apresentou divergência entre as duas ordens testadas. Isso é evidência limitada ao conjunto de contactos e estado inicial usados no teste; não deve ser transformado em uma alegação universal de permutation invariance.
 
 ### Estado runtime-root
 
-PR #105 demonstrou por teste que `RuntimePaths::fromProcess(nullptr)` produz o mesmo executable root e paths derivados de assets/levels/sprite quando a chamada ocorre sob dois current working directories distintos nos ambientes da matriz CI. Esta evidência não define uma política de packaging/deployment futura nem elimina o limite do fallback de `argv0` fora das condições exercitadas.
+PR #105 demonstrou por teste que `RuntimePaths::fromProcess(nullptr)` produz o mesmo executable root e paths derivados de assets/levels/sprite quando a chamada ocorre sob dois current working directories distintos nos ambientes da matriz CI. Esta evidência não define uma política de packaging/deployment futura nem elimina limites não exercitados do fallback de `argv0`.
 
-### Gaps restantes
+### Estado world/chunk
 
-- capability/error evidence Vulkan além do happy path;
-- paths/runtime roots independentes do current working directory: **evidência integrada para o caminho de processo exercitado; fallback/packaging permanecem limitados**;
-- contrato world/chunk metadata de `Level`;
-- eventual política global de collision-order apenas se surgir requisito ou counterexample adicional;
+PRs #113/#114 já caracterizaram e protegeram o comportamento atual de composição. Portanto este assunto deixa de ser um finding não caracterizado do Gate e passa a ser um contrato documentado.
+
+O modelo atual continua deliberadamente limitado: `flag` é metadata singular e `spawnPosition` não é materializado como metadata persistente de `Level`. Um modelo semântico geral de chunks e schema/versioning pertencem à Fase 10, salvo requisito novo.
+
+### Estado Vulkan
+
+- #94 fornece evidência executável para `vkDeviceWaitIdle()`.
+- #108 classifica os restantes paths por contrato, evitando uma matriz artificial de fault injection.
+- #109 estabelece que falha de `vkQueueSubmit` depois de reset do fence é terminal/fail-closed no design atual; não existe promessa de recuperação em processo da frame falhada.
+
+O gap restante é uma revisão de capability/queue/synchronization assumptions e da suficiência da evidência atual, não a obrigação de testar cada `VkResult` isoladamente.
+
+## Gaps restantes
+
+1. revisão final das assumptions de capability/queue/synchronization de Vulkan;
+2. revisão final de ownership/architecture;
+3. disposição explícita sobre se terminal/result replay e live-input frame-rate independence são requisitos de Gate;
+4. decisão formal de fecho do Gate 9.6.
+
+Ficam fora do Gate, salvo requisito novo:
+
 - semantic validation/schema/versioning de `LevelData` (Fase 10);
-- revisão final de ownership/architecture.
+- replay persistence/serialization;
+- generalização de `RenderSnapshot` antes do fecho do Gate.
 
 ## Regras
 
@@ -78,4 +110,6 @@ Windows build/test
 malformed/error paths
 +
 architecture/ownership review
++
+explicit disposition of remaining replay claims
 ```
