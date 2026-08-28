@@ -8,6 +8,7 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 
 ### Evidência integrada
 
+- PR #76 — `RuntimeBootstrap` como composição de startup, sem `Application` genérica.
 - PR #81 — rollback agregado de `GraphicsRuntime`.
 - PR #87 — falhas de reconfiguração de `VulkanContext` tratadas como terminais; lower-level fault evidence continua parcial.
 - PR #85 — Windows build/test evidence em runner real com Vulkan software driver.
@@ -15,6 +16,10 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 - PR #90 — `ReplayManager` alinhado a `TickInput`.
 - PR #92 — malformed syntax da gramática atual coberta por testes; PR #91 foi superseded.
 - PR #94 — failure-path evidence específica para `vkDeviceWaitIdle()` em `RendererCore`.
+- PR #95 — reconciliação do replay contra o `main` atual.
+- PR #99 — licença MIT do projeto e fronteiras de licenciamento de terceiros.
+- PR #100 — caracterização de collision-order por permutação, sem alteração da física de produção.
+- PR #101 — documentação do resultado da caracterização.
 
 ### Estado residual de replay
 
@@ -24,12 +29,16 @@ A evidência atual demonstra replay tick-semantic e comparação de estado por t
 - terminal/result replay completo de `GameSession`;
 - persistence/replay serialization.
 
+### Estado residual de collision-order
+
+O caso exercitado por #100 não apresentou divergência entre as duas ordens testadas. Isso é evidência limitada ao conjunto de contactos e estado inicial usados no teste; não deve ser transformado em uma alegação universal de permutation invariance.
+
 ### Gaps restantes
 
 - capability/error evidence Vulkan além do happy path;
 - paths/runtime roots independentes do current working directory;
 - contrato world/chunk metadata de `Level`;
-- determinismo de múltiplos contactos/collision-order;
+- eventual política global de collision-order apenas se surgir requisito ou counterexample adicional;
 - semantic validation/schema/versioning de `LevelData` (Fase 10);
 - revisão final de ownership/architecture.
 
