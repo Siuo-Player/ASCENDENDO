@@ -6,7 +6,7 @@
 **Subsistema:** `Runtime / Process bootstrap`  
 **Work Package:** `9.6 Runtime-root independence evidence`  
 **Branch:** `test/9-6-runtime-root-independence-20260828`  
-**PR:** `#105`
+**PR:** `#105` — merged
 
 ## Objetivo
 
@@ -50,7 +50,7 @@ Demonstrar por teste executável que a resolução de `RuntimePaths::fromProcess
 ### Dependências de validação
 
 - Linux normal;
-- Linux ASan/UBSan;
+- ASan/UBSan;
 - Windows Clang/Vulkan CI.
 
 ## Decisões arquiteturais
@@ -84,7 +84,9 @@ Mudança futura da estratégia de distribuição ou requirement de resource bund
 
 ### Testes automatizados
 
-- `process paths are independent of current directory` em `test_runtime_paths.cpp`.
+- Linux normal: **success**, 230/230 test cases, 1318/1318 assertions;
+- Linux ASan/UBSan: **success**, 230/230 test cases, 1318/1318 assertions;
+- Windows: **success**, 230/230 test cases, 1318/1318 assertions; campaign validation `[OK]` para os níveis ativos; Windows evidence artifact produzido.
 
 ### Validação manual
 
@@ -96,7 +98,7 @@ Mudança futura da estratégia de distribuição ou requirement de resource bund
 
 ### Failure paths
 
-- não é uma failure-path tranche; pretende demonstrar invariância de resolução em condições normais.
+- não é uma failure-path tranche; demonstra invariância de resolução em condições normais.
 
 ## Definition of Ready
 
@@ -109,13 +111,13 @@ Mudança futura da estratégia de distribuição ou requirement de resource bund
 
 ## Definition of Done
 
-- [ ] teste passa em Linux normal;
-- [ ] teste passa em ASan/UBSan;
-- [ ] teste passa em Windows;
-- [ ] comportamento observado documentado;
-- [ ] limitation sobre fallback/packaging preservada;
-- [ ] documentação normativa atualizada;
-- [ ] PR integrada.
+- [x] teste passa em Linux normal;
+- [x] teste passa em ASan/UBSan;
+- [x] teste passa em Windows;
+- [x] comportamento observado documentado;
+- [x] limitation sobre fallback/packaging preservada;
+- [x] documentação normativa atualizada em PR #106;
+- [x] PR #105 integrada.
 
 ## Alterações durante a execução
 
@@ -129,8 +131,11 @@ O teste pode caracterizar o comportamento normal sem alterar produção.
 Decisão tomada:
 Adicionar apenas teste executável e nenhuma nova abstração.
 
-Documentos atualizados:
-este WP
+Resultado:
+Dois CWDs diferentes produziram o mesmo executable root e os mesmos caminhos derivados na matriz CI.
+
+Limitação preservada:
+Isto não estabelece uma política universal de packaging/deployment e não elimina a análise do fallback argv0 em cenários que não foram exercitados.
 ```
 
 ## Evidência / referências
@@ -139,10 +144,11 @@ este WP
 - `Game/Core/RuntimePaths.h`;
 - `Game/Core/RuntimeBootstrap.cpp`;
 - `Tests/Unit/test_runtime_paths.cpp`;
+- PR #105;
 - `PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_DEEP.md`.
 
 ## Fecho
 
-**Resultado:** `em validação`  
-**Critério de saída:** `mesmos roots/pathts derivados para dois CWDs sob fromProcess()`  
+**Resultado:** `validated / bounded`  
+**Critério de saída:** `mesmos roots/path derivados para dois CWDs sob fromProcess()`  
 **Dívida residual:** `fallback argv0 e futura política de packaging continuam fora desta tranche`
