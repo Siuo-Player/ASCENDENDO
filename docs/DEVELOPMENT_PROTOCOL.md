@@ -218,12 +218,12 @@ A change that crosses architectural boundaries must update the affected architec
 
 ## Current renderer boundary
 
-The legacy `Renderer.cpp/.h` implementation is absent from `main`. The current presentation direction is:
+The legacy `Renderer.cpp/.h` implementation is absent from `main`. The implemented presentation direction is:
 
 ```text
 Runtime / domain
       ↓
-application boundary
+application composition
       ↓
 render data / RenderSnapshot
       ↓
@@ -232,9 +232,9 @@ RendererFacade
 World / UI / Editor passes
 ```
 
-On current `main`, `WorldRenderer` still directly receives `logic::Player` and `logic::Level`. Therefore the general `RenderSnapshot` boundary is **not yet complete on `main`**.
+On current `main`, the world/player path receives `gfx::RenderSnapshot`, and the editor path receives `logic::EditorRenderSnapshot` materialized by composition. `WorldRenderer` does not receive `logic::Player`/`logic::Level` directly, and `RendererFacade` does not retain or query `logic::EditorSession`.
 
-PR #20 (`refactor(renderer): migrate WorldRenderer to RenderSnapshot`) is historical/closed-superseded; it is not an active implementation record. Use current architecture/work-package documents and the merged commit history for the present migration state.
+PR #129 established the first world/player snapshot boundary. PR #132 removed the remaining `RendererFacade → EditorSession` dependency. These are integrated implementation records and should be used with the current architecture/work-package documents rather than the historical PR #20.
 
 ## Branch / PR discipline
 
