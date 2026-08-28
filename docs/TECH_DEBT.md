@@ -138,6 +138,29 @@ Foi introduzido `Game/Logic/LevelDataValidator.h/.cpp` como boundary semântico 
 - source-size: success;
 - campaign validation: success.
 
+## Semantic LevelData finite geometry — concluído
+
+A tranche seguinte transformou a propriedade de finitude da geometria em um invariante executável. `LevelDataValidator` agora rejeita coordenadas `NaN`/`+Inf`/`-Inf` em `PLATFORM` e `FLAG`, além das extensões estritamente positivas já estabelecidas por #143.
+
+**Issue:** #144  
+**PR:** #145  
+**Merge:** `34c96b83573add90bd1f3d238f62d8f37ba3c9a9`  
+**Estado:** **DONE**
+
+### Decisão
+
+A validação permanece separada de `LevelDataIO`: o parser continua responsável pela gramática e o validator pela validade semântica consumível pelo runtime. Não foi introduzida nenhuma política adicional de bounds, schema/versioning ou SPAWN.
+
+### Validação
+
+- `LevelDataValidator` exige coordenadas finitas em todos os limites do AABB;
+- testes cobrem `NaN`, `+Inf` e `-Inf`;
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- source-size: success;
+- campaign validation: success.
+
 ## RenderSnapshot — primeira tranche concluída
 
 A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129 e completada com a remoção do acoplamento `RendererFacade → EditorSession` no PR #132.
