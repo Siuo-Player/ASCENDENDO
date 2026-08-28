@@ -136,9 +136,37 @@ PR #133 foi integrado como `e3871bc935dfa52124ec5244ddbb04714caec161`. Os workfl
 
 `DONE`
 
-### Próxima análise
+## EditorInteraction layer boundary — próxima tranche
 
-Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` agora que o lifecycle Vulkan duplicado foi removido. Não criar novas abstrações sem duplicação concreta e consumidores demonstráveis.
+Issue #135 identificou uma dependência residual de camada: `Game/Logic/EditorInteraction.h` inclui `Graphics/Camera.h` e expõe `cursorFromLogical(..., const gfx::Camera&)`, embora a operação utilize apenas `camera.position`.
+
+### Decisão
+
+Substituir a dependência da classe `Camera` por `const Vec2& cameraPosition`.
+
+```text
+logical cursor + camera position
+→ world cursor
+```
+
+A `Camera` continua uma responsabilidade de presentation/composição. `EditorInteractionController` permanece em `Game/Logic` e não dependerá de tipos concretos de `Game/Graphics`.
+
+### Validação requerida
+
+- caracterização cursor→world preservando exatamente a soma;
+- build/testes;
+- ASan/UBSan;
+- Windows/Clang;
+- source-size;
+- pesquisa de consumidores da API antiga.
+
+### Estado
+
+`READY FOR IMPLEMENTATION — branch refactor/editor-interaction-layer-boundary-20260828`
+
+### Condição de revisão
+
+Não introduzir um novo tipo de transformação. `Vec2` é o contrato mínimo; voltar a aumentar a dependência só se existir uma operação real que necessite de mais estado de `Camera`.
 
 ## Outras dívidas explicitamente adiadas
 
@@ -162,12 +190,14 @@ Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer
 10. Implementation semantics e executable evidence continuam estados distintos.
 11. Presentation recebe dados necessários para rendering, não o modelo mutável de gameplay/editor.
 12. Shared Vulkan primitives devem permanecer estreitos e não absorver políticas específicas sem nova evidência.
+13. `Game/Logic` não deve depender de tipos concretos de `Game/Graphics` para operações de interação.
 
 ## Próximo passo
 
 ```text
-PR #133 integrado
-→ reavaliar #22 FontRenderer decomposition
-→ investigar SpriteRenderer
-→ só depois decidir novas extrações ou otimizações
+Issue #135
+→ remove Logic → Graphics/Camera dependency
+→ validate
+→ update architecture/roadmap/debt/WP
+→ re-audit remaining Logic ↔ Graphics includes
 ```
