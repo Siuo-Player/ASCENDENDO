@@ -2,11 +2,11 @@
 
 ## Estado
 
-`READY FOR IMPLEMENTATION`
+`DONE — PR #133`
 
 ## Contexto
 
-`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` duplicam a mesma sequência de criação/upload de imagens Vulkan. As diferenças são propriedades concretas dos recursos (formato, filtro e dados de origem), não diferenças de lifecycle.
+`FontRendererGpu.cpp` e `SpriteRendererGpu.cpp` duplicavam a mesma sequência de criação/upload de imagens Vulkan. As diferenças eram propriedades concretas dos recursos (formato, filtro e dados de origem), não diferenças de lifecycle.
 
 ## Decisão
 
@@ -19,56 +19,53 @@ Não criar `TextureManager`, cache global ou abstração genérica de asset mana
 ```text
 consumer
   ↓
-uploadImage2D(ctx, pixels, width, height, format, filter, out)
+uploadVulkanImage2D(ctx, pixels, width, height, format, filter, out)
   ↓
 VkImage + VkDeviceMemory + VkImageView + VkSampler
 ```
 
-O primitive é stateless depois da chamada. O consumidor passa a ser responsável pelos handles devolvidos e pelo descriptor setup.
+O primitive é stateless depois da chamada. O consumidor mantém ownership dos handles devolvidos e do descriptor setup.
 
 ### Propriedades explícitas
 
-- `VkFormat` é fornecido pelo consumidor;
-- `VkFilter` é fornecido pelo consumidor;
-- usage comum fica limitado a `TRANSFER_DST | SAMPLED`;
-- image layout final é `SHADER_READ_ONLY_OPTIMAL`;
-- command pool usa a graphics queue family existente;
-- sampler mantém clamp-to-edge e anisotropy efetiva atual.
+- `VkFormat` continua fornecido pelo consumidor;
+- `VkFilter` continua fornecido pelo consumidor;
+- usage comum: `TRANSFER_DST | SAMPLED`;
+- layout final: `SHADER_READ_ONLY_OPTIMAL`;
+- command pool: graphics queue family existente;
+- address mode: `CLAMP_TO_EDGE`;
+- Font: `R8_UNORM` + `LINEAR`;
+- Sprite: `R8G8B8A8_UNORM` + `NEAREST`.
 
 ### Failure contract
 
-Qualquer falha durante staging, allocation, binding, command recording/submission, image view ou sampler deixa todos os handles de saída nulos e liberta os recursos parcialmente criados.
+Falhas durante staging, allocation, binding, command recording/submission, image view ou sampler libertam recursos parcialmente criados e deixam o output nulo.
 
-## Escopo
+## Resultado
 
-- adicionar primitive compartilhado;
-- migrar `FontRendererGpu`;
-- migrar `SpriteRendererGpu`;
-- manter descriptor resources específicos;
-- adicionar testes de preconditions;
-- validar em Linux normal, ASan/UBSan e Windows.
+`Game/Graphics/VulkanImageUpload.h/.cpp` centraliza o lifecycle comum. `FontRendererGpu` e `SpriteRendererGpu` mantêm as responsabilidades específicas. Descriptor pools/sets não foram absorvidos pelo primitive.
 
-## Fora de escopo
+## Validação
 
-- alterar semântica visual;
-- alterar filtros ou formatos atuais;
-- shaders/pipelines;
-- asset manager/cache;
-- performance tuning.
+PR #133 foi integrada como `e3871bc935dfa52124ec5244ddbb04714caec161`.
 
-## Dependências
+Os três workflows obrigatórios passaram no head validado:
+- Linux / Clang / C++20 / Headless Vulkan;
+- Linux / Clang / ASan + UBSan / Headless Vulkan;
+- Windows / Clang / C++20.
 
-- `VulkanContext`;
-- #22 `FontRenderer decomposition`;
-- `docs/CODE_SIZE.md`;
-- `docs/ARCHITECTURE.md`;
-- `docs/DEVELOPMENT_PROTOCOL.md`.
+Os jobs correspondentes também passaram source-size, full tests, headless Vulkan e campaign validation.
 
 ## Exit criteria
 
-- existe uma única implementação do upload comum;
-- ownership está explícito;
-- `FontRendererGpu` e `SpriteRendererGpu` mantêm comportamento;
-- failure paths limpam recursos parcialmente criados;
-- build/testes/sanitizers/Windows passam;
-- documentação finalizada.
+- [x] existe uma única implementação do upload comum;
+- [x] ownership está explícito;
+- [x] `FontRendererGpu` usa o primitive sem regressão;
+- [x] `SpriteRendererGpu` usa o primitive sem regressão;
+- [x] failure paths limpam recursos parcialmente criados;
+- [x] build/testes/sanitizers/Windows passam;
+- [x] documentação finalizada.
+
+## Próxima decisão
+
+Reavaliar #22 `FontRenderer decomposition` e a decomposição de `SpriteRenderer` a partir das responsabilidades que permanecem após a remoção da infraestrutura Vulkan duplicada. Não generalizar o primitive sem nova evidência de duplicação e consumidores.
