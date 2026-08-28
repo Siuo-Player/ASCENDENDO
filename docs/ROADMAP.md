@@ -139,19 +139,43 @@ O tipo permanece em `Logic`, porque a evidência não justifica transformá-lo n
 - source-size e campaign validation: **success**;
 - issue #138 fechado como completed após integração.
 
-## Próximo alvo — revisão final de ownership/arquitetura
+## Presentation configuration boundary
 
-Os três findings concretos mais recentes foram encerrados:
+**Issue:** #140  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_PRESENTATION_CONFIG_BOUNDARY_2026-08-28.md`  
+**Implementation:** `refactor/presentation-config-boundary-20260828`  
+**Estado:** **IN IMPLEMENTATION**
+
+### Descoberta
+
+`Game/Core/Config.h` mistura constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependem desse header para cores, clear colors e espaçamento visual.
+
+`CAMERA_SPEED` e `CAMERA_OFFSET_Y` também não têm consumidores efetivos na implementação atual.
+
+### Decisão
+
+Criar `Game/Graphics/PresentationConfig.h` para os valores comprovadamente de presentation e manter em `Core/Config.h` apenas dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
 
 ```text
-EditorInteraction → Camera dependency       DONE (#136)
-GameStateMachine → Graphics/GameState       DONE (#137)
-Player → InputManager para TickInput        DONE (#139)
+Core/Config
+  → logical/gameplay semantics
+
+Graphics/PresentationConfig
+  → visual presentation policy
 ```
 
-A próxima etapa volta a ser auditoria. Só abrir nova tranche quando existir um finding concreto com coupling observável, contrato mínimo claro, semântica preservável e evidência executável. Em particular, não criar uma `Application` genérica apenas para reduzir linhas de `main.cpp`.
+### Evidência inicial
 
-A inspeção de bootstrap observou duplicação de parsing entre `CampaignLoader` e `CampaignID`, mas ambos atualmente interpretam a mesma manifestação e ordem; isto fica como dívida potencial, não como alteração automática.
+- `WorldRenderer.cpp` usa apenas cores de plataforma/jogador/bandeira a partir de `Core/Config`;
+- `EditorRenderer.cpp` usa cores e espaçamento visual da grelha, mantendo dimensões lógicas em Core;
+- `RendererFacade.cpp` usa clear colors e continua a usar `TARGET_ASPECT` de Core;
+- a caracterização independente de `PresentationConfig.h` preserva valores representativos.
+
+## Próximo alvo — revisão final de ownership/arquitetura
+
+Após o #140, voltar à auditoria global e não criar novas divisões de configuração ou abstrações sem coupling concreto e contrato mínimo verificável.
+
+A inspeção de bootstrap observou duplicação de parsing entre `CampaignLoader` e `CampaignID`, mas ambos atualmente interpretam a mesma manifestação e ordem; isto permanece uma dívida potencial, não uma alteração automática.
 
 Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
 

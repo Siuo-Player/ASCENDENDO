@@ -2,47 +2,77 @@
 
 **Bloco do roadmap:** `Post-Gate 9.6 architecture / ownership boundaries`
 
-**Work Package concluído:** `Semantic TickInput contract`
+**Work Package:** `Presentation-owned configuration`
 
-**Issue:** `#138`
+**Issue:** `#140`
 
-**Branch de implementação:** `refactor/semantic-tick-input-boundary-20260828`
+**Branch de implementação:** `refactor/presentation-config-boundary-20260828`
 
-## Resultado
+## Contexto
 
-O finding foi resolvido no PR #139. `TickInput` passou a viver em `Game/Logic/TickInput.h`; `InputManager` continua a produzir o contrato semântico e `Player` passou a depender diretamente desse value object, sem incluir `InputManager.h`.
+A auditoria pós-#139 encontrou `Game/Core/Config.h` a misturar constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependiam do header de Core para cores, clear colors e espaçamento visual.
 
-A fronteira resultante é:
+## Descoberta
+
+A separação real é:
 
 ```text
-hardware / bindings
-        ↓
-InputManager
-        ↓
-semantic TickInput
-        ↓
-Player / simulation
+Core/Config
+  → dimensões lógicas / timestep / física / gameplay / regras semânticas
+
+Graphics/PresentationConfig
+  → cores / clear colors / apresentação visual do editor
 ```
+
+Também existem `CAMERA_SPEED` e `CAMERA_OFFSET_Y` em `Core/Config.h` sem uso efetivo na implementação atual.
+
+## Decisão
+
+Criar `Game/Graphics/PresentationConfig.h` e mover apenas constantes comprovadamente de presentation. Manter `LOGICAL_WIDTH`, `LOGICAL_HEIGHT`, `TARGET_ASPECT`, física/gameplay e `EDITOR_GRID_SNAP` em Core.
+
+Remover apenas `CAMERA_SPEED` e `CAMERA_OFFSET_Y`, pois o código atual usa um default explícito para speed e calcula o offset diretamente.
+
+## Escopo
+
+- adicionar `Graphics/PresentationConfig.h`;
+- migrar `WorldRenderer`, `EditorRenderer` e `RendererFacade`;
+- limpar `Core/Config.h` dos valores visuais;
+- caracterizar o novo header;
+- atualizar documentação.
+
+## Fora de escopo
+
+- alterar valores visuais;
+- alterar semântica da Camera/viewport;
+- mover dimensões lógicas ou física para Graphics;
+- criar sistema genérico de settings;
+- modificar `EDITOR_GRID_SNAP`.
 
 ## Validação
 
-- Linux / Clang / C++20 / Headless Vulkan: **success**
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**
-- Windows / Clang / C++20: **success**
-- source-size: **success**
-- campaign validation: **success**
+```text
+presentation config compile characterization
+→ Linux normal
+→ ASan/UBSan
+→ Windows
+→ source-size/campaign validation
+```
 
-**Merge:** `7da5af74e2ccc9c2a33d43cbfbcfacc6f5c04381`
+## Critério de saída
+
+```text
+Graphics consumers no longer take presentation policy from Core/Config
++ core constants remain in Core
++ all presentation numeric values preserved
++ no behavior change
++ CI mandatory gates green
++ documentation synchronized
+```
+
+## Estado atual
+
+`IMPLEMENTED — pending PR/CI validation`
 
 ## Próxima decisão
 
-Voltar à revisão final de ownership/arquitetura. Só abrir nova tranche quando existir um finding concreto com coupling observável e contrato mínimo verificável. A auditoria atual observou duplicação de parsing entre `CampaignLoader` e `CampaignID`, mas sem divergência comportamental demonstrada; permanece apenas como dívida potencial.
-
-```text
-investigar
-→ confirmar finding
-→ documentar
-→ implementar menor mudança suficiente
-→ validar
-→ reconciliar documentação
-```
+Depois do #140, voltar à auditoria de ownership e só abrir nova tranche para um coupling real com evidência suficiente.

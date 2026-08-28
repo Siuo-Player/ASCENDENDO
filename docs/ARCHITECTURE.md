@@ -301,7 +301,19 @@ A implementação atual ainda permite que `CampaignLoader` e `CampaignID` interp
 
 ## Configuração
 
-`Config.h` é atualmente transversal demais. Novas constantes devem ser organizadas por domínio (`physics`, `render`, `window`, `editor`, `gameplay`).
+`Core/Config.h` deve conter apenas configuração necessária aos contratos lógicos do jogo: dimensões lógicas, aspect ratio, timestep, física, gameplay e regras semânticas do editor.
+
+A configuração exclusivamente visual pertence a `Game/Graphics/PresentationConfig.h`. O boundary atual separa:
+
+```text
+Core/Config
+  → logical/gameplay semantics
+
+Graphics/PresentationConfig
+  → visual presentation policy
+```
+
+As constantes visuais migradas incluem cores de plataformas/jogador/bandeira, clear colors dos estados de presentation e espaçamento visual da grelha do editor. `EDITOR_GRID_SNAP` permanece em Core por ser regra semântica de edição.
 
 ## Editor
 

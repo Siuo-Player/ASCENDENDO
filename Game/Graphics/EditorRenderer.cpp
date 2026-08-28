@@ -7,6 +7,7 @@
 #include "Graphics/Pipeline.h"
 #include "Graphics/TextPipeline.h"
 #include "Graphics/FontRenderer.h"
+#include "Graphics/PresentationConfig.h"
 #include "Core/Config.h"
 
 #include <cmath>
@@ -41,8 +42,8 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
 
     shapes.bind(cmd, shapePipeline);
 
-    constexpr float spacing = config::EDITOR_GRID_VISUAL_SPACING;
-    constexpr float majorSpacing = config::EDITOR_GRID_MAJOR_SPACING;
+    constexpr float spacing = presentation::EDITOR_GRID_VISUAL_SPACING;
+    constexpr float majorSpacing = presentation::EDITOR_GRID_MAJOR_SPACING;
     constexpr float minorR = 0.18f;
     constexpr float minorG = 0.18f;
     constexpr float minorB = 0.22f;
@@ -94,9 +95,9 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         const logic::AABB& platform = snapshot.platforms[i];
         const bool selected = snapshot.hasSelection && snapshot.selectedIndex == i;
 
-        const float r = selected ? 0.95f : config::COLOR_PLATFORM_R;
-        const float g = selected ? 0.78f : config::COLOR_PLATFORM_G;
-        const float b = selected ? 0.15f : config::COLOR_PLATFORM_B;
+        const float r = selected ? 0.95f : presentation::COLOR_PLATFORM_R;
+        const float g = selected ? 0.78f : presentation::COLOR_PLATFORM_G;
+        const float b = selected ? 0.15f : presentation::COLOR_PLATFORM_B;
 
         shapes.drawRect(cmd, shapePipeline,
                         platform.min.x, platform.min.y,
