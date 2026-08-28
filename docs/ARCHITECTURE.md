@@ -44,7 +44,7 @@ Application / process composition
     └── Local user data
 ```
 
-A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e fechar a fronteira `RenderSnapshot`.
+A implementação atual ainda está parcialmente concentrada em `main.cpp`. O renderer legado `Renderer.cpp/.h` já não está presente; a consolidação seguinte é reduzir responsabilidades de `main.cpp` e expandir fronteiras explícitas de presentation apenas quando houver consumidores reais.
 
 A primeira extração da entry point é `GameSession`: uma fronteira de runtime sem ownership Vulkan/presentation. A composição global de processo continua fora desta tranche; não existe ainda uma classe `Application` concreta.
 
@@ -108,57 +108,53 @@ A decomposição deve continuar incrementalmente. `Application` permanece uma di
 
 ## Renderer e `RenderSnapshot`
 
-O Gate 9.6 está formalmente fechado. A migração geral de `RenderSnapshot` é agora um bloco arquitetural próprio.
+O Gate 9.6 está formalmente fechado. A primeira tranche da migração `RenderSnapshot` foi integrada no PR #129.
 
 ### Estado atual
 
-`RendererFacade::drawFrame()` e `WorldRenderer::draw()` ainda recebem diretamente `logic::Player`, `logic::Level` e `Camera` em parte do caminho. `EditorRenderSnapshot` já fornece um exemplo local de separação por dados, mas não substitui um contrato geral.
+O world/player path de `RendererFacade::drawFrame()` e `WorldRenderer::draw()` já recebe um `gfx::RenderSnapshot` em vez de consultar diretamente `logic::Player` e `logic::Level`. `EditorRenderSnapshot` continua a ser um contrato local separado para o editor.
 
-### Fronteira alvo
+### Fronteira atual
 
 ```text
-Player / Level / camera state
+Player / Level runtime state
           ↓
-  explicit snapshot builder
+  RenderSnapshotBuilder
           ↓
      RenderSnapshot
           ↓
- RendererFacade / passes
+ RendererFacade / WorldRenderer
 ```
 
-`RenderSnapshot` deve ser um value object transitório de presentation. Não deve conter:
+`RenderSnapshot` é um value object transitório de presentation. Não contém:
 
 - tipos de domínio (`Player`, `Level`, `Vec2`);
 - `Camera` ou referências a objetos vivos;
 - Vulkan handles/resources;
 - ownership;
 - lógica de gameplay;
-- estado cuja única finalidade seja satisfazer curiosidade futura do renderer.
+- estado sem consumidor concreto no presentation path.
 
-A primeira tranche foi deliberadamente reduzida ao world/player path. O contrato inicial em investigação é:
+A primeira tranche ficou deliberadamente limitada ao world/player path. O contrato efetivamente implementado é:
 
 ```text
 RenderSnapshot
-├── camera { x, y }
-├── player { x, y, width, height, facingLeft }
+├── player { bounds, facingDirection }
 ├── platforms[] { x, y, width, height }
 └── flag { visible, x, y, width, height }
 ```
 
-O contrato pode ser reduzido caso a implementação demonstre que algum campo não é necessário. Campos adicionais exigem consumidor de presentation concreto.
+A `Camera` permanece separada por ser estado de presentation e transformação world→NDC.
 
 ### Regra de construção
 
-A construção do snapshot deve copiar/transformar estado existente; não deve introduzir regras novas de physics, gameplay ou campaign. O resultado deve ser determinístico para o mesmo estado de runtime.
+A construção do snapshot copia/transforma estado existente; não introduz regras novas de physics, gameplay ou campaign. O resultado é determinístico para o mesmo estado de runtime.
 
-### Estratégia incremental
+`main.cpp` constrói o snapshot apenas nos estados `PLAYING`/`PAUSED`, quando o world path é consumido. Outros estados não fazem a cópia da geometria do mundo.
 
-1. caracterizar os dados consumidos por `WorldRenderer`;
-2. introduzir o contrato mínimo;
-3. construir o snapshot explicitamente;
-4. fazer `WorldRenderer` depender apenas do snapshot e dos recursos de render;
-5. adaptar `RendererFacade`;
-6. validar comportamento e só depois avaliar os restantes passes.
+### Próxima expansão
+
+A existência desta fronteira não implica um snapshot global único. `UiRenderer`, editor e outros passes devem ser avaliados individualmente. Um novo snapshot só deve ser criado quando a separação trouxer uma redução verificável de acoplamento, melhorar testabilidade ou estabelecer um contrato necessário entre subsistemas.
 
 Não migrar editor, menus, replay e world rendering numa única mudança apenas para obter uma interface uniforme.
 

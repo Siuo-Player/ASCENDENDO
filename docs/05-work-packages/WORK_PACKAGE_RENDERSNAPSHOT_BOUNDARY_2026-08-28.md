@@ -9,11 +9,11 @@
 
 ## Estado
 
-`IMPLEMENTATION IN PROGRESS`
+`DONE — first world/player presentation boundary`
 
 ## Contexto
 
-Gate 9.6 foi formalmente fechado. A documentação canónica identifica a fronteira `RenderSnapshot` como o próximo bloco arquitetural. Os Studies confirmam que esta migração deve começar apenas depois do fecho do Gate e sem transformar arquitetura futura em requisito retroativo.
+Gate 9.6 foi formalmente fechado. A documentação canónica identificou a fronteira `RenderSnapshot` como o bloco arquitetural seguinte. Os Studies confirmaram que a migração deveria começar apenas depois do fecho do Gate e sem transformar arquitetura futura em requisito retroativo.
 
 ## Evidência inicial
 
@@ -90,7 +90,7 @@ O contrato é coberto por testes que verificam:
 4. independência do snapshot perante alterações posteriores no runtime;
 5. propriedades básicas de value object/cópia.
 
-A conclusão final depende da passagem dos três workflows obrigatórios do PR de implementação.
+O PR #129 passou os três workflows obrigatórios e foi integrado na `main`.
 
 ## Critérios de saída
 
@@ -104,16 +104,18 @@ snapshot independente de tipos de domínio
 + documentação corresponde ao código
 ```
 
-## Riscos
+Todos os critérios da primeira tranche foram satisfeitos.
 
-| Risco | Mitigação |
+## Riscos observados
+
+| Risco | Resultado |
 |---|---|
-| snapshot demasiado rico | campos só entram com consumidor real |
-| duplicação de estado | usar um único contrato `gfx::RenderSnapshot` |
-| builder absorve regras de jogo | copiar/transformar apenas estado existente |
-| trabalho desnecessário fora do world path | construir snapshot só em PLAYING/PAUSED |
-| migração demasiado grande | limitar primeira tranche a world/player |
+| snapshot demasiado rico | evitado; só campos consumidos pelo world/player pass |
+| duplicação de estado | evitada; reutilizado o único contrato `gfx::RenderSnapshot` |
+| builder absorver regras de jogo | evitado; adapter apenas copia/transforma estado existente |
+| trabalho desnecessário fora do world path | evitado; construção limitada a PLAYING/PAUSED |
+| migração demasiado grande | evitada; primeira tranche limitada ao world/player path |
 
 ## Próxima decisão
 
-Após CI verde, comparar a API resultante com os restantes consumers e decidir separadamente se `UiRenderer`, editor ou outros paths justificam snapshots específicos. Não uniformizar interfaces apenas por estética.
+Após a integração, os restantes presentation consumers devem ser avaliados individualmente. `UiRenderer`, editor e outros paths só devem receber snapshots próprios quando houver um benefício arquitetural/testável demonstrado. Não uniformizar interfaces apenas por estética.
