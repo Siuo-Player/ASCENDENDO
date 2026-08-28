@@ -112,28 +112,31 @@ Foi criado `Game/Graphics/PresentationConfig.h` para configuração exclusivamen
 - campaign validation: success;
 - teste independente de `PresentationConfig.h` compilou e verificou valores representativos.
 
-## Semantic LevelData geometry validation — em implementação
+## Semantic LevelData geometry validation — concluído
 
-A auditoria da Fase 10 encontrou um gap concreto entre sintaxe e semântica: `LevelDataIO` rejeita tokens/linhas inválidos, mas podia aceitar `PLATFORM`/`FLAG` com largura ou altura zero/negativa, produzindo AABBs degeneradas ou invertidas antes do runtime.
+A auditoria da Fase 10 encontrou um gap concreto entre sintaxe e semântica: `LevelDataIO` rejeitava tokens/linhas inválidos, mas aceitava `PLATFORM`/`FLAG` com largura ou altura zero/negativa, produzindo AABBs degeneradas ou invertidas antes do runtime.
 
 **Issue:** #142  
+**PR:** #143  
 **Branch:** `refactor/leveldata-semantic-validation-20260828`  
-**Estado:** implementation in progress
+**Merge:** `2ef4c1b4c25bbfe862ad8c05edad8f8438741835`  
+**Estado:** **DONE**
 
 ### Decisão
 
-Introduzir `Game/Logic/LevelDataValidator.h/.cpp` como boundary semântico independente. A primeira regra é estritamente geométrica:
+Foi introduzido `Game/Logic/LevelDataValidator.h/.cpp` como boundary semântico independente do parser. A primeira regra valida extensões estritamente positivas para plataformas e flag.
 
-```text
-platform.width() > 0
-platform.height() > 0
-flag.width() > 0
-flag.height() > 0
-```
+`CampaignRuntime` executa esta validação imediatamente após `LevelDataIO::load()` e antes de `Level::appendFromData()`. Uma entrada semânticamente inválida não avança o progresso da campanha nem altera a geometria acumulada.
 
-`CampaignRuntime` valida o documento imediatamente após `LevelDataIO::load()` e antes de `Level::appendFromData()`.
+### Validação
 
-A tranche mantém schema/versioning, migration e bounds policy fora de escopo.
+- validator unit tests: success;
+- malformed campaign-runtime tests: success;
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- source-size: success;
+- campaign validation: success.
 
 ## RenderSnapshot — primeira tranche concluída
 
@@ -179,8 +182,9 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 ## Próximo passo
 
 ```text
-validar Issue #142
-→ Linux normal + ASan/UBSan + Windows
+revisão final da Fase 10
+→ identificar apenas invariantes semanticamente demonstráveis
+→ abrir work package com contrato mínimo
+→ validar em Linux + ASan/UBSan + Windows
 → merge e reconciliar documentação
-→ voltar à auditoria final da Fase 10
 ```
