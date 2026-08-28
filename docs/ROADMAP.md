@@ -107,15 +107,16 @@ Os estados e as transições não foram alterados.
 **Issue:** #138  
 **WP:** `docs/05-work-packages/WORK_PACKAGE_TICK_INPUT_BOUNDARY_2026-08-28.md`  
 **Implementation:** `refactor/semantic-tick-input-boundary-20260828`  
-**Estado:** **IN IMPLEMENTATION**
+**Merge:** `7da5af74e2ccc9c2a33d43cbfbcfacc6f5c04381`  
+**Estado:** **COMPLETED**
 
 ### Descoberta
 
-`Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para conhecer `TickInput`. `Player` não utiliza a API de input físico; recebe somente cinco campos semânticos necessários para um tick de simulação.
+`Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para conhecer `TickInput`. `Player` não utilizava a API de input físico; recebia somente cinco campos semânticos necessários para um tick de simulação.
 
 ### Decisão
 
-Extrair `TickInput` para `Game/Logic/TickInput.h`. `InputManager` continua a traduzir hardware/bindings para o value object; `Player` passa a depender somente desse contrato semântico.
+`TickInput` foi extraído para `Game/Logic/TickInput.h`. `InputManager` continua a traduzir hardware/bindings para o value object e `Player` depende apenas desse contrato semântico.
 
 ```text
 InputManager
@@ -125,25 +126,32 @@ TickInput
 Player
 ```
 
-O tipo permanece em `Logic`, porque a evidência atual não justifica transformá-lo num contrato transversal de `Core`.
+O tipo permanece em `Logic`, porque a evidência não justifica transformá-lo num contrato transversal de `Core`.
 
-### Evidência inicial
+### Evidência
 
-- `Player.cpp` lê apenas os cinco campos semânticos de `TickInput`;
-- `SimulationOrchestrator` obtém o tipo de `InputManager` e o passa a `Player`;
+- `Player.cpp` continua a consumir apenas os cinco campos do contrato;
 - `test_player.cpp` constrói `TickInput` diretamente;
-- a implementação já separa o value object de `InputManager.h` sem alteração de semântica.
+- `Player.h` deixou de incluir `InputManager.h`;
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size e campaign validation: **success**;
+- issue #138 fechado como completed após integração.
 
 ## Próximo alvo — revisão final de ownership/arquitetura
 
-Após o #138, repetir a revisão global apenas para crossings concretos. Não transformar a organização de headers numa refatoração ampla nem criar uma `Application` genérica por redução de linhas.
+Os três findings concretos mais recentes foram encerrados:
 
-Só abrir nova tranche quando existir:
+```text
+EditorInteraction → Camera dependency       DONE (#136)
+GameStateMachine → Graphics/GameState       DONE (#137)
+Player → InputManager para TickInput        DONE (#139)
+```
 
-1. finding concreto;
-2. contrato mínimo claro;
-3. mudança semântica explicitamente preservada;
-4. evidência executável que possa validar a decisão.
+A próxima etapa volta a ser auditoria. Só abrir nova tranche quando existir um finding concreto com coupling observável, contrato mínimo claro, semântica preservável e evidência executável. Em particular, não criar uma `Application` genérica apenas para reduzir linhas de `main.cpp`.
+
+A inspeção de bootstrap observou duplicação de parsing entre `CampaignLoader` e `CampaignID`, mas ambos atualmente interpretam a mesma manifestação e ordem; isto fica como dívida potencial, não como alteração automática.
 
 Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
 
