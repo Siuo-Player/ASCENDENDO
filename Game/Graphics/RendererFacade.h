@@ -10,7 +10,6 @@
 #include <vulkan/vulkan.h>
 #include <memory>
 
-namespace logic { class EditorSession; }
 namespace gfx {
 
 class VulkanContext;
@@ -43,7 +42,6 @@ public:
     void attachText(TextPipeline* textPipeline, FontRenderer* font);
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
-    void attachEditorSession(const logic::EditorSession* session);
 
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
@@ -65,7 +63,6 @@ private:
     FontRenderer* m_font = nullptr;
     SpritePipeline* m_spritePipeline = nullptr;
     SpriteRenderer* m_sprite = nullptr;
-    const logic::EditorSession* m_editorSession = nullptr; // não possuído
     logic::EditorRenderSnapshot m_editorSnapshot{};
     const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
 
