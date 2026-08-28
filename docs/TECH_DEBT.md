@@ -4,9 +4,9 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 
 ## Gate 9.6 — estado
 
-**READY FOR FORMAL CLOSE**
+**CLOSED**
 
-O estado `CLOSED` só deve ser escrito depois de a decisão desta tranche ser integrada na `main`.
+O fecho formal segue a integração da revisão final do Gate (PR #118) e confirma que não existe blocker técnico restante dentro do escopo 9.6.
 
 ### Evidência integrada
 
@@ -31,6 +31,7 @@ O estado `CLOSED` só deve ser escrito depois de a decisão desta tranche ser in
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
 - PR #117 — reconciliação do roadmap/technical debt com os Studies e a `main` real.
+- PR #118 — revisão final de Vulkan capability/queue/synchronization, architecture/ownership e disposição dos claims residuais de replay.
 
 ### Replay
 
@@ -40,7 +41,7 @@ Provado:
 - comparação de estado por tick;
 - fronteira frame → `TickInput`.
 
-Não provado e explicitamente não necessário para este Gate segundo a revisão atual:
+Não provado e explicitamente não necessário para este Gate segundo a revisão final:
 
 - live-input frame-rate independence;
 - terminal/result replay de uma sessão completa;
@@ -76,16 +77,19 @@ A revisão final confirmou que:
 
 Não foi encontrada responsabilidade adicional que justifique uma `Application` genérica nesta revisão.
 
-## Gaps restantes após a revisão
+## Gaps restantes após o fecho
 
-Nenhum blocker técnico novo de 9.6 foi identificado. O único trabalho do bloco corrente é integrar a decisão final e converter `READY FOR FORMAL CLOSE` em `CLOSED`.
+Nenhum blocker técnico de 9.6 permanece.
 
-Fora do Gate:
+Fora do Gate / próximos blocos:
 
+- generalização de `RenderSnapshot` e separação domain/presentation;
 - semantic validation/schema/versioning de `LevelData` (Fase 10);
 - replay persistence;
 - live-input frame-rate independence;
-- generalização de `RenderSnapshot` até este Gate estar fechado.
+- terminal/result replay de uma sessão completa.
+
+Estas capacidades futuras só devem ser promovidas a requisitos quando existir uma decisão de produto explícita.
 
 ## Regras preservadas
 
@@ -102,7 +106,7 @@ Fora do Gate:
 
 ## Próximo bloco
 
-Depois do fecho formal de 9.6:
+O próximo trabalho arquitetural pode iniciar independentemente do fecho de 9.6:
 
 ```text
 RenderSnapshot/domain-presentation boundary
