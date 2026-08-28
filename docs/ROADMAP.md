@@ -144,17 +144,18 @@ O tipo permanece em `Logic`, porque a evidência não justifica transformá-lo n
 **Issue:** #140  
 **WP:** `docs/05-work-packages/WORK_PACKAGE_PRESENTATION_CONFIG_BOUNDARY_2026-08-28.md`  
 **Implementation:** `refactor/presentation-config-boundary-20260828`  
-**Estado:** **IN IMPLEMENTATION**
+**Merge:** `6885ae63f0aacab16be1505643182d25378c1747`  
+**Estado:** **COMPLETED**
 
 ### Descoberta
 
-`Game/Core/Config.h` mistura constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependem desse header para cores, clear colors e espaçamento visual.
-
-`CAMERA_SPEED` e `CAMERA_OFFSET_Y` também não têm consumidores efetivos na implementação atual.
+`Game/Core/Config.h` misturava constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependiam do header de Core para cores, clear colors e espaçamento visual.
 
 ### Decisão
 
-Criar `Game/Graphics/PresentationConfig.h` para os valores comprovadamente de presentation e manter em `Core/Config.h` apenas dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
+Foi criado `Game/Graphics/PresentationConfig.h` para cores, clear colors e espaçamento visual do editor. `Core/Config.h` mantém dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
+
+`CAMERA_SPEED` e `CAMERA_OFFSET_Y` foram removidos por estarem sem uso efetivo no código atual; a implementação de `Camera` já define o speed efetivo e deriva o offset da altura lógica.
 
 ```text
 Core/Config
@@ -164,18 +165,29 @@ Graphics/PresentationConfig
   → visual presentation policy
 ```
 
-### Evidência inicial
+### Evidência
 
-- `WorldRenderer.cpp` usa apenas cores de plataforma/jogador/bandeira a partir de `Core/Config`;
-- `EditorRenderer.cpp` usa cores e espaçamento visual da grelha, mantendo dimensões lógicas em Core;
-- `RendererFacade.cpp` usa clear colors e continua a usar `TARGET_ASPECT` de Core;
-- a caracterização independente de `PresentationConfig.h` preserva valores representativos.
+- `WorldRenderer`, `EditorRenderer` e `RendererFacade` passaram a depender do header de presentation para valores visuais;
+- dimensões lógicas e `TARGET_ASPECT` continuam em Core;
+- teste independente caracteriza o novo header e valores representativos;
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size e campaign validation: **success**;
+- issue #140 fechado como completed após integração.
 
 ## Próximo alvo — revisão final de ownership/arquitetura
 
-Após o #140, voltar à auditoria global e não criar novas divisões de configuração ou abstrações sem coupling concreto e contrato mínimo verificável.
+Os findings concretos recentes estão encerrados:
 
-A inspeção de bootstrap observou duplicação de parsing entre `CampaignLoader` e `CampaignID`, mas ambos atualmente interpretam a mesma manifestação e ordem; isto permanece uma dívida potencial, não uma alteração automática.
+```text
+EditorInteraction → Camera dependency          DONE (#136)
+GameStateMachine → Graphics/GameState          DONE (#137)
+Player → InputManager para TickInput           DONE (#139)
+Core::Config → presentation policy              DONE (#141)
+```
+
+A próxima etapa volta à auditoria global. A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável. Não criar uma `Application` genérica, nem novas divisões de configuração, apenas por organização.
 
 Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
 
