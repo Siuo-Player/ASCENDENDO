@@ -48,37 +48,30 @@ Não provado e explicitamente não necessário para este Gate:
 - terminal/result replay de uma sessão completa;
 - replay persistence/serialization.
 
-## RenderSnapshot — dívida arquitetural ativa
+## RenderSnapshot — implementação em curso
 
-`RendererFacade` e `WorldRenderer` ainda atravessam a fronteira de presentation com `logic::Player`, `logic::Level` e `Camera`. Esta dívida passa agora a ser um work package arquitetural dedicado após o Gate 9.6.
+A fronteira foi iniciada na branch `feat/render-snapshot-world-path-20260828`, seguindo o contrato já existente em `Game/Graphics/RenderSnapshot.h`.
 
-**Issue:** #122  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_RENDERSNAPSHOT_BOUNDARY_2026-08-28.md`  
-**Branch:** `docs/render-snapshot-wp-20260828`
+A primeira tranche removeu `Player`/`Level` do `RendererFacade` e `WorldRenderer`, acrescentando um `RenderSnapshotBuilder` explícito. `Camera` continua separado da snapshot por ser estado de presentation e transformação world→NDC.
 
-### Contrato inicial
+### Contrato atual
 
 ```text
 RenderSnapshot
-├── camera { x, y }
-├── player { x, y, width, height, facingLeft }
+├── player { bounds, facingDirection }
 ├── platforms[] { x, y, width, height }
 └── flag { visible, x, y, width, height }
 ```
 
-O contrato deve permanecer mínimo: adicionar dados apenas quando um pass de presentation os consumir. Não transportar tipos de domínio, handles Vulkan, ownership, estado mutável ou lógica de gameplay.
+O builder é apenas uma transformação de estado para dados de presentation; não deve introduzir regras de gameplay.
 
-### Exit criteria
+### Regra de custo
 
-```text
-snapshot como value object de presentation
-+ sem tipos de domínio
-+ sem Vulkan ownership
-+ builder explícito/determinístico
-+ WorldRenderer sem Player/Level
-+ comportamento preservado
-+ testes/build/CI
-```
+O snapshot é construído apenas em `PLAYING`/`PAUSED`. Em outros estados o world pass não é consumido, pelo que não se copia a geometria do nível desnecessariamente.
+
+### Estado
+
+`CI VALIDATION PENDING` — o ambiente local desta sessão não conseguiu resolver `github.com`; a validação de compilação depende dos workflows do PR.
 
 ## Outras dívidas explicitamente adiadas
 
@@ -86,7 +79,7 @@ snapshot como value object de presentation
 - replay persistence;
 - live-input frame-rate independence;
 - terminal/result replay;
-- decomposição de `FontRenderer` e `SpriteRenderer` em WPs separados quando a análise de coesão/coupling justificar a mudança.
+- restantes presentation paths, caso uma análise específica mostre necessidade de snapshots adicionais.
 
 ## Regras preservadas
 
@@ -100,14 +93,13 @@ snapshot como value object de presentation
 8. `ReplayManager` usa `TickInput`.
 9. CI failure causes exigem evidência observável.
 10. Implementation semantics e executable evidence continuam estados distintos.
-11. Presentation deve receber dados necessários para renderização, não o modelo mutável de gameplay, quando a fronteira snapshot estiver disponível.
+11. Presentation deve receber dados necessários para rendering, não o modelo mutável de gameplay, quando a fronteira snapshot estiver disponível.
 
-## Próximo bloco
+## Próximo passo
 
 ```text
-RenderSnapshot/domain-presentation boundary
-→ dedicated work package
-→ implementation
-→ validation
-→ decidir expansão para restantes presentation paths
+PR #129 CI
+→ corrigir qualquer regressão
+→ merge da primeira fronteira
+→ avaliar restantes presentation consumers
 ```

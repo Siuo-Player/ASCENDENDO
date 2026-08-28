@@ -8,6 +8,9 @@
 #include "Game/Graphics/GraphicsRuntime.h"
 #include "Game/Graphics/PresentationRuntime.h"
 #include "Game/Graphics/Camera.h"
+#include "Game/Graphics/RenderState.h"
+#include "Game/Graphics/RenderSnapshot.h"
+#include "Game/Graphics/RenderSnapshotBuilder.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
@@ -85,6 +88,17 @@ void applyStatePresentation(GLFWwindow* window,
     } else if (state == GameState::PLAYING) {
         setPlayingTitle(window);
     }
+}
+
+RenderState toRenderState(GameState state) {
+    switch (state) {
+        case GameState::PLAYING: return RenderState::PLAYING;
+        case GameState::PAUSED:  return RenderState::PAUSED;
+        case GameState::CREDITS: return RenderState::CREDITS;
+        case GameState::MENU:    return RenderState::MENU;
+        case GameState::EDITOR:  return RenderState::EDITOR;
+    }
+    return RenderState::MENU;
 }
 
 } // namespace
@@ -219,9 +233,13 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            if (!renderer.drawFrame(session.player(), camera, &session.level(),
-                                    currentState, session.menuSelection(),
-                                    session.elapsedTime())) {
+            RenderSnapshot renderSnapshot;
+            if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
+                renderSnapshot = buildRenderSnapshot(session.player(), session.level());
+            }
+
+            if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),
+                                    session.menuSelection(), session.elapsedTime())) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }

@@ -7,7 +7,9 @@
 #include "../../Game/Graphics/VulkanContext.h"
 #include "../../Game/Graphics/Window.h"
 #include "../../Game/Graphics/Camera.h"
+#include "../../Game/Graphics/RenderSnapshotBuilder.h"
 #include "../../Game/Logic/Player.h"
+#include "../../Game/Logic/Level.h"
 
 #include <filesystem>
 #include <vector>
@@ -55,9 +57,10 @@ TEST_SUITE("PresentationRuntime") {
         CHECK(renderer.isInitialized());
 
         Player player;
+        Level level;
         Camera camera;
-        CHECK(renderer.drawFrame(player, camera, nullptr,
-                                 GameState::PLAYING, 0, 0.0f));
+        const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
+        CHECK(renderer.drawFrame(snapshot, camera, RenderState::PLAYING, 0, 0.0f));
 
         vkDeviceWaitIdle(ctx.device());
     }
