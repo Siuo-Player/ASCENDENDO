@@ -78,17 +78,15 @@ A revisão final confirmou as assumptions de queue/capability/synchronization e 
 
 `GameSession` permanece como fronteira de estado de sessão sem ownership Vulkan/presentation. `GraphicsRuntime` mantém o ownership agregado do stack gráfico e cleanup em ordem inversa de dependências. `PresentationRuntime` mantém recursos de presentation e attachments não-owning ao `RendererFacade`.
 
-A fronteira geral de `RenderSnapshot` ainda não está implementada e é agora o próximo bloco arquitetural dedicado. Não deve existir uma classe `Application` genérica apenas para completar o diagrama.
-
 ## Next Architecture Block — RenderSnapshot
 
 **Issue:** #122  
 **WP:** `docs/05-work-packages/WORK_PACKAGE_RENDERSNAPSHOT_BOUNDARY_2026-08-28.md`  
-**Estado:** investigação iniciada.
+**Estado:** **FIRST TRANCHE CONCLUÍDA (PR #129)**
 
-Objetivo: separar dados de presentation do domínio no world/player path. O snapshot deve conter somente dados necessários para os passes migrados, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
+Objetivo da tranche: separar dados de presentation do domínio no world/player path. O snapshot contém somente dados necessários para os passes migrados, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
 
-Primeira sequência:
+A sequência executada foi:
 
 ```text
 inventariar consumidores
@@ -98,10 +96,42 @@ inventariar consumidores
 → adaptar RendererFacade
 → caracterizar/testar
 → validar CI
-→ decidir expansão para restantes passes
+→ concluir primeira tranche
 ```
 
-A primeira tranche não inclui replay, schema/versioning, physics/gameplay, otimização sem baseline ou `Application` genérica.
+### Evidência da primeira tranche
+
+- `Game/Graphics/RenderSnapshot.h` existente foi reutilizado como único contrato.
+- `RenderSnapshotBuilder` passou a constituir a fronteira explícita runtime → presentation.
+- `WorldRenderer` passou a consumir `RenderSnapshot` no world/player path, sem consultar `Player`/`Level` mutáveis.
+- `RendererFacade` passou a receber o snapshot nesse caminho.
+- `main.cpp` constrói o snapshot na composição do frame.
+- Testes cobrem composição, geometria visual, direção visual e independência perante alterações posteriores do runtime.
+- PR #129 foi integrado após os três workflows obrigatórios passarem.
+
+### Contrato atual da tranche
+
+```text
+RenderSnapshot
+├── player { bounds, facingDirection }
+├── platforms[] { x, y, width, height }
+└── flag { visible, x, y, width, height }
+```
+
+A `Camera` permanece separada como objeto de presentation; não faz parte do snapshot.
+
+### Fora de escopo
+
+- replay;
+- schema/versioning;
+- physics/gameplay;
+- `Application` genérica;
+- migração automática de todos os passes;
+- otimização de baixo nível sem baseline.
+
+## Próximo bloco arquitetural
+
+Os restantes presentation consumers devem ser inventariados individualmente. A existência do primeiro snapshot não implica que `UiRenderer`, editor ou outros passes devam partilhar o mesmo contrato. Cada novo snapshot deve nascer apenas quando existir um benefício arquitetural/testável demonstrável.
 
 ## Fase 10
 
