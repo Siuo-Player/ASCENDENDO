@@ -10,12 +10,9 @@
 #include "Graphics/Swapchain.h"
 #include "Graphics/Pipeline.h"
 #include "Graphics/Camera.h"
-#include "Logic/Player.h"
-#include "Logic/Level.h"
-#include "Logic/EditorSession.h"
 #include "Core/Config.h"
+#include "Logic/EditorSession.h"
 
-#include <algorithm>
 #include <memory>
 
 namespace gfx {
@@ -58,6 +55,10 @@ void RendererFacade::cleanup() {
     m_editorSession = nullptr;
     m_editorSnapshotPtr = nullptr;
     m_editorSnapshot = {};
+    m_textPipeline = nullptr;
+    m_font = nullptr;
+    m_spritePipeline = nullptr;
+    m_sprite = nullptr;
     m_initialized = false;
 }
 
@@ -91,27 +92,8 @@ void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
     m_editorSnapshotPtr = &m_editorSnapshot;
 }
 
-bool RendererFacade::drawFrame(const logic::Player& player,
+bool RendererFacade::drawFrame(const core::RenderSnapshot& snapshot,
                                const Camera& camera,
-                               const logic::Level* level,
-                               GameState state,
-                               int menuSelection,
-                               float elapsedSeconds) {
-    RenderState renderState = RenderState::PLAYING;
-    switch (state) {
-        case GameState::PLAYING: renderState = RenderState::PLAYING; break;
-        case GameState::PAUSED:  renderState = RenderState::PAUSED;  break;
-        case GameState::CREDITS: renderState = RenderState::CREDITS; break;
-        case GameState::MENU:    renderState = RenderState::MENU;    break;
-        case GameState::EDITOR:  renderState = RenderState::EDITOR; break;
-    }
-    return drawFrame(player, camera, level, renderState,
-                     menuSelection, elapsedSeconds);
-}
-
-bool RendererFacade::drawFrame(const logic::Player& player,
-                               const Camera& camera,
-                               const logic::Level* level,
                                RenderState state,
                                int menuSelection,
                                float elapsedSeconds) {
@@ -190,13 +172,13 @@ bool RendererFacade::drawFrame(const logic::Player& player,
     switch (state) {
         case RenderState::PLAYING:
             m_world->draw(commandBuffer, *m_shapePipeline, *m_shapes,
-                          player, camera, level, m_spritePipeline, m_sprite);
+                          snapshot, camera, m_spritePipeline, m_sprite);
             m_ui->drawTimer(commandBuffer, m_textPipeline, m_font, elapsedSeconds);
             break;
 
         case RenderState::PAUSED:
             m_world->draw(commandBuffer, *m_shapePipeline, *m_shapes,
-                          player, camera, level, m_spritePipeline, m_sprite);
+                          snapshot, camera, m_spritePipeline, m_sprite);
             m_ui->drawPaused(commandBuffer, *m_shapePipeline, *m_shapes,
                              m_textPipeline, m_font, menuSelection);
             break;
