@@ -20,6 +20,8 @@ Este documento transforma a revisão de código atual em trabalho rastreável.
 - PR #99 — licença MIT do projeto e fronteiras de licenciamento de terceiros.
 - PR #100 — caracterização de collision-order por permutação, sem alteração da física de produção.
 - PR #101 — documentação do resultado da caracterização.
+- PR #102 — reconciliação canónica do Gate após #100/#101.
+- PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
 
 ### Estado residual de replay
 
@@ -33,10 +35,14 @@ A evidência atual demonstra replay tick-semantic e comparação de estado por t
 
 O caso exercitado por #100 não apresentou divergência entre as duas ordens testadas. Isso é evidência limitada ao conjunto de contactos e estado inicial usados no teste; não deve ser transformado em uma alegação universal de permutation invariance.
 
+### Estado runtime-root
+
+PR #105 demonstrou por teste que `RuntimePaths::fromProcess(nullptr)` produz o mesmo executable root e paths derivados de assets/levels/sprite quando a chamada ocorre sob dois current working directories distintos nos ambientes da matriz CI. Esta evidência não define uma política de packaging/deployment futura nem elimina o limite do fallback de `argv0` fora das condições exercitadas.
+
 ### Gaps restantes
 
 - capability/error evidence Vulkan além do happy path;
-- paths/runtime roots independentes do current working directory;
+- paths/runtime roots independentes do current working directory: **evidência integrada para o caminho de processo exercitado; fallback/packaging permanecem limitados**;
 - contrato world/chunk metadata de `Level`;
 - eventual política global de collision-order apenas se surgir requisito ou counterexample adicional;
 - semantic validation/schema/versioning de `LevelData` (Fase 10);
@@ -47,7 +53,7 @@ O caso exercitado por #100 não apresentou divergência entre as duas ordens tes
 1. Renderer não lê input nem altera gameplay.
 2. Gameplay não depende de teclas físicas.
 3. `LevelData` não depende de Vulkan/GLFW.
-4. Runtime não depende de current working directory.
+4. Runtime não depende de current working directory para a resolução de paths de processo atualmente exercitada.
 5. `RuntimeBootstrap` é composição de startup, não `Application` genérica.
 6. `LevelDataIO` é parser/serializer, não schema authority nem semantic validator.
 7. Ordem de `Level::platforms()` não é assumida irrelevante para determinismo.
