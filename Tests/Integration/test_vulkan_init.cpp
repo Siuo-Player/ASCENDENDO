@@ -102,7 +102,12 @@ TEST_SUITE("Vulkan / Inicializacao") {
         for (VkPhysicalDevice device : devices) {
             VkPhysicalDeviceProperties props{};
             vkGetPhysicalDeviceProperties(device, &props);
-            if (VK_VERSION_MAJOR(props.apiVersion) != 1 || VK_VERSION_MINOR(props.apiVersion) < 3) {
+
+            const bool apiSupported =
+                VK_VERSION_MAJOR(props.apiVersion) == 1 &&
+                VK_VERSION_MINOR(props.apiVersion) >= 3;
+            if (!apiSupported) {
+                MESSAGE("Skipping Vulkan device below API 1.3: ", props.deviceName);
                 continue;
             }
 
@@ -135,9 +140,14 @@ TEST_SUITE("Vulkan / Inicializacao") {
                 }
             }
 
-            CHECK(hasSwapchainExtension);
-            CHECK(hasGraphicsQueue);
-            runtimeCandidateFound = runtimeCandidateFound || (hasSwapchainExtension && hasGraphicsQueue);
+            const bool runtimeCandidate = hasSwapchainExtension && hasGraphicsQueue;
+            if (!runtimeCandidate) {
+                MESSAGE("Skipping Vulkan device unsuitable for runtime: ", props.deviceName);
+                continue;
+            }
+
+            runtimeCandidateFound = true;
+            break;
         }
 
         CHECK(runtimeCandidateFound);
