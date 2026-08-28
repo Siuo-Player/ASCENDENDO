@@ -102,16 +102,41 @@ Os estados e as transições não foram alterados.
 - `static_assert` confirma a identidade de tipo entre `gfx::GameState` e `core::GameState`;
 - issue #137 fechado como completed após integração.
 
-## Próximo alvo — revisão final de ownership/arquitetura
+## Semantic TickInput boundary
 
-Os dois findings concretos desta tranche foram resolvidos:
+**Issue:** #138  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_TICK_INPUT_BOUNDARY_2026-08-28.md`  
+**Implementation:** `refactor/semantic-tick-input-boundary-20260828`  
+**Estado:** **IN IMPLEMENTATION**
+
+### Descoberta
+
+`Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para conhecer `TickInput`. `Player` não utiliza a API de input físico; recebe somente cinco campos semânticos necessários para um tick de simulação.
+
+### Decisão
+
+Extrair `TickInput` para `Game/Logic/TickInput.h`. `InputManager` continua a traduzir hardware/bindings para o value object; `Player` passa a depender somente desse contrato semântico.
 
 ```text
-EditorInteraction → Camera dependency       DONE (#136)
-GameStateMachine → Graphics/GameState       DONE (#137)
+InputManager
+    ↓ produz
+TickInput
+    ↓ consome
+Player
 ```
 
-A próxima etapa não deve ser mais uma movimentação de tipos por estética. Deve ser uma revisão global de ownership, especialmente em `main.cpp`, `GameSession`, RuntimeBootstrap e Presentation, procurando responsabilidades duplicadas ou fronteiras que possam ser testadas isoladamente.
+O tipo permanece em `Logic`, porque a evidência atual não justifica transformá-lo num contrato transversal de `Core`.
+
+### Evidência inicial
+
+- `Player.cpp` lê apenas os cinco campos semânticos de `TickInput`;
+- `SimulationOrchestrator` obtém o tipo de `InputManager` e o passa a `Player`;
+- `test_player.cpp` constrói `TickInput` diretamente;
+- a implementação já separa o value object de `InputManager.h` sem alteração de semântica.
+
+## Próximo alvo — revisão final de ownership/arquitetura
+
+Após o #138, repetir a revisão global apenas para crossings concretos. Não transformar a organização de headers numa refatoração ampla nem criar uma `Application` genérica por redução de linhas.
 
 Só abrir nova tranche quando existir:
 
