@@ -48,11 +48,9 @@ Não provado e explicitamente não necessário para este Gate:
 - terminal/result replay de uma sessão completa;
 - replay persistence/serialization.
 
-## RenderSnapshot — implementação em curso
+## RenderSnapshot — primeira tranche concluída
 
-A fronteira foi iniciada na branch `feat/render-snapshot-world-path-20260828`, seguindo o contrato já existente em `Game/Graphics/RenderSnapshot.h`.
-
-A primeira tranche removeu `Player`/`Level` do `RendererFacade` e `WorldRenderer`, acrescentando um `RenderSnapshotBuilder` explícito. `Camera` continua separado da snapshot por ser estado de presentation e transformação world→NDC.
+A primeira tranche da fronteira `RenderSnapshot` foi integrada no PR #129.
 
 ### Contrato atual
 
@@ -63,15 +61,39 @@ RenderSnapshot
 └── flag { visible, x, y, width, height }
 ```
 
-O builder é apenas uma transformação de estado para dados de presentation; não deve introduzir regras de gameplay.
+O snapshot reutiliza o contrato já existente em `Game/Graphics/RenderSnapshot.h` e permanece um value object de presentation, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
+
+### Fronteira implementada
+
+```text
+logic::Player + logic::Level
+            ↓
+RenderSnapshotBuilder
+            ↓
+     gfx::RenderSnapshot
+            ↓
+RendererFacade / WorldRenderer
+```
+
+`WorldRenderer` e o world path de `RendererFacade` já não recebem diretamente `Player`/`Level`.
+
+A `Camera` permanece separada da snapshot por ser estado de presentation e transformação world→NDC.
 
 ### Regra de custo
 
 O snapshot é construído apenas em `PLAYING`/`PAUSED`. Em outros estados o world pass não é consumido, pelo que não se copia a geometria do nível desnecessariamente.
 
+### Validação
+
+O PR #129 foi integrado após os workflows obrigatórios passarem. Os testes cobrem composição do snapshot, geometria de plataformas/flag, direção visual e independência perante alterações posteriores no runtime.
+
 ### Estado
 
-`CI VALIDATION PENDING` — o ambiente local desta sessão não conseguiu resolver `github.com`; a validação de compilação depende dos workflows do PR.
+`DONE — first world/player presentation boundary`
+
+### Próxima análise
+
+Os restantes presentation consumers devem ser avaliados separadamente. `UiRenderer`, editor e outros passes só devem receber snapshots próprios se a análise dos dados realmente consumidos justificar a fronteira.
 
 ## Outras dívidas explicitamente adiadas
 
@@ -98,8 +120,8 @@ O snapshot é construído apenas em `PLAYING`/`PAUSED`. Em outros estados o worl
 ## Próximo passo
 
 ```text
-PR #129 CI
-→ corrigir qualquer regressão
-→ merge da primeira fronteira
-→ avaliar restantes presentation consumers
+PR #129 integrado
+→ inventariar restantes presentation consumers
+→ decidir snapshots específicos por consumer
+→ só então implementar nova tranche
 ```
