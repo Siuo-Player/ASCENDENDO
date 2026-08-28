@@ -2,10 +2,10 @@
 
 namespace core {
 
-GameStateMachine::GameStateMachine(gfx::GameState initialState) noexcept
+GameStateMachine::GameStateMachine(GameState initialState) noexcept
     : state_(initialState),
-      editorReturnState_(gfx::GameState::MENU),
-      creditsReturnState_(gfx::GameState::MENU),
+      editorReturnState_(GameState::MENU),
+      creditsReturnState_(GameState::MENU),
       menuSelection_(0) {}
 
 void GameStateMachine::selectRelative(int delta, int count) noexcept {
@@ -33,19 +33,19 @@ void GameStateMachine::select(int index, int count) noexcept {
 }
 
 void GameStateMachine::enterPlaying() noexcept {
-    state_ = gfx::GameState::PLAYING;
+    state_ = GameState::PLAYING;
     menuSelection_ = 0;
 }
 
-void GameStateMachine::enterEditor(gfx::GameState returnState) noexcept {
+void GameStateMachine::enterEditor(GameState returnState) noexcept {
     editorReturnState_ = returnState;
-    state_ = gfx::GameState::EDITOR;
+    state_ = GameState::EDITOR;
     menuSelection_ = 0;
 }
 
-void GameStateMachine::enterCredits(gfx::GameState returnState) noexcept {
+void GameStateMachine::enterCredits(GameState returnState) noexcept {
     creditsReturnState_ = returnState;
-    state_ = gfx::GameState::CREDITS;
+    state_ = GameState::CREDITS;
     menuSelection_ = 0;
 }
 
@@ -60,21 +60,21 @@ void GameStateMachine::returnFromCredits() noexcept {
 }
 
 void GameStateMachine::pause() noexcept {
-    if (state_ == gfx::GameState::PLAYING) {
-        state_ = gfx::GameState::PAUSED;
+    if (state_ == GameState::PLAYING) {
+        state_ = GameState::PAUSED;
         menuSelection_ = 0;
     }
 }
 
 void GameStateMachine::resume() noexcept {
-    if (state_ == gfx::GameState::PAUSED) {
-        state_ = gfx::GameState::PLAYING;
+    if (state_ == GameState::PAUSED) {
+        state_ = GameState::PLAYING;
         menuSelection_ = 0;
     }
 }
 
 void GameStateMachine::returnToMenu() noexcept {
-    state_ = gfx::GameState::MENU;
+    state_ = GameState::MENU;
     menuSelection_ = 0;
 }
 
