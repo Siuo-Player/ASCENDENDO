@@ -9,10 +9,10 @@
 #include "Game/Graphics/PresentationRuntime.h"
 #include "Game/Graphics/Camera.h"
 #include "Game/Graphics/RenderState.h"
+#include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
-#include "Game/Logic/RenderSnapshotBuilder.h"
 #include "Game/Core/RuntimeBootstrap.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/KeyBindings.h"
@@ -232,8 +232,8 @@ int main(int argc, char** argv) {
                 break;
             }
 
-            const core::RenderSnapshot renderSnapshot =
-                logic::buildRenderSnapshot(session.player(), session.level());
+            const RenderSnapshot renderSnapshot =
+                buildRenderSnapshot(session.player(), session.level());
 
             if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),
                                     session.menuSelection(), session.elapsedTime())) {
