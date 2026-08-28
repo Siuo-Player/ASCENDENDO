@@ -32,9 +32,9 @@ PR #136 removeu a dependência concreta `Game/Logic/EditorInteraction → Game/G
 
 O contrato passou a receber apenas `Vec2 cameraPosition`, preservando a transformação `logical + cameraPosition`. `EditorSession` também deixou de instanciar `gfx::Camera` para o editor de tela única e passa `{0,0}`. A mudança foi validada pelos três workflows obrigatórios.
 
-## GameState ownership — Issue #137
+## GameState ownership — concluído
 
-Foi encontrado um novo coupling concreto durante a auditoria pós-#136:
+O Issue #137 encontrou e resolveu o coupling:
 
 ```text
 Game/Core/GameStateMachine.h
@@ -42,12 +42,21 @@ Game/Core/GameStateMachine.h
 Game/Graphics/GameState.h
 ```
 
-`GameState` contém apenas estados de runtime (`PLAYING`, `PAUSED`, `CREDITS`, `MENU`, `EDITOR`) e não contém dados de rendering. Não existe razão estrutural para que o estado pertença a `Graphics`.
-
-**Decision:** canonicalizar a definição em `Game/Core/GameState.h`. `Graphics/GameState.h` passa a ser somente um alias compatível `gfx::GameState = core::GameState`, permitindo migrar os consumidores sem churn desnecessário. `GameStateMachine` passa a usar diretamente `core::GameState`.
+`GameState` contém apenas estados de runtime e não dados de rendering. A definição canónica foi movida para `Game/Core/GameState.h`; `Game/Graphics/GameState.h` ficou como alias explícito de compatibilidade (`gfx::GameState = core::GameState`). `GameStateMachine`, `GameSession`, `main.cpp` e os testes internos passaram a usar diretamente `core::GameState`.
 
 **Issue:** #137  
-**Estado:** implementation branch created; CI validation pending.
+**PR:** #137  
+**Merge:** `b9f0d0021bef341327bfde1cdd02d2be8171e0ba`  
+**Estado:** **DONE**
+
+### Validação
+
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- source-size: success;
+- campaign validation: success;
+- `static_assert` confirmou identidade de tipo entre `gfx::GameState` e `core::GameState`.
 
 ## RenderSnapshot — primeira tranche concluída
 
@@ -88,9 +97,9 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 ## Próximo passo
 
 ```text
-validar Issue #137
-→ migrar Core/GameState sem alteração semântica
-→ CI Linux normal + ASan/UBSan + Windows
-→ se verde, merge e reconciliar documentação
-→ voltar à revisão final de ownership/arquitetura
+revisão final de ownership/arquitetura
+→ identificar apenas findings concretos
+→ abrir work package com contrato mínimo
+→ validar em Linux + ASan/UBSan + Windows
+→ merge e reconciliar documentação
 ```
