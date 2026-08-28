@@ -6,7 +6,7 @@ O roadmap orienta a ordem do trabalho, mas uma propriedade só muda de estado qu
 
 ## Gate 9.6 — Base Engineering Gate
 
-O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #118) e desta confirmação de fecho formal.
+O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #118) e da confirmação de fecho formal (PR #119).
 
 ### Evidência integrada
 
@@ -21,7 +21,7 @@ O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #
 - PR #95 — reconciliação do replay contra o `main` atual.
 - PR #99 — licença MIT do projeto e fronteiras de licenciamento de terceiros.
 - PR #100 — caracterização por permutação da ordem de contactos de colisão.
-- PR #101 — documentação do resultado observado da caracterização de collision-order.
+- PR #101 — documentação do resultado observado de collision-order.
 - PR #102 — reconciliação canónica do Gate após #100/#101.
 - PR #105 — evidência executável de independência do current working directory para `RuntimePaths::fromProcess(nullptr)` nos ambientes suportados.
 - PR #108 — classificação dos failure/error paths Vulkan residuais.
@@ -32,6 +32,7 @@ O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
 - PR #117 — reconciliação canónica do roadmap/tech debt com os Studies e com a `main` real.
 - PR #118 — revisão final de Vulkan capability/queue/synchronization, architecture/ownership e disposição dos claims residuais de replay.
+- PR #119 — fecho formal do Gate 9.6.
 
 ### Estado reconciliado de replay
 
@@ -71,48 +72,40 @@ Este contrato está caracterizado. Um modelo semântico geral de chunks e schema
 
 ### Vulkan — revisão final
 
-A revisão final confirmou:
-
-- `VulkanContext` exige graphics queue, present queue quando há surface, `VK_KHR_swapchain` e API compatível com 1.3;
-- `Swapchain` valida suporte da present queue e consulta surface capabilities, formatos e present modes antes da criação;
-- graphics e present podem ser a mesma queue family ou famílias distintas;
-- #94 cobre falha de `vkDeviceWaitIdle()`;
-- #109 estabelece semântica terminal/fail-closed após falha de `vkQueueSubmit`.
-
-Não foi identificado requisito que justifique uma nova camada genérica de fault injection. O resultado é `reviewed / accepted`, não `every VkResult exhaustively tested`.
+A revisão final confirmou as assumptions de queue/capability/synchronization e os contratos de failure relevantes. Não foi identificado requisito que justifique uma camada genérica de fault injection.
 
 ### Architecture / ownership — revisão final
 
 `GameSession` permanece como fronteira de estado de sessão sem ownership Vulkan/presentation. `GraphicsRuntime` mantém o ownership agregado do stack gráfico e cleanup em ordem inversa de dependências. `PresentationRuntime` mantém recursos de presentation e attachments não-owning ao `RendererFacade`.
 
-`RendererFacade` ainda recebe `logic::Player`/`logic::Level` diretamente em parte do caminho. A fronteira geral de `RenderSnapshot` permanece incompleta e é dívida arquitetural conhecida, mas não foi identificado um requisito de Gate 9.6 que a torne blocker. Não deve existir uma classe `Application` genérica apenas para completar o diagrama.
+A fronteira geral de `RenderSnapshot` ainda não está implementada e é agora o próximo bloco arquitetural dedicado. Não deve existir uma classe `Application` genérica apenas para completar o diagrama.
 
-### Gate disposition
+## Next Architecture Block — RenderSnapshot
 
-Os restantes itens estão explicitamente classificados:
+**Issue:** #122  
+**WP:** `docs/05-work-packages/WORK_PACKAGE_RENDERSNAPSHOT_BOUNDARY_2026-08-28.md`  
+**Estado:** investigação iniciada.
 
-```text
-Vulkan capability/queue/synchronization review       ACCEPTED
-Architecture/ownership review                        ACCEPTED
-Replay terminal/result                               FUTURE / not Gate requirement
-Live-input frame-rate independence                   FUTURE / not Gate requirement
-Replay persistence                                   FUTURE / not Gate requirement
-Collision universal invariance                       NOT CLAIMED
-Level semantic validation/schema                     FASE 10
-RenderSnapshot general migration                     NEXT ARCHITECTURE BLOCK
-```
+Objetivo: separar dados de presentation do domínio no world/player path. O snapshot deve conter somente dados necessários para os passes migrados, sem `logic::Player`, `logic::Level`, `logic::Vec2`, `Camera`, recursos Vulkan ou ownership.
 
-### Ordem seguinte
+Primeira sequência:
 
 ```text
-Gate 9.6 CLOSED
-→ dedicated RenderSnapshot work package
-→ presentation/domain boundary migration
-→ validation
-→ Fase 10 semantic Level/schema/versioning
+inventariar consumidores
+→ definir contrato mínimo
+→ construir snapshot explícito
+→ migrar WorldRenderer
+→ adaptar RendererFacade
+→ caracterizar/testar
+→ validar CI
+→ decidir expansão para restantes passes
 ```
 
-A migração geral de `RenderSnapshot` deve ser tratada num WP próprio, com desenho explícito da fronteira de dados e ownership.
+A primeira tranche não inclui replay, schema/versioning, physics/gameplay, otimização sem baseline ou `Application` genérica.
+
+## Fase 10
+
+Semantic `LevelData` validation/schema/versioning permanece separado do bloco de presentation e só avança quando a evidência/requisito correspondente o justificar.
 
 ## Princípios de execução
 
