@@ -1,81 +1,83 @@
 # Plano da branch atual
 
-**Bloco do roadmap:** `Post-Gate 9.6 architecture / editor boundaries`
+**Bloco do roadmap:** `Post-Gate 9.6 architecture / ownership boundaries`
 
-**Work Package:** `EditorInteraction presentation-independent input boundary`
+**Work Package:** `Core-owned GameState contract`
 
-**Issue:** `#135`
+**Issue:** `#137`
 
-**Branch de implementação:** `refactor/editor-interaction-layer-boundary-20260828`
+**Branch de implementação:** `refactor/core-gamestate-boundary-20260828`
 
 ## Contexto
 
-`Game/Logic/EditorInteraction.h` dependia diretamente de `Graphics/Camera.h` através de `cursorFromLogical(..., const gfx::Camera&)`.
+A auditoria pós-PR #136 encontrou uma dependência estrutural concreta: `Game/Core/GameStateMachine.h` incluía `Graphics/GameState.h` e expunha `gfx::GameState` como contrato da máquina de estados.
 
-## Descoberta
-
-A implementação utiliza apenas `camera.position.x` e `camera.position.y`. O tipo `gfx::Camera` não acrescenta informação necessária à política de interação.
-
-Durante a validação do PR #136, o mesmo princípio foi encontrado em `EditorSession.cpp`: a sessão do editor criava `gfx::Camera` apenas para obter a posição zero de uma câmara fixa da tela lógica. `EditorSession` já documenta que não possui estado de câmera.
+`GameState` é apenas um enum de estado de runtime. Não contém dados de rendering nem exige ownership de Graphics.
 
 ## Decisão
 
-Usar `const Vec2& cameraPosition` como contrato mínimo em `EditorInteractionController` e passar `Vec2{0.0f, 0.0f}` desde `EditorSession`, mantendo a regra de que Camera pertence a presentation/composição.
+Mover a definição canónica para `Game/Core/GameState.h`.
 
-```text
-logical cursor + camera position
-→ world cursor
+`Game/Graphics/GameState.h` continua disponível como alias explícito:
+
+```cpp
+using GameState = core::GameState;
 ```
 
-No editor de tela única, a posição da câmara é `{0,0}`.
+Isto preserva consumidores existentes enquanto inverte a dependência estrutural para:
+
+```text
+Core state contract
+        ↓
+GameSession / state machine
+        ↓
+Presentation
+```
 
 ## Escopo
 
-- remover `Graphics/Camera.h` de `EditorInteraction.h`;
-- alterar implementação e consumidores;
-- remover o uso desnecessário de `gfx::Camera` em `EditorSession.cpp`;
-- preservar exatamente a transformação cursor→world;
-- manter characterization tests;
-- validar build, sanitizers e Windows.
+- adicionar `Core/GameState.h`;
+- migrar `GameStateMachine.h/.cpp` para `core::GameState`;
+- manter `gfx::GameState` como alias compatível;
+- adicionar characterization compile-time;
+- atualizar arquitetura, roadmap e dívida técnica;
+- validar todos os workflows obrigatórios.
 
 ## Fora de escopo
 
-- `Camera`;
-- sistema de coordenadas;
-- comportamento STAMP/DRAG/move/delete;
-- GLFW/Vulkan;
-- novas abstrações genéricas.
+- alterar os cinco estados existentes;
+- alterar transições;
+- alterar rendering/Vulkan;
+- criar abstrações genéricas;
+- redesenhar `main.cpp`.
 
 ## Validação
 
 ```text
-header dependency removed
-→ compile consumers
-→ cursor→world characterization
-→ full tests
+Core header ownership
+→ type-identity compatibility
+→ state-machine characterization
+→ Linux normal
 → ASan/UBSan
 → Windows
-→ global dependency audit
+→ source-size/campaign validation
 ```
 
 ## Critério de saída
 
 ```text
-Game/Logic/EditorInteraction sem Graphics/Camera include
-+ EditorSession sem uso de gfx::Camera
-+ API usa somente Vec2 para camera position
+Game/Core/GameStateMachine sem include de Graphics/GameState
++ definição canónica em Core
++ gfx::GameState type-identical
 + comportamento preservado
-+ nenhum consumidor antigo
 + CI obrigatório verde
 + documentação sincronizada
 ```
 
 ## Estado atual
 
-`IMPLEMENTED — pending CI validation`
-
-O PR #136 revelou ainda um include concreto ausente em `EditorRenderer.cpp`; a correção foi aplicada na mesma branch porque é necessária para restaurar a compilação dos três targets obrigatórios.
+`IMPLEMENTED — pending PR/CI validation`
 
 ## Próxima decisão
 
-Depois de integrar #135, auditar os restantes includes cruzados `Game/Logic ↔ Game/Graphics` antes de abrir outra tranche. Só remover dependências com evidência de coupling e contrato mínimo claro.
+Depois do #137, voltar à revisão final de ownership/arquitetura. Só abrir nova tranche de desacoplamento quando houver um finding concreto e um contrato mínimo comprovável.
