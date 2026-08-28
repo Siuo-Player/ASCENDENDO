@@ -238,6 +238,23 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 - Windows / Clang / C++20: **success**;
 - source-size e campaign validation: **success**.
 
+### Level state reset — concluído
+
+**Implementation:** PR #161  
+**Merge:** `70d99a819746b89afd885cabaef16b5d8f2886ea`  
+**Estado:** **COMPLETED**
+
+`Level::clear()` agora limpa conjuntamente a geometria acumulada e todo o estado de metadata pertencente ao modelo (`name`, `hasFlag` e `flagBounds`). Foi acrescentado teste regressivo dedicado.
+
+### Replay contract include boundary — concluído
+
+**Issue:** #158  
+**Implementation:** PR #160  
+**Merge:** `0a798872685c668eaac1d1d2b9fbd08c66af1992`  
+**Estado:** **COMPLETED**
+
+`ReplayManager.h` deixou de depender transitivamente de `InputManager.h` para obter `TickInput` e passou a incluir diretamente `Logic/TickInput.h`. A API e a semântica temporal do replay não foram alteradas.
+
 ### Fora de escopo
 
 - schema/versionamento;
@@ -246,11 +263,11 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 - redesign de `Level`;
 - física/colisão;
 
-A extensão finita não altera estes limites de escopo.
+Estas exclusões continuam válidas para as tranches semânticas já concluídas.
 
 ## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
 
-Após #145, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+Após as tranches #144/#145/#161, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
 
 Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
 
