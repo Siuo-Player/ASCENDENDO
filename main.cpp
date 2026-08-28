@@ -183,7 +183,6 @@ int main(int argc, char** argv) {
             bootstrap.campaignID,
             bootstrap.runsFile().string());
         Camera camera;
-        renderer.attachEditorSession(&session.editorSession());
 
         setMenuTitle(win.handle());
         auto lastTime = std::chrono::high_resolution_clock::now();
@@ -234,8 +233,14 @@ int main(int argc, char** argv) {
             }
 
             RenderSnapshot renderSnapshot;
+            logic::EditorRenderSnapshot editorSnapshot;
             if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
                 renderSnapshot = buildRenderSnapshot(session.player(), session.level());
+            } else if (currentState == GameState::EDITOR) {
+                editorSnapshot = session.editorSession().renderSnapshot();
+                renderer.attachEditorSnapshot(&editorSnapshot);
+            } else {
+                renderer.attachEditorSnapshot(nullptr);
             }
 
             if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),
