@@ -92,7 +92,7 @@ void RendererFacade::attachEditorSession(const logic::EditorSession* session) {
     m_editorSnapshotPtr = &m_editorSnapshot;
 }
 
-bool RendererFacade::drawFrame(const core::RenderSnapshot& snapshot,
+bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
                                const Camera& camera,
                                RenderState state,
                                int menuSelection,
