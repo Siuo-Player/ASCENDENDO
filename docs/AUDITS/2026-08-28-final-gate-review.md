@@ -5,7 +5,7 @@
 
 ## Executive result
 
-Gate 9.6 remains **OPEN until this review is integrated and the repository records the final disposition**. No new production defect requiring implementation was identified in the reviewed areas.
+Gate 9.6 is **CLOSED**. PR #118 integrated the final review and confirmed that no new production defect requiring implementation was identified in the reviewed areas; this follow-up records the formal closed state in the canonical roadmap and technical-debt documents.
 
 ## Evidence review
 
@@ -31,25 +31,23 @@ This establishes a coherent retry/rollback boundary without requiring a new appl
 
 `GameSession` owns session/domain state without Vulkan/presentation ownership. `PresentationRuntime` owns presentation resources but keeps a non-owning pointer to `RendererFacade`. `RendererFacade` owns its renderer components through `unique_ptr` and keeps editor session/supplementary presentation resources as non-owning attachments.
 
-`main.cpp` remains the process/frame composition root. It still passes `Player`/`Level` directly into `RendererFacade`; therefore the general `RenderSnapshot` migration is not complete. This is a known architectural debt and is **not** automatically a Gate 9.6 blocker because no 9.6 requirement currently depends on the full snapshot migration.
+`main.cpp` remains the process/frame composition root. It still passes `Player`/`Level` directly into `RendererFacade`; therefore the general `RenderSnapshot` migration is not complete. This is a known architectural debt and is **not** a Gate 9.6 blocker because no 9.6 requirement depends on the full snapshot migration.
 
 No `Application` class is introduced: no additional concrete ownership/lifecycle boundary was demonstrated to justify one.
 
 ### Replay claim disposition
 
-The Gate can rely on:
+The Gate relies on:
 
 - tick-semantic replay;
 - state comparison by tick;
 - current frame → `TickInput` boundary behavior.
 
-The following remain future capabilities/properties unless a product decision promotes them into the Gate:
+The following remain future capabilities/properties and are not Gate 9.6 requirements:
 
 - live-input frame-rate independence across arbitrary render/event cadences;
 - complete terminal/result replay of a whole `GameSession`;
 - replay persistence/serialization.
-
-No current product decision reviewed in the canonical documentation requires those properties for Gate 9.6.
 
 ### Collision / Level / paths
 
@@ -57,7 +55,7 @@ Collision-order evidence remains bounded to the exercised permutation scenario. 
 
 ## CI / platform evidence
 
-The mandatory merge gate remains:
+The mandatory merge gate is:
 
 ```text
 Linux / Clang / C++20 / Headless Vulkan
@@ -65,7 +63,7 @@ Linux / Clang / ASan + UBSan / Headless Vulkan
 Windows / Clang / C++20
 ```
 
-The Windows workflow records toolchain/Vulkan/GLFW provenance and uploads an evidence artifact. `Actions smoke` remains manual/informational.
+The #118 head completed all three mandatory workflows successfully before merge. `Actions smoke` remains manual/informational.
 
 ## Final disposition
 
@@ -94,11 +92,11 @@ Terminal replay result                                FUTURE / NOT A GATE REQUIR
 Replay persistence                                    FUTURE / NOT A GATE REQUIREMENT
 Level semantic/schema validation                      FASE 10
 
-Gate 9.6                                            READY FOR FORMAL CLOSE
+Gate 9.6                                            CLOSED
 ```
 
-The wording `READY FOR FORMAL CLOSE` is intentionally distinct from `CLOSED`: the Git history must integrate this decision and then record the final Gate state in the canonical roadmap/debt documents.
+The closed state is justified by the bounded evidence and explicit disposition above; it does not claim universal collision permutation invariance, universal live-input cadence invariance, complete persisted replay, or exhaustive fault injection.
 
 ## Next step after Gate close
 
-Only after the formal close should the project begin the next architectural tranche: general `RenderSnapshot` migration, with a separate WP and explicit ownership/data-boundary design. The existing architecture direction remains valid: presentation data must not expose Vulkan resources or gameplay ownership.
+The next architectural tranche is a dedicated `RenderSnapshot` migration, with explicit ownership/data-boundary design. Presentation data must not expose Vulkan resources or gameplay ownership. This work should receive its own work package and validation criteria rather than modifying the closed Gate retroactively.

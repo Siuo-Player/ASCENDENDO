@@ -6,7 +6,7 @@ O roadmap orienta a ordem do trabalho, mas uma propriedade só muda de estado qu
 
 ## Gate 9.6 — Base Engineering Gate
 
-O Gate está **READY FOR FORMAL CLOSE** nesta tranche. O estado `CLOSED` só será usado depois de esta decisão ser integrada na `main`.
+O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #118) e desta confirmação de fecho formal.
 
 ### Evidência integrada
 
@@ -31,6 +31,7 @@ O Gate está **READY FOR FORMAL CLOSE** nesta tranche. O estado `CLOSED` só ser
 - PR #115 — isolamento dos residuais de replay/input.
 - PR #116 — characterization executável da fronteira frame → `TickInput`.
 - PR #117 — reconciliação canónica do roadmap/tech debt com os Studies e com a `main` real.
+- PR #118 — revisão final de Vulkan capability/queue/synchronization, architecture/ownership e disposição dos claims residuais de replay.
 
 ### Estado reconciliado de replay
 
@@ -42,7 +43,7 @@ Isto **não** demonstra:
 - terminal/result replay completo de `GameSession`;
 - persistence/serialization de replay.
 
-Estas propriedades são distintas. A revisão de produto não encontrou requisito que as torne pré-condições do Gate 9.6; permanecem capacidades futuras explícitas.
+Estas são capacidades futuras explícitas e não requisitos do Gate 9.6 segundo a revisão final integrada.
 
 ### Collision-order — estado correto
 
@@ -88,7 +89,7 @@ Não foi identificado requisito que justifique uma nova camada genérica de faul
 
 ### Gate disposition
 
-Os restantes itens são explicitamente classificados:
+Os restantes itens estão explicitamente classificados:
 
 ```text
 Vulkan capability/queue/synchronization review       ACCEPTED
@@ -104,13 +105,14 @@ RenderSnapshot general migration                     NEXT ARCHITECTURE BLOCK
 ### Ordem seguinte
 
 ```text
-formal Gate 9.6 close
+Gate 9.6 CLOSED
 → dedicated RenderSnapshot work package
 → presentation/domain boundary migration
+→ validation
 → Fase 10 semantic Level/schema/versioning
 ```
 
-Não iniciar a migração geral de `RenderSnapshot` no mesmo WP do fecho do Gate.
+A migração geral de `RenderSnapshot` deve ser tratada num WP próprio, com desenho explícito da fronteira de dados e ownership.
 
 ## Princípios de execução
 
