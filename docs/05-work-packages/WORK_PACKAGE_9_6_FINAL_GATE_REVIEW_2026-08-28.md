@@ -6,7 +6,7 @@
 **Subsistema:** `Infrastructure / Runtime / Presentation`
 **Work Package:** `9.6 final capability, ownership and Gate disposition review`
 **Branch:** `docs/9-6-final-gate-review-20260828`
-**PR:** `TBD`
+**PR:** `#118`
 
 ## Objetivo
 
@@ -42,7 +42,7 @@ Revisar as evidências já integradas e determinar, com critérios explícitos, 
 ### Produz para
 
 - decisão de fecho do Gate 9.6;
-- próximo bloco arquitetural de `RenderSnapshot`, se o Gate for fechado.
+- próximo bloco arquitetural de `RenderSnapshot`.
 
 ### Consumidores afetados
 
@@ -91,19 +91,23 @@ Reabrir o finding se surgir requisito concreto que torne a separação de presen
 
 ### Testes automatizados
 
-Os testes já integrados nas PRs referenciadas continuam a constituir a evidência executável do Gate.
+Os testes já integrados nas PRs referenciadas constituem a evidência executável do Gate. Para o head de PR #118, os três workflows obrigatórios terminaram com sucesso:
+
+- `Linux / Clang / C++20 / Headless Vulkan`;
+- `Linux / Clang / ASan + UBSan / Headless Vulkan`;
+- `Windows / Clang / C++20`.
 
 ### Validação manual
 
-Revisão do código atual e da ownership graph de `main.cpp`, `GraphicsRuntime`, `VulkanContext`, `Swapchain`, `PresentationRuntime` e `RendererFacade`.
+Foi revista a ownership graph de `main.cpp`, `GraphicsRuntime`, `VulkanContext`, `Swapchain`, `PresentationRuntime` e `RendererFacade`, juntamente com a documentação canónica atual.
 
 ### Profiling / métricas
 
-Nenhuma otimização proposta nesta tranche; profiling não é critério de saída.
+Nenhuma otimização foi proposta nesta tranche; profiling não é critério de saída.
 
 ### Failure paths
 
-Revisar explicitamente:
+Foram revistos explicitamente:
 
 - `vkDeviceWaitIdle()`;
 - `vkQueueSubmit()`;
@@ -122,28 +126,31 @@ Revisar explicitamente:
 
 ## Definition of Done
 
-- [ ] capability/queue/synchronization assumptions revistas;
-- [ ] ownership/architecture revista;
-- [ ] claims de replay explicitamente classificadas como Gate ou futuras;
-- [ ] roadmap/tech debt atualizados;
-- [ ] evidência final documentada;
-- [ ] decisão de Gate demonstrada;
-- [ ] PR pronta para merge sem trabalho essencial oculto.
+- [x] capability/queue/synchronization assumptions revistas;
+- [x] ownership/architecture revista;
+- [x] claims de replay explicitamente classificadas como Gate ou futuras;
+- [x] roadmap/tech debt atualizados;
+- [x] evidência final documentada;
+- [x] decisão de Gate demonstrada;
+- [x] PR #118 mergeada sem trabalho essencial oculto.
 
 ## Alterações durante a execução
 
 ```text
 Descoberta:
-Os Studies mais recentes ainda descrevem #116 como aberta por serem snapshots datados. O upstream atual já integra #117.
+Os Studies mais recentes estavam stale relativamente a #116. O upstream atual foi usado como estado operacional.
 
 Impacto:
-A leitura do snapshot não pode ser usada como estado operacional atual sem reconciliação.
+A leitura dos Studies não pode substituir a reconciliação com a main atual.
 
 Decisão tomada:
-Este WP usa o GitHub atual como estado e usa os Studies apenas para identificar perguntas metodológicas.
+Este WP usa o GitHub atual como estado e os Studies como fonte consultiva/metodológica.
+
+Resultado adicional:
+PR #118 integrou a revisão final; esta tranche de fecho converte agora READY FOR FORMAL CLOSE em CLOSED.
 
 Documentos atualizados:
-ROADMAP / TECH_DEBT / ARCHITECTURE
+ROADMAP / TECH_DEBT / WORK PACKAGE / AUDIT
 ```
 
 ## Evidência / referências
@@ -151,10 +158,12 @@ ROADMAP / TECH_DEBT / ARCHITECTURE
 - `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_LATEST.md`;
 - `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO/CURRENT_STATE_2026-08-28_FINAL-RECONCILIATION.md`;
 - VulkanContext/Swapchain/GraphicsRuntime/PresentationRuntime atuais;
-- PRs integradas listadas neste WP.
+- PRs integradas listadas neste WP;
+- PR #118 e os três workflows obrigatórios do seu head.
 
 ## Fecho
 
-**Resultado:** `review pending`  
+**Resultado:** `CLOSED`  
 **Critério de saída:** todas as claims do Gate têm estado explícito e nenhuma capacidade futura é tratada como blocker sem requisito.  
-**Dívida residual:** `RenderSnapshot boundary, replay persistence/live-input independence, LevelData semantic/schema work`
+**Dívida residual:** `RenderSnapshot boundary, replay persistence/live-input independence, LevelData semantic/schema work`  
+**Próximo bloco:** `RenderSnapshot/domain-presentation boundary`
