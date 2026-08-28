@@ -16,23 +16,26 @@
 
 A implementação utiliza apenas `camera.position.x` e `camera.position.y`. O tipo `gfx::Camera` não acrescenta informação necessária à política de interação.
 
+Durante a validação do PR #136, o mesmo princípio foi encontrado em `EditorSession.cpp`: a sessão do editor criava `gfx::Camera` apenas para obter a posição zero de uma câmara fixa da tela lógica. `EditorSession` já documenta que não possui estado de câmera.
+
 ## Decisão
 
-Usar `const Vec2& cameraPosition` como contrato mínimo.
+Usar `const Vec2& cameraPosition` como contrato mínimo em `EditorInteractionController` e passar `Vec2{0.0f, 0.0f}` desde `EditorSession`, mantendo a regra de que Camera pertence a presentation/composição.
 
 ```text
 logical cursor + camera position
 → world cursor
 ```
 
-A `Camera` permanece em presentation/composição. `Game/Logic` não deve depender de um tipo concreto de `Game/Graphics` quando um valor de domínio simples é suficiente.
+No editor de tela única, a posição da câmara é `{0,0}`.
 
 ## Escopo
 
 - remover `Graphics/Camera.h` de `EditorInteraction.h`;
 - alterar implementação e consumidores;
+- remover o uso desnecessário de `gfx::Camera` em `EditorSession.cpp`;
 - preservar exatamente a transformação cursor→world;
-- manter teste de characterization;
+- manter characterization tests;
 - validar build, sanitizers e Windows.
 
 ## Fora de escopo
@@ -59,6 +62,7 @@ header dependency removed
 
 ```text
 Game/Logic/EditorInteraction sem Graphics/Camera include
++ EditorSession sem uso de gfx::Camera
 + API usa somente Vec2 para camera position
 + comportamento preservado
 + nenhum consumidor antigo
@@ -66,9 +70,11 @@ Game/Logic/EditorInteraction sem Graphics/Camera include
 + documentação sincronizada
 ```
 
-## Resultado
+## Estado atual
 
-Ainda não implementado nesta branch; documentação/decisão concluída antes da alteração de código, conforme `DEVELOPMENT_PROTOCOL.md`.
+`IMPLEMENTED — pending CI validation`
+
+O PR #136 revelou ainda um include concreto ausente em `EditorRenderer.cpp`; a correção foi aplicada na mesma branch porque é necessária para restaurar a compilação dos três targets obrigatórios.
 
 ## Próxima decisão
 
