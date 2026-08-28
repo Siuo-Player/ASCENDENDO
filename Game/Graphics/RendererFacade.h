@@ -4,13 +4,13 @@
 // =============================================================================
 
 #include "Graphics/RenderState.h"
-#include "Graphics/GameState.h"
+#include "Core/RenderSnapshot.h"
 #include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 #include <memory>
 
-namespace logic { class Player; class Level; class EditorSession; }
+namespace logic { class EditorSession; }
 namespace gfx {
 
 class VulkanContext;
@@ -45,19 +45,9 @@ public:
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
     void attachEditorSession(const logic::EditorSession* session);
 
-    bool drawFrame(const logic::Player& player,
+    bool drawFrame(const core::RenderSnapshot& snapshot,
                    const Camera& camera,
-                   const logic::Level* level,
                    RenderState state,
-                   int menuSelection = 0,
-                   float elapsedSeconds = 0.0f);
-
-    // Transitional overload for existing runtime callers. It converts the
-    // application state at the presentation boundary rather than in an adapter.
-    bool drawFrame(const logic::Player& player,
-                   const Camera& camera,
-                   const logic::Level* level,
-                   GameState state,
                    int menuSelection = 0,
                    float elapsedSeconds = 0.0f);
 
