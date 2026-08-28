@@ -2,6 +2,7 @@
 // Game/Graphics/EditorRenderer.cpp
 // =============================================================================
 #include "Graphics/EditorRenderer.h"
+#include "Graphics/Camera.h"
 #include "Graphics/ShapeRenderer.h"
 #include "Graphics/Pipeline.h"
 #include "Graphics/TextPipeline.h"
