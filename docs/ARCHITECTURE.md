@@ -65,7 +65,7 @@ GameSession
   ├── SimulationOrchestrator
   └── CampaignRuntime
       ↓
-runtime state / render inputs
+render-state extraction
       ↓
 RenderSnapshot
       ↓
@@ -108,23 +108,59 @@ A decomposição deve continuar incrementalmente. `Application` permanece uma di
 
 ## Renderer e `RenderSnapshot`
 
-A arquitetura integrada já não usa `Renderer.cpp/.h`, mas a fronteira de dados entre runtime e presentation ainda não está completa.
+O Gate 9.6 está formalmente fechado. A migração geral de `RenderSnapshot` é agora um bloco arquitetural próprio.
 
-Atualmente, a presentation continua a receber dados de domínio diretamente em partes do caminho de rendering. A direção é:
+### Estado atual
+
+`RendererFacade::drawFrame()` e `WorldRenderer::draw()` ainda recebem diretamente `logic::Player`, `logic::Level` e `Camera` em parte do caminho. `EditorRenderSnapshot` já fornece um exemplo local de separação por dados, mas não substitui um contrato geral.
+
+### Fronteira alvo
 
 ```text
-Player / Level / GameState
+Player / Level / camera state
+          ↓
+  explicit snapshot builder
           ↓
      RenderSnapshot
           ↓
-    RendererFacade
-          ↓
-    rendering passes
+ RendererFacade / passes
 ```
 
-O snapshot deve conter dados compactos, transitórios e próprios de presentation; não deve possuir Vulkan resources, lógica de jogo nem tipos de domínio.
+`RenderSnapshot` deve ser um value object transitório de presentation. Não deve conter:
 
-O PR #20 foi encerrado/superseded e não é uma tranche ativa. A migração atual deve ser planeada a partir da documentação corrente e não de uma branch histórica permanente.
+- tipos de domínio (`Player`, `Level`, `Vec2`);
+- `Camera` ou referências a objetos vivos;
+- Vulkan handles/resources;
+- ownership;
+- lógica de gameplay;
+- estado cuja única finalidade seja satisfazer curiosidade futura do renderer.
+
+A primeira tranche foi deliberadamente reduzida ao world/player path. O contrato inicial em investigação é:
+
+```text
+RenderSnapshot
+├── camera { x, y }
+├── player { x, y, width, height, facingLeft }
+├── platforms[] { x, y, width, height }
+└── flag { visible, x, y, width, height }
+```
+
+O contrato pode ser reduzido caso a implementação demonstre que algum campo não é necessário. Campos adicionais exigem consumidor de presentation concreto.
+
+### Regra de construção
+
+A construção do snapshot deve copiar/transformar estado existente; não deve introduzir regras novas de physics, gameplay ou campaign. O resultado deve ser determinístico para o mesmo estado de runtime.
+
+### Estratégia incremental
+
+1. caracterizar os dados consumidos por `WorldRenderer`;
+2. introduzir o contrato mínimo;
+3. construir o snapshot explicitamente;
+4. fazer `WorldRenderer` depender apenas do snapshot e dos recursos de render;
+5. adaptar `RendererFacade`;
+6. validar comportamento e só depois avaliar os restantes passes.
+
+Não migrar editor, menus, replay e world rendering numa única mudança apenas para obter uma interface uniforme.
 
 ## Modelo comum de níveis
 
@@ -265,9 +301,9 @@ Windows build + tests
 Windows game build/link
 ```
 
-O workflow atual fornece evidência observável de source-size, Vulkan headless, build/testes e campaign validation em Linux. O workflow separado de ASan/UBSan também está integrado e verde. Windows e matriz de hardware continuam a faltar.
+O workflow atual fornece evidência observável de source-size, Vulkan headless, build/testes e campaign validation em Linux. O workflow separado de ASan/UBSan também está integrado. Windows e matriz de hardware continuam a depender dos testes reais do runner.
 
-A suite recente validada contra o estado atual produz **167 test cases e 901 assertions**, mas a contagem não substitui testes de invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
+A contagem de testes é evidência de cobertura executável, mas não substitui testes de invariantes, malformed input, boundaries, runtime paths e falhas de inicialização.
 
 ## Formatos e partilha futura
 
