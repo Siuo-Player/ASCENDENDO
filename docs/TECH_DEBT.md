@@ -58,19 +58,30 @@ Game/Graphics/GameState.h
 - campaign validation: success;
 - `static_assert` confirmou identidade de tipo entre `gfx::GameState` e `core::GameState`.
 
-## Semantic TickInput boundary — em validação
+## Semantic TickInput boundary — concluído
 
 A auditoria pós-#137 encontrou um coupling menor mas concreto: `Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para obter `TickInput`. `Player` não usa callbacks, key codes, mouse state, `GLFWwindow` ou `KeyBindings`; consome somente os cinco campos semânticos de um tick de simulação.
 
 **Issue:** #138  
+**PR:** #139  
 **Branch:** `refactor/semantic-tick-input-boundary-20260828`  
-**Estado:** implementation in progress
+**Merge:** `7da5af74e2ccc9c2a33d43cbfbcfacc6f5c04381`  
+**Estado:** **DONE**
 
 ### Decisão
 
 `TickInput` foi extraído para `Game/Logic/TickInput.h`. `InputManager` continua a produzir o contrato a partir do input físico/configurado, enquanto `Player` depende apenas do value object semântico.
 
 O tipo permanece em `Logic`, não em `Core`, porque a evidência atual não justifica torná-lo um contrato transversal da aplicação.
+
+### Validação
+
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- source-size: success;
+- campaign validation: success;
+- `Player.h` deixou de incluir `InputManager.h`.
 
 ## RenderSnapshot — primeira tranche concluída
 
@@ -90,7 +101,8 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 - replay persistence;
 - live-input frame-rate independence;
 - terminal/result replay;
-- future presentation snapshots apenas quando houver benefício verificável.
+- future presentation snapshots apenas quando houver benefício verificável;
+- eventual convergência entre `CampaignLoader` e o parsing usado por `CampaignID`, caso passe de duplicação atual para divergência observável.
 
 ## Regras preservadas
 
@@ -112,8 +124,9 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 ## Próximo passo
 
 ```text
-validar Issue #138
-→ Linux normal + ASan/UBSan + Windows
+revisão final de ownership/arquitetura
+→ identificar apenas findings concretos
+→ abrir work package com contrato mínimo
+→ validar em Linux + ASan/UBSan + Windows
 → merge e reconciliar documentação
-→ voltar à revisão final de ownership/arquitetura
 ```
