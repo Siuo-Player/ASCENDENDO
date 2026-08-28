@@ -27,7 +27,13 @@ public:
 
     const std::vector<Platform>& platforms() const { return m_platforms; }
     int platformCount() const { return static_cast<int>(m_platforms.size()); }
-    void clear() { m_platforms.clear(); }
+
+    void clear() {
+        m_platforms.clear();
+        name = "Sem Nome";
+        hasFlag = false;
+        flagBounds = {};
+    }
 
 private:
     static constexpr float SKIN_WIDTH = 1.0f;
