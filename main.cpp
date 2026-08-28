@@ -11,6 +11,7 @@
 #include "Game/Graphics/RenderState.h"
 #include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Graphics/RenderSnapshotBuilder.h"
+#include "Game/Logic/EditorRenderSnapshot.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
@@ -236,6 +237,7 @@ int main(int argc, char** argv) {
             logic::EditorRenderSnapshot editorSnapshot;
             if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
                 renderSnapshot = buildRenderSnapshot(session.player(), session.level());
+                renderer.attachEditorSnapshot(nullptr);
             } else if (currentState == GameState::EDITOR) {
                 editorSnapshot = session.editorSession().renderSnapshot();
                 renderer.attachEditorSnapshot(&editorSnapshot);
