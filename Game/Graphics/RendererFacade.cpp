@@ -10,6 +10,7 @@
 #include "Graphics/Swapchain.h"
 #include "Graphics/Pipeline.h"
 #include "Graphics/Camera.h"
+#include "Graphics/PresentationConfig.h"
 #include "Core/Config.h"
 
 #include <memory>
@@ -100,19 +101,19 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
     float clearB = 0.15f;
     switch (state) {
         case RenderState::CREDITS:
-            clearR = config::CLEAR_CREDITS_R;
-            clearG = config::CLEAR_CREDITS_G;
-            clearB = config::CLEAR_CREDITS_B;
+            clearR = presentation::CLEAR_CREDITS_R;
+            clearG = presentation::CLEAR_CREDITS_G;
+            clearB = presentation::CLEAR_CREDITS_B;
             break;
         case RenderState::MENU:
-            clearR = config::CLEAR_MENU_R;
-            clearG = config::CLEAR_MENU_G;
-            clearB = config::CLEAR_MENU_B;
+            clearR = presentation::CLEAR_MENU_R;
+            clearG = presentation::CLEAR_MENU_G;
+            clearB = presentation::CLEAR_MENU_B;
             break;
         case RenderState::EDITOR:
-            clearR = config::CLEAR_EDITOR_R;
-            clearG = config::CLEAR_EDITOR_G;
-            clearB = config::CLEAR_EDITOR_B;
+            clearR = presentation::CLEAR_EDITOR_R;
+            clearG = presentation::CLEAR_EDITOR_G;
+            clearB = presentation::CLEAR_EDITOR_B;
             break;
         case RenderState::PLAYING:
         case RenderState::PAUSED:
