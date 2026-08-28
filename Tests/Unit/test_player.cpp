@@ -4,6 +4,7 @@
 
 #include "doctest/doctest.h"
 #include "Logic/Player.h"
+#include "Logic/TickInput.h"
 #include "Logic/Physics.h"
 #include "Logic/InputManager.h"
 #include "Core/Config.h"
