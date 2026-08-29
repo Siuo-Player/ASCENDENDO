@@ -1,6 +1,9 @@
 NAME Inicio
-# Chao de largura total (obrigatorio no primeiro nivel)
-PLATFORM 0 0 640 20
-PLATFORM 436 85 180 20
-PLATFORM 148 170 180 20
-PLATFORM 436 255 180 20
+# Plataformações revistas para módulos visuais de 16 px.
+# As posições continuam em coordenadas de mundo livres; largura/altura da geometria
+# de plataforma usam múltiplos de 16 px. As superfícies superiores mantêm as
+# altitudes originais para preservar a dificuldade/trajectória da campanha.
+PLATFORM 0 4 640 16
+PLATFORM 436 89 176 16
+PLATFORM 148 174 176 16
+PLATFORM 436 259 176 16
