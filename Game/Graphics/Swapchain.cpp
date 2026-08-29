@@ -38,10 +38,6 @@ bool chooseSurfaceFormat(VkPhysicalDevice device,
             return true;
         }
     }
-
-    // RenderPass currently uses the swapchain format directly at initialization
-    // and is not recreated during a frame. Reject a different format rather than
-    // silently creating an incompatible render pass/framebuffer combination.
     return false;
 }
 
@@ -134,14 +130,11 @@ bool Swapchain::init(VulkanContext* ctx, Window* window) {
 }
 
 bool Swapchain::recreate() {
-    if (!m_ctx || !m_window || !m_ctx->isInitialized() || !m_window->isCreated()) {
-        return false;
-    }
+    if (!m_ctx || !m_window || !m_ctx->isInitialized() || !m_window->isCreated()) return false;
 
     VkDevice device = m_ctx->device();
     if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
 
-    // Swapchain image views must be destroyed before their parent swapchain.
     destroyImageResources();
     if (m_swapchain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
@@ -159,28 +152,21 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     VkPhysicalDevice physicalDevice = m_ctx->physicalDevice();
     VkSurfaceKHR surface = m_ctx->surface();
     VkDevice device = m_ctx->device();
-    if (physicalDevice == VK_NULL_HANDLE || surface == VK_NULL_HANDLE || device == VK_NULL_HANDLE) {
-        return false;
-    }
+    if (physicalDevice == VK_NULL_HANDLE || surface == VK_NULL_HANDLE || device == VK_NULL_HANDLE) return false;
 
     const uint32_t graphicsFamily = m_ctx->graphicsFamily();
     const uint32_t presentFamily = m_ctx->presentFamily();
     if (graphicsFamily == UINT32_MAX || presentFamily == UINT32_MAX) return false;
 
     VkBool32 presentSupported = VK_FALSE;
-    if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice,
-                                             presentFamily,
-                                             surface,
-                                             &presentSupported) != VK_SUCCESS ||
+    if (vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, presentFamily, surface, &presentSupported) != VK_SUCCESS ||
         presentSupported != VK_TRUE) {
         std::cerr << "[ERRO] A queue de presentation selecionada nao suporta esta surface.\n";
         return false;
     }
 
     VkSurfaceCapabilitiesKHR capabilities{};
-    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities) != VK_SUCCESS) {
-        return false;
-    }
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &capabilities) != VK_SUCCESS) return false;
 
     VkFormat format = VK_FORMAT_UNDEFINED;
     VkColorSpaceKHR colorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
@@ -194,9 +180,7 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     if (extent.width == 0 || extent.height == 0) return false;
 
     uint32_t imageCount = std::max(2u, capabilities.minImageCount);
-    if (capabilities.maxImageCount > 0) {
-        imageCount = std::min(imageCount, capabilities.maxImageCount);
-    }
+    if (capabilities.maxImageCount > 0) imageCount = std::min(imageCount, capabilities.maxImageCount);
 
     const bool separateQueueFamilies = graphicsFamily != presentFamily;
     uint32_t queueFamilyIndices[] = {graphicsFamily, presentFamily};
@@ -209,9 +193,8 @@ bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
     createInfo.imageColorSpace = colorSpace;
     createInfo.imageExtent = extent;
     createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    createInfo.imageSharingMode = separateQueueFamilies ? VK_SHARING_MODE_CONCURRENT
-                                                        : VK_SHARING_MODE_EXCLUSIVE;
+    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    createInfo.imageSharingMode = separateQueueFamilies ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
     createInfo.queueFamilyIndexCount = separateQueueFamilies ? 2u : 0u;
     createInfo.pQueueFamilyIndices = separateQueueFamilies ? queueFamilyIndices : nullptr;
     createInfo.preTransform = (capabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)

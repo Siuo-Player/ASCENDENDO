@@ -6,7 +6,10 @@
 // Não conhece Player, Level, UI ou editor.
 // =============================================================================
 
+#include "Graphics/VulkanFrameCapture.h"
+
 #include <vulkan/vulkan.h>
+#include <string>
 #include <vector>
 
 namespace gfx {
@@ -74,6 +77,9 @@ private:
     VkSemaphore m_imageAvailableSemaphore = VK_NULL_HANDLE;
     VkSemaphore m_renderFinishedSemaphore = VK_NULL_HANDLE;
     VkFence m_inFlightFence = VK_NULL_HANDLE;
+
+    VulkanFrameCapture m_capture;
+    std::string m_capturePath;
 
     DeviceWaitIdleFunction m_waitIdle = &vkDeviceWaitIdle;
     bool m_initialized = false;
