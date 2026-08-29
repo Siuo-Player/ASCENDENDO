@@ -37,7 +37,7 @@ For each active campaign level in the current campaign:
 - `ASCENDENDO_CAPTURE_LEVEL_INDEX` selects the level;
 - `ASCENDENDO_CAPTURE_PPM` arms the existing `RendererCore` readback path;
 - `Development/AI_Validation/validate_deterministic_capture.py` executes the game and validates the binary P6 PPM;
-- `.github/workflows/deterministic-capture.yml` runs the validator for levels 0, 1 and 2 at `1280x720` and uploads the resulting PPMs.
+- `.github/workflows/deterministic-capture.yml` runs the validator for levels 0, 1 and 2 at the effective `1152x648` framebuffer produced by the current headless window policy, while the Xvfb display remains `1280x720`.
 
 ## Findings from first E2E run
 
@@ -57,11 +57,33 @@ The failure was therefore a packaging/layout mismatch in the validation workflow
 
 The CI workflow is corrected to stage `Game/Assets` beside the executable after `make game` and explicitly checks the campaign and player-sprite files before launching capture. This preserves the runtime path contract and does not change production runtime code.
 
+## Findings from runtime framebuffer sizing
+
+The second E2E run confirmed that asset staging was correct: the game loaded the campaign, loaded the player sprite, entered deterministic capture mode for each requested level, and exited successfully.
+
+The validator initially expected `1280x720`, but the actual captured PPM was `1152x648`. This is deterministic and follows the existing `Window::create()` policy: the requested window is capped at 90% of the current monitor dimensions. Under the CI Xvfb display of `1280x720`, the effective window/framebuffer is therefore exactly `1152x648`.
+
+The validator contract was consequently corrected to expect `1152x648`. No viewport, camera, renderer or production runtime behavior was changed.
+
+The corrected E2E workflow then passed all three active campaign levels and retained one PPM artifact for each level.
+
 ## Validator hardening
 
 During review, the P6 parser was corrected so it consumes only the mandatory header/pixel separator instead of stripping arbitrary whitespace from the binary payload. This matters because P6 pixel bytes are arbitrary binary data and may themselves equal whitespace byte values.
 
 Therefore the validator now checks the binary boundary without mutating the payload before the exact byte-count check.
+
+## Final validation
+
+On branch `feat/deterministic-capture-e2e-validation-20260829`, commit `a697d901b3f06b7f42ce59d1ea48dcb8da3a8d65`:
+
+- Linux / Clang / C++20 / Headless Vulkan: success;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: success;
+- Windows / Clang / C++20: success;
+- Deterministic Capture Evidence: success for levels 0, 1 and 2;
+- retained artifacts: `deterministic-capture-level-0`, `deterministic-capture-level-1`, `deterministic-capture-level-2`.
+
+These results establish operational and structural capture evidence for the tested environment. They do not establish visual correctness beyond the validator's non-uniformity and P6 structural checks.
 
 ## Scope boundary
 
@@ -70,6 +92,7 @@ Included:
 - deterministic launcher behavior already introduced by PR #185;
 - E2E capture execution;
 - runtime-layout staging required to reproduce the real distribution layout;
+- effective headless framebuffer dimension validation;
 - structural PPM validation;
 - artifact retention.
 
