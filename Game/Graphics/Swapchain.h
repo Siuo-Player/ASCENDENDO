@@ -34,6 +34,7 @@ public:
     uint32_t imageCount() const {
         return static_cast<uint32_t>(m_imageViews.size());
     }
+    bool supportsTransferSrc() const { return m_supportsTransferSrc; }
     bool isInitialized() const { return m_swapchain != VK_NULL_HANDLE; }
 
 private:
@@ -47,6 +48,7 @@ private:
     VkExtent2D m_extent{};
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_imageViews;
+    bool m_supportsTransferSrc = false;
 };
 
 } // namespace gfx
