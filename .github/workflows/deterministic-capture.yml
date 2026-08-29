@@ -59,8 +59,8 @@ jobs:
               --binary build/game/game \
               --level ${{ matrix.level }} \
               --output artifacts/level-${{ matrix.level }}.ppm \
-              --width 1280 \
-              --height 720
+              --width 1152 \
+              --height 648
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
