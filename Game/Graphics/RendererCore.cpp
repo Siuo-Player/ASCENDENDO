@@ -7,6 +7,8 @@
 #include "Graphics/RenderPass.h"
 #include "Graphics/Pipeline.h"
 
+#include <cstdlib>
+
 namespace gfx {
 
 bool RendererCore::init(VulkanContext* ctx, Swapchain* swapchain,
@@ -20,6 +22,18 @@ bool RendererCore::init(VulkanContext* ctx, Swapchain* swapchain,
     m_swapchain = swapchain;
     m_renderPass = renderPass;
     m_pipeline = pipeline;
+
+    if (!m_capture.init(ctx)) {
+        m_ctx = nullptr;
+        m_swapchain = nullptr;
+        m_renderPass = nullptr;
+        m_pipeline = nullptr;
+        return false;
+    }
+
+    if (const char* path = std::getenv("ASCENDENDO_CAPTURE_PPM"); path && *path) {
+        m_capturePath = path;
+    }
 
     if (!createFramebuffers() || !createCommandPool() ||
         !allocateCommandBuffers() || !createSyncObjects()) {
@@ -64,8 +78,10 @@ void RendererCore::cleanup() {
 
     VkDevice device = m_ctx->device();
     vkDeviceWaitIdle(device);
+    m_capture.cleanup();
     destroyFrameResources();
 
+    m_capturePath.clear();
     m_ctx = nullptr;
     m_swapchain = nullptr;
     m_renderPass = nullptr;
@@ -138,6 +154,16 @@ RendererCore::FrameStatus RendererCore::submitFrame(VkCommandBuffer commandBuffe
 
     VkDevice device = m_ctx->device();
 
+    if (!m_capturePath.empty()) {
+        if (imageIndex >= m_swapchain->images().size() ||
+            !m_capture.record(commandBuffer,
+                              m_swapchain->images()[imageIndex],
+                              m_swapchain->extent(),
+                              m_swapchain->imageFormat())) {
+            return FrameStatus::Fatal;
+        }
+    }
+
     // Reset immediately before submission. If command recording fails before
     // this point, the signaled fence remains usable by the next frame.
     if (vkResetFences(device, 1, &m_inFlightFence) != VK_SUCCESS) {
@@ -157,8 +183,7 @@ RendererCore::FrameStatus RendererCore::submitFrame(VkCommandBuffer commandBuffe
 
     if (vkQueueSubmit(m_ctx->graphicsQueue(), 1, &submitInfo, m_inFlightFence) != VK_SUCCESS) {
         // Submission failure is not safely recoverable for this frame because
-        // the fence has already been reset. Let the application fail closed
-        // instead of attempting to reuse partially submitted synchronization.
+        // the fence has already been reset. Let the application fail closed.
         return FrameStatus::Fatal;
     }
 
@@ -172,6 +197,15 @@ RendererCore::FrameStatus RendererCore::submitFrame(VkCommandBuffer commandBuffe
     presentInfo.pImageIndices = &imageIndex;
 
     const VkResult result = vkQueuePresentKHR(m_ctx->presentQueue(), &presentInfo);
+
+    if (!m_capturePath.empty()) {
+        if (vkWaitForFences(device, 1, &m_inFlightFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS ||
+            !m_capture.writePpm(m_capturePath, m_swapchain->imageFormat(), m_swapchain->extent())) {
+            return FrameStatus::Fatal;
+        }
+        m_capturePath.clear();
+    }
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
         return FrameStatus::SwapchainNeedsRecreate;
     }
@@ -186,15 +220,12 @@ bool RendererCore::recreateSwapchain() {
     VkDevice device = m_ctx->device();
     if (m_waitIdle(device) != VK_SUCCESS) return false;
 
-    // From this point onward the old frame resources are deliberately gone.
-    // Mark the core inactive before destroying anything so a failed rebuild
-    // can never leave a half-valid object that drawFrame() might reuse.
+    m_capture.cleanup();
     m_initialized = false;
     destroyFrameResources();
 
-    if (!m_swapchain->recreate()) {
-        return false;
-    }
+    if (!m_swapchain->recreate()) return false;
+    if (!m_capture.init(m_ctx)) return false;
 
     if (!createFramebuffers() || !createCommandPool() ||
         !allocateCommandBuffers() || !createSyncObjects()) {
@@ -270,9 +301,7 @@ bool RendererCore::createSyncObjects() {
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
     VkDevice device = m_ctx->device();
-    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS) {
-        return false;
-    }
+    if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS) return false;
     if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) != VK_SUCCESS) {
         vkDestroySemaphore(device, m_imageAvailableSemaphore, nullptr);
         m_imageAvailableSemaphore = VK_NULL_HANDLE;
