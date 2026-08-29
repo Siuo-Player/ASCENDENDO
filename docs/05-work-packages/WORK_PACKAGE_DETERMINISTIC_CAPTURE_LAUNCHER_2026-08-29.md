@@ -15,5 +15,18 @@ Provide a validation-only launch path that selects a campaign level deterministi
 - existing three CI gates remain green;
 - no generic application/scene-management abstraction is introduced.
 
+## Implementation note from validation
+`CampaignRuntime::loadInitialLevel()` had an existing failure contract: it resets runtime state and clears the destination level before attempting the initial campaign entry. The first implementation generalized it directly to `loadLevelAt()`, and the existing regression test caught the semantic change. The fix preserves the old `loadInitialLevel()` failure behavior while keeping `loadLevelAt()` non-destructive when its requested index/file/data is invalid.
+
+This distinction is intentional:
+
+```text
+normal initial load
+  → preserve established reset/clear semantics
+
+validation level-at-index load
+  → fail without mutating existing state
+```
+
 ## Follow-up
 After this launcher is validated, run the existing stress manifest across the target viewport matrix and inspect actual PPM captures.
