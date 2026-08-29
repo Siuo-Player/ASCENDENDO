@@ -26,6 +26,19 @@ bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
     return true;
 }
 
+bool CampaignRuntime::loadLevelAt(Level& level, std::size_t index, float maxWidth) {
+    if (index >= m_campaign.size()) return false;
+    if (!std::filesystem::exists(m_campaign[index])) return false;
+
+    const auto data = LevelDataIO::load(m_campaign[index]);
+    if (!data || !LevelDataValidator::validate(*data)) return false;
+
+    level.clear();
+    m_spawnY = level.appendFromData(*data, maxWidth, 0.0f);
+    m_nextLevelIndex = index + 1;
+    return true;
+}
+
 bool CampaignRuntime::streamNextLevel(Level& level, float maxWidth) {
     if (!hasMoreLevels()) return false;
     if (!std::filesystem::exists(m_campaign[m_nextLevelIndex])) return false;

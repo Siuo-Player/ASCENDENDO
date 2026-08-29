@@ -21,7 +21,9 @@
 
 #include <GLFW/glfw3.h>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
+#include <limits>
 
 using namespace gfx;
 using namespace logic;
@@ -101,6 +103,22 @@ RenderState toRenderState(GameState state) {
         case GameState::EDITOR:  return RenderState::EDITOR;
     }
     return RenderState::MENU;
+}
+
+bool readCaptureLevelIndex(std::size_t& index) {
+    const char* value = std::getenv("ASCENDENDO_CAPTURE_LEVEL_INDEX");
+    if (!value || *value == '\0') return false;
+
+    char* end = nullptr;
+    const unsigned long long parsed = std::strtoull(value, &end, 10);
+    if (end == value || *end != '\0' ||
+        parsed > static_cast<unsigned long long>(std::numeric_limits<std::size_t>::max())) {
+        std::cerr << "[ERRO] ASCENDENDO_CAPTURE_LEVEL_INDEX invalido: " << value << "\n";
+        return false;
+    }
+
+    index = static_cast<std::size_t>(parsed);
+    return true;
 }
 
 } // namespace
@@ -186,10 +204,28 @@ int main(int argc, char** argv) {
             bootstrap.runsFile().string());
         Camera camera;
 
-        setMenuTitle(win.handle());
-        auto lastTime = std::chrono::high_resolution_clock::now();
-        std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor | Q sair\n";
+        std::size_t captureLevelIndex = 0;
+        const char* captureLevelEnv = std::getenv("ASCENDENDO_CAPTURE_LEVEL_INDEX");
+        const bool captureMode = captureLevelEnv != nullptr && *captureLevelEnv != '\0';
+        if (captureMode) {
+            if (!readCaptureLevelIndex(captureLevelIndex)) return 2;
+            if (!session.beginPlayingLevel(captureLevelIndex,
+                                           static_cast<float>(config::LOGICAL_WIDTH))) {
+                std::cerr << "[ERRO] Nao foi possivel carregar o nivel de captura "
+                          << captureLevelIndex << ".\n";
+                return 2;
+            }
+            camera = gfx::Camera{};
+            setPlayingTitle(win.handle());
+            std::cout << "[ASCENDENDO] Capture mode: nivel " << captureLevelIndex
+                      << " carregado isoladamente.\n";
+        } else {
+            setMenuTitle(win.handle());
+            std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor | Q sair\n";
+        }
 
+        bool captureFramePending = captureMode;
+        auto lastTime = std::chrono::high_resolution_clock::now();
         while (!win.shouldClose()) {
             const auto now = std::chrono::high_resolution_clock::now();
             const float dt = std::chrono::duration<float>(now - lastTime).count();
@@ -199,15 +235,21 @@ int main(int argc, char** argv) {
             win.pollEvents();
 
             const GameState previousState = session.state();
-            const GameSessionUpdateResult result = session.update(
-                dt, input, bindings,
-                static_cast<int32_t>(win.width()),
-                static_cast<int32_t>(win.height()),
-                static_cast<float>(config::LOGICAL_WIDTH),
-                static_cast<float>(config::LOGICAL_HEIGHT));
+            GameSessionUpdateResult result;
+            if (captureFramePending) {
+                captureFramePending = false;
+            } else {
+                result = session.update(
+                    dt, input, bindings,
+                    static_cast<int32_t>(win.width()),
+                    static_cast<int32_t>(win.height()),
+                    static_cast<float>(config::LOGICAL_WIDTH),
+                    static_cast<float>(config::LOGICAL_HEIGHT));
+            }
             const GameState currentState = session.state();
 
-            if (previousState == GameState::PLAYING && currentState == GameState::PLAYING) {
+            if (!captureMode &&
+                previousState == GameState::PLAYING && currentState == GameState::PLAYING) {
                 camera.follow(session.player().position(), dt);
             }
 
@@ -251,6 +293,8 @@ int main(int argc, char** argv) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }
+
+            if (captureMode) break;
         }
 
         vkDeviceWaitIdle(ctx.device());

@@ -1,0 +1,36 @@
+# Work Package — Deterministic Capture Launcher — 2026-08-29
+
+## Objective
+Provide a validation-only launch path that selects a campaign level deterministically before rendering, so the Vulkan PPM capture path can produce repeatable golden-scene evidence.
+
+## Scope
+- environment-variable driven selection only;
+- normal menu/game flow unchanged when the variable is absent;
+- selected level is loaded as the capture scene without accumulating unrelated preceding levels;
+- capture remains opt-in through `ASCENDENDO_CAPTURE_PPM`.
+
+## Required evidence
+- selected level is the sole loaded scene;
+- unsupported/out-of-range selection fails closed with an explicit message;
+- existing three CI gates remain green;
+- no generic application/scene-management abstraction is introduced.
+
+## Implementation note from validation
+`CampaignRuntime::loadInitialLevel()` had an existing failure contract: it resets runtime state and clears the destination level before attempting the initial campaign entry. The first implementation generalized it directly to `loadLevelAt()`, and the existing regression test caught the semantic change. The fix preserves the old `loadInitialLevel()` failure behavior while keeping `loadLevelAt()` non-destructive when its requested index/file/data is invalid.
+
+This distinction is intentional:
+
+```text
+normal initial load
+  → preserve established reset/clear semantics
+
+validation level-at-index load
+  → fail without mutating existing state
+```
+
+## Validation state
+
+The first CI attempt failed on the pre-fix PR merge ref `5dd615d...`, with the existing `CampaignRuntime` regression described above. The branch was then corrected to commit `0a3c51d...`. The old failing runs must not be reused as evidence for the corrected head; a fresh synchronization run is required.
+
+## Follow-up
+After this launcher is validated, run the existing stress manifest across the target viewport matrix and inspect actual PPM captures.

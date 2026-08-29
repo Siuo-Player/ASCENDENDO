@@ -42,6 +42,7 @@ public:
     GameSession& operator=(GameSession&&) = delete;
 
     void beginPlaying(float logicalWidth);
+    bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
     void openEditor(core::GameState returnState) noexcept;
 
     GameSessionUpdateResult update(float dt,
