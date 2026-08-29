@@ -31,6 +31,9 @@ jobs:
       - name: Check source-file size policy
         run: python3 Development/Tools/check_source_sizes.py
 
+      - name: Validate visual stress scene manifest
+        run: python3 Development/AI_Validation/visual_stress_scenes.py --json /tmp/visual-stress-manifest.json
+
       - name: Select deterministic Vulkan software driver
         shell: bash
         run: |
