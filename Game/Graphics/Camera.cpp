@@ -9,6 +9,8 @@
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
+#include <algorithm>
+
 namespace gfx {
 
 logic::Vec2 Camera::worldToNDC(const logic::Vec2& worldPos) const {
@@ -29,8 +31,10 @@ void Camera::follow(const logic::Vec2& target, float dt, float speed) {
     float targetY = target.y - VERTICAL_OFFSET;
     if (targetY < 0.0f) targetY = 0.0f; // Nao mostrar abaixo do mundo
 
-    // Lerp suave em direcao ao alvo
-    position.y += (targetY - position.y) * speed * dt;
+    // Lerp suave em direcao ao alvo. O fator e limitado a [0,1] para que
+    // mesmo um dt grande nunca transforme a interpolacao em extrapolacao.
+    const float alpha = std::clamp(speed * dt, 0.0f, 1.0f);
+    position.y += (targetY - position.y) * alpha;
 
     // Garantia adicional: camera nunca vai abaixo de 0
     if (position.y < 0.0f) position.y = 0.0f;

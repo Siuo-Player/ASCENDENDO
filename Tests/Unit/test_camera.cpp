@@ -67,6 +67,20 @@ TEST_SUITE("Fase 6.4 — Camera Tracking Vertical") {
         CHECK(cam.position.y <= target + 1.0f); // nao ultrapassou
     }
 
+    TEST_CASE("follow() mantem o Lerp dentro do alvo com dt grande") {
+        Camera cam;
+        cam.position = {0.0f, 0.0f};
+
+        Vec2 playerPos = {320.0f, 400.0f};
+        constexpr float target = 400.0f - config::LOGICAL_HEIGHT * 0.35f; // 274
+
+        // speed default = 5; dt=1s daria fator 5 sem clamp e extrapolaria para 1370.
+        cam.follow(playerPos, 1.0f);
+
+        CHECK(cam.position.y >= 0.0f);
+        CHECK(cam.position.y <= target);
+    }
+
     TEST_CASE("follow() nao vai abaixo de zero") {
         Camera cam;
         cam.position = {0.0f, 50.0f};
