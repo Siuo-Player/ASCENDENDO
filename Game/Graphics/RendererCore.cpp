@@ -11,6 +11,14 @@
 
 namespace gfx {
 
+RendererCore::FrameStatus RendererCore::classifyVulkanResult(VkResult result) {
+    if (result == VK_SUCCESS) return FrameStatus::Ready;
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        return FrameStatus::SwapchainNeedsRecreate;
+    }
+    return FrameStatus::Fatal;
+}
+
 bool RendererCore::init(VulkanContext* ctx, Swapchain* swapchain,
                         RenderPass* renderPass, Pipeline* pipeline) {
     if (m_initialized) return true;
@@ -102,10 +110,8 @@ RendererCore::FrameStatus RendererCore::beginFrame(VkCommandBuffer& commandBuffe
         device, m_swapchain->handle(), UINT64_MAX,
         m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        return FrameStatus::SwapchainNeedsRecreate;
-    }
-    if (result != VK_SUCCESS) return FrameStatus::Fatal;
+    const FrameStatus status = classifyVulkanResult(result);
+    if (status != FrameStatus::Ready) return status;
 
     if (imageIndex >= m_commandBuffers.size()) return FrameStatus::Fatal;
     if (vkResetCommandBuffer(m_commandBuffers[imageIndex], 0) != VK_SUCCESS) {
@@ -206,12 +212,7 @@ RendererCore::FrameStatus RendererCore::submitFrame(VkCommandBuffer commandBuffe
         m_capturePath.clear();
     }
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
-        return FrameStatus::SwapchainNeedsRecreate;
-    }
-    if (result != VK_SUCCESS) return FrameStatus::Fatal;
-
-    return FrameStatus::Ready;
+    return classifyVulkanResult(result);
 }
 
 bool RendererCore::recreateSwapchain() {
