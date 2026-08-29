@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 from pathlib import Path
-import struct
 import subprocess
 import sys
 
@@ -35,13 +35,18 @@ def read_ppm(path: Path) -> tuple[int, int, bytes]:
         tokens.append(data[pos:end])
         pos = end
 
-    width, height = (int(tokens[0]), int(tokens[1]))
+    width, height = int(tokens[0]), int(tokens[1])
     max_value = int(tokens[2])
     if width <= 0 or height <= 0 or max_value != 255:
         raise ValueError("invalid PPM dimensions/max value")
 
-    while pos < len(data) and data[pos] in b" \t\r\n":
+    if pos >= len(data) or data[pos] not in b" \t\r\n":
+        raise ValueError("missing PPM header/pixel separator")
+    if data[pos : pos + 2] == b"\r\n":
+        pos += 2
+    else:
         pos += 1
+
     pixels = data[pos:]
     expected = width * height * 3
     if len(pixels) != expected:
@@ -109,7 +114,7 @@ def main() -> int:
         print("[capture] image is fully uniform; no rendered content evidence", file=sys.stderr)
         return 5
 
-    checksum = __import__("hashlib").sha256(pixels).hexdigest()
+    checksum = hashlib.sha256(pixels).hexdigest()
     print(f"[capture] OK {width}x{height}, sha256(pixel-data)={checksum}")
     return 0
 
