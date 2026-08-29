@@ -259,19 +259,65 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 
 O teste de capability passou a modelar a política real de `VulkanContext`: dispositivos sem API suficiente ou sem `VK_KHR_swapchain`/graphics queue são ignorados, e a propriedade exigida é a existência de pelo menos uma candidatura válida para o runtime.
 
+## Fase 10 — Presentation + camera validation
+
+### Camera follow Lerp bound — concluído
+
+**WP:** `docs/05-work-packages/WORK_PACKAGE_CAMERA_FOLLOW_LERP_BOUND_2026-08-29.md`  
+**Implementation:** branch `fix/camera-follow-lerp-clamp-20260829`  
+**PR:** #170  
+**Merge:** `284d4c807569dc5960c349a67ce0ef87f0aed4ec`  
+**Estado:** **COMPLETED**
+
+### Descoberta
+
+`gfx::Camera::follow()` usava `speed * dt` diretamente como fator de interpolação. Com `speed * dt > 1`, a operação tornava-se extrapolação e podia ultrapassar o alvo.
+
+### Decisão
+
+O fator passou a ser limitado a `[0,1]` através de `std::clamp`, preservando o comportamento no fixed-step normal e eliminando o overshoot provocado por `dt` grande.
+
+### Evidência
+
+- teste regressivo adicionado com `dt = 1.0f` e `speed = 5.0f`;
+- Linux / Clang / C++20 / Headless Vulkan: **success**;
+- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
+- Windows / Clang / C++20: **success**;
+- source-size, build/testes e campaign validation: **success**;
+- o head efetivamente validado foi `2a96eed38c7cc87e456c03a3b15d1f712d57d4ea`; o SHA anteriormente referido como `8feefa7869b0cab37986427776351c202de22ea4` já não era o head atual da PR no momento da validação.
+
+### Próxima investigação
+
+Auditar objetivamente:
+
+```text
+world → NDC
+viewport boundaries
+camera target tracking
+camera lower bound
+large/small viewport behavior
+finite camera state
+```
+
+Nenhuma nova regra deve ser implementada apenas por consistência estética. Para avançar é necessária uma propriedade operacional clara, consumidor afetado, risco/falha demonstrável e teste capaz de provar a propriedade.
+
+O estudo de 2026-08-29 também recomenda, como sequência de investigação posterior, um **Movement Feel Benchmark** determinístico que compare cenários pequenos de movimento/câmera/VFX. Esse benchmark permanece distinto do futuro benchmark de PCG e de player-conditioned generation.
+
 ### Fora de escopo
 
-- schema/versionamento;
+- schema/versioning;
 - migration;
 - política geral de bounds;
 - redesign de `Level`;
 - física/colisão;
+- replay persistence sem requisito de produto;
+- nova abstração genérica `Application`.
 
-As tranches #160/#161/#164 não alteram estes limites de escopo.
+As tranches #160/#161/#164 e #170 não alteram estes limites de escopo.
 
 ## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
 
-Após #164, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+Após as tranches concluídas, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
 
 Para Vulkan, capability/error semantics devem ser aprofundadas apenas onde houver uma propriedade operacional não coberta pelos testes atuais.
 
