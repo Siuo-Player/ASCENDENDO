@@ -13,7 +13,17 @@ void CampaignRuntime::reset() {
 }
 
 bool CampaignRuntime::loadInitialLevel(Level& level, float maxWidth) {
-    return loadLevelAt(level, 0, maxWidth);
+    reset();
+    level.clear();
+
+    if (m_campaign.empty() || !std::filesystem::exists(m_campaign.front())) return false;
+
+    const auto data = LevelDataIO::load(m_campaign.front());
+    if (!data || !LevelDataValidator::validate(*data)) return false;
+
+    m_spawnY = level.appendFromData(*data, maxWidth, 0.0f);
+    m_nextLevelIndex = 1;
+    return true;
 }
 
 bool CampaignRuntime::loadLevelAt(Level& level, std::size_t index, float maxWidth) {
