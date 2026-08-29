@@ -42,6 +42,15 @@ jobs:
           GALLIUM_DRIVER: "llvmpipe"
           VK_LOADER_DEBUG: "error"
 
+      - name: Stage runtime assets beside executable
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/game/Game
+          cp -a Game/Assets build/game/Game/
+          test -f build/game/Game/Assets/Levels/campaign.txt
+          test -f build/game/Game/Assets/Sprites/personagem.png
+
       - name: Capture level
         run: |
           mkdir -p artifacts
