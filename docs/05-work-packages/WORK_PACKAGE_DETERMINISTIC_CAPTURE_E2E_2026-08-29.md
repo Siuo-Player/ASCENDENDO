@@ -39,6 +39,12 @@ For each active campaign level in the current campaign:
 - `Development/AI_Validation/validate_deterministic_capture.py` executes the game and validates the binary P6 PPM;
 - `.github/workflows/deterministic-capture.yml` runs the validator for levels 0, 1 and 2 at `1280x720` and uploads the resulting PPMs.
 
+## Validator hardening
+
+During review, the P6 parser was corrected so it consumes only the mandatory header/pixel separator instead of stripping arbitrary whitespace from the binary payload. This matters because P6 pixel bytes are arbitrary binary data and may themselves equal whitespace byte values.
+
+Therefore the validator now checks the binary boundary without mutating the payload before the exact byte-count check.
+
 ## Scope boundary
 
 Included:
