@@ -259,6 +259,15 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 
 O teste de capability passou a modelar a política real de `VulkanContext`: dispositivos sem API suficiente ou sem `VK_KHR_swapchain`/graphics queue são ignorados, e a propriedade exigida é a existência de pelo menos uma candidatura válida para o runtime.
 
+### Camera follow Lerp bound — em validação
+
+**WP:** `docs/05-work-packages/WORK_PACKAGE_CAMERA_FOLLOW_LERP_BOUND_2026-08-29.md`  
+**Branch:** `fix/camera-follow-lerp-clamp-20260829`
+
+`Camera::follow()` documenta e testa tracking por Lerp, mas usava `speed * dt` diretamente como fator. Para `dt` grande isso permite extrapolação e pode ultrapassar o alvo.
+
+A implementação limita o fator a `[0,1]` e adiciona uma caracterização com `dt = 1.0s` para provar que o alvo nunca é ultrapassado.
+
 ### Fora de escopo
 
 - schema/versionamento;
@@ -266,22 +275,11 @@ O teste de capability passou a modelar a política real de `VulkanContext`: disp
 - política geral de bounds;
 - redesign de `Level`;
 - física/colisão;
+- alteração do offset/camera model.
 
-As tranches #160/#161/#164 não alteram estes limites de escopo.
+### Próximo alvo
 
-## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
-
-Após #164, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
-
-Para Vulkan, capability/error semantics devem ser aprofundadas apenas onde houver uma propriedade operacional não coberta pelos testes atuais.
-
-Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
-
-A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável.
-
-Não criar uma `Application` genérica, nem novas divisões de configuração, apenas por organização.
-
-Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
+Após a validação da câmera, continuar apenas com propriedades de presentation/camera demonstráveis e, depois, cenas determinísticas de stress. Não iniciar replay persistence, schema/versioning ou uma `Application` genérica sem requisito novo.
 
 ## Princípios de execução
 
