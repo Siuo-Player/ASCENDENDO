@@ -1,0 +1,65 @@
+name: Deterministic Capture Evidence
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capture:
+    name: Linux / deterministic PPM capture
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        level: [0, 1, 2]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain and headless graphics dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers vulkan-tools
+
+      - name: Select deterministic Vulkan software driver
+        shell: bash
+        run: |
+          set -euo pipefail
+          ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -type f -name 'lvp_icd*.json' | head -n 1)"
+          test -n "$ICD"
+          echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          echo "Using Vulkan ICD: $ICD"
+
+      - name: Build release game
+        run: xvfb-run -a -s '-screen 0 1280x720x24' make game -j2
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          GALLIUM_DRIVER: "llvmpipe"
+          VK_LOADER_DEBUG: "error"
+
+      - name: Capture level
+        run: |
+          mkdir -p artifacts
+          xvfb-run -a -s '-screen 0 1280x720x24' \
+            python3 Development/AI_Validation/validate_deterministic_capture.py \
+              --binary build/game/game \
+              --level ${{ matrix.level }} \
+              --output artifacts/level-${{ matrix.level }}.ppm \
+              --width 1280 \
+              --height 720
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          GALLIUM_DRIVER: "llvmpipe"
+          VK_LOADER_DEBUG: "error"
+
+      - name: Upload PPM evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: deterministic-capture-level-${{ matrix.level }}
+          path: artifacts/level-${{ matrix.level }}.ppm
+          if-no-files-found: error
