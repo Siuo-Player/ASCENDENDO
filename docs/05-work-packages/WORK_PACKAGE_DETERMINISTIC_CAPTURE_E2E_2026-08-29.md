@@ -39,6 +39,24 @@ For each active campaign level in the current campaign:
 - `Development/AI_Validation/validate_deterministic_capture.py` executes the game and validates the binary P6 PPM;
 - `.github/workflows/deterministic-capture.yml` runs the validator for levels 0, 1 and 2 at `1280x720` and uploads the resulting PPMs.
 
+## Findings from first E2E run
+
+The first real E2E run reached the release-game build successfully but failed before level loading because `RuntimePaths::assetsRoot()` resolves assets relative to the executable directory. With the normal build layout, the executable is `build/game/game`, so the runtime correctly looked for:
+
+```text
+build/game/Game/Assets/...
+```
+
+while the repository assets remained under:
+
+```text
+Game/Assets/...
+```
+
+The failure was therefore a packaging/layout mismatch in the validation workflow, not a Vulkan or campaign-format failure. No PPM artifact was produced.
+
+The CI workflow is corrected to stage `Game/Assets` beside the executable after `make game` and explicitly checks the campaign and player-sprite files before launching capture. This preserves the runtime path contract and does not change production runtime code.
+
 ## Validator hardening
 
 During review, the P6 parser was corrected so it consumes only the mandatory header/pixel separator instead of stripping arbitrary whitespace from the binary payload. This matters because P6 pixel bytes are arbitrary binary data and may themselves equal whitespace byte values.
@@ -51,6 +69,7 @@ Included:
 
 - deterministic launcher behavior already introduced by PR #185;
 - E2E capture execution;
+- runtime-layout staging required to reproduce the real distribution layout;
 - structural PPM validation;
 - artifact retention.
 
