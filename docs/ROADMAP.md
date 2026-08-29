@@ -238,6 +238,27 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 - Windows / Clang / C++20: **success**;
 - source-size e campaign validation: **success**.
 
+### Level/replay cleanup tranches — concluídas
+
+**PR #160 — ReplayManager → TickInput**  
+**Merge:** `0a798872685c668eaac1d1d2b9fbd08c66af1992`  
+**Estado:** **COMPLETED**
+
+`ReplayManager.h` deixou de depender de `InputManager.h` apenas para obter `TickInput`; passou a incluir diretamente `Logic/TickInput.h`, sem alteração da API ou da semântica do replay.
+
+**PR #161 — Level::clear() state reset**  
+**Merge:** `70d99a819746b89afd885cabaef16b5d8f2886ea`  
+**Estado:** **COMPLETED**
+
+`Level::clear()` passou a limpar simultaneamente plataformas, `name`, `hasFlag` e `flagBounds`, com teste regressivo dedicado.
+
+**PR #164 — Vulkan capability matrix test**  
+**Issue:** #162  
+**Merge:** `95419bf25adb2a2c7227b0a72b3a23d714aeaf30`  
+**Estado:** **COMPLETED**
+
+O teste de capability passou a modelar a política real de `VulkanContext`: dispositivos sem API suficiente ou sem `VK_KHR_swapchain`/graphics queue são ignorados, e a propriedade exigida é a existência de pelo menos uma candidatura válida para o runtime.
+
 ### Fora de escopo
 
 - schema/versionamento;
@@ -246,11 +267,13 @@ A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`
 - redesign de `Level`;
 - física/colisão;
 
-A extensão finita não altera estes limites de escopo.
+As tranches #160/#161/#164 não alteram estes limites de escopo.
 
 ## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
 
-Após #145, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+Após #164, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
+
+Para Vulkan, capability/error semantics devem ser aprofundadas apenas onde houver uma propriedade operacional não coberta pelos testes atuais.
 
 Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
 
