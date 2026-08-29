@@ -1,63 +1,73 @@
 # Plano da branch atual
 
-**Bloco do roadmap:** `Fase 10 / LevelData semantic validation`
+**Bloco do roadmap:** `Fase 10 / presentation + camera validation`
 
-**Work Package:** `Finite LevelData geometry boundary`
+**Work Package:** `Camera follow Lerp bound`
 
-**Issue:** `#144`
+**Branch de implementação:** `fix/camera-follow-lerp-clamp-20260829`
 
-**Branch de implementação:** `refactor/leveldata-finite-geometry-20260828`
+**PR:** `#170`
 
 ## Contexto
 
-A tranche #142 passou a rejeitar plataformas e flags com largura ou altura não positiva. A arquitetura do ASCENDENDO também estabelece que valores `NaN`/`Inf` não devem entrar na simulação.
+`gfx::Camera::follow()` documentava tracking vertical por Lerp, mas usava diretamente `speed * dt` como fator. Para `speed * dt > 1`, a atualização tornava-se extrapolação.
 
 ## Decisão
 
-Estender a mesma boundary semântica, sem alterar o parser, para exigir coordenadas finitas em `PLATFORM` e `FLAG`:
+Limitar o fator a `[0, 1]`:
 
-```text
-min.x, min.y, max.x, max.y são finitos
-+ width > 0
-+ height > 0
+```cpp
+const float alpha = std::clamp(speed * dt, 0.0f, 1.0f);
 ```
+
+Preserva o comportamento para o fixed-step normal e elimina overshoot causado por `dt` grande.
 
 ## Escopo
 
-- `Game/Logic/LevelDataValidator`;
-- rejeitar coordenadas não finitas de plataformas e flag;
-- testes para `NaN` e `±Inf`;
-- preservar assets válidos e comportamento existente.
+- `Game/Graphics/Camera.cpp`;
+- teste regressivo em `Tests/Unit/test_camera.cpp` com `dt = 1.0f`;
+- documentação do finding e da dívida técnica.
 
 ## Fora de escopo
 
-- schema/versionamento;
-- migration;
-- bounds policy;
-- `SPAWN` validation sem consumidor runtime;
-- redesign de `Level`;
-- física/collision.
+- mudança do offset vertical;
+- tracking horizontal;
+- mudança do sistema de coordenadas;
+- nova abstração de câmera;
+- mudança da política de fixed-step.
 
 ## Validação
 
-```text
-validator unit tests                  success
-Linux normal/headless Vulkan          success
-ASan/UBSan                            success
-Windows                               success
-source-size/campaign validation       success
-```
-
-## Critério de saída
+Head efetivamente validado: `2a96eed38c7cc87e456c03a3b15d1f712d57d4ea`.
 
 ```text
-finite + positive geometry accepted
-+ NaN/Inf geometry rejected before runtime append
-+ no valid asset changes
-+ three mandatory CI gates green
-+ documentation synchronized
+Linux / Clang / C++20 / Headless Vulkan       success
+Linux / Clang / ASan + UBSan / Headless Vulkan success
+Windows / Clang / C++20                       success
+source-size                                    success
+build + tests                                  success
+campaign validation                            success
 ```
 
-## Estado atual
+A PR #170 foi mergeada por squash como `284d4c807569dc5960c349a67ce0ef87f0aed4ec`.
 
-`COMPLETED — PR #145 merged as 34c96b83573add90bd1f3d238f62d8f37ba3c9a9`
+## Resultado
+
+`COMPLETED`
+
+## Próxima decisão
+
+Auditar propriedades objetivas de `Camera`/viewport:
+
+```text
+world → NDC
+viewport boundaries
+camera target tracking
+camera lower bound
+large/small viewport behavior
+finite camera state
+```
+
+Não implementar uma segunda regra automaticamente. A passagem seguinte só avança quando existir propriedade operacional clara, consumidor afetado, risco/falha demonstrável e teste que a prove.
+
+O estudo de 2026-08-29 também recomenda separar esta validação local de um futuro **Movement Feel Benchmark**, que deve ser determinístico e comparável entre alterações de movimento/câmera/VFX.
