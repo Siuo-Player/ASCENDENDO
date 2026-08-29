@@ -4,6 +4,33 @@
 
 O roadmap orienta a ordem do trabalho, mas uma propriedade só muda de estado quando existe evidência suficiente para a alegação correspondente.
 
+## Prioridade operacional atual — 2026-08-29
+
+`main` já ultrapassou o estado descrito nos snapshots antigos dos Studies e no prompt de continuação anterior.
+
+Estado canónico atual:
+
+```text
+Gate 9.6                                      CLOSED
+LevelData semantic geometry                    DONE
+Replay/Level cleanup                           DONE
+Vulkan capability matrix                       DONE
+Camera follow Lerp bound                       DONE (#170)
+Movement / Camera deterministic benchmark      DONE (#172)
+
+NEXT → stress scenes / render captures
+        ↓
+human playtesting protocol
+        ↓
+difficulty / progression calibration
+        ↓
+procedural assistance
+        ↓
+player-conditioned generation
+```
+
+Esta secção tem precedência operacional sobre snapshots antigos dos `PROJECT-STUDIES`. Antes de cada nova branch, confirmar novamente o estado real de `main`, o roadmap e a evidência mais recente dos Studies.
+
 ## Gate 9.6 — Base Engineering Gate
 
 O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #118) e da confirmação de fecho formal (PR #119).
@@ -286,22 +313,58 @@ O fator passou a ser limitado a `[0,1]` através de `std::clamp`, preservando o 
 - source-size, build/testes e campaign validation: **success**;
 - o head efetivamente validado foi `2a96eed38c7cc87e456c03a3b15d1f712d57d4ea`; o SHA anteriormente referido como `8feefa7869b0cab37986427776351c202de22ea4` já não era o head atual da PR no momento da validação.
 
-### Próxima investigação
+### Movement / Camera deterministic benchmark — concluído
 
-Auditar objetivamente:
+**WP:** `docs/05-work-packages/WORK_PACKAGE_MOVEMENT_CAMERA_BENCHMARK_2026-08-29.md`  
+**Implementation:** branch `feat/movement-camera-benchmark-20260829`  
+**PR:** #172  
+**Merge:** `749ec9f3977ee42331b46600a1eaf314e4def8b9`  
+**Estado:** **COMPLETED**
+
+A primeira tranche criou `Development/AI_Validation/movement_camera_benchmark.py`, um benchmark determinístico e independente de Vulkan/GLFW que replica somente as matemáticas necessárias para as propriedades atuais de camera/viewport.
+
+Os cenários cobrem:
 
 ```text
-world → NDC
-viewport boundaries
-camera target tracking
-camera lower bound
-large/small viewport behavior
-finite camera state
+camera.follow large dt
+camera.follow fixed-step tracking
+camera.follow lower bound
+camera worldToNDC mapping
+viewport letterbox reference cases
+viewport invalid dimensions
+camera NDC finite reference grid
 ```
 
-Nenhuma nova regra deve ser implementada apenas por consistência estética. Para avançar é necessária uma propriedade operacional clara, consumidor afetado, risco/falha demonstrável e teste capaz de provar a propriedade.
+O benchmark pode emitir relatório JSON e não altera física, renderer ou comportamento de produção. Serve como base comparável para futuras alterações de movimento/câmara.
 
-O estudo de 2026-08-29 também recomenda, como sequência de investigação posterior, um **Movement Feel Benchmark** determinístico que compare cenários pequenos de movimento/câmera/VFX. Esse benchmark permanece distinto do futuro benchmark de PCG e de player-conditioned generation.
+### Próximo alvo — stress scenes / render captures
+
+A primeira tranche matemática de camera/viewport está concluída. Não há evidência, neste momento, para inventar outra regra de runtime apenas por consistência estética.
+
+O próximo work package deve concentrar-se em **stress scenes / render captures** para múltiplos viewports e casos de câmara, com foco em propriedades observáveis que os testes matemáticos não conseguem provar:
+
+```text
+visibilidade do player
+visibilidade das plataformas/contact points
+route/hazard readability
+camera edge behavior
+large/small viewport presentation
+letterbox interaction with scene composition
+```
+
+A implementação deve continuar separada da simulação. A aceitação visual deve respeitar a regra existente de gameplay-first visuals: player e plataformas permanecem visualmente dominantes e o background/atmosfera nunca deve degradar a leitura de gameplay.
+
+**Não implementar ainda** look-ahead, dead/focus zones, "lag ideal", difficulty ou valores subjetivos de game-feel apenas a partir do benchmark matemático. Esses aspetos pertencem a experimentação de produto/playtesting.
+
+### Sequência posterior
+
+```text
+stress scenes / render captures
+→ human playtesting protocol
+→ difficulty / progression calibration
+→ procedural assistance
+→ player-conditioned generation
+```
 
 ### Fora de escopo
 
@@ -313,7 +376,7 @@ O estudo de 2026-08-29 também recomenda, como sequência de investigação post
 - replay persistence sem requisito de produto;
 - nova abstração genérica `Application`.
 
-As tranches #160/#161/#164 e #170 não alteram estes limites de escopo.
+As tranches #160/#161/#164/#170/#172 não alteram estes limites de escopo.
 
 ## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
 
