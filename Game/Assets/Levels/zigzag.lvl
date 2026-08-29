@@ -1,5 +1,8 @@
 NAME ZigZag
-PLATFORM 170 0 140 20
-PLATFORM 418 85 140 20
-PLATFORM 170 170 140 20
-PLATFORM 418 255 140 20
+# Geometria de plataforma alinhada a módulos visuais de 16 px.
+# As posições X/Y são coordenadas de mundo e não estão obrigadas ao grid de 16 px.
+# As superfícies superiores mantêm as altitudes originais.
+PLATFORM 170 4 144 16
+PLATFORM 418 89 144 16
+PLATFORM 170 174 144 16
+PLATFORM 418 259 144 16
