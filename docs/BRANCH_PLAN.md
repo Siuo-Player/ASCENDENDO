@@ -2,72 +2,70 @@
 
 **Bloco do roadmap:** `Fase 10 / presentation + camera validation`
 
-**Work Package:** `Camera follow Lerp bound`
+**Estado atual:** `Camera follow Lerp bound` e `Movement / Camera deterministic benchmark` já estão integrados em `main`.
 
-**Branch de implementação:** `fix/camera-follow-lerp-clamp-20260829`
+## Últimas tranches integradas
 
-**PR:** `#170`
+### Camera follow Lerp bound
 
-## Contexto
+**Implementation:** branch `fix/camera-follow-lerp-clamp-20260829`  
+**PR:** `#170`  
+**Merge:** `284d4c807569dc5960c349a67ce0ef87f0aed4ec`
 
-`gfx::Camera::follow()` documentava tracking vertical por Lerp, mas usava diretamente `speed * dt` como fator. Para `speed * dt > 1`, a atualização tornava-se extrapolação.
+`gfx::Camera::follow()` passou a limitar o fator de Lerp a `[0,1]`, eliminando extrapolação quando `speed * dt > 1`.
 
-## Decisão
+### Movement / Camera deterministic benchmark
 
-Limitar o fator a `[0, 1]`:
+**Implementation:** branch `feat/movement-camera-benchmark-20260829`  
+**PR:** `#172`  
+**Merge:** `749ec9f3977ee42331b46600a1eaf314e4def8b9`
 
-```cpp
-const float alpha = std::clamp(speed * dt, 0.0f, 1.0f);
-```
+Foi integrada a primeira tranche do benchmark determinístico de movimento/câmara:
 
-Preserva o comportamento para o fixed-step normal e elimina overshoot causado por `dt` grande.
+- camera follow com `dt` grande;
+- tracking em fixed-step;
+- lower bound da câmara;
+- world → NDC;
+- referência de letterbox em múltiplos viewports;
+- dimensões de viewport inválidas;
+- finitude da grelha de referência;
+- relatório JSON opcional.
 
-## Escopo
+O benchmark é independente de Vulkan/GLFW e não altera o runtime de produção. Serve como oráculo numérico para futuras alterações de camera/movement.
 
-- `Game/Graphics/Camera.cpp`;
-- teste regressivo em `Tests/Unit/test_camera.cpp` com `dt = 1.0f`;
-- documentação do finding e da dívida técnica.
+## Próxima prioridade do roadmap
 
-## Fora de escopo
+**Não voltar a implementar a tranche já concluída.** O próximo trabalho deve ser escolhido a partir do estado real de `main` e da evidência mais recente dos Studies.
 
-- mudança do offset vertical;
-- tracking horizontal;
-- mudança do sistema de coordenadas;
-- nova abstração de câmera;
-- mudança da política de fixed-step.
-
-## Validação
-
-Head efetivamente validado: `2a96eed38c7cc87e456c03a3b15d1f712d57d4ea`.
-
-```text
-Linux / Clang / C++20 / Headless Vulkan       success
-Linux / Clang / ASan + UBSan / Headless Vulkan success
-Windows / Clang / C++20                       success
-source-size                                    success
-build + tests                                  success
-campaign validation                            success
-```
-
-A PR #170 foi mergeada por squash como `284d4c807569dc5960c349a67ce0ef87f0aed4ec`.
-
-## Resultado
-
-`COMPLETED`
-
-## Próxima decisão
-
-Auditar propriedades objetivas de `Camera`/viewport:
+A prioridade imediata é a continuação de **presentation + camera validation**, começando por **stress scenes / render captures para múltiplos viewports**. O objetivo é validar propriedades de visibilidade e comportamento observável que os testes matemáticos não conseguem provar.
 
 ```text
-world → NDC
-viewport boundaries
-camera target tracking
-camera lower bound
-large/small viewport behavior
-finite camera state
+Movement / Camera benchmark       DONE
+          ↓
+stress scenes / render captures  NEXT
+          ↓
+human playtesting protocol
+          ↓
+difficulty / progression calibration
+          ↓
+procedural assistance
+          ↓
+player-conditioned generation
 ```
 
-Não implementar uma segunda regra automaticamente. A passagem seguinte só avança quando existir propriedade operacional clara, consumidor afetado, risco/falha demonstrável e teste que a prove.
+Antes de abrir uma nova branch:
 
-O estudo de 2026-08-29 também recomenda separar esta validação local de um futuro **Movement Feel Benchmark**, que deve ser determinístico e comparável entre alterações de movimento/câmera/VFX.
+```text
+1. ler docs/ROADMAP.md
+2. comparar com ASCENDENDO/main atual
+3. consultar PROJECT-STUDIES/ASCENDENDO/
+4. identificar uma propriedade ou objetivo concreto
+5. confirmar consumidor, risco e validação
+6. só então implementar
+```
+
+## Regra de escopo
+
+Não criar uma nova regra de camera, validator ou abstração apenas por consistência estética. Um finding novo precisa de propriedade operacional clara, risco/falha demonstrável e teste/validação adequado.
+
+Não criar `Application` genérica, schema/versioning, nova política geral de bounds ou outras abstrações adiadas sem requisito concreto.
