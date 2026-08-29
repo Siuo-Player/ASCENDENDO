@@ -36,6 +36,8 @@ public:
     RendererCore(const RendererCore&) = delete;
     RendererCore& operator=(const RendererCore&) = delete;
 
+    static FrameStatus classifyVulkanResult(VkResult result);
+
     bool init(VulkanContext* ctx, Swapchain* swapchain,
               RenderPass* renderPass, Pipeline* pipeline);
     void cleanup();
