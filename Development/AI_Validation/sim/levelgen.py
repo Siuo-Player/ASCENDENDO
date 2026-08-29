@@ -7,11 +7,17 @@ from engine import (Body, do_jump, physics_step, resolve_collision,
                     FIXED_STEP, PLAYER_WIDTH, LOGICAL_WIDTH,
                     PLAYER_MIN_JUMP, PLAYER_MAX_JUMP, GRAVITY)
 
-PLATFORM_H   = 20.0
+PLATFORM_H   = 16.0
 COS60, SIN60 = 0.5, 0.866
-CLEARANCE    = 40.0    # margem minima (corpo a subir vs borda proxima da plataforma)
-LEVEL_HEIGHT = 360.0   # altura de cada chunk
-OFFSETS      = [0.0, LEVEL_HEIGHT, LEVEL_HEIGHT * 2]   # inicio, zigzag, precipicio
+CLEARANCE    = 40.0
+LEVEL_HEIGHT = 360.0
+OFFSETS      = [0.0, LEVEL_HEIGHT, LEVEL_HEIGHT * 2]
+
+WIDTH_INICIO = 176
+WIDTH_ZIGZAG = 144
+WIDTH_PRECIPICIO = 96
+WIDTH_PEDESTAL = 128
+
 
 def F(charge):
     return PLAYER_MIN_JUMP + (PLAYER_MAX_JUMP - PLAYER_MIN_JUMP) * charge
@@ -60,7 +66,7 @@ def place_platform(land_x, x_asc, direction, w):
 
 def edge_start(plat, direction):
     w = plat[2] - plat[0]
-    if w > 500:                              # chao de largura total
+    if w > 500:
         return LOGICAL_WIDTH / 2.0 - PLAYER_WIDTH / 2.0
     return (plat[2] - PLAYER_WIDTH) if direction == 1 else plat[0]
 
@@ -101,23 +107,22 @@ def verify_all(platforms, directions, charges, noise=0.08, pos=10.0, n=50, seed=
 
 def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     """Gera os 3 niveis, verifica e escreve os .lvl em coordenadas locais."""
-    DY_INTRA = 85.0    # diferenca de altura dentro de um chunk
-    DY_CROSS = 105.0   # diferenca de altura cross-chunk (fixo pela geometria dos chunks)
+    DY_INTRA = 85.0
+    DY_CROSS = 105.0
 
     all_ok = True
-    results = {}       # nivel -> lista de (local_x, local_y, w, h, tipo)
+    results = {}
 
-    # ── INICIO ──────────────────────────────────────────────────────────────
     print("=" * 62)
-    print("INICIO  (w=180, c_intra=%.0f%%)" % (charge_intra*100))
+    print("INICIO  (w=%d, c_intra=%.0f%%)" % (WIDTH_INICIO, charge_intra*100))
     print("=" * 62)
     OFF = OFFSETS[0]
-    GROUND = (0, OFF, 640, OFF + PLATFORM_H)     # chao full-width em coords mundo
+    GROUND = (0, OFF, 640, OFF + PLATFORM_H)
     plats = [GROUND]; dirs = []; charges = []
 
     for d in [+1, -1, +1]:
         cf = charge_intra
-        p, info = gen_one(plats[-1], d, cf, 180, DY_INTRA, plats)
+        p, info = gen_one(plats[-1], d, cf, WIDTH_INICIO, DY_INTRA, plats)
         print("  " + info)
         if p is None: print("  FALHA!"); break
         plats.append(p); dirs.append(d); charges.append(cf)
@@ -127,23 +132,19 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     all_ok = all_ok and ok
     results['inicio'] = (plats, OFF)
 
-    # ── ZIGZAG ──────────────────────────────────────────────────────────────
     print("\n" + "=" * 62)
-    print("ZIGZAG  (w=140, c_cross=%.0f%%, c_intra=%.0f%%)" % (charge_cross*100, charge_intra*100))
+    print("ZIGZAG  (w=%d, c_cross=%.0f%%, c_intra=%.0f%%)" % (WIDTH_ZIGZAG, charge_cross*100, charge_intra*100))
     print("=" * 62)
     OFF = OFFSETS[1]
     plats2 = [plats[-1]]; dirs2 = []; charges2 = []
 
-    # Salto 1 e cross-chunk (dy=105) e SEMPRE vai para a ESQUERDA
-    # (porque P3 do inicio esta mais a direita)
-    p, info = gen_one(plats2[-1], -1, charge_cross, 140, DY_CROSS, plats2)
+    p, info = gen_one(plats2[-1], -1, charge_cross, WIDTH_ZIGZAG, DY_CROSS, plats2)
     print("  CROSS: " + info)
     if p is None: print("  FALHA!"); return
     plats2.append(p); dirs2.append(-1); charges2.append(charge_cross)
 
-    # Saltos internos do zigzag
     for d in [+1, -1, +1]:
-        p, info = gen_one(plats2[-1], d, charge_intra, 140, DY_INTRA, plats2)
+        p, info = gen_one(plats2[-1], d, charge_intra, WIDTH_ZIGZAG, DY_INTRA, plats2)
         print("  " + info)
         if p is None: print("  FALHA!"); break
         plats2.append(p); dirs2.append(d); charges2.append(charge_intra)
@@ -153,26 +154,23 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     all_ok = all_ok and ok
     results['zigzag'] = (plats2, OFF)
 
-    # ── PRECIPICIO ──────────────────────────────────────────────────────────
     print("\n" + "=" * 62)
-    print("PRECIPICIO  (w=100, c_cross=%.0f%%, c_intra=%.0f%%)" % (charge_cross*100, charge_intra*100))
+    print("PRECIPICIO  (w=%d, c_cross=%.0f%%, c_intra=%.0f%%)" % (WIDTH_PRECIPICIO, charge_cross*100, charge_intra*100))
     print("=" * 62)
     OFF = OFFSETS[2]
     plats3 = [plats2[-1]]; dirs3 = []; charges3 = []
 
-    # Cross-chunk: de P4 do zigzag (que fica a direita), va para a esquerda
-    p, info = gen_one(plats3[-1], -1, charge_cross, 100, DY_CROSS, plats3)
+    p, info = gen_one(plats3[-1], -1, charge_cross, WIDTH_PRECIPICIO, DY_CROSS, plats3)
     print("  CROSS: " + info)
     if p is None: print("  FALHA!"); return
     plats3.append(p); dirs3.append(-1); charges3.append(charge_cross)
 
     for d in [+1, -1]:
-        p, info = gen_one(plats3[-1], d, charge_intra, 100, DY_INTRA, plats3)
+        p, info = gen_one(plats3[-1], d, charge_intra, WIDTH_PRECIPICIO, DY_INTRA, plats3)
         print("  " + info)
         if p is None: print("  FALHA!"); break
         plats3.append(p); dirs3.append(d); charges3.append(charge_intra)
 
-    # FLAG: do ultimo platform do precipicio, 1 salto mais (dir oposta ao ultimo)
     last = plats3[-1]
     last_dir = dirs3[-1]
     fl_d = -last_dir
@@ -180,13 +178,12 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     fl_xasc = ascending_x_at(fl_sx, last[3], fl_d, charge_intra, last[3]+DY_INTRA)
     fl_lx   = fly_descend_to(fl_sx, last[3], fl_d, charge_intra, last[3]+DY_INTRA, plats3)
     fl_top  = last[3] + DY_INTRA
-    fl_nx   = place_platform(fl_lx, fl_xasc, fl_d, 120)
-    FLAG    = (fl_nx, fl_top - 40, fl_nx + 120, fl_top)  # h=40
+    fl_nx   = place_platform(fl_lx, fl_xasc, fl_d, WIDTH_PEDESTAL)
+    FLAG    = (fl_nx, fl_top - 40, fl_nx + WIDTH_PEDESTAL, fl_top)
     print(f"  FLAG: [{FLAG[0]:.0f},{FLAG[1]:.0f},{FLAG[2]:.0f},{FLAG[3]:.0f}]")
 
     print("  -- verify --")
     ok = verify_all(plats3, dirs3, charges3, n=noise_trials)
-    # verificar FLAG (overlap durante o voo)
     plats_no_flag = list(plats3)
     sx_f = edge_start(last, fl_d)
     succ_f = 0
@@ -203,27 +200,23 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     results['precipicio'] = (plats3, OFF)
     results['FLAG'] = FLAG
 
-    # ── OUTPUT .lvl em coords LOCAIS ────────────────────────────────────────
     print("\n" + "=" * 62)
     print("STATUS: %s" % ("TUDO OK ✅" if all_ok else "REVISAR ❌"))
     print("=" * 62)
 
     out_dir = os.path.join(os.path.dirname(__file__), "..")
 
-    # INICIO
     off = OFFSETS[0]
     lines = ["NAME Inicio\n",
              "# Chao de largura total (obrigatorio no primeiro nivel)\n",
-             f"PLATFORM 0 0 640 20\n"]
-    for p in results['inicio'][0][1:]:   # skip ground
+             f"PLATFORM 0 0 640 {PLATFORM_H:.0f}\n"]
+    for p in results['inicio'][0][1:]:
         lx,ly = p[0], p[1]-off
         w,h   = p[2]-p[0], p[3]-p[1]
         lines.append(f"PLATFORM {lx:.0f} {ly:.0f} {w:.0f} {h:.0f}\n")
     with open(os.path.join(out_dir, "inicio.lvl"), "w") as f:
         f.writelines(lines)
-    print("Escrito: inicio.lvl")
 
-    # ZIGZAG — skip a plataforma de saida do inicio (plats2[0])
     off = OFFSETS[1]
     lines = ["NAME ZigZag\n"]
     for p in results['zigzag'][0][1:]:
@@ -232,9 +225,7 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
         lines.append(f"PLATFORM {lx:.0f} {ly:.0f} {w:.0f} {h:.0f}\n")
     with open(os.path.join(out_dir, "zigzag.lvl"), "w") as f:
         f.writelines(lines)
-    print("Escrito: zigzag.lvl")
 
-    # PRECIPICIO
     off = OFFSETS[2]
     lines = ["NAME O Precipicio\n"]
     for p in results['precipicio'][0][1:]:
@@ -246,7 +237,6 @@ def generate_and_export(charge_intra=0.78, charge_cross=0.85, noise_trials=50):
     lines.append(f"FLAG {fl_lx:.0f} {fl_ly:.0f} {fl_w:.0f} {fl_h:.0f}\n")
     with open(os.path.join(out_dir, "precipicio.lvl"), "w") as f:
         f.writelines(lines)
-    print("Escrito: precipicio.lvl")
 
     return all_ok
 
