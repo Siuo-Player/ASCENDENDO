@@ -17,6 +17,7 @@ public:
 
     void reset();
     bool loadInitialLevel(Level& level, float maxWidth);
+    bool loadLevelAt(Level& level, std::size_t index, float maxWidth);
     bool streamNextLevel(Level& level, float maxWidth);
 
     bool hasMoreLevels() const { return m_nextLevelIndex < m_campaign.size(); }
