@@ -21,6 +21,17 @@ void GameSession::beginPlaying(float logicalWidth) {
     resetGame(logicalWidth);
 }
 
+bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) {
+    player_ = logic::Player{};
+    player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+    world_ = logic::PhysicsWorld{};
+    elapsedTime_ = 0.0f;
+
+    if (!campaignRuntime_.loadLevelAt(level_, levelIndex, logicalWidth)) return false;
+    stateMachine_.enterPlaying();
+    return true;
+}
+
 void GameSession::openEditor(core::GameState returnState) noexcept {
     editorSession_.cancelInteraction();
     stateMachine_.enterEditor(returnState);
