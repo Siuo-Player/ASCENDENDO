@@ -28,5 +28,9 @@ validation level-at-index load
   → fail without mutating existing state
 ```
 
+## Validation state
+
+The first CI attempt failed on the pre-fix PR merge ref `5dd615d...`, with the existing `CampaignRuntime` regression described above. The branch was then corrected to commit `0a3c51d...`. The old failing runs must not be reused as evidence for the corrected head; a fresh synchronization run is required.
+
 ## Follow-up
 After this launcher is validated, run the existing stress manifest across the target viewport matrix and inspect actual PPM captures.
