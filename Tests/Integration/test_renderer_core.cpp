@@ -128,4 +128,42 @@ TEST_SUITE("RendererCore") {
 
         vkDeviceWaitIdle(ctx.device());
     }
+
+    TEST_CASE("Falha apos wait-idle deixa o core fail-closed") {
+        Window win;
+        VulkanContext ctx;
+        Swapchain swapchain;
+        RenderPass renderPass;
+        Pipeline pipeline;
+        RendererCore core;
+
+        REQUIRE(win.create(800, 600, "RendererCore fail-closed recreation test"));
+
+        std::vector<const char*> extensions;
+        win.appendRequiredExtensions(extensions);
+        REQUIRE(ctx.init(false, extensions));
+
+        VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
+        REQUIRE(surface != VK_NULL_HANDLE);
+        REQUIRE(ctx.createSurface(surface));
+        REQUIRE(swapchain.init(&ctx, &win));
+        REQUIRE(renderPass.init(&ctx, &swapchain));
+        REQUIRE(pipeline.init(&ctx, &swapchain, &renderPass));
+        REQUIRE(core.init(&ctx, &swapchain, &renderPass, &pipeline));
+
+        // Cross the wait-idle boundary successfully, then invalidate the
+        // dependent swapchain before asking the core to recreate it. The
+        // existing Swapchain guard rejects recreation and RendererCore must
+        // remain explicitly inactive instead of exposing destroyed resources.
+        vkDeviceWaitIdle(ctx.device());
+        swapchain.cleanup();
+
+        CHECK_FALSE(core.recreateSwapchain());
+        CHECK_FALSE(core.isInitialized());
+        CHECK_FALSE(core.recreateSwapchain());
+
+        // Leave ownership to RAII: core -> pipeline -> renderPass ->
+        // swapchain -> context -> window. In particular, do not shutdown the
+        // context before RendererCore's destructor runs.
+    }
 }
