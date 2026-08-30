@@ -151,7 +151,7 @@ TEST_SUITE("RendererCore") {
         REQUIRE(pipeline.init(&ctx, &swapchain, &renderPass));
         REQUIRE(core.init(&ctx, &swapchain, &renderPass, &pipeline));
 
-        renderPass.cleanup();
+        swapchain.cleanup();
 
         CHECK_FALSE(core.recreateSwapchain());
         CHECK_FALSE(core.isInitialized());
@@ -159,7 +159,7 @@ TEST_SUITE("RendererCore") {
 
         vkDeviceWaitIdle(ctx.device());
         pipeline.cleanup();
-        swapchain.cleanup();
+        renderPass.cleanup();
         ctx.shutdown();
         win.destroy();
     }
