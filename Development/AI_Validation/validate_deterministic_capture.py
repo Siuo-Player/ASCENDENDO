@@ -65,6 +65,8 @@ def main() -> int:
 
     if args.level < 0:
         parser.error("--level must be non-negative")
+    if args.width <= 0 or args.height <= 0:
+        parser.error("--width and --height must be positive")
     if not args.binary.is_file():
         parser.error(f"game binary not found: {args.binary}")
 
@@ -73,12 +75,14 @@ def main() -> int:
 
     env = os.environ.copy()
     env["ASCENDENDO_CAPTURE_LEVEL_INDEX"] = str(args.level)
+    env["ASCENDENDO_CAPTURE_WINDOW_WIDTH"] = str(args.width)
+    env["ASCENDENDO_CAPTURE_WINDOW_HEIGHT"] = str(args.height)
     env["ASCENDENDO_CAPTURE_PPM"] = str(args.output.resolve())
     env.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
     env.setdefault("GALLIUM_DRIVER", "llvmpipe")
     env.setdefault("VK_LOADER_DEBUG", "error")
 
-    print(f"[capture] level={args.level} output={args.output}")
+    print(f"[capture] level={args.level} window={args.width}x{args.height} output={args.output}")
     completed = subprocess.run(
         [str(args.binary)],
         env=env,
