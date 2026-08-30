@@ -14,12 +14,45 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
+#include <limits>
 
 namespace gfx {
+
+namespace {
+
+bool readCaptureDimension(const char* name, uint32_t& value) {
+    const char* text = std::getenv(name);
+    if (!text || *text == '\0') return false;
+
+    char* end = nullptr;
+    const unsigned long long parsed = std::strtoull(text, &end, 10);
+    if (end == text || *end != '\0' || parsed == 0 ||
+        parsed > static_cast<unsigned long long>(std::numeric_limits<uint32_t>::max())) {
+        return false;
+    }
+
+    value = static_cast<uint32_t>(parsed);
+    return true;
+}
+
+void applyCaptureWindowDimensions(uint32_t& width, uint32_t& height) {
+    uint32_t captureWidth = 0;
+    uint32_t captureHeight = 0;
+    if (readCaptureDimension("ASCENDENDO_CAPTURE_WINDOW_WIDTH", captureWidth) &&
+        readCaptureDimension("ASCENDENDO_CAPTURE_WINDOW_HEIGHT", captureHeight)) {
+        width = captureWidth;
+        height = captureHeight;
+    }
+}
+
+} // namespace
 
 bool Window::create(uint32_t width, uint32_t height, const char* title) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+    applyCaptureWindowDimensions(width, height);
 
     GLFWmonitor* monitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
