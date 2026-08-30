@@ -10,12 +10,21 @@ permissions:
 
 jobs:
   capture:
-    name: Linux / deterministic PPM capture
+    name: Linux / deterministic PPM capture (${{ matrix.aspect }}, level ${{ matrix.level }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        level: [0, 1, 2]
+        include:
+          - { level: 0, aspect: "16-9", width: 1152, height: 648, screen: "1280x720" }
+          - { level: 1, aspect: "16-9", width: 1152, height: 648, screen: "1280x720" }
+          - { level: 2, aspect: "16-9", width: 1152, height: 648, screen: "1280x720" }
+          - { level: 0, aspect: "4-3",  width: 800,  height: 600, screen: "1280x960" }
+          - { level: 1, aspect: "4-3",  width: 800,  height: 600, screen: "1280x960" }
+          - { level: 2, aspect: "4-3",  width: 800,  height: 600, screen: "1280x960" }
+          - { level: 0, aspect: "21-9", width: 1680, height: 720, screen: "1920x1080" }
+          - { level: 1, aspect: "21-9", width: 1680, height: 720, screen: "1920x1080" }
+          - { level: 2, aspect: "21-9", width: 1680, height: 720, screen: "1920x1080" }
 
     steps:
       - name: Checkout
@@ -36,7 +45,7 @@ jobs:
           echo "Using Vulkan ICD: $ICD"
 
       - name: Build release game
-        run: xvfb-run -a -s '-screen 0 1280x720x24' make game -j2
+        run: xvfb-run -a -s '-screen 0 ${{ matrix.screen }}x24' make game -j2
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
@@ -54,13 +63,13 @@ jobs:
       - name: Capture level
         run: |
           mkdir -p artifacts
-          xvfb-run -a -s '-screen 0 1280x720x24' \
+          xvfb-run -a -s '-screen 0 ${{ matrix.screen }}x24' \
             python3 Development/AI_Validation/validate_deterministic_capture.py \
               --binary build/game/game \
               --level ${{ matrix.level }} \
-              --output artifacts/level-${{ matrix.level }}.ppm \
-              --width 1152 \
-              --height 648
+              --output artifacts/level-${{ matrix.level }}-${{ matrix.aspect }}.ppm \
+              --width ${{ matrix.width }} \
+              --height ${{ matrix.height }}
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
           GALLIUM_DRIVER: "llvmpipe"
@@ -69,6 +78,6 @@ jobs:
       - name: Upload PPM evidence
         uses: actions/upload-artifact@v4
         with:
-          name: deterministic-capture-level-${{ matrix.level }}
-          path: artifacts/level-${{ matrix.level }}.ppm
+          name: deterministic-capture-level-${{ matrix.level }}-${{ matrix.aspect }}
+          path: artifacts/level-${{ matrix.level }}-${{ matrix.aspect }}.ppm
           if-no-files-found: error
