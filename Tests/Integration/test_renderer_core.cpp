@@ -160,7 +160,7 @@ TEST_SUITE("RendererCore") {
         vkDeviceWaitIdle(ctx.device());
         pipeline.cleanup();
         swapchain.cleanup();
-        ctx.cleanup();
+        ctx.shutdown();
         win.destroy();
     }
 }
