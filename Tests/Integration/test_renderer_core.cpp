@@ -128,4 +128,39 @@ TEST_SUITE("RendererCore") {
 
         vkDeviceWaitIdle(ctx.device());
     }
+
+    TEST_CASE("Falha apos wait-idle deixa o core fail-closed") {
+        Window win;
+        VulkanContext ctx;
+        Swapchain swapchain;
+        RenderPass renderPass;
+        Pipeline pipeline;
+        RendererCore core;
+
+        REQUIRE(win.create(800, 600, "RendererCore fail-closed recreation test"));
+
+        std::vector<const char*> extensions;
+        win.appendRequiredExtensions(extensions);
+        REQUIRE(ctx.init(false, extensions));
+
+        VkSurfaceKHR surface = win.createVulkanSurface(ctx.instance());
+        REQUIRE(surface != VK_NULL_HANDLE);
+        REQUIRE(ctx.createSurface(surface));
+        REQUIRE(swapchain.init(&ctx, &win));
+        REQUIRE(renderPass.init(&ctx, &swapchain));
+        REQUIRE(pipeline.init(&ctx, &swapchain, &renderPass));
+        REQUIRE(core.init(&ctx, &swapchain, &renderPass, &pipeline));
+
+        renderPass.cleanup();
+
+        CHECK_FALSE(core.recreateSwapchain());
+        CHECK_FALSE(core.isInitialized());
+        CHECK_FALSE(core.recreateSwapchain());
+
+        vkDeviceWaitIdle(ctx.device());
+        pipeline.cleanup();
+        swapchain.cleanup();
+        ctx.cleanup();
+        win.destroy();
+    }
 }
