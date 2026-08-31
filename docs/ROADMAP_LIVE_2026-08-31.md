@@ -2,7 +2,7 @@
 
 ## Canonical production state
 
-`ASCENDENDO/main` = `33736d76b916872c0636820a6443acafe06b4187`.
+`ASCENDENDO/main` = `bd6f850ac430741f3c291a2866be30c2960a76f9`.
 
 The historical `docs/ROADMAP.md` remains authoritative for its existing detailed entries, but its tail predates PRs #183–#196. This snapshot reconciles the live state without rewriting historical material.
 
@@ -21,6 +21,7 @@ The historical `docs/ROADMAP.md` remains authoritative for its existing detailed
 - #194 — human playtest session preparation
 - #195 — Linux tests + ASan/UBSan workflow consolidation
 - #196 — obsolete Actions smoke diagnostic removal
+- #197 — live roadmap and visual issue reconciliation
 
 ## Current evidence
 
