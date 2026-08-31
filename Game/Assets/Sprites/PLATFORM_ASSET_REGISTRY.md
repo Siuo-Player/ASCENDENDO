@@ -46,8 +46,9 @@ Status: research candidates only. No external platform family is approved or shi
 ## Candidate D — Generic Platformer Tileset (16×16) + Background
 - `asset_id`: `generic.platformer-tileset-16x16`
 - source: `https://opengameart.org/content/generic-platformer-tileset-16x16-background`
-- licence: CC0 (reported by the current PROJECT-STUDIES asset shortlist; source-level provenance still needs direct verification before shipping)
-- asset/version identifier: source-page identifier not yet verified in this registry
+- creator: etqws3
+- licence: CC0 (verified against the OpenGameArt source page)
+- asset/version identifier: OpenGameArt source page published 2015-02-26; filenames identify the DB32 tileset/background PNGs
 - retrieval date: 2026-08-31
 - nominal tile size: 16×16
 - role: comparison / background candidate
