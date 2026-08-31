@@ -3,6 +3,8 @@
 // =============================================================================
 #include "Graphics/PlatformAssetSelector.h"
 
+#include <tuple>
+
 namespace gfx::assets {
 namespace {
 
