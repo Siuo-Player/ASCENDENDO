@@ -3,9 +3,9 @@
 // =============================================================================
 #include "Graphics/PlatformCompositor.h"
 
-#include <algorithm>
 #include <array>
 #include <map>
+#include <tuple>
 
 namespace gfx::compositor {
 namespace {
