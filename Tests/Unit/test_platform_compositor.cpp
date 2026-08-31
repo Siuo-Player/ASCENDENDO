@@ -129,6 +129,42 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
         CHECK(result.cells.empty());
     }
 
+    TEST_CASE("T13 non-grid-aligned world origin is preserved") {
+        const PlatformRegion region{436.0f, 89.0f, 176.0f, 16.0f, 1};
+        const auto result = composeRegion(region);
+
+        REQUIRE(result.valid);
+        REQUIRE(result.cells.size() == 11);
+        CHECK(result.cells.front().localX == 0);
+        CHECK(result.cells.front().localY == 0);
+        CHECK(result.cells.front().worldX == doctest::Approx(436.0f));
+        CHECK(result.cells.front().worldY == doctest::Approx(89.0f));
+        CHECK(result.cells.back().worldX == doctest::Approx(596.0f));
+        CHECK(result.cells.back().worldY == doctest::Approx(89.0f));
+    }
+
+    TEST_CASE("T14 local lattice does not assume a global world grid") {
+        const PlatformRegion first{436.0f, 89.0f, 176.0f, 16.0f, 1};
+        const PlatformRegion second{448.0f, 121.0f, 176.0f, 16.0f, 1};
+        const auto a = composeRegion(first);
+        const auto b = composeRegion(second);
+
+        REQUIRE(a.valid);
+        REQUIRE(b.valid);
+        REQUIRE(a.cells.size() == b.cells.size());
+        CHECK(a.cells.front().localX == b.cells.front().localX);
+        CHECK(a.cells.front().localY == b.cells.front().localY);
+        CHECK(a.cells.front().worldX == doctest::Approx(436.0f));
+        CHECK(b.cells.front().worldX == doctest::Approx(448.0f));
+    }
+
+    TEST_CASE("T15 non-modular platform dimensions are rejected") {
+        const PlatformRegion region{436.0f, 89.0f, 175.0f, 16.0f, 1};
+        const auto result = composeRegion(region);
+        CHECK_FALSE(result.valid);
+        CHECK(result.cells.empty());
+    }
+
     TEST_CASE("same input is deterministic") {
         const auto first = compose(cells({
             {0, 0, 3}, {1, 0, 3}, {1, 1, 4}
