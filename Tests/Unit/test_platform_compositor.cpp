@@ -6,6 +6,8 @@
 #include "doctest/doctest.h"
 #include "Graphics/PlatformCompositor.h"
 
+#include <initializer_list>
+#include <stdexcept>
 #include <vector>
 
 using namespace gfx::compositor;
