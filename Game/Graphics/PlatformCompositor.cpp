@@ -4,6 +4,7 @@
 #include "Graphics/PlatformCompositor.h"
 
 #include <array>
+#include <cmath>
 #include <map>
 #include <tuple>
 
@@ -87,6 +88,19 @@ TopologyClass classify(const std::map<CellKey, std::uint16_t>& cells,
     return TopologyClass::VerticalEdge;
 }
 
+bool isModularDimension(float value, int& cellCount) {
+    if (!std::isfinite(value) || value <= 0.0f)
+        return false;
+
+    const float quotient = value / static_cast<float>(CELL_SIZE);
+    const float rounded = std::round(quotient);
+    if (rounded < 1.0f || std::fabs(quotient - rounded) > 1.0e-5f)
+        return false;
+
+    cellCount = static_cast<int>(rounded);
+    return cellCount > 0;
+}
+
 } // namespace
 
 CompositionResult compose(std::span<const GridCell> input) {
@@ -107,6 +121,47 @@ CompositionResult compose(std::span<const GridCell> input) {
         const GridCell cell{key.x, key.y, material};
         const std::uint8_t mask = neighbourMask(cells, cell);
         result.cells.push_back({cell, mask, classify(cells, cell, mask)});
+    }
+
+    return result;
+}
+
+RegionCompositionResult composeRegion(const PlatformRegion& region) {
+    RegionCompositionResult result;
+
+    int widthCells = 0;
+    int heightCells = 0;
+    if (!std::isfinite(region.x) || !std::isfinite(region.y) ||
+        !isModularDimension(region.width, widthCells) ||
+        !isModularDimension(region.height, heightCells)) {
+        result.valid = false;
+        return result;
+    }
+
+    std::vector<GridCell> localCells;
+    localCells.reserve(static_cast<std::size_t>(widthCells * heightCells));
+    for (int y = 0; y < heightCells; ++y) {
+        for (int x = 0; x < widthCells; ++x)
+            localCells.push_back({x, y, region.material});
+    }
+
+    const CompositionResult composed = compose(localCells);
+    if (!composed.valid) {
+        result.valid = false;
+        return result;
+    }
+
+    result.cells.reserve(composed.cells.size());
+    for (const ComposedCell& cell : composed.cells) {
+        result.cells.push_back({
+            cell.cell.x,
+            cell.cell.y,
+            region.x + static_cast<float>(cell.cell.x * CELL_SIZE),
+            region.y + static_cast<float>(cell.cell.y * CELL_SIZE),
+            cell.cell.material,
+            cell.neighbours,
+            cell.topology,
+        });
     }
 
     return result;
