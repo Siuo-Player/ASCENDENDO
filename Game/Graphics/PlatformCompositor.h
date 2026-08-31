@@ -3,8 +3,8 @@
 // Game/Graphics/PlatformCompositor.h
 //
 // Bounded structural pilot for the 16x16 semantic platform compositor.
-// This layer consumes semantic grid cells only; it does not own gameplay
-// geometry, collision state, asset selection or world->grid rasterization.
+// This layer consumes presentation-side semantic regions; it does not own
+// gameplay geometry, collision state, asset selection or renderer policy.
 // =============================================================================
 
 #include <cstdint>
@@ -51,13 +51,38 @@ struct CompositionResult {
     std::vector<ComposedCell> cells;
 };
 
-// Deterministic structural compositor.
-//
-// Input coordinates are semantic 16x16 cell coordinates, not world pixels.
-// The caller is responsible for defining the world->cell mapping; this keeps
-// continuous LevelData coordinates out of the pilot until that contract is
-// explicitly specified.
+// A semantic platform region keeps its own 16x16 visual lattice anchored at
+// the region's continuous world origin. x/y are presentation inputs here and
+// are never snapped or rewritten.
+struct PlatformRegion {
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+    std::uint16_t material = 0;
+};
+
+struct RegionCell {
+    int localX = 0;
+    int localY = 0;
+    float worldX = 0.0f;
+    float worldY = 0.0f;
+    std::uint16_t material = 0;
+    std::uint8_t neighbours = None;
+    TopologyClass topology = TopologyClass::Isolated;
+};
+
+struct RegionCompositionResult {
+    bool valid = true;
+    std::vector<RegionCell> cells;
+};
+
+// Deterministic structural compositor for an already-defined semantic grid.
 CompositionResult compose(std::span<const GridCell> input);
+
+// Expand one modular semantic platform into a local visual lattice without
+// snapping its continuous world-space origin.
+RegionCompositionResult composeRegion(const PlatformRegion& region);
 
 const char* toString(TopologyClass topology);
 
