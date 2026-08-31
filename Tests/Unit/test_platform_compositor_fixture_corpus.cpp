@@ -154,7 +154,7 @@ TEST_SUITE("16x16 semantic compositor — explicit fixture corpus v1") {
                 const auto* actual = findCell(result, expected.x, expected.y);
                 REQUIRE(actual != nullptr);
                 CHECK(actual->neighbours == expected.neighbours);
-                CHECK(actual->topology == expected.topology);
+                CHECK(static_cast<int>(actual->topology) == static_cast<int>(expected.topology));
             }
         }
     }
@@ -180,7 +180,7 @@ TEST_SUITE("16x16 semantic compositor — explicit fixture corpus v1") {
             CHECK(macro.cells[i].localX == modular.cells[i].cell.x);
             CHECK(macro.cells[i].localY == modular.cells[i].cell.y);
             CHECK(macro.cells[i].neighbours == modular.cells[i].neighbours);
-            CHECK(macro.cells[i].topology == modular.cells[i].topology);
+            CHECK(static_cast<int>(macro.cells[i].topology) == static_cast<int>(modular.cells[i].topology));
         }
 
         CHECK(macro.cells.front().worldX == doctest::Approx(100.0f));
