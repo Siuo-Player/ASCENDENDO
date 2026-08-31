@@ -4,6 +4,7 @@
 #include "Swapchain.h"
 #include "RenderPass.h"
 #include "RendererFacade.h"
+#include "Graphics/StarterVisualCatalog.h"
 
 namespace gfx {
 
@@ -39,8 +40,10 @@ bool PresentationRuntime::init(VulkanContext* ctx,
         font_.cleanup();
     }
 
+    const StarterVisualCatalog starterAssets(playerSpritePath);
+    const StarterAssetMetadata& playerAsset = starterAssets.player();
     if (spritePipeline_.init(ctx, swapchain, renderPass) &&
-        playerSprite_.init(ctx, spritePipeline_.descriptorSetLayout(), playerSpritePath.string())) {
+        playerSprite_.init(ctx, spritePipeline_.descriptorSetLayout(), playerAsset.runtimePath.string())) {
         renderer_->attachSprite(&spritePipeline_, &playerSprite_);
         spriteReady_ = true;
     } else {
