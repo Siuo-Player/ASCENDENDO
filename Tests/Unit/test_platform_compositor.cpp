@@ -35,7 +35,7 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 1);
         CHECK(result.cells[0].neighbours == None);
-        CHECK(result.cells[0].topology == TopologyClass::Isolated);
+        CHECK(static_cast<int>(result.cells[0].topology) == static_cast<int>(TopologyClass::Isolated));
     }
 
     TEST_CASE("F02 3x1 straight classifies middle as interior") {
@@ -43,7 +43,7 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 0, 1}, {1, 0, 1}, {2, 0, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 1, 0).topology == TopologyClass::Interior);
+        CHECK(static_cast<int>(findCell(result, 1, 0).topology) == static_cast<int>(TopologyClass::Interior));
         CHECK(findCell(result, 1, 0).neighbours == (Left | Right));
     }
 
@@ -52,8 +52,8 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 0, 1}, {1, 0, 1}, {2, 0, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 0, 0).topology == TopologyClass::LeftEnd);
-        CHECK(findCell(result, 2, 0).topology == TopologyClass::RightEnd);
+        CHECK(static_cast<int>(findCell(result, 0, 0).topology) == static_cast<int>(TopologyClass::LeftEnd));
+        CHECK(static_cast<int>(findCell(result, 2, 0).topology) == static_cast<int>(TopologyClass::RightEnd));
     }
 
     TEST_CASE("F05/F06 corners") {
@@ -61,9 +61,9 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 0, 1}, {1, 0, 1}, {0, 1, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 0, 0).topology == TopologyClass::Corner);
-        CHECK(findCell(result, 1, 0).topology == TopologyClass::RightEnd);
-        CHECK(findCell(result, 0, 1).topology == TopologyClass::VerticalEdge);
+        CHECK(static_cast<int>(findCell(result, 0, 0).topology) == static_cast<int>(TopologyClass::Corner));
+        CHECK(static_cast<int>(findCell(result, 1, 0).topology) == static_cast<int>(TopologyClass::RightEnd));
+        CHECK(static_cast<int>(findCell(result, 0, 1).topology) == static_cast<int>(TopologyClass::VerticalEdge));
     }
 
     TEST_CASE("F07 stepped profile remains local") {
@@ -71,8 +71,8 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {2, 1, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 1, 0).topology == TopologyClass::Corner);
-        CHECK(findCell(result, 1, 1).topology == TopologyClass::Corner);
+        CHECK(static_cast<int>(findCell(result, 1, 0).topology) == static_cast<int>(TopologyClass::Corner));
+        CHECK(static_cast<int>(findCell(result, 1, 1).topology) == static_cast<int>(TopologyClass::Corner));
     }
 
     TEST_CASE("F08 T junction") {
@@ -80,7 +80,7 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {1, 0, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 1, 1).topology == TopologyClass::Junction);
+        CHECK(static_cast<int>(findCell(result, 1, 1).topology) == static_cast<int>(TopologyClass::Junction));
     }
 
     TEST_CASE("F09 cross junction") {
@@ -88,7 +88,7 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {1, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {1, 2, 1}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 1, 1).topology == TopologyClass::Junction);
+        CHECK(static_cast<int>(findCell(result, 1, 1).topology) == static_cast<int>(TopologyClass::Junction));
         CHECK(findCell(result, 1, 1).neighbours == (Left | Right | Up | Down));
     }
 
@@ -97,27 +97,27 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             {0, 0, 1}, {1, 0, 2}
         }));
         REQUIRE(result.valid);
-        CHECK(findCell(result, 0, 0).topology == TopologyClass::MaterialBoundary);
-        CHECK(findCell(result, 1, 0).topology == TopologyClass::MaterialBoundary);
+        CHECK(static_cast<int>(findCell(result, 0, 0).topology) == static_cast<int>(TopologyClass::MaterialBoundary));
+        CHECK(static_cast<int>(findCell(result, 1, 0).topology) == static_cast<int>(TopologyClass::MaterialBoundary));
     }
 
-    TEST_CASE("F11 macro-vs-modular equivalent has identical structural output") {
-        const auto modular = compose(cells({
+    TEST_CASE("F11 input ordering does not affect structural output") {
+        const auto ordered = compose(cells({
             {0, 0, 1}, {1, 0, 1}, {2, 0, 1}
         }));
         const auto reordered = compose(cells({
             {2, 0, 1}, {0, 0, 1}, {1, 0, 1}
         }));
 
-        REQUIRE(modular.valid);
+        REQUIRE(ordered.valid);
         REQUIRE(reordered.valid);
-        REQUIRE(modular.cells.size() == reordered.cells.size());
+        REQUIRE(ordered.cells.size() == reordered.cells.size());
 
-        for (std::size_t i = 0; i < modular.cells.size(); ++i) {
-            CHECK(modular.cells[i].cell.x == reordered.cells[i].cell.x);
-            CHECK(modular.cells[i].cell.y == reordered.cells[i].cell.y);
-            CHECK(modular.cells[i].neighbours == reordered.cells[i].neighbours);
-            CHECK(modular.cells[i].topology == reordered.cells[i].topology);
+        for (std::size_t i = 0; i < ordered.cells.size(); ++i) {
+            CHECK(ordered.cells[i].cell.x == reordered.cells[i].cell.x);
+            CHECK(ordered.cells[i].cell.y == reordered.cells[i].cell.y);
+            CHECK(ordered.cells[i].neighbours == reordered.cells[i].neighbours);
+            CHECK(static_cast<int>(ordered.cells[i].topology) == static_cast<int>(reordered.cells[i].topology));
         }
     }
 
@@ -146,7 +146,7 @@ TEST_SUITE("16x16 semantic compositor — structural pilot") {
             CHECK(first.cells[i].cell.y == second.cells[i].cell.y);
             CHECK(first.cells[i].cell.material == second.cells[i].cell.material);
             CHECK(first.cells[i].neighbours == second.cells[i].neighbours);
-            CHECK(first.cells[i].topology == second.cells[i].topology);
+            CHECK(static_cast<int>(first.cells[i].topology) == static_cast<int>(second.cells[i].topology));
         }
     }
 }
