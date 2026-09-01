@@ -3,7 +3,7 @@
 
 #include <array>
 #include <cstddef>
-#include <vector>
+#include <string>
 
 namespace {
 
@@ -41,7 +41,7 @@ TEST_SUITE("Inicio compositor execution corpus") {
             REQUIRE(result.valid);
             REQUIRE(result.cells.size() == fixture.expectedCells);
 
-            if (fixture.id == "R1") {
+            if (std::string(fixture.id) == "R1") {
                 CHECK(result.cells.front().localX == 0);
                 CHECK(result.cells.front().localY == 0);
                 CHECK(result.cells.back().localX == 39);
@@ -53,8 +53,10 @@ TEST_SUITE("Inicio compositor execution corpus") {
                 CHECK(result.cells.back().localY == 0);
             }
 
-            CHECK(result.cells.front().topology == TopologyClass::LeftEnd);
-            CHECK(result.cells.back().topology == TopologyClass::RightEnd);
+            CHECK(static_cast<int>(result.cells.front().topology) ==
+                  static_cast<int>(TopologyClass::LeftEnd));
+            CHECK(static_cast<int>(result.cells.back().topology) ==
+                  static_cast<int>(TopologyClass::RightEnd));
         }
     }
 
@@ -78,25 +80,22 @@ TEST_SUITE("Inicio compositor execution corpus") {
 
         CHECK(result.cells.front().worldX == doctest::Approx(0.0f));
         CHECK(result.cells.back().worldX == doctest::Approx(624.0f));
-        CHECK(result.cells.front().topology == TopologyClass::LeftEnd);
-        CHECK(result.cells.back().topology == TopologyClass::RightEnd);
+        CHECK(static_cast<int>(result.cells.front().topology) ==
+              static_cast<int>(TopologyClass::LeftEnd));
+        CHECK(static_cast<int>(result.cells.back().topology) ==
+              static_cast<int>(TopologyClass::RightEnd));
     }
 
     TEST_CASE("real fixtures do not mutate their gameplay-space inputs") {
-        const std::array<PlatformRegion, 4> original{{
-            kInicioCorpus[0].region,
-            kInicioCorpus[1].region,
-            kInicioCorpus[2].region,
-            kInicioCorpus[3].region,
-        }};
+        const auto original = kInicioCorpus;
 
-        for (const auto& region : original) {
-            const auto result = composeRegion(region);
+        for (const auto& fixture : original) {
+            const auto result = composeRegion(fixture.region);
             REQUIRE(result.valid);
         }
 
         for (std::size_t i = 0; i < original.size(); ++i) {
-            CHECK(sameRegion(original[i], kInicioCorpus[i].region));
+            CHECK(sameRegion(original[i].region, kInicioCorpus[i].region));
         }
     }
 }
