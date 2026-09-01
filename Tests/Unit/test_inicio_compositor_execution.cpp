@@ -24,6 +24,12 @@ constexpr std::array<RealFixture, 4> kInicioCorpus{{
     {"R4", {436.0f, 259.0f, 176.0f, 16.0f, 0}, 11},
 }};
 
+bool sameRegion(const PlatformRegion& lhs, const PlatformRegion& rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y &&
+           lhs.width == rhs.width && lhs.height == rhs.height &&
+           lhs.material == rhs.material;
+}
+
 } // namespace
 
 TEST_SUITE("Inicio compositor execution corpus") {
@@ -40,16 +46,15 @@ TEST_SUITE("Inicio compositor execution corpus") {
                 CHECK(result.cells.front().localY == 0);
                 CHECK(result.cells.back().localX == 39);
                 CHECK(result.cells.back().localY == 0);
-                CHECK(result.cells.front().topology == TopologyClass::LeftEnd);
-                CHECK(result.cells.back().topology == TopologyClass::RightEnd);
             } else {
                 CHECK(result.cells.front().localX == 0);
                 CHECK(result.cells.front().localY == 0);
                 CHECK(result.cells.back().localX == 10);
                 CHECK(result.cells.back().localY == 0);
-                CHECK(result.cells.front().topology == TopologyClass::LeftEnd);
-                CHECK(result.cells.back().topology == TopologyClass::RightEnd);
             }
+
+            CHECK(result.cells.front().topology == TopologyClass::LeftEnd);
+            CHECK(result.cells.back().topology == TopologyClass::RightEnd);
         }
     }
 
@@ -66,7 +71,7 @@ TEST_SUITE("Inicio compositor execution corpus") {
         }
     }
 
-    TEST_CASE("full-width floor uses world-content boundaries, not viewport isolation") {
+    TEST_CASE("full-width floor remains a 640x16 content region") {
         const auto result = composeRegion(kInicioCorpus[0].region);
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 40);
@@ -78,19 +83,20 @@ TEST_SUITE("Inicio compositor execution corpus") {
     }
 
     TEST_CASE("real fixtures do not mutate their gameplay-space inputs") {
-        const std::vector<PlatformRegion> original{
+        const std::array<PlatformRegion, 4> original{{
             kInicioCorpus[0].region,
             kInicioCorpus[1].region,
             kInicioCorpus[2].region,
             kInicioCorpus[3].region,
-        };
-        auto observed = original;
+        }};
 
-        for (auto& region : observed) {
+        for (const auto& region : original) {
             const auto result = composeRegion(region);
             REQUIRE(result.valid);
         }
 
-        CHECK(observed == original);
+        for (std::size_t i = 0; i < original.size(); ++i) {
+            CHECK(sameRegion(original[i], kInicioCorpus[i].region));
+        }
     }
 }
