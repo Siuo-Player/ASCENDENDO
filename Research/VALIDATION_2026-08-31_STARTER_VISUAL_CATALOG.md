@@ -78,8 +78,42 @@ This tranche does **not**:
 
 Unit tests assert the metadata contract and, critically, assert that missing licence/provenance evidence remains `Unverified` rather than silently becoming approved.
 
-The existing CI then remains responsible for Linux correctness, ASan+UBSan, Windows and deterministic capture.
+The exact head SHA `03d02b3e23d65c9537caa6898e11dfcab410b2e9` passed all required CI workflows before merge:
 
-## Next dependency
+```text
+Tests — run 1438 — SUCCESS
+Windows — run 514 — SUCCESS
+Deterministic Capture Evidence — run 34 — SUCCESS
+```
 
-Platform A/B visual integration remains blocked on obtaining/staging the actual candidate binaries with verifiable provenance. Once those binaries are available, this catalogue can be extended with platform gameplay-critical entries and the controlled `Inicio` A/B capture can proceed.
+The deterministic capture workflow also produced the declared per-level PPM evidence artifacts for the tested viewports.
+
+## Merge record
+
+```text
+PR: #205
+head: 03d02b3e23d65c9537caa6898e11dfcab410b2e9
+base: 176b37266518c727622e872d3e4da3b0b334d96c
+merge commit: 037e48b5647e09ec33d63fb18e6a652770ae999b
+main after merge: 037e48b5647e09ec33d63fb18e6a652770ae999b
+```
+
+The post-merge `main` ref was independently fetched and confirmed at the merge commit.
+
+## Next dependency / blocker
+
+The next roadmap unit is the `Inicio` platform corpus and compositor-pilot evidence. External Candidates A/B remain `REVIEW` and are not staged. The current GitHub writing interface used for this tranche cannot safely create/commit arbitrary binary PNG trees, so no external or synthetic platform binary has been introduced merely to satisfy the roadmap mechanically.
+
+When a verifiable platform binary source is available through a suitable repository/file transfer path, the next evidence chain is:
+
+```text
+platform binary
+→ provenance verification
+→ metadata catalogue entry
+→ controlled Inicio composition
+→ deterministic capture
+→ structural + physical↔visual QA
+→ human review
+```
+
+Until that prerequisite exists, do not claim A/B selection, platform-family approval, or golden-corpus promotion.
