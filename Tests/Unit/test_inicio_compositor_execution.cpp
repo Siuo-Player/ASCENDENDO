@@ -1,0 +1,101 @@
+#include "doctest/doctest.h"
+#include "Graphics/PlatformCompositor.h"
+
+#include <array>
+#include <cstddef>
+#include <string>
+
+namespace {
+
+using gfx::compositor::composeRegion;
+using gfx::compositor::PlatformRegion;
+using gfx::compositor::TopologyClass;
+
+struct RealFixture {
+    const char* id;
+    PlatformRegion region;
+    std::size_t expectedCells;
+};
+
+constexpr std::array<RealFixture, 4> kInicioCorpus{{
+    {"R1", {0.0f, 4.0f, 640.0f, 16.0f, 0}, 40},
+    {"R2", {436.0f, 89.0f, 176.0f, 16.0f, 0}, 11},
+    {"R3", {148.0f, 174.0f, 176.0f, 16.0f, 0}, 11},
+    {"R4", {436.0f, 259.0f, 176.0f, 16.0f, 0}, 11},
+}};
+
+bool sameRegion(const PlatformRegion& lhs, const PlatformRegion& rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y &&
+           lhs.width == rhs.width && lhs.height == rhs.height &&
+           lhs.material == rhs.material;
+}
+
+} // namespace
+
+TEST_SUITE("Inicio compositor execution corpus") {
+
+    TEST_CASE("R1-R4 expand to the exact local 16x16 visual footprint") {
+        for (const auto& fixture : kInicioCorpus) {
+            const auto result = composeRegion(fixture.region);
+
+            REQUIRE(result.valid);
+            REQUIRE(result.cells.size() == fixture.expectedCells);
+
+            if (std::string(fixture.id) == "R1") {
+                CHECK(result.cells.front().localX == 0);
+                CHECK(result.cells.front().localY == 0);
+                CHECK(result.cells.back().localX == 39);
+                CHECK(result.cells.back().localY == 0);
+            } else {
+                CHECK(result.cells.front().localX == 0);
+                CHECK(result.cells.front().localY == 0);
+                CHECK(result.cells.back().localX == 10);
+                CHECK(result.cells.back().localY == 0);
+            }
+
+            CHECK(static_cast<int>(result.cells.front().topology) ==
+                  static_cast<int>(TopologyClass::LeftEnd));
+            CHECK(static_cast<int>(result.cells.back().topology) ==
+                  static_cast<int>(TopologyClass::RightEnd));
+        }
+    }
+
+    TEST_CASE("real Inicio origins remain continuous world coordinates") {
+        for (const auto& fixture : kInicioCorpus) {
+            const auto result = composeRegion(fixture.region);
+            REQUIRE(result.valid);
+
+            CHECK(result.cells.front().worldX == doctest::Approx(fixture.region.x));
+            CHECK(result.cells.front().worldY == doctest::Approx(fixture.region.y));
+            CHECK(result.cells.back().worldX == doctest::Approx(
+                fixture.region.x + static_cast<float>(fixture.expectedCells - 1) * 16.0f));
+            CHECK(result.cells.back().worldY == doctest::Approx(fixture.region.y));
+        }
+    }
+
+    TEST_CASE("full-width floor remains a 640x16 content region") {
+        const auto result = composeRegion(kInicioCorpus[0].region);
+        REQUIRE(result.valid);
+        REQUIRE(result.cells.size() == 40);
+
+        CHECK(result.cells.front().worldX == doctest::Approx(0.0f));
+        CHECK(result.cells.back().worldX == doctest::Approx(624.0f));
+        CHECK(static_cast<int>(result.cells.front().topology) ==
+              static_cast<int>(TopologyClass::LeftEnd));
+        CHECK(static_cast<int>(result.cells.back().topology) ==
+              static_cast<int>(TopologyClass::RightEnd));
+    }
+
+    TEST_CASE("real fixtures do not mutate their gameplay-space inputs") {
+        const auto original = kInicioCorpus;
+
+        for (const auto& fixture : original) {
+            const auto result = composeRegion(fixture.region);
+            REQUIRE(result.valid);
+        }
+
+        for (std::size_t i = 0; i < original.size(); ++i) {
+            CHECK(sameRegion(original[i].region, kInicioCorpus[i].region));
+        }
+    }
+}
