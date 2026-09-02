@@ -4,18 +4,16 @@
 //
 // Bounded structural pilot for the 16x16 semantic platform compositor.
 // This layer consumes presentation-side semantic regions; it does not own
-// gameplay geometry, collision state, asset loading or renderer policy.
+// gameplay geometry, collision state, asset selection or renderer policy.
 // =============================================================================
 
 #include <cstdint>
 #include <span>
-#include <string_view>
 #include <vector>
 
 namespace gfx::compositor {
 
 constexpr int CELL_SIZE = 16;
-constexpr std::uint16_t ANY_MATERIAL = 0xFFFFu;
 
 enum class TopologyClass : std::uint8_t {
     Isolated,
@@ -78,37 +76,6 @@ struct RegionCompositionResult {
     bool valid = true;
     std::vector<RegionCell> cells;
 };
-
-// Minimal metadata-only candidate contract. This deliberately does not load
-// binaries or declare asset provenance/approval; it only resolves an already
-// described candidate set deterministically.
-struct AssetCandidate {
-    std::string_view id{};
-    std::string_view semanticRole{};
-    std::uint32_t topologyMask = 0;
-    std::uint16_t material = ANY_MATERIAL;
-    int widthCells = 0;
-    int heightCells = 0;
-    bool supportsFlip = false;
-    int scale = 1;
-    int preferredRank = 0;
-};
-
-struct CandidateRequest {
-    std::string_view semanticRole{};
-    TopologyClass topology = TopologyClass::Isolated;
-    std::uint16_t material = 0;
-    int widthCells = 0;
-    int heightCells = 0;
-    bool flipRequired = false;
-    int scale = 1;
-};
-
-// Returns the selected candidate id, or fallbackId when no candidate satisfies
-// every hard constraint. Enumeration order must not influence the result.
-std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
-                                 const CandidateRequest& request,
-                                 std::string_view fallbackId);
 
 // Deterministic structural compositor for an already-defined semantic grid.
 CompositionResult compose(std::span<const GridCell> input);
