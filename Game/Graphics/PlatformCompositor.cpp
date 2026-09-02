@@ -101,6 +101,17 @@ bool isModularDimension(float value, int& cellCount) {
     return cellCount > 0;
 }
 
+bool validRegion(const PlatformRegion& region, int& widthCells, int& heightCells) {
+    return std::isfinite(region.x) && std::isfinite(region.y) &&
+           isModularDimension(region.width, widthCells) &&
+           isModularDimension(region.height, heightCells);
+}
+
+float overlapLength(float lhsStart, float lhsEnd,
+                    float rhsStart, float rhsEnd) {
+    return std::min(lhsEnd, rhsEnd) - std::max(lhsStart, rhsStart);
+}
+
 } // namespace
 
 CompositionResult compose(std::span<const GridCell> input) {
@@ -131,9 +142,7 @@ RegionCompositionResult composeRegion(const PlatformRegion& region) {
 
     int widthCells = 0;
     int heightCells = 0;
-    if (!std::isfinite(region.x) || !std::isfinite(region.y) ||
-        !isModularDimension(region.width, widthCells) ||
-        !isModularDimension(region.height, heightCells)) {
+    if (!validRegion(region, widthCells, heightCells)) {
         result.valid = false;
         return result;
     }
@@ -165,6 +174,100 @@ RegionCompositionResult composeRegion(const PlatformRegion& region) {
     }
 
     return result;
+}
+
+std::vector<RegionContact> findRegionContacts(const PlatformRegion& lhs,
+                                              const PlatformRegion& rhs,
+                                              float tolerance) {
+    std::vector<RegionContact> contacts;
+
+    if (!std::isfinite(tolerance) || tolerance < 0.0f)
+        return contacts;
+
+    int lhsWidth = 0;
+    int lhsHeight = 0;
+    int rhsWidth = 0;
+    int rhsHeight = 0;
+    if (!validRegion(lhs, lhsWidth, lhsHeight) ||
+        !validRegion(rhs, rhsWidth, rhsHeight))
+        return contacts;
+
+    const float lhsRight = lhs.x + lhs.width;
+    const float lhsBottom = lhs.y + lhs.height;
+    const float rhsRight = rhs.x + rhs.width;
+    const float rhsBottom = rhs.y + rhs.height;
+
+    const bool lhsIsLeft = std::fabs(lhsRight - rhs.x) <= tolerance;
+    const bool rhsIsLeft = std::fabs(rhsRight - lhs.x) <= tolerance;
+    if (lhsIsLeft || rhsIsLeft) {
+        const float overlapStart = std::max(lhs.y, rhs.y);
+        const float overlapEnd = std::min(lhsBottom, rhsBottom);
+        if (overlapEnd > overlapStart + tolerance) {
+            for (int lhsY = 0; lhsY < lhsHeight; ++lhsY) {
+                const float lhsCellStart = lhs.y + lhsY * CELL_SIZE;
+                const float lhsCellEnd = lhsCellStart + CELL_SIZE;
+                const float localOverlapStart = std::max(lhsCellStart, overlapStart);
+                const float localOverlapEnd = std::min(lhsCellEnd, overlapEnd);
+                if (localOverlapEnd <= localOverlapStart + tolerance)
+                    continue;
+
+                for (int rhsY = 0; rhsY < rhsHeight; ++rhsY) {
+                    const float rhsCellStart = rhs.y + rhsY * CELL_SIZE;
+                    const float rhsCellEnd = rhsCellStart + CELL_SIZE;
+                    if (overlapLength(localOverlapStart, localOverlapEnd,
+                                      rhsCellStart, rhsCellEnd) <= tolerance)
+                        continue;
+
+                    const bool lhsLeftOfRhs = lhsIsLeft;
+                    contacts.push_back({
+                        lhsLeftOfRhs ? lhsWidth - 1 : 0,
+                        lhsY,
+                        lhsLeftOfRhs ? 0 : rhsWidth - 1,
+                        rhsY,
+                        static_cast<std::uint8_t>(lhsLeftOfRhs ? Right : Left),
+                        static_cast<std::uint8_t>(lhsLeftOfRhs ? Left : Right),
+                    });
+                }
+            }
+        }
+    }
+
+    const bool lhsIsAbove = std::fabs(lhsBottom - rhs.y) <= tolerance;
+    const bool rhsIsAbove = std::fabs(rhsBottom - lhs.y) <= tolerance;
+    if (lhsIsAbove || rhsIsAbove) {
+        const float overlapStart = std::max(lhs.x, rhs.x);
+        const float overlapEnd = std::min(lhsRight, rhsRight);
+        if (overlapEnd > overlapStart + tolerance) {
+            for (int lhsX = 0; lhsX < lhsWidth; ++lhsX) {
+                const float lhsCellStart = lhs.x + lhsX * CELL_SIZE;
+                const float lhsCellEnd = lhsCellStart + CELL_SIZE;
+                const float localOverlapStart = std::max(lhsCellStart, overlapStart);
+                const float localOverlapEnd = std::min(lhsCellEnd, overlapEnd);
+                if (localOverlapEnd <= localOverlapStart + tolerance)
+                    continue;
+
+                for (int rhsX = 0; rhsX < rhsWidth; ++rhsX) {
+                    const float rhsCellStart = rhs.x + rhsX * CELL_SIZE;
+                    const float rhsCellEnd = rhsCellStart + CELL_SIZE;
+                    if (overlapLength(localOverlapStart, localOverlapEnd,
+                                      rhsCellStart, rhsCellEnd) <= tolerance)
+                        continue;
+
+                    const bool lhsAboveRhs = lhsIsAbove;
+                    contacts.push_back({
+                        lhsX,
+                        lhsAboveRhs ? lhsHeight - 1 : 0,
+                        rhsX,
+                        lhsAboveRhs ? 0 : rhsHeight - 1,
+                        static_cast<std::uint8_t>(lhsAboveRhs ? Down : Up),
+                        static_cast<std::uint8_t>(lhsAboveRhs ? Up : Down),
+                    });
+                }
+            }
+        }
+    }
+
+    return contacts;
 }
 
 const char* toString(TopologyClass topology) {
