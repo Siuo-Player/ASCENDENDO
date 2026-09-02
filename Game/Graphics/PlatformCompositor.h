@@ -77,12 +77,31 @@ struct RegionCompositionResult {
     std::vector<RegionCell> cells;
 };
 
+// A contact is a presentation-only adjacency between cells belonging to two
+// independent semantic regions. It is derived from world-space rectangles,
+// never from a shared global cell index.
+struct RegionContact {
+    int lhsLocalX = 0;
+    int lhsLocalY = 0;
+    int rhsLocalX = 0;
+    int rhsLocalY = 0;
+    std::uint8_t lhsNeighbour = None;
+    std::uint8_t rhsNeighbour = None;
+};
+
 // Deterministic structural compositor for an already-defined semantic grid.
 CompositionResult compose(std::span<const GridCell> input);
 
 // Expand one modular semantic platform into a local visual lattice without
 // snapping its continuous world-space origin.
 RegionCompositionResult composeRegion(const PlatformRegion& region);
+
+// Derive presentation-only contacts between two modular semantic regions.
+// Adjacency is computed from their continuous world-space rectangles using the
+// supplied tolerance. Gameplay geometry is never modified.
+std::vector<RegionContact> findRegionContacts(const PlatformRegion& lhs,
+                                              const PlatformRegion& rhs,
+                                              float tolerance = 1.0e-4f);
 
 const char* toString(TopologyClass topology);
 
