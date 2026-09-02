@@ -115,10 +115,8 @@ std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
     const AssetCandidate* best = nullptr;
     for (const AssetCandidate& candidate : candidates) {
         const bool topologyCovered = (candidate.topologyMask & requestedTopology) != 0u;
-        const bool exactTopology = candidate.topologyMask == requestedTopology;
         const bool materialCompatible = candidate.material == ANY_MATERIAL ||
                                         candidate.material == request.material;
-        const bool exactMaterial = candidate.material == request.material;
 
         if (candidate.semanticRole != request.semanticRole ||
             !topologyCovered ||
@@ -134,28 +132,16 @@ std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
             continue;
         }
 
-        const bool bestExactTopology = best->topologyMask == requestedTopology;
-        const bool bestExactMaterial = best->material == request.material;
-        const auto candidateRank = std::tuple{
-            exactTopology ? 1 : 0,
-            candidate.widthCells == request.widthCells &&
-                candidate.heightCells == request.heightCells ? 1 : 0,
-            exactMaterial ? 1 : 0,
-            candidate.preferredRank,
-            candidate.id,
-        };
-        const auto bestRank = std::tuple{
-            bestExactTopology ? 1 : 0,
-            best->widthCells == request.widthCells &&
-                best->heightCells == request.heightCells ? 1 : 0,
-            bestExactMaterial ? 1 : 0,
-            best->preferredRank,
-            best->id,
+        // Higher exact topology/material match wins. Lower explicit preference
+        // rank wins next, with asset id as the final deterministic tie-breaker.
+        const auto rank = [&](const AssetCandidate& value) {
+            const int exactTopology = value.topologyMask == requestedTopology ? 1 : 0;
+            const int exactMaterial = value.material == request.material ? 1 : 0;
+            return std::tuple{-exactTopology, -exactMaterial,
+                              value.preferredRank, value.id};
         };
 
-        if (candidateRank < bestRank)
-            continue;
-        if (bestRank < candidateRank)
+        if (rank(candidate) < rank(*best))
             best = &candidate;
     }
 
