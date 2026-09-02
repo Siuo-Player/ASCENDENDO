@@ -169,7 +169,8 @@ void EditorSession::update(const InputManager& input,
 
 void EditorSession::cancelInteraction() {
     m_leftDragActive = false;
-    m_controller.endMove();
+    if (m_controller.mode() == EditorMouseMode::MOVING)
+        m_controller.cancelMove();
     m_controller.clearSelection();
 }
 
