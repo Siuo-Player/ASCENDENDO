@@ -306,9 +306,10 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         }
         CHECK_FALSE(containsInvalidation(invalidated, 6, 6));
         for (std::size_t i = 1; i < invalidated.size(); ++i) {
-            CHECK(invalidated[i - 1].y < invalidated[i].y ||
-                  (invalidated[i - 1].y == invalidated[i].y &&
-                   invalidated[i - 1].x < invalidated[i].x));
+            const bool ordered = invalidated[i - 1].y < invalidated[i].y ||
+                                 (invalidated[i - 1].y == invalidated[i].y &&
+                                  invalidated[i - 1].x < invalidated[i].x);
+            CHECK(ordered);
         }
     }
 
