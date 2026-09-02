@@ -26,6 +26,10 @@ using gfx::compositor::Left;
 using gfx::compositor::Right;
 using gfx::compositor::Up;
 using gfx::compositor::Down;
+using gfx::compositor::UpLeft;
+using gfx::compositor::UpRight;
+using gfx::compositor::DownLeft;
+using gfx::compositor::DownRight;
 using gfx::compositor::TopologyClass;
 using gfx::compositor::PlatformRegion;
 
@@ -88,19 +92,19 @@ std::vector<Fixture> fixtureCorpus() {
         {
             "F05", "upper-left corner", "fixture-v1", "NONE", true,
             cells({{0, 0, 1}, {1, 0, 1}, {0, 1, 1}}),
-            {{0, 0, static_cast<std::uint8_t>(Right | Down), TopologyClass::Corner}},
+            {{0, 0, static_cast<std::uint8_t>(Right | Down | DownRight), TopologyClass::Corner}},
         },
         {
             "F06", "upper-right corner", "fixture-v1", "NONE", true,
             cells({{0, 0, 1}, {1, 0, 1}, {1, 1, 1}}),
-            {{1, 0, static_cast<std::uint8_t>(Left | Down), TopologyClass::Corner}},
+            {{1, 0, static_cast<std::uint8_t>(Left | Down | DownLeft), TopologyClass::Corner}},
         },
         {
             "F07", "stepped profile", "fixture-v1", "NONE", true,
             cells({{0, 0, 1}, {1, 0, 1}, {1, 1, 1}, {2, 1, 1}}),
             {
-                {1, 0, static_cast<std::uint8_t>(Left | Down), TopologyClass::Corner},
-                {1, 1, static_cast<std::uint8_t>(Up | Right), TopologyClass::Corner},
+                {1, 0, static_cast<std::uint8_t>(Left | Down | DownRight), TopologyClass::Corner},
+                {1, 1, static_cast<std::uint8_t>(Up | Right | UpLeft), TopologyClass::Corner},
             },
         },
         {
@@ -111,7 +115,9 @@ std::vector<Fixture> fixtureCorpus() {
         {
             "F09", "cross junction", "fixture-v1", "NONE", true,
             cells({{1, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {1, 2, 1}}),
-            {{1, 1, static_cast<std::uint8_t>(Left | Right | Up | Down), TopologyClass::Junction}},
+            {{1, 1, static_cast<std::uint8_t>(Left | Right | Up | Down |
+                                               UpLeft | UpRight | DownLeft | DownRight),
+              TopologyClass::Junction}},
         },
         {
             "F10", "material transition", "fixture-v1", "NONE", true,
@@ -200,4 +206,4 @@ TEST_SUITE("16x16 semantic compositor — explicit fixture corpus v1") {
         const std::array<gfx::assets::PlatformAssetCandidate, 0> noCandidates{};
         CHECK_FALSE(selectBestPlatformAsset(noCandidates, request).has_value());
     }
-}
+} 
