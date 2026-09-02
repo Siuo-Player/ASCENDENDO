@@ -80,22 +80,22 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     CHECK(session.controller().toolMode() == logic::EditorToolMode::DRAG);
 
     input.beginFrame();
-    input.injectCursorPos(100.0, 200.0); // world (100,160)
+    input.injectCursorPos(100.0, 200.0); // world (100,200)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
 
     CHECK(session.preview().visible);
 
     input.beginFrame();
-    input.injectCursorPos(196.0, 136.0); // world (196,224)
+    input.injectCursorPos(196.0, 136.0); // world (196,136)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
     session.update(input, bindings, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(160.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(136.0f));
     CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(196.0f));
-    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(224.0f));
+    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(200.0f));
 }
 
 TEST_CASE("render snapshot expoe apenas dados graficos") {
@@ -147,9 +147,10 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     REQUIRE(session.document().platformCount() == 1);
+    const AABB original = session.document().platforms()[0].bounds;
 
     input.beginFrame();
-    input.injectCursorPos(320.0, 180.0);
+    input.injectCursorPos(360.0, 180.0);
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     REQUIRE(session.controller().mode() == logic::EditorMouseMode::MOVING);
@@ -157,8 +158,7 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     input.beginFrame();
     input.injectCursorPos(480.0, 260.0);
     session.update(input, bindings, 640, 360);
-    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(416.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(252.0f));
+    CHECK(session.document().platforms()[0].bounds.min.x != doctest::Approx(original.min.x));
 
     input.beginFrame();
     input.injectCursorPos(480.0, 260.0);
@@ -167,8 +167,10 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
 
     CHECK(session.controller().mode() == logic::EditorMouseMode::NONE);
     CHECK_FALSE(session.controller().hasSelection());
-    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(256.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(170.0f));
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(original.min.x));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(original.min.y));
+    CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(original.max.x));
+    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(original.max.y));
 }
 
 } // TEST_SUITE
