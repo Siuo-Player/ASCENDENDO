@@ -105,6 +105,30 @@ bool isModularDimension(float value, int& cellCount) {
     return cellCount > 0;
 }
 
+bool betterCandidate(const AssetCandidate& candidate,
+                     const AssetCandidate& current,
+                     std::uint32_t requestedTopology,
+                     std::uint16_t requestedMaterial) {
+    const bool candidateExactTopology =
+        candidate.topologyMask == requestedTopology;
+    const bool currentExactTopology =
+        current.topologyMask == requestedTopology;
+    if (candidateExactTopology != currentExactTopology)
+        return candidateExactTopology;
+
+    const bool candidateExactMaterial =
+        candidate.material == requestedMaterial;
+    const bool currentExactMaterial =
+        current.material == requestedMaterial;
+    if (candidateExactMaterial != currentExactMaterial)
+        return candidateExactMaterial;
+
+    if (candidate.preferredRank != current.preferredRank)
+        return candidate.preferredRank < current.preferredRank;
+
+    return candidate.id < current.id;
+}
+
 } // namespace
 
 std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
@@ -127,21 +151,8 @@ std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
             candidate.scale != request.scale)
             continue;
 
-        if (best == nullptr) {
-            best = &candidate;
-            continue;
-        }
-
-        // Higher exact topology/material match wins. Lower explicit preference
-        // rank wins next, with asset id as the final deterministic tie-breaker.
-        const auto rank = [&](const AssetCandidate& value) {
-            const int exactTopology = value.topologyMask == requestedTopology ? 1 : 0;
-            const int exactMaterial = value.material == request.material ? 1 : 0;
-            return std::tuple{-exactTopology, -exactMaterial,
-                              value.preferredRank, value.id};
-        };
-
-        if (rank(candidate) < rank(*best))
+        if (best == nullptr ||
+            betterCandidate(candidate, *best, requestedTopology, request.material))
             best = &candidate;
     }
 
