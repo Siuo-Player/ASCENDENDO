@@ -147,7 +147,7 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     REQUIRE(session.document().platformCount() == 1);
-    const AABB original = session.document().platforms()[0].bounds;
+    const logic::AABB original = session.document().platforms()[0].bounds;
 
     input.beginFrame();
     input.injectCursorPos(360.0, 180.0);
