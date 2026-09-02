@@ -117,6 +117,29 @@ TEST_CASE("render snapshot expoe apenas dados graficos") {
     CHECK(snapshot.platforms[0].width() == doctest::Approx(128.0f));
 }
 
+TEST_CASE("cancelInteraction restaura movimento em curso") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+    REQUIRE(session.document().addPlatform({{100.0f, 80.0f}, {228.0f, 100.0f}}));
+
+    input.beginFrame();
+    input.injectCursorPos(112.0, 90.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    input.beginFrame();
+    input.injectCursorPos(215.0, 157.0);
+    session.update(input, bindings, 640, 360);
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(204.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(148.0f));
+
+    session.cancelInteraction();
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(80.0f));
+    CHECK_FALSE(session.controller().hasSelection());
+}
+
 TEST_CASE("DELETE apaga a selecao atual") {
     logic::EditorSession session(false);
     logic::InputManager input;
