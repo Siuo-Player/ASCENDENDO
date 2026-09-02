@@ -10,6 +10,7 @@
 #include "Logic/LevelEditor.h"
 
 #include <cstddef>
+#include <optional>
 
 namespace logic {
 
@@ -44,6 +45,7 @@ public:
     bool beginMove(const Vec2& world);
     bool updateMove(const Vec2& world);
     bool endMove();
+    bool cancelMove();
 
     bool deleteAt(const Vec2& world);
 
@@ -76,6 +78,7 @@ private:
     EditorSizePreset     m_sizePreset = EditorSizePreset::MEDIUM;
     float                m_moveOffsetX = 0.0f;
     float                m_moveOffsetY = 0.0f;
+    std::optional<AABB>  m_moveOriginalBounds;
 };
 
 } // namespace logic
