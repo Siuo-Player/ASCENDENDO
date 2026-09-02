@@ -36,7 +36,7 @@ TEST_CASE("starter player metadata preserves presentation-only contract") {
 
     CHECK(player->logicalDrawSize.width == 16);
     CHECK(player->logicalDrawSize.height == 16);
-    CHECK(player->anchor.width == 0);
-    CHECK(player->anchor.height == 0);
+    CHECK(player->anchor.x == 0);
+    CHECK(player->anchor.y == 0);
     CHECK_FALSE(player->flipXAllowed);
 }
