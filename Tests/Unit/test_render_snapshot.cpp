@@ -28,12 +28,14 @@ TEST_SUITE("RenderSnapshot") {
         snapshot.flag.bounds = {600.0f, 260.0f, 16.0f, 64.0f};
 
         const RenderSnapshot copy = snapshot;
+        const int topology = static_cast<int>(copy.semanticPlatformCells[0].topology);
         CHECK(copy.player.bounds.x == 10.0f);
         CHECK(copy.player.facingDirection == -1.0f);
         CHECK(copy.platforms.size() == 1);
         CHECK(copy.semanticPlatformsValid);
         CHECK(copy.semanticPlatformCells.size() == 1);
         CHECK(copy.semanticPlatformCells[0].worldX == 0.0f);
+        CHECK(topology == static_cast<int>(compositor::TopologyClass::RightEnd));
         CHECK(copy.flag.visible);
         CHECK(copy.flag.bounds.height == 64.0f);
     }
@@ -85,8 +87,10 @@ TEST_SUITE("RenderSnapshot") {
         CHECK(snapshot.semanticPlatformCells[0].worldY == doctest::Approx(89.5f));
         CHECK(snapshot.semanticPlatformCells[1].worldX == doctest::Approx(452.25f));
         CHECK(snapshot.semanticPlatformCells[2].worldX == doctest::Approx(468.25f));
-        CHECK(snapshot.semanticPlatformCells[0].topology == compositor::TopologyClass::LeftEnd);
-        CHECK(snapshot.semanticPlatformCells[2].topology == compositor::TopologyClass::RightEnd);
+        const int firstTopology = static_cast<int>(snapshot.semanticPlatformCells[0].topology);
+        const int lastTopology = static_cast<int>(snapshot.semanticPlatformCells[2].topology);
+        CHECK(firstTopology == static_cast<int>(compositor::TopologyClass::LeftEnd));
+        CHECK(lastTopology == static_cast<int>(compositor::TopologyClass::RightEnd));
     }
 
     TEST_CASE("builder propaga contacto entre regiões modulares") {
