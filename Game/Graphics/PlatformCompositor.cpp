@@ -20,10 +20,6 @@ struct CellKey {
     }
 };
 
-std::uint32_t topologyBit(TopologyClass topology) {
-    return 1u << static_cast<std::uint8_t>(topology);
-}
-
 std::uint8_t neighbourMask(const std::map<CellKey, std::uint16_t>& cells,
                            const GridCell& cell) {
     std::uint8_t mask = None;
@@ -105,59 +101,7 @@ bool isModularDimension(float value, int& cellCount) {
     return cellCount > 0;
 }
 
-bool betterCandidate(const AssetCandidate& candidate,
-                     const AssetCandidate& current,
-                     std::uint32_t requestedTopology,
-                     std::uint16_t requestedMaterial) {
-    const bool candidateExactTopology =
-        candidate.topologyMask == requestedTopology;
-    const bool currentExactTopology =
-        current.topologyMask == requestedTopology;
-    if (candidateExactTopology != currentExactTopology)
-        return candidateExactTopology;
-
-    const bool candidateExactMaterial =
-        candidate.material == requestedMaterial;
-    const bool currentExactMaterial =
-        current.material == requestedMaterial;
-    if (candidateExactMaterial != currentExactMaterial)
-        return candidateExactMaterial;
-
-    if (candidate.preferredRank != current.preferredRank)
-        return candidate.preferredRank < current.preferredRank;
-
-    return candidate.id < current.id;
-}
-
 } // namespace
-
-std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
-                                 const CandidateRequest& request,
-                                 std::string_view fallbackId) {
-    const std::uint32_t requestedTopology = topologyBit(request.topology);
-
-    const AssetCandidate* best = nullptr;
-    for (const AssetCandidate& candidate : candidates) {
-        const bool topologyCovered = (candidate.topologyMask & requestedTopology) != 0u;
-        const bool materialCompatible = candidate.material == ANY_MATERIAL ||
-                                        candidate.material == request.material;
-
-        if (candidate.semanticRole != request.semanticRole ||
-            !topologyCovered ||
-            !materialCompatible ||
-            candidate.widthCells != request.widthCells ||
-            candidate.heightCells != request.heightCells ||
-            (request.flipRequired && !candidate.supportsFlip) ||
-            candidate.scale != request.scale)
-            continue;
-
-        if (best == nullptr ||
-            betterCandidate(candidate, *best, requestedTopology, request.material))
-            best = &candidate;
-    }
-
-    return best != nullptr ? best->id : fallbackId;
-}
 
 CompositionResult compose(std::span<const GridCell> input) {
     CompositionResult result;
