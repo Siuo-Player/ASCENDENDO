@@ -67,6 +67,7 @@ bool EditorInteractionController::beginMove(const Vec2& world) {
     m_mode = EditorMouseMode::MOVING;
     m_moveOffsetX = world.x - b.min.x;
     m_moveOffsetY = world.y - b.min.y;
+    m_moveOriginalBounds = b;
     return true;
 }
 
@@ -84,7 +85,31 @@ bool EditorInteractionController::updateMove(const Vec2& world) {
 bool EditorInteractionController::endMove() {
     if (m_mode != EditorMouseMode::MOVING) return false;
     m_mode = EditorMouseMode::NONE;
+    m_moveOriginalBounds.reset();
     return hasSelection();
+}
+
+bool EditorInteractionController::cancelMove() {
+    if (m_mode != EditorMouseMode::MOVING ||
+        !hasSelection() ||
+        !m_moveOriginalBounds.has_value())
+        return false;
+
+    const AABB original = *m_moveOriginalBounds;
+    // Restore through the same document invariant checks used by normal moves.
+    const bool restored = m_document.movePlatform(m_selected, original.min);
+    if (!restored) return false;
+
+    const AABB& current = m_document.platforms()[m_selected].bounds;
+    const bool exact = current.min.x == original.min.x &&
+                       current.min.y == original.min.y &&
+                       current.max.x == original.max.x &&
+                       current.max.y == original.max.y;
+    if (!exact) return false;
+
+    m_mode = EditorMouseMode::NONE;
+    m_moveOriginalBounds.reset();
+    return true;
 }
 
 bool EditorInteractionController::deleteAt(const Vec2& world) {
@@ -99,6 +124,7 @@ bool EditorInteractionController::deleteAt(const Vec2& world) {
         --m_selected;
     }
     m_mode = EditorMouseMode::NONE;
+    m_moveOriginalBounds.reset();
     return true;
 }
 
@@ -107,6 +133,7 @@ void EditorInteractionController::clearSelection() {
     m_mode = EditorMouseMode::NONE;
     m_moveOffsetX = 0.0f;
     m_moveOffsetY = 0.0f;
+    m_moveOriginalBounds.reset();
 }
 
 } // namespace logic
