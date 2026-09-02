@@ -7,6 +7,7 @@
 #include "Graphics/PlatformCompositor.h"
 
 #include <array>
+#include <stdexcept>
 
 using namespace gfx::compositor;
 
@@ -44,8 +45,8 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK(applied);
         CHECK((cellAt(lhsResult, 1, 0).neighbours & Right) != 0);
         CHECK((cellAt(rhsResult, 0, 0).neighbours & Left) != 0);
-        CHECK(cellAt(lhsResult, 1, 0).topology == TopologyClass::Interior);
-        CHECK(cellAt(rhsResult, 0, 0).topology == TopologyClass::Interior);
+        CHECK(cellAt(lhsResult, 1, 0).topology == TopologyClass::LeftEnd);
+        CHECK(cellAt(rhsResult, 0, 0).topology == TopologyClass::RightEnd);
     }
 
     TEST_CASE("T20 partial vertical overlap enriches every overlapping cell pair") {
