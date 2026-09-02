@@ -238,12 +238,12 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         CHECK(contacts.front().rhsNeighbour == gfx::compositor::Left);
     }
 
-    TEST_CASE("T14 vertical contact maps overlapping local cells") {
+    TEST_CASE("T14 vertical contact maps every overlapping local cell pair") {
         const PlatformRegion lhs{100.0f, 100.0f, 32.0f, 16.0f, 1};
         const PlatformRegion rhs{112.0f, 116.0f, 48.0f, 16.0f, 1};
 
         const auto contacts = findRegionContacts(lhs, rhs);
-        REQUIRE(contacts.size() == 2);
+        REQUIRE(contacts.size() == 3);
         CHECK(contacts[0].lhsLocalX == 0);
         CHECK(contacts[0].lhsLocalY == 0);
         CHECK(contacts[0].rhsLocalX == 0);
@@ -251,7 +251,11 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         CHECK(contacts[0].lhsNeighbour == gfx::compositor::Down);
         CHECK(contacts[0].rhsNeighbour == gfx::compositor::Up);
         CHECK(contacts[1].lhsLocalX == 1);
+        CHECK(contacts[1].lhsLocalY == 0);
         CHECK(contacts[1].rhsLocalX == 0);
+        CHECK(contacts[1].rhsLocalY == 0);
+        CHECK(contacts[2].lhsLocalX == 1);
+        CHECK(contacts[2].rhsLocalX == 1);
     }
 
     TEST_CASE("T14 tolerance admits only the requested visual adjacency") {
