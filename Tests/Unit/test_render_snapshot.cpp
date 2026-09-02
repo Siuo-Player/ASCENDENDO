@@ -5,8 +5,10 @@
 #include "../../Game/Graphics/RenderSnapshot.h"
 #include "../../Game/Graphics/RenderSnapshotBuilder.h"
 #include "../../Game/Logic/Level.h"
+#include "../../Game/Logic/LevelDataIO.h"
 #include "../../Game/Logic/Player.h"
 
+#include <filesystem>
 #include <type_traits>
 
 using namespace gfx;
@@ -30,7 +32,7 @@ TEST_SUITE("RenderSnapshot") {
         const RenderSnapshot copy = snapshot;
         const int topology = static_cast<int>(copy.semanticPlatformCells[0].topology);
         CHECK(copy.player.bounds.x == 10.0f);
-        CHECK(copy.player.facingDirection == -1.0f);
+        CHECK(copy.facingDirection == -1.0f);
         CHECK(copy.platforms.size() == 1);
         CHECK(copy.semanticPlatformsValid);
         CHECK(copy.semanticPlatformCells.size() == 1);
@@ -107,6 +109,51 @@ TEST_SUITE("RenderSnapshot") {
         CHECK((snapshot.semanticPlatformCells[2].neighbours & compositor::Left) != 0);
         CHECK(snapshot.semanticPlatformCells[0].worldX == doctest::Approx(0.25f));
         CHECK(snapshot.semanticPlatformCells[2].worldX == doctest::Approx(32.25f));
+    }
+
+    TEST_CASE("snapshot real de campanha preserva geometria e composição modular") {
+        Player player;
+        const std::filesystem::path root = "Game/Assets/Levels";
+
+        struct Case {
+            const char* file;
+            std::size_t platformCount;
+            std::size_t semanticCellCount;
+        };
+
+        const Case cases[] = {
+            {"inicio.lvl", 4, 73},
+            {"precipicio.lvl", 4, 26},
+            {"zigzag.lvl", 4, 36},
+        };
+
+        for (const auto& test : cases) {
+            const auto path = root / test.file;
+            const auto data = LevelDataIO::load(path);
+            REQUIRE_MESSAGE(data.has_value(), "failed to load campaign level: " << path.string());
+
+            Level level;
+            const float nextOffset = level.appendFromData(*data, 640.0f, 0.0f);
+            REQUIRE(level.platformCount() == test.platformCount);
+            CHECK(data->platforms.size() == test.platformCount);
+            CHECK(nextOffset > 0.0f);
+
+            const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
+
+            REQUIRE(snapshot.semanticPlatformsValid);
+            CHECK(snapshot.semanticPlatformCells.size() == test.semanticCellCount);
+            REQUIRE(snapshot.platforms.size() == test.platformCount);
+
+            for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
+                CHECK(snapshot.platforms[i].x == doctest::Approx(data->platforms[i].min.x));
+                CHECK(snapshot.platforms[i].y == doctest::Approx(data->platforms[i].min.y));
+                CHECK(snapshot.platforms[i].width == doctest::Approx(data->platforms[i].width()));
+                CHECK(snapshot.platforms[i].height == doctest::Approx(data->platforms[i].height()));
+            }
+
+            CHECK(snapshot.semanticPlatformCells.front().worldX == doctest::Approx(data->platforms.front().min.x));
+            CHECK(snapshot.semanticPlatformCells.front().worldY == doctest::Approx(data->platforms.front().min.y));
+        }
     }
 
     TEST_CASE("snapshot fica independente de alterações posteriores no runtime") {
