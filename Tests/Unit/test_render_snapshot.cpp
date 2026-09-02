@@ -32,7 +32,7 @@ TEST_SUITE("RenderSnapshot") {
         const RenderSnapshot copy = snapshot;
         const int topology = static_cast<int>(copy.semanticPlatformCells[0].topology);
         CHECK(copy.player.bounds.x == 10.0f);
-        CHECK(copy.facingDirection == -1.0f);
+        CHECK(copy.player.facingDirection == -1.0f);
         CHECK(copy.platforms.size() == 1);
         CHECK(copy.semanticPlatformsValid);
         CHECK(copy.semanticPlatformCells.size() == 1);
