@@ -4,6 +4,9 @@
 
 #include "Assets/StarterAssetCatalog.h"
 
+// Materialize string_view metadata before doctest comparison so the assertions
+// remain portable across the Linux and Windows toolchains used by CI.
+
 TEST_CASE("starter catalog exposes only verified runtime asset") {
     REQUIRE(assets::kStarterRuntimeAssets.size() == 1);
 
