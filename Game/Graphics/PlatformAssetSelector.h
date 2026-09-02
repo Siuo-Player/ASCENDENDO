@@ -42,6 +42,14 @@ struct PlatformAssetRequest {
     int scale = 1;
 };
 
+// Build the canonical selector request for one compositor-produced cell.
+// World position and neighbour masks are intentionally not copied: asset
+// selection is a topology/footprint/material presentation concern.
+PlatformAssetRequest makePlatformAssetRequest(
+    const compositor::RegionCell& cell,
+    bool mirrored = false,
+    int scale = 1);
+
 // Select the highest-ranked eligible candidate using only documented metadata.
 // Returns std::nullopt when no candidate passes every hard constraint.
 std::optional<std::string> selectBestPlatformAsset(
