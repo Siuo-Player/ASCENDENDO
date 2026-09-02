@@ -2,6 +2,7 @@
 #include "Graphics/PlatformPresentationRasterizer.h"
 
 #include <array>
+#include <limits>
 
 using namespace gfx;
 
