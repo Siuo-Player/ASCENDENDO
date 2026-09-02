@@ -20,6 +20,10 @@ struct CellKey {
     }
 };
 
+std::uint32_t topologyBit(TopologyClass topology) {
+    return 1u << static_cast<std::uint8_t>(topology);
+}
+
 std::uint8_t neighbourMask(const std::map<CellKey, std::uint16_t>& cells,
                            const GridCell& cell) {
     std::uint8_t mask = None;
@@ -102,6 +106,61 @@ bool isModularDimension(float value, int& cellCount) {
 }
 
 } // namespace
+
+std::string_view selectCandidate(std::span<const AssetCandidate> candidates,
+                                 const CandidateRequest& request,
+                                 std::string_view fallbackId) {
+    const std::uint32_t requestedTopology = topologyBit(request.topology);
+
+    const AssetCandidate* best = nullptr;
+    for (const AssetCandidate& candidate : candidates) {
+        const bool topologyCovered = (candidate.topologyMask & requestedTopology) != 0u;
+        const bool exactTopology = candidate.topologyMask == requestedTopology;
+        const bool materialCompatible = candidate.material == ANY_MATERIAL ||
+                                        candidate.material == request.material;
+        const bool exactMaterial = candidate.material == request.material;
+
+        if (candidate.semanticRole != request.semanticRole ||
+            !topologyCovered ||
+            !materialCompatible ||
+            candidate.widthCells != request.widthCells ||
+            candidate.heightCells != request.heightCells ||
+            (request.flipRequired && !candidate.supportsFlip) ||
+            candidate.scale != request.scale)
+            continue;
+
+        if (best == nullptr) {
+            best = &candidate;
+            continue;
+        }
+
+        const bool bestExactTopology = best->topologyMask == requestedTopology;
+        const bool bestExactMaterial = best->material == request.material;
+        const auto candidateRank = std::tuple{
+            exactTopology ? 1 : 0,
+            candidate.widthCells == request.widthCells &&
+                candidate.heightCells == request.heightCells ? 1 : 0,
+            exactMaterial ? 1 : 0,
+            candidate.preferredRank,
+            candidate.id,
+        };
+        const auto bestRank = std::tuple{
+            bestExactTopology ? 1 : 0,
+            best->widthCells == request.widthCells &&
+                best->heightCells == request.heightCells ? 1 : 0,
+            bestExactMaterial ? 1 : 0,
+            best->preferredRank,
+            best->id,
+        };
+
+        if (candidateRank < bestRank)
+            continue;
+        if (bestRank < candidateRank)
+            best = &candidate;
+    }
+
+    return best != nullptr ? best->id : fallbackId;
+}
 
 CompositionResult compose(std::span<const GridCell> input) {
     CompositionResult result;
