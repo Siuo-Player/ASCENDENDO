@@ -187,12 +187,12 @@ TEST_SUITE("Compositor structural fixture pack v1") {
     TEST_CASE("F12 missing reviewed asset is an explicit fallback condition") {
         const PlatformAssetRequest request{
             TopologyClass::Interior, 1, 1, 7, false, 1};
-        const auto blocked = reviewedCandidate("blocked", TopologyClass::Interior, 7);
+        auto blocked = reviewedCandidate("blocked", TopologyClass::Interior, 7);
+        blocked.provenanceVerified = false;
         const std::array<PlatformAssetCandidate, 1> candidates = {blocked};
 
         // No eligible reviewed candidate means presentation must not invent an
         // asset; the integration layer can deterministically select its fallback.
-        candidates.front().provenanceVerified = false;
         CHECK_FALSE(selectBestPlatformAsset(candidates, request).has_value());
     }
 
