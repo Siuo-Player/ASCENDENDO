@@ -23,12 +23,16 @@ struct CellKey {
 
 std::uint8_t neighbourMask(const std::map<CellKey, std::uint16_t>& cells,
                            const GridCell& cell) {
-    std::uint8_t mask = None;
-    const std::array<std::pair<int, int>, 4> offsets = {{
-        {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+    const std::array<std::pair<int, int>, 8> offsets = {{
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1},
+        {-1, -1}, {1, -1}, {-1, 1}, {1, 1}
     }};
-    const std::array<std::uint8_t, 4> bits = {{Left, Right, Up, Down}};
+    const std::array<std::uint8_t, 8> bits = {{
+        Left, Right, Up, Down,
+        UpLeft, UpRight, DownLeft, DownRight
+    }};
 
+    std::uint8_t mask = None;
     for (std::size_t i = 0; i < offsets.size(); ++i) {
         const CellKey key{cell.x + offsets[i].first, cell.y + offsets[i].second};
         if (cells.contains(key))
@@ -41,6 +45,10 @@ std::uint8_t neighbourMask(const std::map<CellKey, std::uint16_t>& cells,
 TopologyClass classify(const std::map<CellKey, std::uint16_t>& cells,
                        const GridCell& cell,
                        std::uint8_t mask) {
+    // Topology classes retain the original cardinal-neighbour semantics. The
+    // diagonal bits are additional semantic signature data and must not alter
+    // established left/right/up/down classification until a future topology
+    // contract explicitly promotes them.
     const int degree = ((mask & Left) != 0) + ((mask & Right) != 0) +
                        ((mask & Up) != 0) + ((mask & Down) != 0);
 
