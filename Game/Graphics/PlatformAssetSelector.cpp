@@ -76,6 +76,20 @@ bool better(const PlatformAssetCandidate& lhs,
 
 } // namespace
 
+PlatformAssetRequest makePlatformAssetRequest(
+    const compositor::RegionCell& cell,
+    bool mirrored,
+    int scale) {
+    PlatformAssetRequest request{};
+    request.topology = cell.topology;
+    request.widthCells = 1;
+    request.heightCells = 1;
+    request.material = cell.material;
+    request.mirrored = mirrored;
+    request.scale = scale;
+    return request;
+}
+
 std::uint16_t topologyBit(compositor::TopologyClass topology) {
     return static_cast<std::uint16_t>(1u << static_cast<unsigned>(topology));
 }
