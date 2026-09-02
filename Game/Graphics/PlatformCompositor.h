@@ -89,6 +89,19 @@ struct RegionContact {
     std::uint8_t rhsNeighbour = None;
 };
 
+struct InvalidationCell {
+    int x = 0;
+    int y = 0;
+};
+
+// Return exactly the visual dependency neighbourhood of one changed semantic
+// cell: that cell plus existing cells within Chebyshev distance one. The
+// changed cell is retained even when it no longer exists in `input` (deletion).
+// Output is deterministic and contains no duplicate coordinates.
+std::vector<InvalidationCell> affectedCells(std::span<const GridCell> input,
+                                             int changedX,
+                                             int changedY);
+
 // Deterministic structural compositor for an already-defined semantic grid.
 CompositionResult compose(std::span<const GridCell> input);
 
