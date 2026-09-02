@@ -8,6 +8,10 @@
 namespace gfx::assets {
 namespace {
 
+bool validRequest(const PlatformAssetRequest& request) {
+    return request.widthCells > 0 && request.heightCells > 0 && request.scale > 0;
+}
+
 int topologyMatchRank(const PlatformAssetCandidate& candidate,
                       const PlatformAssetRequest& request) {
     const std::uint16_t bit = topologyBit(request.topology);
@@ -32,6 +36,8 @@ int materialMatchRank(const PlatformAssetCandidate& candidate,
 
 bool eligible(const PlatformAssetCandidate& candidate,
               const PlatformAssetRequest& request) {
+    if (!validRequest(request))
+        return false;
     if (candidate.assetId.empty())
         return false;
     if (topologyMatchRank(candidate, request) == 0)
@@ -97,6 +103,9 @@ std::uint16_t topologyBit(compositor::TopologyClass topology) {
 std::optional<std::string> selectBestPlatformAsset(
     std::span<const PlatformAssetCandidate> candidates,
     const PlatformAssetRequest& request) {
+    if (!validRequest(request))
+        return std::nullopt;
+
     const PlatformAssetCandidate* best = nullptr;
 
     for (const auto& candidate : candidates) {

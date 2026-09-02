@@ -123,4 +123,30 @@ TEST_SUITE("16x16 semantic compositor — asset selection") {
 
         CHECK(selectBestPlatformAsset(candidates, request) == std::optional<std::string>("multi"));
     }
+
+    TEST_CASE("invalid request footprint fails closed") {
+        const auto valid = candidate("valid", compositor::TopologyClass::Interior, 1, 0);
+        const std::array<PlatformAssetCandidate, 1> candidates = {valid};
+
+        const PlatformAssetRequest zeroWidth{
+            compositor::TopologyClass::Interior, 0, 1, 1, false, 1};
+        const PlatformAssetRequest negativeHeight{
+            compositor::TopologyClass::Interior, 1, -1, 1, false, 1};
+
+        CHECK_FALSE(selectBestPlatformAsset(candidates, zeroWidth).has_value());
+        CHECK_FALSE(selectBestPlatformAsset(candidates, negativeHeight).has_value());
+    }
+
+    TEST_CASE("invalid request scale fails closed") {
+        const auto valid = candidate("valid", compositor::TopologyClass::Interior, 1, 0);
+        const std::array<PlatformAssetCandidate, 1> candidates = {valid};
+
+        const PlatformAssetRequest zeroScale{
+            compositor::TopologyClass::Interior, 1, 1, 1, false, 0};
+        const PlatformAssetRequest negativeScale{
+            compositor::TopologyClass::Interior, 1, 1, 1, false, -2};
+
+        CHECK_FALSE(selectBestPlatformAsset(candidates, zeroScale).has_value());
+        CHECK_FALSE(selectBestPlatformAsset(candidates, negativeScale).has_value());
+    }
 }
