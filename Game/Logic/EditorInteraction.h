@@ -44,6 +44,7 @@ public:
     bool beginMove(const Vec2& world);
     bool updateMove(const Vec2& world);
     bool endMove();
+    bool cancelMove();
 
     bool deleteAt(const Vec2& world);
 
@@ -76,6 +77,8 @@ private:
     EditorSizePreset     m_sizePreset = EditorSizePreset::MEDIUM;
     float                m_moveOffsetX = 0.0f;
     float                m_moveOffsetY = 0.0f;
+    AABB                 m_moveOriginalBounds{};
+    bool                 m_moveHasOriginal = false;
 };
 
 } // namespace logic
