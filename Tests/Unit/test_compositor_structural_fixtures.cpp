@@ -2,6 +2,7 @@
 #include "Graphics/PlatformCompositor.h"
 
 #include <array>
+#include <cstdint>
 #include <string_view>
 #include <vector>
 
@@ -11,10 +12,10 @@ using gfx::compositor::ANY_MATERIAL;
 using gfx::compositor::AssetCandidate;
 using gfx::compositor::CandidateRequest;
 using gfx::compositor::GridCell;
+using gfx::compositor::CELL_SIZE;
 using gfx::compositor::compose;
 using gfx::compositor::selectCandidate;
 using gfx::compositor::TopologyClass;
-using gfx::compositor::CELL_SIZE;
 
 GridCell cell(int x, int y, std::uint16_t material = 1) {
     return {x, y, material};
@@ -43,6 +44,17 @@ CandidateRequest request(TopologyClass topology,
     };
 }
 
+const gfx::compositor::ComposedCell* findCell(
+    const std::vector<gfx::compositor::ComposedCell>& cells,
+    int x,
+    int y) {
+    for (const auto& item : cells) {
+        if (item.cell.x == x && item.cell.y == y)
+            return &item;
+    }
+    return nullptr;
+}
+
 } // namespace
 
 TEST_SUITE("Compositor structural fixture pack v1") {
@@ -63,9 +75,12 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 3);
-        CHECK(result.cells[0].topology == TopologyClass::LeftEnd);
-        CHECK(result.cells[1].topology == TopologyClass::Interior);
-        CHECK(result.cells[2].topology == TopologyClass::RightEnd);
+        REQUIRE(findCell(result.cells, 0, 0) != nullptr);
+        REQUIRE(findCell(result.cells, 1, 0) != nullptr);
+        REQUIRE(findCell(result.cells, 2, 0) != nullptr);
+        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::LeftEnd);
+        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::Interior);
+        CHECK(findCell(result.cells, 2, 0)->topology == TopologyClass::RightEnd);
     }
 
     TEST_CASE("F03 left end and F04 right end are orientation-sensitive") {
@@ -74,8 +89,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 2);
-        CHECK(result.cells[0].topology == TopologyClass::LeftEnd);
-        CHECK(result.cells[1].topology == TopologyClass::RightEnd);
+        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::LeftEnd);
+        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::RightEnd);
     }
 
     TEST_CASE("F05 upper-left and F06 upper-right corners classify as corners") {
@@ -91,8 +106,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(leftResult.valid);
         REQUIRE(rightResult.valid);
-        CHECK(leftResult.cells[0].topology == TopologyClass::Corner);
-        CHECK(rightResult.cells[1].topology == TopologyClass::Corner);
+        CHECK(findCell(leftResult.cells, 0, 0)->topology == TopologyClass::Corner);
+        CHECK(findCell(rightResult.cells, 1, 0)->topology == TopologyClass::Corner);
     }
 
     TEST_CASE("F07 stepped profile preserves a single junction corner") {
@@ -103,8 +118,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 4);
-        CHECK(result.cells[1].topology == TopologyClass::Corner);
-        CHECK(result.cells[2].topology == TopologyClass::Corner);
+        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::Corner);
+        CHECK(findCell(result.cells, 1, 1)->topology == TopologyClass::Corner);
     }
 
     TEST_CASE("F08 T junction has degree-three centre") {
@@ -115,7 +130,9 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 4);
-        CHECK(result.cells[1].topology == TopologyClass::Junction);
+        const auto* centre = findCell(result.cells, 1, 0);
+        REQUIRE(centre != nullptr);
+        CHECK(centre->topology == TopologyClass::Junction);
     }
 
     TEST_CASE("F09 cross junction has degree-four centre") {
@@ -126,7 +143,9 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 5);
-        CHECK(result.cells.front().topology == TopologyClass::Junction);
+        const auto* centre = findCell(result.cells, 1, 1);
+        REQUIRE(centre != nullptr);
+        CHECK(centre->topology == TopologyClass::Junction);
     }
 
     TEST_CASE("F10 material transition marks both sides as material boundary") {
@@ -137,8 +156,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 2);
-        CHECK(result.cells[0].topology == TopologyClass::MaterialBoundary);
-        CHECK(result.cells[1].topology == TopologyClass::MaterialBoundary);
+        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::MaterialBoundary);
+        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::MaterialBoundary);
     }
 
     TEST_CASE("F11 macro and modular representations preserve contact semantics") {
@@ -167,12 +186,12 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
     TEST_CASE("F12 empty or incompatible candidate sets use explicit fallback") {
         constexpr std::string_view fallback = "fallback/platform-default";
-        const std::array noCandidates{};
+        const std::array<AssetCandidate, 0> noCandidates{};
         CHECK(selectCandidate(noCandidates, request(TopologyClass::Isolated), fallback) == fallback);
 
+        const auto isolatedBit = 1u << static_cast<int>(TopologyClass::Isolated);
         const std::array wrongRole{
-            AssetCandidate{"wrong", "other", 1u << static_cast<int>(TopologyClass::Isolated),
-                           1, 1, 1, false, 1, 0}
+            AssetCandidate{"wrong", "other", isolatedBit, 1, 1, false, 1, 0}
         };
         CHECK(selectCandidate(wrongRole, request(TopologyClass::Isolated), fallback) == fallback);
     }
@@ -196,7 +215,7 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         const auto isolatedBit = 1u << static_cast<int>(TopologyClass::Isolated);
         const std::array candidates{
             AssetCandidate{"no-flip", "platform", isolatedBit, 1, 1, false, 1, 0},
-            AssetCandidate{"wrong-material", "platform", isolatedBit, 2, 1, true, 1, 0},
+            AssetCandidate{"wrong-size", "platform", isolatedBit, 2, 1, true, 1, 0},
             AssetCandidate{"wrong-role", "other", isolatedBit, 1, 1, true, 1, 0},
         };
 
@@ -225,15 +244,5 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         CHECK_FALSE(result.valid);
         CHECK(result.cells.empty());
-    }
-
-    TEST_CASE("fixture helper has no accidental universal-topology assumption") {
-        const std::array cells{
-            cell(0, 0), cell(1, 0), cell(2, 0)
-        };
-        const auto result = compose(cells);
-
-        REQUIRE(result.valid);
-        CHECK(!allTopology(result.cells, TopologyClass::Isolated));
     }
 }
