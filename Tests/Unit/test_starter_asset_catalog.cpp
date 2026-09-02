@@ -1,3 +1,5 @@
+#include <string>
+
 #include <doctest/doctest.h>
 
 #include "Assets/StarterAssetCatalog.h"
@@ -6,10 +8,15 @@ TEST_CASE("starter catalog exposes only verified runtime asset") {
     REQUIRE(assets::kStarterRuntimeAssets.size() == 1);
 
     const assets::AssetMetadata& player = assets::kStarterRuntimeAssets.front();
-    CHECK(player.assetId == "player.personagem.v1");
-    CHECK(player.runtimePath == "Game/Assets/Sprites/personagem.png");
-    CHECK(player.sourcePath == "Game/Assets/Sprites/Source/personagem.pixil");
-    CHECK(player.licence == "project-owned");
+    const std::string assetId(player.assetId);
+    const std::string runtimePath(player.runtimePath);
+    const std::string sourcePath(player.sourcePath);
+    const std::string licence(player.licence);
+
+    CHECK(assetId == "player.personagem.v1");
+    CHECK(runtimePath == "Game/Assets/Sprites/personagem.png");
+    CHECK(sourcePath == "Game/Assets/Sprites/Source/personagem.pixil");
+    CHECK(licence == "project-owned");
     CHECK(player.semanticRole == assets::SemanticRole::Player);
     CHECK(player.nominalPixelSize.width == 32);
     CHECK(player.nominalPixelSize.height == 32);
