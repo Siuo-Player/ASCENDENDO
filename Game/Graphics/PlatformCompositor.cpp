@@ -114,6 +114,27 @@ float overlapLength(float lhsStart, float lhsEnd,
 
 } // namespace
 
+std::vector<InvalidationCell> affectedCells(std::span<const GridCell> input,
+                                             int changedX,
+                                             int changedY) {
+    std::vector<InvalidationCell> result;
+    result.reserve(10);
+
+    result.push_back({changedX, changedY});
+    for (const GridCell& cell : input) {
+        if (std::abs(cell.x - changedX) <= 1 &&
+            std::abs(cell.y - changedY) <= 1 &&
+            !(cell.x == changedX && cell.y == changedY))
+            result.push_back({cell.x, cell.y});
+    }
+
+    std::sort(result.begin(), result.end(), [](const InvalidationCell& lhs,
+                                               const InvalidationCell& rhs) {
+        return std::tie(lhs.y, lhs.x) < std::tie(rhs.y, rhs.x);
+    });
+    return result;
+}
+
 CompositionResult compose(std::span<const GridCell> input) {
     CompositionResult result;
 
