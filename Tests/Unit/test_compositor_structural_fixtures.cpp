@@ -21,15 +21,6 @@ GridCell cell(int x, int y, std::uint16_t material = 1) {
     return {x, y, material};
 }
 
-bool allTopology(const std::vector<gfx::compositor::ComposedCell>& cells,
-                 TopologyClass topology) {
-    for (const auto& item : cells) {
-        if (item.topology != topology)
-            return false;
-    }
-    return true;
-}
-
 CandidateRequest request(TopologyClass topology,
                          std::uint16_t material = 1,
                          bool flipRequired = false) {
@@ -66,7 +57,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 1);
         CHECK(result.cells.front().neighbours == gfx::compositor::None);
-        CHECK(result.cells.front().topology == TopologyClass::Isolated);
+        CHECK(static_cast<int>(result.cells.front().topology) ==
+              static_cast<int>(TopologyClass::Isolated));
     }
 
     TEST_CASE("F02 3x1 straight exposes both ends and interior") {
@@ -78,9 +70,12 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         REQUIRE(findCell(result.cells, 0, 0) != nullptr);
         REQUIRE(findCell(result.cells, 1, 0) != nullptr);
         REQUIRE(findCell(result.cells, 2, 0) != nullptr);
-        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::LeftEnd);
-        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::Interior);
-        CHECK(findCell(result.cells, 2, 0)->topology == TopologyClass::RightEnd);
+        CHECK(static_cast<int>(findCell(result.cells, 0, 0)->topology) ==
+              static_cast<int>(TopologyClass::LeftEnd));
+        CHECK(static_cast<int>(findCell(result.cells, 1, 0)->topology) ==
+              static_cast<int>(TopologyClass::Interior));
+        CHECK(static_cast<int>(findCell(result.cells, 2, 0)->topology) ==
+              static_cast<int>(TopologyClass::RightEnd));
     }
 
     TEST_CASE("F03 left end and F04 right end are orientation-sensitive") {
@@ -89,8 +84,10 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 2);
-        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::LeftEnd);
-        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::RightEnd);
+        CHECK(static_cast<int>(findCell(result.cells, 0, 0)->topology) ==
+              static_cast<int>(TopologyClass::LeftEnd));
+        CHECK(static_cast<int>(findCell(result.cells, 1, 0)->topology) ==
+              static_cast<int>(TopologyClass::RightEnd));
     }
 
     TEST_CASE("F05 upper-left and F06 upper-right corners classify as corners") {
@@ -106,11 +103,13 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(leftResult.valid);
         REQUIRE(rightResult.valid);
-        CHECK(findCell(leftResult.cells, 0, 0)->topology == TopologyClass::Corner);
-        CHECK(findCell(rightResult.cells, 1, 0)->topology == TopologyClass::Corner);
+        CHECK(static_cast<int>(findCell(leftResult.cells, 0, 0)->topology) ==
+              static_cast<int>(TopologyClass::Corner));
+        CHECK(static_cast<int>(findCell(rightResult.cells, 1, 0)->topology) ==
+              static_cast<int>(TopologyClass::Corner));
     }
 
-    TEST_CASE("F07 stepped profile preserves a single junction corner") {
+    TEST_CASE("F07 stepped profile preserves its two profile corners") {
         const std::array cells{
             cell(0, 0), cell(1, 0), cell(1, 1), cell(2, 1)
         };
@@ -118,8 +117,10 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 4);
-        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::Corner);
-        CHECK(findCell(result.cells, 1, 1)->topology == TopologyClass::Corner);
+        CHECK(static_cast<int>(findCell(result.cells, 1, 0)->topology) ==
+              static_cast<int>(TopologyClass::Corner));
+        CHECK(static_cast<int>(findCell(result.cells, 1, 1)->topology) ==
+              static_cast<int>(TopologyClass::Corner));
     }
 
     TEST_CASE("F08 T junction has degree-three centre") {
@@ -132,7 +133,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         REQUIRE(result.cells.size() == 4);
         const auto* centre = findCell(result.cells, 1, 0);
         REQUIRE(centre != nullptr);
-        CHECK(centre->topology == TopologyClass::Junction);
+        CHECK(static_cast<int>(centre->topology) ==
+              static_cast<int>(TopologyClass::Junction));
     }
 
     TEST_CASE("F09 cross junction has degree-four centre") {
@@ -145,7 +147,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         REQUIRE(result.cells.size() == 5);
         const auto* centre = findCell(result.cells, 1, 1);
         REQUIRE(centre != nullptr);
-        CHECK(centre->topology == TopologyClass::Junction);
+        CHECK(static_cast<int>(centre->topology) ==
+              static_cast<int>(TopologyClass::Junction));
     }
 
     TEST_CASE("F10 material transition marks both sides as material boundary") {
@@ -156,8 +159,10 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         REQUIRE(result.valid);
         REQUIRE(result.cells.size() == 2);
-        CHECK(findCell(result.cells, 0, 0)->topology == TopologyClass::MaterialBoundary);
-        CHECK(findCell(result.cells, 1, 0)->topology == TopologyClass::MaterialBoundary);
+        CHECK(static_cast<int>(findCell(result.cells, 0, 0)->topology) ==
+              static_cast<int>(TopologyClass::MaterialBoundary));
+        CHECK(static_cast<int>(findCell(result.cells, 1, 0)->topology) ==
+              static_cast<int>(TopologyClass::MaterialBoundary));
     }
 
     TEST_CASE("F11 macro and modular representations preserve contact semantics") {
@@ -177,7 +182,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         for (std::size_t i = 0; i < modular.cells.size(); ++i) {
             CHECK(macro.cells[i].localX == modular.cells[i].cell.x);
             CHECK(macro.cells[i].localY == modular.cells[i].cell.y);
-            CHECK(macro.cells[i].topology == modular.cells[i].topology);
+            CHECK(static_cast<int>(macro.cells[i].topology) ==
+                  static_cast<int>(modular.cells[i].topology));
             CHECK(macro.cells[i].worldX == doctest::Approx(
                 region.x + static_cast<float>(i * CELL_SIZE)));
             CHECK(macro.cells[i].worldY == doctest::Approx(region.y));
