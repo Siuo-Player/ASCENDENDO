@@ -27,11 +27,15 @@ enum class TopologyClass : std::uint8_t {
 };
 
 enum NeighbourMask : std::uint8_t {
-    None  = 0,
-    Left  = 1u << 0,
-    Right = 1u << 1,
-    Up    = 1u << 2,
-    Down  = 1u << 3,
+    None      = 0,
+    Left      = 1u << 0,
+    Right     = 1u << 1,
+    Up        = 1u << 2,
+    Down      = 1u << 3,
+    UpLeft    = 1u << 4,
+    UpRight   = 1u << 5,
+    DownLeft  = 1u << 6,
+    DownRight = 1u << 7,
 };
 
 struct GridCell {
