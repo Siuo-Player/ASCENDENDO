@@ -67,6 +67,8 @@ bool EditorInteractionController::beginMove(const Vec2& world) {
     m_mode = EditorMouseMode::MOVING;
     m_moveOffsetX = world.x - b.min.x;
     m_moveOffsetY = world.y - b.min.y;
+    m_moveOriginalBounds = b;
+    m_moveHasOriginal = true;
     return true;
 }
 
@@ -84,7 +86,23 @@ bool EditorInteractionController::updateMove(const Vec2& world) {
 bool EditorInteractionController::endMove() {
     if (m_mode != EditorMouseMode::MOVING) return false;
     m_mode = EditorMouseMode::NONE;
+    m_moveHasOriginal = false;
+    m_moveOriginalBounds = {};
     return hasSelection();
+}
+
+bool EditorInteractionController::cancelMove() {
+    if (m_mode != EditorMouseMode::MOVING || !m_moveHasOriginal)
+        return false;
+
+    if (m_selected >= m_document.platformCount()) {
+        clearSelection();
+        return false;
+    }
+
+    const bool restored = m_document.movePlatform(m_selected, m_moveOriginalBounds.min);
+    clearSelection();
+    return restored;
 }
 
 bool EditorInteractionController::deleteAt(const Vec2& world) {
@@ -107,6 +125,8 @@ void EditorInteractionController::clearSelection() {
     m_mode = EditorMouseMode::NONE;
     m_moveOffsetX = 0.0f;
     m_moveOffsetY = 0.0f;
+    m_moveOriginalBounds = {};
+    m_moveHasOriginal = false;
 }
 
 } // namespace logic
