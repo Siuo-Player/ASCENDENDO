@@ -191,8 +191,8 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         blocked.provenanceVerified = false;
         const std::array<PlatformAssetCandidate, 1> candidates = {blocked};
 
-        // No eligible reviewed candidate means presentation must not invent an
-        // asset; the integration layer can deterministically select its fallback.
+        // The compositor remains asset-agnostic. A failed reviewed selection is
+        // the explicit handoff condition for the presentation fallback policy.
         CHECK_FALSE(selectBestPlatformAsset(candidates, request).has_value());
     }
 
