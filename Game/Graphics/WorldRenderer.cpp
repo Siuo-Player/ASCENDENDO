@@ -22,14 +22,29 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
 
     shapes.bind(cmd, shapePipeline);
 
-    for (const auto& platform : snapshot.platforms) {
-        shapes.drawRect(cmd, shapePipeline,
-                        platform.x, platform.y,
-                        platform.width, platform.height,
-                        presentation::COLOR_PLATFORM_R,
-                        presentation::COLOR_PLATFORM_G,
-                        presentation::COLOR_PLATFORM_B,
-                        1.0f, &camera);
+    if (snapshot.semanticPlatformsValid) {
+        for (const auto& platform : snapshot.semanticPlatformCells) {
+            shapes.drawRect(cmd, shapePipeline,
+                            platform.worldX, platform.worldY,
+                            static_cast<float>(compositor::CELL_SIZE),
+                            static_cast<float>(compositor::CELL_SIZE),
+                            presentation::COLOR_PLATFORM_R,
+                            presentation::COLOR_PLATFORM_G,
+                            presentation::COLOR_PLATFORM_B,
+                            1.0f, &camera);
+        }
+    } else {
+        // Preserve the legacy rectangle path for levels whose presentation
+        // geometry cannot be represented by the 16x16 semantic compositor.
+        for (const auto& platform : snapshot.platforms) {
+            shapes.drawRect(cmd, shapePipeline,
+                            platform.x, platform.y,
+                            platform.width, platform.height,
+                            presentation::COLOR_PLATFORM_R,
+                            presentation::COLOR_PLATFORM_G,
+                            presentation::COLOR_PLATFORM_B,
+                            1.0f, &camera);
+        }
     }
 
     if (snapshot.flag.visible) {
