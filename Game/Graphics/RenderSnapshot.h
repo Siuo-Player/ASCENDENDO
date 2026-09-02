@@ -6,6 +6,8 @@
 // Não contém Player, Level, GameState ou outros tipos de domínio.
 // =============================================================================
 
+#include "Graphics/PlatformCompositor.h"
+
 #include <cstdint>
 #include <vector>
 
@@ -31,6 +33,13 @@ struct RenderFlagSnapshot {
 struct RenderSnapshot {
     RenderPlayerSnapshot player{};
     std::vector<RenderRect> platforms;
+
+    // Presentation-only semantic cells generated from modular platform regions.
+    // The legacy platform rectangles remain available so a non-modular level is
+    // never silently rewritten merely to satisfy the compositor boundary.
+    bool semanticPlatformsValid = false;
+    std::vector<compositor::RegionCell> semanticPlatformCells;
+
     RenderFlagSnapshot flag{};
 };
 

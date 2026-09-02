@@ -22,13 +22,20 @@ TEST_SUITE("RenderSnapshot") {
         snapshot.player.bounds = {10.0f, 20.0f, 32.0f, 32.0f};
         snapshot.player.facingDirection = -1.0f;
         snapshot.platforms.push_back({0.0f, 300.0f, 640.0f, 16.0f});
+        snapshot.semanticPlatformsValid = true;
+        snapshot.semanticPlatformCells.push_back({0, 0, 0.0f, 300.0f, 0, compositor::Right, compositor::TopologyClass::RightEnd});
         snapshot.flag.visible = true;
         snapshot.flag.bounds = {600.0f, 260.0f, 16.0f, 64.0f};
 
         const RenderSnapshot copy = snapshot;
+        const int topology = static_cast<int>(copy.semanticPlatformCells[0].topology);
         CHECK(copy.player.bounds.x == 10.0f);
         CHECK(copy.player.facingDirection == -1.0f);
         CHECK(copy.platforms.size() == 1);
+        CHECK(copy.semanticPlatformsValid);
+        CHECK(copy.semanticPlatformCells.size() == 1);
+        CHECK(copy.semanticPlatformCells[0].worldX == 0.0f);
+        CHECK(topology == static_cast<int>(compositor::TopologyClass::RightEnd));
         CHECK(copy.flag.visible);
         CHECK(copy.flag.bounds.height == 64.0f);
     }
@@ -55,6 +62,7 @@ TEST_SUITE("RenderSnapshot") {
         CHECK(snapshot.platforms[1].y == doctest::Approx(160.0f));
         CHECK(snapshot.platforms[1].width == doctest::Approx(80.0f));
         CHECK(snapshot.platforms[1].height == doctest::Approx(16.0f));
+        CHECK_FALSE(snapshot.semanticPlatformsValid);
         CHECK(snapshot.flag.visible);
         CHECK(snapshot.flag.bounds.x == doctest::Approx(90.0f));
         CHECK(snapshot.flag.bounds.y == doctest::Approx(200.0f));
@@ -63,6 +71,42 @@ TEST_SUITE("RenderSnapshot") {
         CHECK(snapshot.player.bounds.x == doctest::Approx(32.0f));
         CHECK(snapshot.player.bounds.y == doctest::Approx(64.0f));
         CHECK(snapshot.player.facingDirection == doctest::Approx(-1.0f));
+    }
+
+    TEST_CASE("builder compõe plataformas modulares sem perder a origem contínua") {
+        Player player;
+        Level level;
+        player.body.position = {20.25f, 30.5f};
+        level.addPlatform(436.25f, 89.5f, 48.0f, 16.0f);
+
+        const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
+
+        REQUIRE(snapshot.semanticPlatformsValid);
+        REQUIRE(snapshot.semanticPlatformCells.size() == 3);
+        CHECK(snapshot.semanticPlatformCells[0].worldX == doctest::Approx(436.25f));
+        CHECK(snapshot.semanticPlatformCells[0].worldY == doctest::Approx(89.5f));
+        CHECK(snapshot.semanticPlatformCells[1].worldX == doctest::Approx(452.25f));
+        CHECK(snapshot.semanticPlatformCells[2].worldX == doctest::Approx(468.25f));
+        const int firstTopology = static_cast<int>(snapshot.semanticPlatformCells[0].topology);
+        const int lastTopology = static_cast<int>(snapshot.semanticPlatformCells[2].topology);
+        CHECK(firstTopology == static_cast<int>(compositor::TopologyClass::LeftEnd));
+        CHECK(lastTopology == static_cast<int>(compositor::TopologyClass::RightEnd));
+    }
+
+    TEST_CASE("builder propaga contacto entre regiões modulares") {
+        Player player;
+        Level level;
+        level.addPlatform(0.25f, 100.5f, 32.0f, 16.0f);
+        level.addPlatform(32.25f, 100.5f, 16.0f, 16.0f);
+
+        const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
+
+        REQUIRE(snapshot.semanticPlatformsValid);
+        REQUIRE(snapshot.semanticPlatformCells.size() == 3);
+        CHECK((snapshot.semanticPlatformCells[1].neighbours & compositor::Right) != 0);
+        CHECK((snapshot.semanticPlatformCells[2].neighbours & compositor::Left) != 0);
+        CHECK(snapshot.semanticPlatformCells[0].worldX == doctest::Approx(0.25f));
+        CHECK(snapshot.semanticPlatformCells[2].worldX == doctest::Approx(32.25f));
     }
 
     TEST_CASE("snapshot fica independente de alterações posteriores no runtime") {
@@ -81,5 +125,7 @@ TEST_SUITE("RenderSnapshot") {
         CHECK(snapshot.platforms[0].y == doctest::Approx(4.0f));
         CHECK(snapshot.player.bounds.x == doctest::Approx(1.0f));
         CHECK(snapshot.player.bounds.y == doctest::Approx(2.0f));
+        CHECK_FALSE(snapshot.semanticPlatformsValid);
+        CHECK(snapshot.semanticPlatformCells.empty());
     }
 }
