@@ -45,8 +45,15 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK(applied);
         CHECK((cellAt(lhsResult, 1, 0).neighbours & Right) != 0);
         CHECK((cellAt(rhsResult, 0, 0).neighbours & Left) != 0);
-        CHECK(cellAt(lhsResult, 1, 0).topology == TopologyClass::LeftEnd);
-        CHECK(cellAt(rhsResult, 0, 0).topology == TopologyClass::RightEnd);
+
+        const bool lhsTopologyIsLeftEnd =
+            static_cast<int>(cellAt(lhsResult, 1, 0).topology) ==
+            static_cast<int>(TopologyClass::LeftEnd);
+        const bool rhsTopologyIsRightEnd =
+            static_cast<int>(cellAt(rhsResult, 0, 0).topology) ==
+            static_cast<int>(TopologyClass::RightEnd);
+        CHECK(lhsTopologyIsLeftEnd);
+        CHECK(rhsTopologyIsRightEnd);
     }
 
     TEST_CASE("T20 partial vertical overlap enriches every overlapping cell pair") {
@@ -88,8 +95,15 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK_FALSE(applyRegionContacts(lhsResult, rhsResult, invalid));
         CHECK(lhsResult.cells[0].neighbours == lhsBefore.cells[0].neighbours);
         CHECK(rhsResult.cells[0].neighbours == rhsBefore.cells[0].neighbours);
-        CHECK(lhsResult.cells[0].topology == lhsBefore.cells[0].topology);
-        CHECK(rhsResult.cells[0].topology == rhsBefore.cells[0].topology);
+
+        const bool lhsTopologyUnchanged =
+            static_cast<int>(lhsResult.cells[0].topology) ==
+            static_cast<int>(lhsBefore.cells[0].topology);
+        const bool rhsTopologyUnchanged =
+            static_cast<int>(rhsResult.cells[0].topology) ==
+            static_cast<int>(rhsBefore.cells[0].topology);
+        CHECK(lhsTopologyUnchanged);
+        CHECK(rhsTopologyUnchanged);
     }
 
     TEST_CASE("T22 repeated contact application is idempotent") {
