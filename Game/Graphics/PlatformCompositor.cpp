@@ -121,6 +121,26 @@ float overlapLength(float lhsStart, float lhsEnd,
     return std::min(lhsEnd, rhsEnd) - std::max(lhsStart, rhsStart);
 }
 
+const RegionCell* findRegionCell(const RegionCompositionResult& region,
+                                 int localX,
+                                 int localY) {
+    for (const RegionCell& cell : region.cells) {
+        if (cell.localX == localX && cell.localY == localY)
+            return &cell;
+    }
+    return nullptr;
+}
+
+RegionCell* findRegionCell(RegionCompositionResult& region,
+                           int localX,
+                           int localY) {
+    for (RegionCell& cell : region.cells) {
+        if (cell.localX == localX && cell.localY == localY)
+            return &cell;
+    }
+    return nullptr;
+}
+
 } // namespace
 
 std::vector<InvalidationCell> affectedCells(std::span<const GridCell> input,
@@ -298,6 +318,30 @@ std::vector<RegionContact> findRegionContacts(const PlatformRegion& lhs,
     }
 
     return contacts;
+}
+
+bool applyRegionContacts(RegionCompositionResult& lhs,
+                         RegionCompositionResult& rhs,
+                         std::span<const RegionContact> contacts) {
+    if (!lhs.valid || !rhs.valid)
+        return false;
+
+    for (const RegionContact& contact : contacts) {
+        if (findRegionCell(lhs, contact.lhsLocalX, contact.lhsLocalY) == nullptr ||
+            findRegionCell(rhs, contact.rhsLocalX, contact.rhsLocalY) == nullptr)
+            return false;
+    }
+
+    for (const RegionContact& contact : contacts) {
+        RegionCell* lhsCell = findRegionCell(lhs, contact.lhsLocalX, contact.lhsLocalY);
+        RegionCell* rhsCell = findRegionCell(rhs, contact.rhsLocalX, contact.rhsLocalY);
+        lhsCell->neighbours = static_cast<std::uint8_t>(
+            lhsCell->neighbours | contact.lhsNeighbour);
+        rhsCell->neighbours = static_cast<std::uint8_t>(
+            rhsCell->neighbours | contact.rhsNeighbour);
+    }
+
+    return true;
 }
 
 const char* toString(TopologyClass topology) {
