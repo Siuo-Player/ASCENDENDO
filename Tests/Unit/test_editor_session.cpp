@@ -149,7 +149,7 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     REQUIRE(session.document().platformCount() == 1);
 
     input.beginFrame();
-    input.injectCursorPos(400.0, 220.0);
+    input.injectCursorPos(320.0, 180.0);
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     REQUIRE(session.controller().mode() == logic::EditorMouseMode::MOVING);
@@ -157,8 +157,8 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     input.beginFrame();
     input.injectCursorPos(480.0, 260.0);
     session.update(input, bindings, 640, 360);
-    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(336.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(248.0f));
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(416.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(252.0f));
 
     input.beginFrame();
     input.injectCursorPos(480.0, 260.0);
