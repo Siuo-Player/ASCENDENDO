@@ -32,6 +32,11 @@ struct PixelSize {
     int height = 0;
 };
 
+struct PixelOffset {
+    int x = 0;
+    int y = 0;
+};
+
 struct AssetMetadata {
     std::string_view assetId;
     std::string_view runtimePath;
@@ -41,7 +46,7 @@ struct AssetMetadata {
     SemanticRole semanticRole;
     PixelSize nominalPixelSize;
     PixelSize logicalDrawSize;
-    PixelSize anchor;
+    PixelOffset anchor;
     bool flipXAllowed = false;
     bool gameplayCritical = false;
     Availability availability = Availability::Reserved;
