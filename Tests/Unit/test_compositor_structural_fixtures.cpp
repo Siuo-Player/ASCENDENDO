@@ -14,6 +14,8 @@ using gfx::compositor::GridCell;
 using gfx::compositor::TopologyClass;
 using gfx::compositor::CELL_SIZE;
 using gfx::compositor::compose;
+using gfx::compositor::findRegionContacts;
+using gfx::compositor::PlatformRegion;
 using gfx::assets::PlatformAssetCandidate;
 using gfx::assets::PlatformAssetRequest;
 using gfx::assets::selectBestPlatformAsset;
@@ -202,5 +204,76 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         CHECK_FALSE(result.valid);
         CHECK(result.cells.empty());
+    }
+
+    TEST_CASE("T13 and T15 preserve non-grid-aligned continuous origin") {
+        const PlatformRegion region{436.25f, 89.5f, 48.0f, 16.0f, 1};
+        const PlatformRegion original = region;
+        const auto result = gfx::compositor::composeRegion(region);
+
+        REQUIRE(result.valid);
+        REQUIRE(result.cells.size() == 3);
+        CHECK(result.cells.front().worldX == doctest::Approx(436.25f));
+        CHECK(result.cells.front().worldY == doctest::Approx(89.5f));
+        CHECK(result.cells.back().worldX == doctest::Approx(468.25f));
+        CHECK(result.cells.back().worldY == doctest::Approx(89.5f));
+        CHECK(region.x == original.x);
+        CHECK(region.y == original.y);
+        CHECK(region.width == original.width);
+        CHECK(region.height == original.height);
+        CHECK(region.material == original.material);
+    }
+
+    TEST_CASE("T14 horizontal contact uses world rectangles with different local origins") {
+        const PlatformRegion lhs{436.25f, 89.5f, 176.0f, 16.0f, 1};
+        const PlatformRegion rhs{612.25f, 95.0f, 176.0f, 16.0f, 1};
+
+        const auto contacts = findRegionContacts(lhs, rhs);
+        REQUIRE(contacts.size() == 1);
+        CHECK(contacts.front().lhsLocalX == 10);
+        CHECK(contacts.front().lhsLocalY == 0);
+        CHECK(contacts.front().rhsLocalX == 0);
+        CHECK(contacts.front().rhsLocalY == 0);
+        CHECK(contacts.front().lhsNeighbour == gfx::compositor::Right);
+        CHECK(contacts.front().rhsNeighbour == gfx::compositor::Left);
+    }
+
+    TEST_CASE("T14 vertical contact maps overlapping local cells") {
+        const PlatformRegion lhs{100.0f, 100.0f, 32.0f, 16.0f, 1};
+        const PlatformRegion rhs{112.0f, 116.0f, 48.0f, 16.0f, 1};
+
+        const auto contacts = findRegionContacts(lhs, rhs);
+        REQUIRE(contacts.size() == 2);
+        CHECK(contacts[0].lhsLocalX == 0);
+        CHECK(contacts[0].lhsLocalY == 0);
+        CHECK(contacts[0].rhsLocalX == 0);
+        CHECK(contacts[0].rhsLocalY == 0);
+        CHECK(contacts[0].lhsNeighbour == gfx::compositor::Down);
+        CHECK(contacts[0].rhsNeighbour == gfx::compositor::Up);
+        CHECK(contacts[1].lhsLocalX == 1);
+        CHECK(contacts[1].rhsLocalX == 0);
+    }
+
+    TEST_CASE("T14 tolerance admits only the requested visual adjacency") {
+        const PlatformRegion lhs{0.0f, 0.0f, 16.0f, 16.0f, 1};
+        const PlatformRegion rhs{16.0005f, 0.0f, 16.0f, 16.0f, 1};
+
+        CHECK(findRegionContacts(lhs, rhs).empty());
+        CHECK(findRegionContacts(lhs, rhs, 0.001f).size() == 1);
+    }
+
+    TEST_CASE("T14 separated regions with no edge contact stay disconnected") {
+        const PlatformRegion lhs{0.0f, 0.0f, 32.0f, 16.0f, 1};
+        const PlatformRegion rhs{40.0f, 0.0f, 32.0f, 16.0f, 1};
+
+        CHECK(findRegionContacts(lhs, rhs).empty());
+    }
+
+    TEST_CASE("T14 invalid or non-modular regions produce no contacts") {
+        const PlatformRegion invalid{-10.0f, 20.0f, 15.5f, 16.0f, 1};
+        const PlatformRegion valid{5.5f, 20.0f, 16.0f, 16.0f, 1};
+
+        CHECK(findRegionContacts(invalid, valid).empty());
+        CHECK(findRegionContacts(valid, invalid).empty());
     }
 }
