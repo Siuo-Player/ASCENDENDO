@@ -120,6 +120,14 @@ std::vector<RegionContact> findRegionContacts(const PlatformRegion& lhs,
                                               const PlatformRegion& rhs,
                                               float tolerance = 1.0e-4f);
 
+// Merge already-derived cross-region contacts into the 8-neighbour semantic
+// signatures of two composed regions. The operation is fail-closed and atomic:
+// invalid contact coordinates leave both results unchanged and return false.
+// TopologyClass remains region-local and is intentionally not recomputed here.
+bool applyRegionContacts(RegionCompositionResult& lhs,
+                          RegionCompositionResult& rhs,
+                          std::span<const RegionContact> contacts);
+
 const char* toString(TopologyClass topology);
 
 } // namespace gfx::compositor
