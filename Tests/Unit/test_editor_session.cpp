@@ -137,4 +137,38 @@ TEST_CASE("DELETE apaga a selecao atual") {
     CHECK_FALSE(session.controller().hasSelection());
 }
 
+TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    REQUIRE(session.document().platformCount() == 1);
+
+    input.beginFrame();
+    input.injectCursorPos(400.0, 220.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    REQUIRE(session.controller().mode() == logic::EditorMouseMode::MOVING);
+
+    input.beginFrame();
+    input.injectCursorPos(480.0, 260.0);
+    session.update(input, bindings, 640, 360);
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(336.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(248.0f));
+
+    input.beginFrame();
+    input.injectCursorPos(480.0, 260.0);
+    input.onMouseButtonEvent(logic::MouseButton::RIGHT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    CHECK(session.controller().mode() == logic::EditorMouseMode::NONE);
+    CHECK_FALSE(session.controller().hasSelection());
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(256.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(170.0f));
+}
+
 } // TEST_SUITE
