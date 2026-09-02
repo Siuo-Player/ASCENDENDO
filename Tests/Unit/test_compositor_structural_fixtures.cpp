@@ -15,6 +15,7 @@ using gfx::compositor::TopologyClass;
 using gfx::compositor::CELL_SIZE;
 using gfx::compositor::compose;
 using gfx::compositor::findRegionContacts;
+using gfx::compositor::affectedCells;
 using gfx::compositor::PlatformRegion;
 using gfx::assets::PlatformAssetCandidate;
 using gfx::assets::PlatformAssetRequest;
@@ -51,6 +52,16 @@ PlatformAssetCandidate reviewedCandidate(const char* id,
     candidate.gameplayDecoupled = true;
     candidate.seamsAcceptable = true;
     return candidate;
+}
+
+bool containsInvalidation(const std::vector<gfx::compositor::InvalidationCell>& cells,
+                          int x,
+                          int y) {
+    for (const auto& item : cells) {
+        if (item.x == x && item.y == y)
+            return true;
+    }
+    return false;
 }
 
 } // namespace
@@ -193,8 +204,6 @@ TEST_SUITE("Compositor structural fixture pack v1") {
         blocked.provenanceVerified = false;
         const std::array<PlatformAssetCandidate, 1> candidates = {blocked};
 
-        // The compositor remains asset-agnostic. A failed reviewed selection is
-        // the explicit handoff condition for the presentation fallback policy.
         CHECK_FALSE(selectBestPlatformAsset(candidates, request).has_value());
     }
 
@@ -279,5 +288,52 @@ TEST_SUITE("Compositor structural fixture pack v1") {
 
         CHECK(findRegionContacts(invalid, valid).empty());
         CHECK(findRegionContacts(valid, invalid).empty());
+    }
+
+    TEST_CASE("T11 changed cell invalidates only its existing Chebyshev-1 dependencies") {
+        const std::array cells{
+            cell(0, 0), cell(1, 0), cell(2, 0),
+            cell(0, 1), cell(2, 1),
+            cell(0, 2), cell(1, 2), cell(2, 2),
+            cell(6, 6)
+        };
+
+        const auto invalidated = affectedCells(cells, 1, 1);
+        REQUIRE(invalidated.size() == 9);
+        for (int y = 0; y <= 2; ++y) {
+            for (int x = 0; x <= 2; ++x)
+                CHECK(containsInvalidation(invalidated, x, y));
+        }
+        CHECK_FALSE(containsInvalidation(invalidated, 6, 6));
+        for (std::size_t i = 1; i < invalidated.size(); ++i) {
+            const bool ordered = invalidated[i - 1].y < invalidated[i].y ||
+                                 (invalidated[i - 1].y == invalidated[i].y &&
+                                  invalidated[i - 1].x < invalidated[i].x);
+            CHECK(ordered);
+        }
+    }
+
+    TEST_CASE("T11 deletion keeps the removed changed coordinate in the dependency set") {
+        const std::array cells{cell(0, 0), cell(2, 0)};
+        const auto invalidated = affectedCells(cells, 1, 0);
+
+        REQUIRE(invalidated.size() == 3);
+        CHECK(containsInvalidation(invalidated, 0, 0));
+        CHECK(containsInvalidation(invalidated, 1, 0));
+        CHECK(containsInvalidation(invalidated, 2, 0));
+    }
+
+    TEST_CASE("T11 repeated equivalent input produces identical dependency set") {
+        const std::array cells{
+            cell(4, 4), cell(3, 3), cell(5, 5), cell(4, 5), cell(9, 9)
+        };
+        const auto first = affectedCells(cells, 4, 4);
+        const auto second = affectedCells(cells, 4, 4);
+
+        REQUIRE(first.size() == second.size());
+        for (std::size_t i = 0; i < first.size(); ++i) {
+            CHECK(first[i].x == second[i].x);
+            CHECK(first[i].y == second[i].y);
+        }
     }
 }
