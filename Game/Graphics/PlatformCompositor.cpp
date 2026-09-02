@@ -3,6 +3,7 @@
 // =============================================================================
 #include "Graphics/PlatformCompositor.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <map>
