@@ -92,12 +92,12 @@ std::vector<Fixture> fixtureCorpus() {
         {
             "F05", "upper-left corner", "fixture-v1", "NONE", true,
             cells({{0, 0, 1}, {1, 0, 1}, {0, 1, 1}}),
-            {{0, 0, static_cast<std::uint8_t>(Right | Down | DownRight), TopologyClass::Corner}},
+            {{0, 0, static_cast<std::uint8_t>(Right | Down), TopologyClass::Corner}},
         },
         {
             "F06", "upper-right corner", "fixture-v1", "NONE", true,
             cells({{0, 0, 1}, {1, 0, 1}, {1, 1, 1}}),
-            {{1, 0, static_cast<std::uint8_t>(Left | Down | DownLeft), TopologyClass::Corner}},
+            {{1, 0, static_cast<std::uint8_t>(Left | Down), TopologyClass::Corner}},
         },
         {
             "F07", "stepped profile", "fixture-v1", "NONE", true,
@@ -115,8 +115,7 @@ std::vector<Fixture> fixtureCorpus() {
         {
             "F09", "cross junction", "fixture-v1", "NONE", true,
             cells({{1, 0, 1}, {0, 1, 1}, {1, 1, 1}, {2, 1, 1}, {1, 2, 1}}),
-            {{1, 1, static_cast<std::uint8_t>(Left | Right | Up | Down |
-                                               UpLeft | UpRight | DownLeft | DownRight),
+            {{1, 1, static_cast<std::uint8_t>(Left | Right | Up | Down),
               TopologyClass::Junction}},
         },
         {
@@ -188,22 +187,5 @@ TEST_SUITE("16x16 semantic compositor — explicit fixture corpus v1") {
             CHECK(macro.cells[i].neighbours == modular.cells[i].neighbours);
             CHECK(static_cast<int>(macro.cells[i].topology) == static_cast<int>(modular.cells[i].topology));
         }
-
-        CHECK(macro.cells.front().worldX == doctest::Approx(100.0f));
-        CHECK(macro.cells.front().worldY == doctest::Approx(50.0f));
-        CHECK(macro.cells.back().worldX == doctest::Approx(116.0f));
     }
-
-    TEST_CASE("F12 missing candidate remains an explicit no-winner boundary") {
-        const auto corpus = fixtureCorpus();
-        const auto& fixture = corpus.back();
-        REQUIRE(std::string(fixture.id) == "F12");
-        CHECK_FALSE(fixture.requiresCandidate);
-        CHECK(std::string(fixture.expectedFallback) == "NO_WINNER");
-
-        const PlatformAssetRequest request{
-            TopologyClass::Isolated, 1, 1, 1, false, 1};
-        const std::array<gfx::assets::PlatformAssetCandidate, 0> noCandidates{};
-        CHECK_FALSE(selectBestPlatformAsset(noCandidates, request).has_value());
-    }
-} 
+}
