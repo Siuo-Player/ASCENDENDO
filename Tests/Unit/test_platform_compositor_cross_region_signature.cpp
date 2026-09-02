@@ -46,14 +46,16 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK((cellAt(lhsResult, 1, 0).neighbours & Right) != 0);
         CHECK((cellAt(rhsResult, 0, 0).neighbours & Left) != 0);
 
-        const bool lhsTopologyIsLeftEnd =
+        // TopologyClass is deliberately local to each region and therefore
+        // must not be recomputed from the cross-region presentation contact.
+        const bool lhsTopologyIsRightEnd =
             static_cast<int>(cellAt(lhsResult, 1, 0).topology) ==
-            static_cast<int>(TopologyClass::LeftEnd);
-        const bool rhsTopologyIsRightEnd =
-            static_cast<int>(cellAt(rhsResult, 0, 0).topology) ==
             static_cast<int>(TopologyClass::RightEnd);
-        CHECK(lhsTopologyIsLeftEnd);
-        CHECK(rhsTopologyIsRightEnd);
+        const bool rhsTopologyIsLeftEnd =
+            static_cast<int>(cellAt(rhsResult, 0, 0).topology) ==
+            static_cast<int>(TopologyClass::LeftEnd);
+        CHECK(lhsTopologyIsRightEnd);
+        CHECK(rhsTopologyIsLeftEnd);
     }
 
     TEST_CASE("T20 partial vertical overlap enriches every overlapping cell pair") {
