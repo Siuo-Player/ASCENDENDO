@@ -15,7 +15,7 @@ enum class EditorValidationState {
     STALE,
 };
 
-struct EditorValidationResult {
+struct EditorAsyncValidationResult {
     EditorValidationState state = EditorValidationState::IDLE;
     bool valid = false;
     std::uint64_t generation = 0;
@@ -33,7 +33,7 @@ public:
 
     bool start(LevelData snapshot, std::uint64_t generation, std::string levelPath);
     bool running() const;
-    EditorValidationResult poll();
+    EditorAsyncValidationResult poll();
     void discard();
 
 private:
@@ -45,7 +45,7 @@ private:
     };
 
     std::future<WorkResult> m_future;
-    EditorValidationResult m_result{};
+    EditorAsyncValidationResult m_result{};
 };
 
 } // namespace logic
