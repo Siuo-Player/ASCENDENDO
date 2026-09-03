@@ -4,6 +4,7 @@
 #include "Logic/LevelData.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <vector>
@@ -30,6 +31,7 @@ public:
     LevelEditorDocument(bool finalCampaignLevel, const AABB& initialGround);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
+    std::uint64_t generation() const { return m_generation; }
 
     static float snap(float value);
     static Vec2 snap(const Vec2& point);
@@ -49,7 +51,7 @@ public:
     float spawnMaxX() const { return m_spawnMaxX; }
 
     bool setFlag(const AABB& requested);
-    void removeFlag() { m_flag.reset(); }
+    void removeFlag();
     bool hasFlag() const { return m_flag.has_value(); }
     const AABB* flag() const { return m_flag.has_value() ? &*m_flag : nullptr; }
 
@@ -58,6 +60,7 @@ public:
     static Vec2 presetSize(EditorSizePreset preset);
 
 private:
+    void bumpGeneration();
     bool insideLogicalBounds(const AABB& rect) const;
     bool validPlatform(const AABB& rect) const;
     bool validFlag(const AABB& rect) const;
@@ -69,6 +72,7 @@ private:
     float m_spawnMinX = 0.0f;
     float m_spawnMaxX = 0.0f;
     std::optional<AABB> m_flag;
+    std::uint64_t m_generation = 0;
 };
 
 } // namespace logic
