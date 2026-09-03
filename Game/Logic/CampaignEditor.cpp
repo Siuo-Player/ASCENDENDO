@@ -1,6 +1,5 @@
 #include "Logic/CampaignEditor.h"
 
-#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -24,7 +23,7 @@ bool isInside(const std::filesystem::path& path,
               const std::filesystem::path& root) {
     const auto relative = path.lexically_relative(root);
     if (relative.empty()) return true;
-    auto it = relative.begin();
+    const auto it = relative.begin();
     return it == relative.end() || *it != "..";
 }
 }
@@ -71,9 +70,22 @@ bool CampaignEditorDocument::moveLevel(std::size_t index, std::size_t newOrder) 
     return true;
 }
 
-CampaignValidationResult CampaignEditorDocument::validateCampaign() const {
+CampaignValidationResult CampaignEditorDocument::validateCampaign(
+    const std::string& campaignPath) const {
     if (m_levels.empty()) {
         return {false, "campaign contains no levels"};
+    }
+
+    const std::filesystem::path campaignRoot =
+        std::filesystem::path(campaignPath).parent_path();
+    if (campaignRoot.empty()) {
+        return {false, "campaign path has no parent directory"};
+    }
+
+    std::error_code ec;
+    const auto canonicalRoot = std::filesystem::weakly_canonical(campaignRoot, ec);
+    if (ec) {
+        return {false, "unable to resolve campaign directory"};
     }
 
     std::unordered_set<std::string> seen;
@@ -83,16 +95,13 @@ CampaignValidationResult CampaignEditorDocument::validateCampaign() const {
             return {false, "campaign entry " + std::to_string(i) + " is not a .lvl file"};
         }
 
-        std::error_code ec;
         const auto canonicalLevel = std::filesystem::weakly_canonical(levelPath, ec);
         if (ec || !std::filesystem::is_regular_file(canonicalLevel, ec) || ec) {
             return {false, "campaign entry " + std::to_string(i) + " does not reference an existing level"};
         }
 
-        const std::filesystem::path canonicalRoot =
-            std::filesystem::weakly_canonical(levelPath.parent_path(), ec);
-        if (ec || !isInside(canonicalLevel, canonicalRoot)) {
-            return {false, "campaign entry " + std::to_string(i) + " escapes its level directory"};
+        if (!isInside(canonicalLevel, canonicalRoot)) {
+            return {false, "campaign entry " + std::to_string(i) + " escapes the campaign directory"};
         }
 
         const std::string identity = canonicalLevel.lexically_normal().string();
@@ -104,34 +113,19 @@ CampaignValidationResult CampaignEditorDocument::validateCampaign() const {
     return {true, "campaign is valid"};
 }
 
-CampaignSaveResult CampaignEditorDocument::saveToCampaignFile(const std::string& campaignPath) const {
-    const auto validation = validateCampaign();
+CampaignSaveResult CampaignEditorDocument::saveToCampaignFile(
+    const std::string& campaignPath) const {
+    const auto validation = validateCampaign(campaignPath);
     if (!validation.valid) {
         return {false, campaignPath, validation.message};
     }
 
     const std::filesystem::path destination(campaignPath);
     const std::filesystem::path base = destination.parent_path();
-    if (base.empty()) {
-        return {false, campaignPath, "campaign destination has no parent directory"};
-    }
-
     std::error_code ec;
     std::filesystem::create_directories(base, ec);
     if (ec) {
         return {false, campaignPath, "unable to create campaign directory"};
-    }
-
-    for (const auto& level : m_levels) {
-        const std::filesystem::path levelPath(level.path);
-        const auto canonicalLevel = std::filesystem::weakly_canonical(levelPath, ec);
-        if (ec) {
-            return {false, campaignPath, "unable to resolve campaign level path"};
-        }
-        const auto canonicalBase = std::filesystem::weakly_canonical(base, ec);
-        if (ec || !isInside(canonicalLevel, canonicalBase)) {
-            return {false, campaignPath, "campaign entry is outside the campaign directory"};
-        }
     }
 
     const std::filesystem::path temporary = destination.string() + ".tmp-save";
@@ -151,7 +145,8 @@ CampaignSaveResult CampaignEditorDocument::saveToCampaignFile(const std::string&
                 (!relative.empty() && *relative.begin() == "..")) {
                 file.close();
                 std::filesystem::remove(temporary, ec);
-                return {false, campaignPath, "campaign entry cannot be represented relative to campaign file"};
+                return {false, campaignPath,
+                        "campaign entry cannot be represented relative to campaign file"};
             }
             file << relative.generic_string() << '\n';
         }
@@ -160,7 +155,8 @@ CampaignSaveResult CampaignEditorDocument::saveToCampaignFile(const std::string&
         if (!file.good()) {
             file.close();
             std::filesystem::remove(temporary, ec);
-            return {false, campaignPath, "failed while writing temporary campaign file"};
+            return {false, campaignPath,
+                    "failed while writing temporary campaign file"};
         }
     }
 
