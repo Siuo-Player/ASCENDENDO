@@ -20,6 +20,91 @@ EditorSession::EditorSession(bool finalCampaignLevel, const AABB& initialGround)
     : m_document(finalCampaignLevel, initialGround),
       m_controller(m_document) {}
 
+void EditorSession::setPersistenceTarget(std::string path, std::string name) {
+    m_persistencePath = std::move(path);
+    m_documentName = std::move(name);
+    if (m_documentName.empty()) m_documentName = "Editor Level";
+}
+
+EditorSaveResult EditorSession::saveLevel() {
+    return saveLevel(m_persistencePath, m_documentName);
+}
+
+EditorSaveResult EditorSession::saveLevel(const std::string& path,
+                                          const std::string& name) {
+    EditorSaveResult result;
+    result.generation = m_document.generation();
+    result.path = path;
+
+    if (path.empty()) {
+        result.message = "Caminho de gravação vazio";
+        m_lastSaveResult = result;
+        return result;
+    }
+
+    const EditorValidationResult validation = validateEditorDocument(m_document);
+    result.validationPassed = validation.valid;
+    if (!validation.valid) {
+        result.message = validation.message;
+        m_lastSaveResult = result;
+        return result;
+    }
+
+    if (!saveEditorLevel(m_document, path, name)) {
+        result.message = "Falha de I/O ao gravar o nível";
+        m_lastSaveResult = result;
+        return result;
+    }
+
+    result.success = true;
+    result.message = "Nível gravado com sucesso";
+    m_lastSaveResult = result;
+    return result;
+}
+
+bool EditorSession::startValidation() {
+    return startValidation(m_persistencePath);
+}
+
+bool EditorSession::startValidation(const std::string& path) {
+    if (path.empty() || m_validationTask.running()) return false;
+
+    const std::uint64_t generation = m_document.generation();
+    m_validationResult = {};
+    m_validationResult.state = EditorValidationState::RUNNING;
+    m_validationResult.generation = generation;
+    m_validationResult.levelPath = path;
+    m_validationResult.message = "Validação em execução";
+
+    return m_validationTask.start(m_document.toLevelData(m_documentName),
+                                  generation,
+                                  path);
+}
+
+EditorValidationResult EditorSession::pollValidation() {
+    refreshValidationResult();
+    return m_validationResult;
+}
+
+void EditorSession::refreshValidationResult() {
+    if (m_validationTask.running()) return;
+
+    const EditorValidationResult result = m_validationTask.poll();
+    if (result.state == EditorValidationState::IDLE) return;
+
+    if (result.state == EditorValidationState::COMPLETE &&
+        result.generation != m_document.generation()) {
+        m_validationResult = result;
+        m_validationResult.state = EditorValidationState::STALE;
+        m_validationResult.valid = false;
+        m_validationResult.message =
+            "Resultado descartado: o documento foi alterado durante a validação";
+        return;
+    }
+
+    m_validationResult = result;
+}
+
 EditorPreview EditorSession::preview() const {
     EditorPreview result;
     result.tool = m_controller.toolMode();
@@ -112,6 +197,12 @@ void EditorSession::updateKeyboard(const InputManager& input,
             m_document.removePlatform(m_controller.selectedIndex());
         m_controller.clearSelection();
     }
+
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSave))
+        saveLevel();
+
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorValidate))
+        startValidation();
 }
 
 void EditorSession::updateMouse(const InputManager& input) {
@@ -165,6 +256,7 @@ void EditorSession::update(const InputManager& input,
     updateCursor(input, windowWidth, windowHeight);
     updateKeyboard(input, bindings);
     updateMouse(input);
+    refreshValidationResult();
 }
 
 void EditorSession::cancelInteraction() {
