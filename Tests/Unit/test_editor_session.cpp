@@ -80,22 +80,22 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     CHECK(session.controller().toolMode() == logic::EditorToolMode::DRAG);
 
     input.beginFrame();
-    input.injectCursorPos(100.0, 200.0); // world (100,200)
+    input.injectCursorPos(100.0, 200.0); // world (100,160)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
 
     CHECK(session.preview().visible);
 
     input.beginFrame();
-    input.injectCursorPos(196.0, 136.0); // world (196,136)
+    input.injectCursorPos(196.0, 136.0); // world (196,224)
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
     session.update(input, bindings, 640, 360);
 
     REQUIRE(session.document().platformCount() == 1);
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(136.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(160.0f));
     CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(196.0f));
-    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(200.0f));
+    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(224.0f));
 }
 
 TEST_CASE("render snapshot expoe apenas dados graficos") {
@@ -148,6 +148,12 @@ TEST_CASE("RIGHT cancel numa movimentacao restaura a posicao original") {
     session.update(input, bindings, 640, 360);
     REQUIRE(session.document().platformCount() == 1);
     const logic::AABB original = session.document().platforms()[0].bounds;
+
+    // Complete the stamp click so the following LEFT PRESS is a new edge.
+    input.beginFrame();
+    input.injectCursorPos(320.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
+    session.update(input, bindings, 640, 360);
 
     input.beginFrame();
     input.injectCursorPos(360.0, 180.0);
