@@ -124,10 +124,11 @@ TEST_CASE("cancelInteraction restaura movimento em curso") {
     REQUIRE(session.document().addPlatform({{100.0f, 80.0f}, {228.0f, 100.0f}}));
 
     input.beginFrame();
-    input.injectCursorPos(112.0, 90.0);
+    input.injectCursorPos(112.0, 270.0); // world (112,90): viewport inverte Y
     input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
 
+    REQUIRE(session.controller().mode() == logic::EditorMouseMode::MOVING);
     REQUIRE(session.controller().updateMove({215.0f, 157.0f}));
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(204.0f));
     CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(148.0f));
