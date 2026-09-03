@@ -2,17 +2,21 @@
 // =============================================================================
 //  Game/Logic/EditorSession.h
 //
-//  Fase 9.6 — camada de orquestração do editor.
+//  Camada de orquestração do editor.
 //  Liga InputManager + EditorInteractionController sem conhecer Vulkan nem
 //  estado de câmera: o Level Editor ocupa sempre uma única tela lógica 640x360.
 // =============================================================================
 
 #include "Core/KeyBindings.h"
 #include "Logic/EditorInteraction.h"
+#include "Logic/EditorLevelIO.h"
 #include "Logic/EditorRenderSnapshot.h"
+#include "Logic/EditorValidation.h"
 #include "Logic/InputManager.h"
+#include "Logic/LevelEditorValidator.h"
 
 #include <cstdint>
+#include <string>
 
 namespace logic {
 
@@ -20,6 +24,14 @@ struct EditorPreview {
     bool visible = false;
     AABB bounds{};
     EditorToolMode tool = EditorToolMode::STAMP;
+};
+
+struct EditorSaveResult {
+    bool success = false;
+    bool validationPassed = false;
+    std::uint64_t generation = 0;
+    std::string path;
+    std::string message;
 };
 
 class EditorSession {
@@ -39,6 +51,23 @@ public:
     EditorMouseMode mouseMode() const { return m_controller.mode(); }
     EditorSizePreset sizePreset() const { return m_controller.sizePreset(); }
     EditorToolMode toolMode() const { return m_controller.toolMode(); }
+    std::uint64_t documentGeneration() const { return m_document.generation(); }
+
+    void setPersistenceTarget(std::string path,
+                              std::string name = "Editor Level");
+    const std::string& persistencePath() const { return m_persistencePath; }
+    const std::string& documentName() const { return m_documentName; }
+
+    EditorSaveResult saveLevel();
+    EditorSaveResult saveLevel(const std::string& path,
+                               const std::string& name = "Editor Level");
+
+    bool startValidation();
+    bool startValidation(const std::string& path);
+    EditorAsyncValidationResult pollValidation();
+    const EditorAsyncValidationResult& validationResult() const { return m_validationResult; }
+
+    const EditorSaveResult& lastSaveResult() const { return m_lastSaveResult; }
 
     EditorPreview preview() const;
     EditorRenderSnapshot renderSnapshot() const;
@@ -58,12 +87,19 @@ private:
     void updateKeyboard(const InputManager& input,
                         const core::KeyBindings& bindings);
     void updateMouse(const InputManager& input);
+    void refreshValidationResult();
 
     LevelEditorDocument m_document;
     EditorInteractionController m_controller;
     EditorCursor m_cursor{};
     Vec2 m_pressedWorld{};
     bool m_leftDragActive = false;
+
+    std::string m_persistencePath;
+    std::string m_documentName = "Editor Level";
+    EditorSaveResult m_lastSaveResult{};
+    EditorValidationTask m_validationTask;
+    EditorAsyncValidationResult m_validationResult{};
 };
 
 } // namespace logic
