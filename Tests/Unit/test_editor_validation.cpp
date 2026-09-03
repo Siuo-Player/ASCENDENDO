@@ -30,7 +30,7 @@ TEST_CASE("validação assíncrona usa snapshot imutável e devolve o nível exa
 TEST_CASE("validação rejeita geometria semanticamente inválida sem bloquear o editor") {
     logic::LevelData data;
     data.name = "Invalid Validation";
-    data.platforms.push_back(logic::AABB{{-1.0f, 0.0f}, {640.0f, 20.0f}});
+    data.platforms.push_back(logic::AABB{{10.0f, 0.0f}, {10.0f, 20.0f}});
 
     logic::EditorValidationTask task;
     REQUIRE(task.start(data, "invalid/test.lvl"));
