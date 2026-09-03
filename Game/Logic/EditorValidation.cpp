@@ -10,16 +10,22 @@ EditorValidationTask::~EditorValidationTask() {
     discard();
 }
 
-bool EditorValidationTask::start(LevelData snapshot, std::string levelPath) {
+bool EditorValidationTask::start(LevelData snapshot,
+                                 std::uint64_t generation,
+                                 std::string levelPath) {
     if (running()) return false;
 
     m_result = {};
     m_result.state = EditorValidationState::RUNNING;
+    m_result.generation = generation;
     m_result.levelPath = levelPath;
 
     m_future = std::async(std::launch::async,
-                          [snapshot = std::move(snapshot), levelPath = std::move(levelPath)]() mutable {
+                          [snapshot = std::move(snapshot),
+                           generation,
+                           levelPath = std::move(levelPath)]() mutable {
                               WorkResult result;
+                              result.generation = generation;
                               result.levelPath = std::move(levelPath);
                               result.valid = LevelDataValidator::validate(snapshot);
                               result.message = result.valid
@@ -42,6 +48,7 @@ EditorValidationResult EditorValidationTask::poll() {
     const WorkResult work = m_future.get();
     m_result.state = EditorValidationState::COMPLETE;
     m_result.valid = work.valid;
+    m_result.generation = work.generation;
     m_result.levelPath = work.levelPath;
     m_result.message = work.message;
     return m_result;
