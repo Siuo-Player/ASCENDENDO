@@ -77,6 +77,35 @@ TEST_CASE("mover preserva o offset do cursor e permanece no grid") {
     CHECK(controller.selectedIndex() == 0);
 }
 
+TEST_CASE("cancelMove restaura exatamente a posição anterior") {
+    LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
+    EditorInteractionController controller(doc);
+    REQUIRE(doc.addPlatform(AABB{{100,80},{228,100}}));
+
+    REQUIRE(controller.beginMove({112,90}));
+    REQUIRE(controller.updateMove({215,157}));
+    CHECK(doc.platforms()[0].bounds.min.x == doctest::Approx(204.0f));
+    CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(148.0f));
+
+    REQUIRE(controller.cancelMove());
+    CHECK(doc.platforms()[0].bounds.min.x == doctest::Approx(100.0f));
+    CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(80.0f));
+    CHECK(doc.platforms()[0].bounds.max.x == doctest::Approx(228.0f));
+    CHECK(doc.platforms()[0].bounds.max.y == doctest::Approx(100.0f));
+    CHECK_FALSE(controller.hasSelection());
+    CHECK(controller.mode() == EditorMouseMode::NONE);
+}
+
+TEST_CASE("cancelMove sem interação ativa falha sem alterar o documento") {
+    LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
+    EditorInteractionController controller(doc);
+    REQUIRE(doc.addPlatform(AABB{{100,80},{228,100}}));
+
+    CHECK_FALSE(controller.cancelMove());
+    CHECK(doc.platforms()[0].bounds.min.x == doctest::Approx(100.0f));
+    CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(80.0f));
+}
+
 TEST_CASE("deleteAt apaga entidade e corrige indice da seleção") {
     LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
     EditorInteractionController controller(doc);
