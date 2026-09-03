@@ -41,7 +41,7 @@ bool EditorValidationTask::running() const {
     return m_future.wait_for(std::chrono::seconds(0)) != std::future_status::ready;
 }
 
-EditorValidationResult EditorValidationTask::poll() {
+EditorAsyncValidationResult EditorValidationTask::poll() {
     if (!m_future.valid()) return m_result;
     if (running()) return m_result;
 
