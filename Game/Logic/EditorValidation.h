@@ -12,6 +12,7 @@ enum class EditorValidationState {
     IDLE,
     RUNNING,
     COMPLETE,
+    STALE,
 };
 
 struct EditorValidationResult {
