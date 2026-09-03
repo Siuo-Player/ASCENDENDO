@@ -64,8 +64,8 @@ public:
 
     bool startValidation();
     bool startValidation(const std::string& path);
-    EditorValidationResult pollValidation();
-    const EditorValidationResult& validationResult() const { return m_validationResult; }
+    EditorAsyncValidationResult pollValidation();
+    const EditorAsyncValidationResult& validationResult() const { return m_validationResult; }
 
     const EditorSaveResult& lastSaveResult() const { return m_lastSaveResult; }
 
@@ -99,7 +99,7 @@ private:
     std::string m_documentName = "Editor Level";
     EditorSaveResult m_lastSaveResult{};
     EditorValidationTask m_validationTask;
-    EditorValidationResult m_validationResult{};
+    EditorAsyncValidationResult m_validationResult{};
 };
 
 } // namespace logic
