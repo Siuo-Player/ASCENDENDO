@@ -42,7 +42,7 @@ public:
     bool loadFromCampaignFile(const std::string& campaignPath);
     bool moveLevel(std::size_t index, std::size_t newOrder);
 
-    CampaignValidationResult validateCampaign() const;
+    CampaignValidationResult validateCampaign(const std::string& campaignPath) const;
     CampaignSaveResult saveToCampaignFile(const std::string& campaignPath) const;
 
     const std::vector<CampaignLevelBlock>& levels() const { return m_levels; }
