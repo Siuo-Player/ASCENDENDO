@@ -20,6 +20,17 @@ struct CampaignLevelBlock {
     bool selected = false;
 };
 
+struct CampaignValidationResult {
+    bool valid = false;
+    std::string message;
+};
+
+struct CampaignSaveResult {
+    bool success = false;
+    std::string path;
+    std::string message;
+};
+
 class CampaignEditorDocument {
 public:
     static constexpr float LEVEL_LOGICAL_WIDTH = 640.0f;
@@ -30,6 +41,9 @@ public:
 
     bool loadFromCampaignFile(const std::string& campaignPath);
     bool moveLevel(std::size_t index, std::size_t newOrder);
+
+    CampaignValidationResult validateCampaign(const std::string& campaignPath) const;
+    CampaignSaveResult saveToCampaignFile(const std::string& campaignPath) const;
 
     const std::vector<CampaignLevelBlock>& levels() const { return m_levels; }
     std::vector<CampaignLevelBlock>& levels() { return m_levels; }
