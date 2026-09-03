@@ -44,6 +44,10 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
     };
 }
 
+void LevelEditorDocument::bumpGeneration() {
+    ++m_generation;
+}
+
 float LevelEditorDocument::snap(float value) {
     return snapScalar(value);
 }
@@ -76,6 +80,7 @@ bool LevelEditorDocument::addPlatform(const AABB& requested,
 
     m_platforms.push_back({rect});
     if (createdIndex) *createdIndex = m_platforms.size() - 1;
+    bumpGeneration();
     return true;
 }
 
@@ -97,13 +102,19 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
     };
 
     if (!validPlatform(moved)) return false;
+    if (moved.min.x == old.min.x && moved.min.y == old.min.y &&
+        moved.max.x == old.max.x && moved.max.y == old.max.y)
+        return true;
+
     m_platforms[index].bounds = moved;
+    bumpGeneration();
     return true;
 }
 
 bool LevelEditorDocument::removePlatform(std::size_t index) {
     if (index >= m_platforms.size()) return false;
     m_platforms.erase(m_platforms.begin() + static_cast<std::ptrdiff_t>(index));
+    bumpGeneration();
     return true;
 }
 
@@ -112,9 +123,11 @@ bool LevelEditorDocument::setSpawnX(float requestedX) {
 
     const float snappedX = snapScalar(requestedX);
     if (snappedX < m_spawnMinX - EPS || snappedX > m_spawnMaxX + EPS) return false;
+    if (snappedX == m_spawnPosition.x) return true;
 
     m_spawnPosition.x = snappedX;
     m_spawnPosition.y = snapScalar(m_initialGround.max.y);
+    bumpGeneration();
     return true;
 }
 
@@ -128,8 +141,20 @@ bool LevelEditorDocument::setFlag(const AABB& requested) {
 
     const AABB rect = snap(requested);
     if (!validFlag(rect)) return false;
+    if (m_flag &&
+        m_flag->min.x == rect.min.x && m_flag->min.y == rect.min.y &&
+        m_flag->max.x == rect.max.x && m_flag->max.y == rect.max.y)
+        return true;
+
     m_flag = rect;
+    bumpGeneration();
     return true;
+}
+
+void LevelEditorDocument::removeFlag() {
+    if (!m_flag) return;
+    m_flag.reset();
+    bumpGeneration();
 }
 
 LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
