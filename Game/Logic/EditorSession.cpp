@@ -82,7 +82,7 @@ bool EditorSession::startValidation(const std::string& path) {
                                   path);
 }
 
-EditorValidationResult EditorSession::pollValidation() {
+EditorAsyncValidationResult EditorSession::pollValidation() {
     refreshValidationResult();
     return m_validationResult;
 }
@@ -90,7 +90,7 @@ EditorValidationResult EditorSession::pollValidation() {
 void EditorSession::refreshValidationResult() {
     if (m_validationTask.running()) return;
 
-    const EditorValidationResult result = m_validationTask.poll();
+    const EditorAsyncValidationResult result = m_validationTask.poll();
     if (result.state == EditorValidationState::IDLE) return;
 
     if (result.state == EditorValidationState::COMPLETE &&
