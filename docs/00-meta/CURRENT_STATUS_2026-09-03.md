@@ -2,11 +2,13 @@
 
 ## Baseline exato
 
-- `main`: `d61036d130ac45846654fd0eef63e7ad5c17744b`
-- Estado: editor de entidades e core save/validation vertical slice integrados; apresentação semântica de plataformas permanece separada.
-- PR #220: fechado por duplicação/supersession; PR #221, #222 e #224 estão merged.
-- Não há assets finais visualmente aprovados por este snapshot.
-- A avaliação visual humana continua pendente.
+- `main`: `8f41f5e9aabaf5c5fb122a661efa4515dc208579`
+- PR #225: merged — active roadmap pointer/reconciliation.
+- PR #227: merged — dedicated pixel-art approval inbox; no artwork was promoted to runtime.
+- PR #226: merged — campaign ordering persistence and reference validation.
+- PR #228: open — real campaign compositor corpus validation.
+- CI obrigatório mantido: `tests.yml`, `windows.yml`, `deterministic-capture.yml`.
+- `Siuo-Player-PROJECT-STUDIES` continua apenas como fonte metodológica; não é modificado pelo projeto.
 
 ## Editor — estado real
 
@@ -16,38 +18,57 @@
 
 PLATFORM, SPAWN e FLAG são ferramentas explícitas. MOVE é transacional e cancelável; SPAWN respeita a plataforma inicial; FLAG é condicionado ao nível final.
 
-### Persistência
+### Persistência de níveis
 
-O serializer `.lvl` canónico continua sendo a única representação persistida. O editor grava primeiro para um temporário completo e só depois substitui o destino; falhas de escrita deixam o destino protegido enquanto o temporário não estiver completo.
+O serializer `.lvl` canónico continua sendo a representação persistida. O editor grava primeiro para um temporário completo e só depois substitui o destino.
 
-### Validação
+### Gestão de campanha — 9.6 concluído
 
-O editor tem duas camadas distintas que não devem ser confundidas:
+`CampaignEditorDocument` representa uma playlist discreta em memória e mantém `campaign.txt` como fonte canónica da ordem. A tranche integrada acrescenta:
 
-1. `validateEditorDocument` / `LevelEditorValidator`: validação síncrona do documento antes do save, com regras existentes de geometria/reachability.
-2. `EditorValidationTask`: validação assíncrona de um snapshot imutável de `LevelData`, identificada por `generation` e `levelPath`, com estado `STALE` quando o documento muda.
+- reordenação de níveis;
+- validação de referências existentes e regulares;
+- rejeição de referências duplicadas, não-`.lvl`, campanhas vazias e escapes do diretório da campanha;
+- persistência staged da ordem para `campaign.txt`;
+- testes de reorder → save → reload e failure paths.
 
-A integração direta com `Development/AI_Validation/ai_validator.py` para validação física/campanha completa ainda não existe.
+O editor não move ficheiros entre diretórios de validade; esse routing continua fora desta camada.
 
-## Apresentação
+### Validação do editor
 
-A cadeia semântica de plataformas está implementada:
+O editor tem duas camadas distintas:
+
+1. `validateEditorDocument` / `LevelEditorValidator`: validação síncrona do documento antes do save.
+2. `EditorValidationTask`: validação assíncrona de snapshot imutável de `LevelData`, identificada por `generation` e `levelPath`, com estado `STALE` quando o documento muda.
+
+A integração direta com `Development/AI_Validation/ai_validator.py` para substituir ou ocultar essa camada ainda não foi introduzida. O validador físico/campanha continua com os seus próprios gates.
+
+## Apresentação — 9.7 em validação
+
+A cadeia semântica permanece:
 
 `LevelData → PlatformPresentationRasterizer → RegionCell → 8-neighbour/cross-region signature → RenderSnapshot → WorldRenderer → asset request/selector`
 
-O sistema permanece presentation-only e não altera física/collision geometry.
+A PR #228 amplia a evidência do compositor sobre o corpus real actualmente listado em `Game/Assets/Levels/campaign.txt`, verificando modularidade 16×16, footprint exacto e preservação das coordenadas contínuas sem alterar gameplay geometry.
 
-## Assets e evidência
+Esta evidência estrutural não é aprovação visual.
 
-Existe metadata/provenance de candidatos e seleção deterministicamente limitada. Isto não constitui aprovação visual. Deterministic capture demonstra comportamento técnico reprodutível; não substitui revisão humana.
+## Assets — gate de aprovação humana
+
+Existe agora `Game/Assets/Sprites/ART_APPROVAL_INBOX/` como ponto único de revisão visual.
+
+Cada candidato é classificado como `PENDING`, `APPROVE`, `REJECT`, `REWORK` ou `LIMIT`. Provenance/licença e testes técnicos continuam necessários, mas a aprovação visual final é uma decisão humana separada.
+
+Nenhum candidato externo foi importado/promovido apenas por estar no inbox.
 
 ## Próximo trabalho
 
-1. 9.6 gestão de campanha: ordem canónica, reorder tipo playlist, persistência e validação de referências.
-2. Fechar, se necessário, a ponte entre validação assíncrona do editor e o validador físico/campanha completo.
-3. Expandir a validação do compositor para corpus real mais amplo.
-4. Só depois promover assets/props com evidência completa.
-5. Audio Design permanece workstream separado.
+1. Fechar PR #228 se todos os gates passarem.
+2. Se necessário, só então fechar a ponte entre validação assíncrona do editor e o validador físico/campanha completo — sem duplicar o validador existente.
+3. Após a evidência 9.7, tratar a escolha de assets pixel-art através do inbox e apenas depois promover os ficheiros explicitamente aprovados.
+4. Construir a cena de props curada depois de existir uma base visual aprovada.
+5. Fazer validação visual humana de editor/jogo/capturas.
+6. Iniciar Audio Design como workstream separado.
 
 ## Fontes metodológicas consultadas
 
