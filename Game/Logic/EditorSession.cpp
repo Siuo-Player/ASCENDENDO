@@ -24,6 +24,9 @@ EditorPreview EditorSession::preview() const {
     EditorPreview result;
     result.tool = m_controller.toolMode();
 
+    if (m_controller.entityTool() != EditorEntityTool::PLATFORM)
+        return result;
+
     if (m_controller.hasSelection() &&
         m_controller.mode() == EditorMouseMode::MOVING) {
         const AABB bounds = m_document.platforms()[m_controller.selectedIndex()].bounds;
@@ -65,6 +68,11 @@ EditorRenderSnapshot EditorSession::renderSnapshot() const {
         ? m_controller.selectedIndex()
         : static_cast<std::size_t>(-1);
     snapshot.cursorWorld = m_cursor.world;
+    snapshot.spawnPosition = m_document.spawnPosition();
+    snapshot.hasFlag = m_document.hasFlag();
+    if (snapshot.hasFlag)
+        snapshot.flagBounds = *m_document.flag();
+    snapshot.entityTool = m_controller.entityTool();
     snapshot.tool = m_controller.toolMode();
     snapshot.sizePreset = m_controller.sizePreset();
 
@@ -107,10 +115,23 @@ void EditorSession::updateKeyboard(const InputManager& input,
             case EditorSizePreset::LARGE: break;
         }
     }
+
+    if (input.isKeyJustPressed(Key::P)) {
+        m_controller.setEntityTool(EditorEntityTool::PLATFORM);
+    } else if (input.isKeyJustPressed(Key::S)) {
+        m_controller.setEntityTool(EditorEntityTool::SPAWN);
+    } else if (input.isKeyJustPressed(Key::F)) {
+        m_controller.setEntityTool(EditorEntityTool::FLAG);
+    }
+
     if (core::isActionJustPressed(bindings, input, core::GameAction::DeleteSelection)) {
-        if (m_controller.hasSelection())
-            m_document.removePlatform(m_controller.selectedIndex());
-        m_controller.clearSelection();
+        if (m_controller.entityTool() == EditorEntityTool::FLAG) {
+            m_controller.removeFlag();
+        } else if (m_controller.entityTool() == EditorEntityTool::PLATFORM) {
+            if (m_controller.hasSelection())
+                m_document.removePlatform(m_controller.selectedIndex());
+            m_controller.clearSelection();
+        }
     }
 }
 
@@ -127,6 +148,17 @@ void EditorSession::updateMouse(const InputManager& input) {
 
     if (leftPressed) {
         m_pressedWorld = m_cursor.world;
+
+        if (m_controller.entityTool() == EditorEntityTool::SPAWN) {
+            m_controller.placeSpawnAt(m_cursor.world);
+            m_leftDragActive = false;
+            return;
+        }
+        if (m_controller.entityTool() == EditorEntityTool::FLAG) {
+            m_controller.placeFlagAt(m_cursor.world);
+            m_leftDragActive = false;
+            return;
+        }
 
         if (m_controller.beginMove(m_cursor.world)) {
             m_leftDragActive = true;
