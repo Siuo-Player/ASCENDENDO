@@ -98,6 +98,78 @@ TEST_CASE("G alterna para DRAG e o arrasto cria dimensao quantizada") {
     CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(224.0f));
 }
 
+TEST_CASE("render snapshot expoe entidades de spawn e FLAG") {
+    logic::EditorSession session(true);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+
+    const auto initialSpawn = session.document().spawnPosition();
+    input.beginFrame();
+    input.injectCursorPos(200.0, 270.0); // world x=200, y=90
+    input.onKeyEvent(logic::Key::S, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    REQUIRE(session.controller().entityTool() == logic::EditorEntityTool::SPAWN);
+
+    input.beginFrame();
+    input.injectCursorPos(200.0, 270.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    CHECK(session.document().spawnPosition().x == doctest::Approx(200.0f));
+    CHECK(session.document().spawnPosition().x != doctest::Approx(initialSpawn.x));
+
+    input.beginFrame();
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
+    session.update(input, bindings, 640, 360);
+
+    input.beginFrame();
+    input.onKeyEvent(logic::Key::F, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    CHECK(session.controller().entityTool() == logic::EditorEntityTool::FLAG);
+
+    input.beginFrame();
+    input.injectCursorPos(320.0, 280.0); // world (320,80)
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    const auto snapshot = session.renderSnapshot();
+    CHECK(snapshot.entityTool == logic::EditorEntityTool::FLAG);
+    CHECK(snapshot.spawnPosition.x == doctest::Approx(200.0f));
+    CHECK(snapshot.hasFlag);
+    CHECK(snapshot.flagBounds.width() == doctest::Approx(64.0f));
+    CHECK(snapshot.flagBounds.height() == doctest::Approx(16.0f));
+}
+
+TEST_CASE("FLAG em nivel nao final não cria objetivo") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+
+    input.beginFrame();
+    input.onKeyEvent(logic::Key::F, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+    input.beginFrame();
+    input.injectCursorPos(320.0, 280.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    CHECK_FALSE(session.document().hasFlag());
+}
+
+TEST_CASE("DELETE no modo FLAG remove o objetivo") {
+    logic::EditorSession session(true);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+
+    REQUIRE(session.controller().placeFlagAt({320.0f, 80.0f}));
+    session.controller().setEntityTool(logic::EditorEntityTool::FLAG);
+
+    input.beginFrame();
+    input.onKeyEvent(logic::Key::DELETE_KEY, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    CHECK_FALSE(session.document().hasFlag());
+}
+
 TEST_CASE("render snapshot expoe apenas dados graficos") {
     logic::EditorSession session(false);
     logic::InputManager input;
@@ -115,6 +187,9 @@ TEST_CASE("render snapshot expoe apenas dados graficos") {
     CHECK(snapshot.tool == logic::EditorToolMode::STAMP);
     CHECK(snapshot.sizePreset == logic::EditorSizePreset::MEDIUM);
     CHECK(snapshot.platforms[0].width() == doctest::Approx(128.0f));
+    CHECK(snapshot.spawnPosition.y == doctest::Approx(16.0f));
+    CHECK_FALSE(snapshot.hasFlag);
+    CHECK(snapshot.entityTool == logic::EditorEntityTool::PLATFORM);
 }
 
 TEST_CASE("cancelInteraction restaura movimento em curso") {

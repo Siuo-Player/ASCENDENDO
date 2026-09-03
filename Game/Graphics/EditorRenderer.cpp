@@ -117,6 +117,33 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         }
     }
 
+    // Spawn and goal are explicit editor entities, rendered independently from
+    // platform geometry so editing them never implies a gameplay rewrite.
+    constexpr float spawnHalf = 8.0f;
+    constexpr float markerThickness = 2.0f;
+    shapes.drawRect(cmd, shapePipeline,
+                    snapshot.spawnPosition.x - markerThickness * 0.5f,
+                    snapshot.spawnPosition.y,
+                    markerThickness, spawnHalf,
+                    0.25f, 1.0f, 0.55f, 0.95f, &fixedCamera);
+    shapes.drawRect(cmd, shapePipeline,
+                    snapshot.spawnPosition.x - spawnHalf,
+                    snapshot.spawnPosition.y + spawnHalf - markerThickness,
+                    spawnHalf * 2.0f, markerThickness,
+                    0.25f, 1.0f, 0.55f, 0.95f, &fixedCamera);
+
+    if (snapshot.hasFlag) {
+        const logic::AABB& flag = snapshot.flagBounds;
+        shapes.drawRect(cmd, shapePipeline,
+                        flag.min.x, flag.min.y,
+                        flag.width(), flag.height(),
+                        1.0f, 0.72f, 0.18f, 0.90f, &fixedCamera);
+        shapes.drawRect(cmd, shapePipeline,
+                        flag.min.x, flag.max.y - markerThickness,
+                        flag.width(), markerThickness,
+                        1.0f, 0.92f, 0.30f, 1.0f, &fixedCamera);
+    }
+
     if (snapshot.previewVisible) {
         const logic::AABB& preview = snapshot.previewBounds;
         shapes.drawRect(cmd, shapePipeline,
@@ -145,11 +172,14 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         const char* size = "MEDIUM";
         if (snapshot.sizePreset == logic::EditorSizePreset::SMALL) size = "SMALL";
         else if (snapshot.sizePreset == logic::EditorSizePreset::LARGE) size = "LARGE";
+        const char* entity = "PLATFORM";
+        if (snapshot.entityTool == logic::EditorEntityTool::SPAWN) entity = "SPAWN";
+        else if (snapshot.entityTool == logic::EditorEntityTool::FLAG) entity = "FLAG";
 
-        char hud[128];
+        char hud[160];
         std::snprintf(hud, sizeof(hud),
-                      "%s  %s  | 1 GUARDAR | 2 TESTAR | 3 VALIDAR | C CAMPANHA | ESC SAIR",
-                      tool, size);
+                      "%s %s | %s | P PLAT S SPAWN F FLAG | DEL APAGAR | ESC SAIR",
+                      entity, tool, size);
         drawEditorText(cmd, textPipeline, font, hud,
                        10.0f, config::LOGICAL_HEIGHT - 24.0f,
                        0.38f, 0.86f, 0.90f, 0.95f, 0.95f);

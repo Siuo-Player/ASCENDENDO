@@ -106,6 +106,42 @@ TEST_CASE("cancelMove sem interação ativa falha sem alterar o documento") {
     CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(80.0f));
 }
 
+TEST_CASE("SPAWN respeita os limites da plataforma inicial") {
+    LevelEditorDocument doc(false, AABB{{32,12},{320,28}});
+    EditorInteractionController controller(doc);
+
+    CHECK(controller.placeSpawnAt({96.0f, 500.0f}));
+    CHECK(doc.spawnPosition().x == doctest::Approx(96.0f));
+    CHECK(doc.spawnPosition().y == doctest::Approx(28.0f));
+    CHECK_FALSE(controller.placeSpawnAt({321.0f, 0.0f}));
+    CHECK(doc.spawnPosition().x == doctest::Approx(96.0f));
+}
+
+TEST_CASE("FLAG só pode ser colocado em nível final") {
+    LevelEditorDocument normal(false, AABB{{0,0},{640,20}});
+    EditorInteractionController normalController(normal);
+    CHECK_FALSE(normalController.placeFlagAt({320.0f, 80.0f}));
+    CHECK_FALSE(normal.hasFlag());
+
+    LevelEditorDocument finalLevel(true, AABB{{0,0},{640,20}});
+    EditorInteractionController finalController(finalLevel);
+    REQUIRE(finalController.placeFlagAt({320.0f, 80.0f}));
+    REQUIRE(finalLevel.hasFlag());
+    CHECK(finalLevel.flag()->width() == doctest::Approx(64.0f));
+    CHECK(finalLevel.flag()->height() == doctest::Approx(16.0f));
+}
+
+TEST_CASE("removeFlag é explícito e idempotente") {
+    LevelEditorDocument doc(true, AABB{{0,0},{640,20}});
+    EditorInteractionController controller(doc);
+
+    CHECK_FALSE(controller.removeFlag());
+    REQUIRE(controller.placeFlagAt({320.0f, 80.0f}));
+    REQUIRE(controller.removeFlag());
+    CHECK_FALSE(doc.hasFlag());
+    CHECK_FALSE(controller.removeFlag());
+}
+
 TEST_CASE("deleteAt apaga entidade e corrige indice da seleção") {
     LevelEditorDocument doc(false, AABB{{0,0},{640,20}});
     EditorInteractionController controller(doc);
