@@ -6,14 +6,14 @@
 
 TEST_SUITE("Fase 9.5 — EditorValidationTask") {
 
-TEST_CASE("validação assíncrona usa snapshot imutável e devolve o nível exato") {
+TEST_CASE("validação assíncrona usa snapshot imutável, geração e nível exato") {
     logic::LevelData data;
     data.name = "Async Validation";
     data.spawnPosition = logic::Vec2{32.0f, 20.0f};
     data.platforms.push_back(logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}});
 
     logic::EditorValidationTask task;
-    REQUIRE(task.start(data, "custom/test.lvl"));
+    REQUIRE(task.start(data, 7, "custom/test.lvl"));
     CHECK(task.running());
 
     logic::EditorValidationResult result;
@@ -23,6 +23,7 @@ TEST_CASE("validação assíncrona usa snapshot imutável e devolve o nível exa
     result = task.poll();
     CHECK(result.state == logic::EditorValidationState::COMPLETE);
     CHECK(result.valid);
+    CHECK(result.generation == 7);
     CHECK(result.levelPath == "custom/test.lvl");
     CHECK(result.message == "Representação semântica válida");
 }
@@ -33,7 +34,7 @@ TEST_CASE("validação rejeita geometria semanticamente inválida sem bloquear o
     data.platforms.push_back(logic::AABB{{10.0f, 0.0f}, {10.0f, 20.0f}});
 
     logic::EditorValidationTask task;
-    REQUIRE(task.start(data, "invalid/test.lvl"));
+    REQUIRE(task.start(data, 12, "invalid/test.lvl"));
 
     while (task.running())
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -41,6 +42,7 @@ TEST_CASE("validação rejeita geometria semanticamente inválida sem bloquear o
     const auto result = task.poll();
     CHECK(result.state == logic::EditorValidationState::COMPLETE);
     CHECK_FALSE(result.valid);
+    CHECK(result.generation == 12);
     CHECK(result.levelPath == "invalid/test.lvl");
 }
 
@@ -49,8 +51,8 @@ TEST_CASE("nova validação não pode substituir uma tarefa ainda em execução"
     data.platforms.push_back(logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}});
 
     logic::EditorValidationTask task;
-    REQUIRE(task.start(data, "first.lvl"));
-    CHECK_FALSE(task.start(data, "second.lvl"));
+    REQUIRE(task.start(data, 1, "first.lvl"));
+    CHECK_FALSE(task.start(data, 2, "second.lvl"));
     task.discard();
 }
 
