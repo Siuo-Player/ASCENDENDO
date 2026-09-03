@@ -2,6 +2,7 @@
 
 #include "Logic/LevelData.h"
 
+#include <cstdint>
 #include <future>
 #include <string>
 
@@ -16,6 +17,7 @@ enum class EditorValidationState {
 struct EditorValidationResult {
     EditorValidationState state = EditorValidationState::IDLE;
     bool valid = false;
+    std::uint64_t generation = 0;
     std::string levelPath;
     std::string message;
 };
@@ -28,7 +30,7 @@ public:
     EditorValidationTask(const EditorValidationTask&) = delete;
     EditorValidationTask& operator=(const EditorValidationTask&) = delete;
 
-    bool start(LevelData snapshot, std::string levelPath);
+    bool start(LevelData snapshot, std::uint64_t generation, std::string levelPath);
     bool running() const;
     EditorValidationResult poll();
     void discard();
@@ -36,6 +38,7 @@ public:
 private:
     struct WorkResult {
         bool valid = false;
+        std::uint64_t generation = 0;
         std::string levelPath;
         std::string message;
     };
