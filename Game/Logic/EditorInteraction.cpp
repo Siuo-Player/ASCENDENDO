@@ -105,6 +105,25 @@ bool EditorInteractionController::cancelMove() {
     return restored;
 }
 
+bool EditorInteractionController::placeSpawnAt(const Vec2& world) {
+    clearSelection();
+    return m_document.setSpawnX(world.x);
+}
+
+bool EditorInteractionController::placeFlagAt(const Vec2& world) {
+    clearSelection();
+    // Keep the goal marker small and grid-aligned while using the existing
+    // document-level final-campaign validation.
+    return m_document.setFlag(centeredStamp(world, {64.0f, 16.0f}));
+}
+
+bool EditorInteractionController::removeFlag() {
+    if (!m_document.hasFlag()) return false;
+    m_document.removeFlag();
+    clearSelection();
+    return true;
+}
+
 bool EditorInteractionController::deleteAt(const Vec2& world) {
     const std::size_t index = hitPlatform(world);
     if (index == m_document.platformCount()) return false;
