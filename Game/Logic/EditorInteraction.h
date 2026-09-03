@@ -20,6 +20,12 @@ enum class EditorMouseMode {
     MOVING,
 };
 
+enum class EditorEntityTool {
+    PLATFORM,
+    SPAWN,
+    FLAG,
+};
+
 struct EditorCursor {
     Vec2 logical;
     Vec2 world;
@@ -46,6 +52,10 @@ public:
     bool endMove();
     bool cancelMove();
 
+    bool placeSpawnAt(const Vec2& world);
+    bool placeFlagAt(const Vec2& world);
+    bool removeFlag();
+
     bool deleteAt(const Vec2& world);
 
     void clearSelection();
@@ -54,6 +64,11 @@ public:
 
     void setSizePreset(EditorSizePreset preset) { m_sizePreset = preset; }
     EditorSizePreset sizePreset() const { return m_sizePreset; }
+
+    // Ferramenta persistente de entidade. PLATFORM mantém STAMP/DRAG;
+    // SPAWN move a posição inicial e FLAG coloca/remove o objetivo final.
+    void setEntityTool(EditorEntityTool tool) { m_entityTool = tool; }
+    EditorEntityTool entityTool() const { return m_entityTool; }
 
     // Ferramenta persistente do editor. O G alterna entre STAMP e DRAG.
     void setToolMode(EditorToolMode mode) { m_toolMode = mode; }
@@ -73,6 +88,7 @@ private:
     LevelEditorDocument& m_document;
     std::size_t          m_selected = npos();
     EditorMouseMode      m_mode = EditorMouseMode::NONE;
+    EditorEntityTool     m_entityTool = EditorEntityTool::PLATFORM;
     EditorToolMode       m_toolMode = EditorToolMode::STAMP;
     EditorSizePreset     m_sizePreset = EditorSizePreset::MEDIUM;
     float                m_moveOffsetX = 0.0f;
