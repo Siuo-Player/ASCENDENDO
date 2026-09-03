@@ -118,6 +118,10 @@ TEST_CASE("render snapshot expoe entidades de spawn e FLAG") {
     CHECK(session.document().spawnPosition().x != doctest::Approx(initialSpawn.x));
 
     input.beginFrame();
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
+    session.update(input, bindings, 640, 360);
+
+    input.beginFrame();
     input.onKeyEvent(logic::Key::F, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     CHECK(session.controller().entityTool() == logic::EditorEntityTool::FLAG);
