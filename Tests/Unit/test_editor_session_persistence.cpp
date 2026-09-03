@@ -81,7 +81,7 @@ TEST_CASE("resultado assíncrono fica STALE quando o documento muda depois do sn
     REQUIRE(session.document().addPlatform({{96.0f, 80.0f}, {224.0f, 100.0f}}));
     CHECK(session.documentGeneration() > generationBefore);
 
-    logic::EditorValidationResult result;
+    logic::EditorAsyncValidationResult result;
     for (int i = 0; i < 200; ++i) {
         result = session.pollValidation();
         if (result.state != logic::EditorValidationState::RUNNING)
