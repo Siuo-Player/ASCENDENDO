@@ -40,7 +40,7 @@ TEST_CASE("saveLevel recusa nível inválido sem criar o ficheiro") {
     std::error_code ec;
     std::filesystem::remove(path, ec);
 
-    logic::EditorSession session(false);
+    logic::EditorSession session(true);
     const auto result = session.saveLevel(path.string(), "Invalid Session Save");
 
     CHECK_FALSE(result.success);
