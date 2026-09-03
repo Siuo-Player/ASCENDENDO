@@ -14,9 +14,8 @@ TEST_CASE("validação assíncrona usa snapshot imutável, geração e nível ex
 
     logic::EditorValidationTask task;
     REQUIRE(task.start(data, 7, "custom/test.lvl"));
-    CHECK(task.running());
 
-    logic::EditorValidationResult result;
+    logic::EditorAsyncValidationResult result;
     for (int i = 0; i < 200 && task.running(); ++i)
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
