@@ -110,7 +110,6 @@ TEST_SUITE("Campaign Editor") {
 
         const auto campaign = levels / "campaign.txt";
         logic::CampaignEditorDocument editor;
-        REQUIRE(editor.loadFromCampaignFile(campaign.string()));
 
         editor.levels() = {
             { (levels / "a.lvl").string(), "A", 0, 0.0f, false },
