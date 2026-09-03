@@ -23,6 +23,8 @@ namespace Key {
     constexpr int D       = 68;
     constexpr int W       = 87;
     constexpr int S       = 83;
+    constexpr int F       = 70;
+    constexpr int P       = 80;
     constexpr int E       = 69;
     constexpr int Q       = 81;
     constexpr int G       = 71;
