@@ -56,7 +56,8 @@ bool eligible(const PlatformAssetCandidate& candidate,
            candidate.pixelScaleSafe &&
            candidate.contactReadable &&
            candidate.gameplayDecoupled &&
-           candidate.seamsAcceptable;
+           candidate.seamsAcceptable &&
+           candidate.humanApproved;
 }
 
 bool better(const PlatformAssetCandidate& lhs,
