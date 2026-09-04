@@ -12,6 +12,21 @@ ART-006: APPROVE / REJECT / REWORK / LIMIT
 ART-007: APPROVE / REJECT / REWORK / LIMIT
 ```
 
+## Estado do inbox
+
+Os IDs acima são espaços de decisão, não afirmam que existam sete ficheiros binários concretos no repositório.
+
+Antes de qualquer aprovação, cada ID tem de apontar para:
+
+- um ficheiro visual concreto ou preview verificável;
+- source e licença/provenance verificáveis;
+- escala e dimensões exactas;
+- função proposta (`PLATFORM`, `PLAYER`, `FLAG`, `PROP`, etc.);
+- compatibilidade técnica documentada;
+- estado final humano (`APPROVE`, `REJECT`, `REWORK`, `LIMIT`).
+
+Não preencher `APPROVE` por inferência a partir de um registry, nome de pacote ou licença CC0. Candidato sem ficheiro visual concreto permanece não aprovado.
+
 ## Comentários opcionais
 
 Para `REWORK` ou `LIMIT`, indica a condição necessária (por exemplo: nova paleta, outro tamanho, apenas fundo, apenas plataforma, etc.).
