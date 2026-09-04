@@ -1,41 +1,44 @@
 # ASCENDENDO — Pixel-Art Approval Inbox
 
-**Estado:** `PENDING HUMAN APPROVAL`
+**Estado:** `APPROVED BY USER WITH SIZE GATE`
 
 Esta pasta é a fronteira entre **candidato visual** e **arte aprovada para o produto**.
 
-Nada nesta pasta é considerado aprovado. Nenhum candidato deve ser promovido para o runtime, para o registry canónico ou para uma composição final apenas por estar aqui listado.
+A decisão humana registada nesta revisão é aplicar aprovação por defeito quando o candidato tem um tamanho compatível com a escala já usada pelo projecto. Candidatos sem tamanho verificável ficam em `REWORK` até existir evidência concreta do tamanho correcto.
 
-## Como usar
+## Regra de tamanhos adoptada
 
-Revê cada ID e decide:
+| Função | Tamanho de referência |
+|---|---|
+| Player actual (`ART-001`) | `32×32 px` |
+| Tiles/plataformas modulares | `16×16 px` |
+| Elementos que ocupem várias células | múltiplos inteiros de `16 px` por eixo |
+| Flag / goal | `16×16 px` por unidade de tile, podendo compor múltiplos de `16 px` |
+| Props ambientais | módulos base de `16×16 px`; objectos maiores em múltiplos de `16 px` |
 
-```text
-APPROVE — pode avançar para integração após as verificações técnicas.
-REJECT  — não usar no produto.
-REWORK  — a ideia é útil, mas requer alterações antes de nova avaliação.
-LIMIT   — usar apenas numa função/contexto explicitamente indicado.
-```
+## Decisões actuais
 
-A decisão humana visual é obrigatória. Licença, provenance, resolução ou passagem de testes técnicos não substituem essa decisão.
+| ID | Candidato | O que é | Para que serviria | Estado | Tamanho exigido |
+|---|---|---|---|---|---|
+| `ART-001` | `personagem.png` / `Source/personagem.pixil` | Sprite actual do personagem | Player/avatar principal | `APPROVE` | `32×32 px` |
+| `ART-002` | `kenney.pixel-line-platformer` | Tileset pixel-art 16×16 | Vocabulário visual de plataformas | `APPROVE` | `16×16 px` |
+| `ART-003` | `hdst.platformer-pack-16x16` | Tileset pixel-art 16×16 | Alternativa visual para plataformas | `APPROVE` | `16×16 px` |
+| `ART-004` | `kenney.pixel-platformer` | Tileset pixel-art 18×18 | Referência/comparação | `REWORK` | converter/substituir por `16×16 px`; não integrar a 18×18 |
+| `ART-005` | `generic.platformer-tileset-16x16` | Tileset + background 16×16 | Alternativa para terreno/ambiente | `APPROVE` | `16×16 px` para tiles; elementos compostos em múltiplos de `16 px` |
+| `ART-006` | `FLAG` | Arte necessária ainda não seleccionada | Goal/flag de nível final | `REWORK` | candidato concreto com unidade base `16×16 px` |
+| `ART-007` | `PROPS` | Conjunto ambiental ainda não seleccionado | Decoração/ambiente sem alterar colisões | `REWORK` | módulos base `16×16 px`; peças maiores em múltiplos de `16 px` |
 
-## Candidatos actualmente identificados
+## Regra de aprovação aplicada
 
-| ID | Candidato | O que é | Para que serviria | Estado |
-|---|---|---|---|---|
-| `ART-001` | `personagem.png` / `Source/personagem.pixil` | Sprite actual do personagem | Player/avatar principal | `PENDING` |
-| `ART-002` | `kenney.pixel-line-platformer` | Tileset pixel-art 16×16 | Vocabulário visual de plataformas | `PENDING` |
-| `ART-003` | `hdst.platformer-pack-16x16` | Tileset pixel-art 16×16 | Alternativa visual para plataformas | `PENDING` |
-| `ART-004` | `kenney.pixel-platformer` | Tileset pixel-art 18×18 | Referência/comparação; não corresponde ainda ao módulo canónico 16×16 | `PENDING / REFERENCE` |
-| `ART-005` | `generic.platformer-tileset-16x16` | Tileset + background 16×16 | Alternativa para terreno/ambiente | `PENDING` |
-| `ART-006` | `FLAG` | Arte necessária ainda não seleccionada | Goal/flag de nível final | `NO CANDIDATE SELECTED` |
-| `ART-007` | `PROPS` | Conjunto ambiental ainda não seleccionado | Decoração/ambiente sem alterar colisões | `NO CANDIDATE SELECTED` |
+`APPROVE` por defeito quando há tamanho verificável e compatível (`32×32 px` para o player actual; `16×16 px` para a grelha modular e seus múltiplos).
+
+`REWORK` quando o tamanho não está definido/verificável ou quando não corresponde à grelha adoptada.
+
+Esta aprovação é uma decisão visual humana explícita e não promove automaticamente nenhum asset para o runtime. A integração continua dependente das verificações técnicas, provenance e do ficheiro exacto a integrar.
 
 ## Evidência e provenance
 
-Os candidatos externos `ART-002` a `ART-005` são apenas referências já registadas no `PLATFORM_ASSET_REGISTRY.md`. A pasta não descarrega nem importa esses packs automaticamente.
-
-Para qualquer promoção futura, devem permanecer disponíveis:
+Os candidatos externos `ART-002` a `ART-005` permanecem sujeitos às referências registadas no `PLATFORM_ASSET_REGISTRY.md`. Para qualquer promoção futura devem permanecer disponíveis:
 
 ```text
 source URL
@@ -62,9 +65,9 @@ revisão visual humana
 
 ## Regra de promoção
 
-Só depois de uma decisão humana positiva é permitido criar uma alteração de integração. A promoção deve referenciar **o ficheiro exacto** aprovado e conservar a provenance; candidatos rejeitados não devem ser substituídos silenciosamente por outros.
+Só depois desta decisão humana positiva e das verificações técnicas/provenance é permitido criar uma alteração de integração. A promoção deve referenciar **o ficheiro exacto** aprovado; candidatos em `REWORK` não devem ser substituídos silenciosamente por outros.
 
-`NO WINNER` é um resultado válido.
+`NO WINNER` continua a ser um resultado válido noutras revisões.
 
 ## Regra de evidência concreta
 
