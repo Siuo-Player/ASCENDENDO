@@ -31,6 +31,8 @@ struct PlatformAssetCandidate {
     bool contactReadable = false;
     bool gameplayDecoupled = false;
     bool seamsAcceptable = false;
+    // Human visual approval is an independent final product gate.
+    bool humanApproved = false;
 };
 
 struct PlatformAssetRequest {
