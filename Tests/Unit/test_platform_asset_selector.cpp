@@ -32,6 +32,7 @@ PlatformAssetCandidate candidate(
     result.contactReadable = isEligible;
     result.gameplayDecoupled = isEligible;
     result.seamsAcceptable = isEligible;
+    result.humanApproved = isEligible;
     return result;
 }
 
@@ -109,6 +110,20 @@ TEST_SUITE("16x16 semantic compositor — asset selection") {
         const std::array<PlatformAssetCandidate, 2> candidates = {blockedA, blockedB};
 
         CHECK_FALSE(selectBestPlatformAsset(candidates, request).has_value());
+    }
+
+    TEST_CASE("explicit human approval is required even when all technical gates pass") {
+        const PlatformAssetRequest request{
+            compositor::TopologyClass::Interior, 1, 1, 1, false, 1};
+
+        auto reviewed = candidate("reviewed", compositor::TopologyClass::Interior, 1, 0);
+        reviewed.humanApproved = false;
+        const std::array<PlatformAssetCandidate, 1> unapproved = {reviewed};
+        CHECK_FALSE(selectBestPlatformAsset(unapproved, request).has_value());
+
+        reviewed.humanApproved = true;
+        const std::array<PlatformAssetCandidate, 1> approved = {reviewed};
+        CHECK(selectBestPlatformAsset(approved, request) == std::optional<std::string>("reviewed"));
     }
 
     TEST_CASE("topology mask can cover multiple classes") {
