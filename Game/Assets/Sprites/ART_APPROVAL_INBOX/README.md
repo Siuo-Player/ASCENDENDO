@@ -65,3 +65,7 @@ revisão visual humana
 Só depois de uma decisão humana positiva é permitido criar uma alteração de integração. A promoção deve referenciar **o ficheiro exacto** aprovado e conservar a provenance; candidatos rejeitados não devem ser substituídos silenciosamente por outros.
 
 `NO WINNER` é um resultado válido.
+
+## Regra de evidência concreta
+
+Um ID só é accionável como candidato visual quando existe um ficheiro/preview concreto que possa ser inspeccionado. Referências bibliográficas ou nomes de pacotes, por si só, não contam como arte apresentada para aprovação.
