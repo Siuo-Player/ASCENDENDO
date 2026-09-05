@@ -16,6 +16,8 @@ using namespace gfx::assets;
 
 namespace {
 
+constexpr const char* kTestSha256 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
 PlatformAssetCandidate candidate(
     const char* id,
     compositor::TopologyClass topology,
@@ -27,6 +29,8 @@ PlatformAssetCandidate candidate(
     result.topologyMask = topologyBit(topology);
     result.material = material;
     result.variantRank = variantRank;
+    result.runtimePath = std::string("Game/Assets/Sprites/ART_APPROVAL_INBOX/") + id + ".png";
+    result.contentSha256 = kTestSha256;
     result.provenanceVerified = isEligible;
     result.pixelScaleSafe = isEligible;
     result.contactReadable = isEligible;
@@ -124,6 +128,26 @@ TEST_SUITE("16x16 semantic compositor — asset selection") {
         reviewed.humanApproved = true;
         const std::array<PlatformAssetCandidate, 1> approved = {reviewed};
         CHECK(selectBestPlatformAsset(approved, request) == std::optional<std::string>("reviewed"));
+    }
+
+    TEST_CASE("exact runtime identity is required") {
+        const PlatformAssetRequest request{
+            compositor::TopologyClass::Interior, 1, 1, 1, false, 1};
+
+        auto missingPath = candidate("missing-path", compositor::TopologyClass::Interior, 1, 0);
+        missingPath.runtimePath.clear();
+        auto missingHash = candidate("missing-hash", compositor::TopologyClass::Interior, 1, 0);
+        missingHash.contentSha256.clear();
+        auto malformedHash = candidate("malformed-hash", compositor::TopologyClass::Interior, 1, 0);
+        malformedHash.contentSha256 = "not-a-sha256";
+
+        const std::array<PlatformAssetCandidate, 3> blocked = {
+            missingPath, missingHash, malformedHash};
+        CHECK_FALSE(selectBestPlatformAsset(blocked, request).has_value());
+
+        const auto valid = candidate("valid", compositor::TopologyClass::Interior, 1, 0);
+        const std::array<PlatformAssetCandidate, 1> accepted = {valid};
+        CHECK(selectBestPlatformAsset(accepted, request) == std::optional<std::string>("valid"));
     }
 
     TEST_CASE("topology mask can cover multiple classes") {
