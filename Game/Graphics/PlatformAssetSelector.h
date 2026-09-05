@@ -33,6 +33,12 @@ struct PlatformAssetCandidate {
     bool seamsAcceptable = false;
     // Human visual approval is an independent final product gate.
     bool humanApproved = false;
+
+    // Exact runtime identity. The selector never reads the file; it requires
+    // the registry to bind the approved candidate to one concrete path and
+    // one exact SHA-256 before runtime promotion is possible.
+    std::string runtimePath;
+    std::string contentSha256;
 };
 
 struct PlatformAssetRequest {
