@@ -63,9 +63,20 @@ captura determinística
 revisão visual humana
 ```
 
+## Regra de identidade exacta
+
+Uma aprovação nunca se refere apenas ao nome do pacote ou ao conceito visual. Antes de qualquer promoção para runtime, o registry deve bindar a aprovação a:
+
+```text
+runtime path exacto
+SHA-256 exacto do conteúdo integrado (64 hex)
+```
+
+O selector de runtime exige estes dois campos e rejeita candidatos sem identidade exacta, mesmo quando todos os outros gates técnicos e a aprovação humana estão activos. O selector não abre nem valida o ficheiro; limita-se a consumir esta evidência declarada.
+
 ## Regra de promoção
 
-Só depois desta decisão humana positiva e das verificações técnicas/provenance é permitido criar uma alteração de integração. A promoção deve referenciar **o ficheiro exacto** aprovado; candidatos em `REWORK` não devem ser substituídos silenciosamente por outros.
+Só depois desta decisão humana positiva e das verificações técnicas/provenance é permitido criar uma alteração de integração. A promoção deve referenciar **o ficheiro exacto** aprovado e a sua identidade SHA-256; candidatos em `REWORK` não devem ser substituídos silenciosamente por outros.
 
 `NO WINNER` continua a ser um resultado válido noutras revisões.
 
