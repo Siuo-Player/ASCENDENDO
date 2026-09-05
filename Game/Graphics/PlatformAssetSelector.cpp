@@ -3,6 +3,8 @@
 // =============================================================================
 #include "Graphics/PlatformAssetSelector.h"
 
+#include <algorithm>
+#include <cctype>
 #include <tuple>
 
 namespace gfx::assets {
@@ -10,6 +12,19 @@ namespace {
 
 bool validRequest(const PlatformAssetRequest& request) {
     return request.widthCells > 0 && request.heightCells > 0 && request.scale > 0;
+}
+
+bool validSha256(const std::string& sha256) {
+    if (sha256.size() != 64)
+        return false;
+
+    return std::all_of(sha256.begin(), sha256.end(), [](unsigned char c) {
+        return std::isxdigit(c) != 0;
+    });
+}
+
+bool exactFileIdentityPresent(const PlatformAssetCandidate& candidate) {
+    return !candidate.runtimePath.empty() && validSha256(candidate.contentSha256);
 }
 
 int topologyMatchRank(const PlatformAssetCandidate& candidate,
@@ -39,6 +54,8 @@ bool eligible(const PlatformAssetCandidate& candidate,
     if (!validRequest(request))
         return false;
     if (candidate.assetId.empty())
+        return false;
+    if (!exactFileIdentityPresent(candidate))
         return false;
     if (topologyMatchRank(candidate, request) == 0)
         return false;
