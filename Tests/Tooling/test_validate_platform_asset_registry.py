@@ -35,10 +35,24 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             self.assertTrue(validate_registry(text, Path(tmp)))
 
     def test_unsafe_path_fails(self) -> None:
-        for path in ("../outside.png", "/absolute/path.png", "C:/absolute/path.png", "C:relative.png"):
+        for path in (
+            "../outside.png",
+            "/absolute/path.png",
+            "C:/absolute/path.png",
+            "C:relative.png",
+        ):
             text = populated_registry(path, VALID_SHA)
             with tempfile.TemporaryDirectory() as tmp:
                 self.assertTrue(validate_registry(text, Path(tmp)), path)
+
+    def test_unpopulated_sentinel_is_exact(self) -> None:
+        text = populated_registry("UNPOPULATEDevil/path.png", VALID_SHA)
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertTrue(validate_registry(text, Path(tmp)))
+
+        text = """## Candidate A\n- `runtime_path`: `UNPOPULATEDfoo`\n- `content_sha256`: `UNPOPULATEDfoo`\n"""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertTrue(validate_registry(text, Path(tmp)))
 
     def test_missing_file_fails(self) -> None:
         text = populated_registry("Game/Assets/A.png", VALID_SHA)
