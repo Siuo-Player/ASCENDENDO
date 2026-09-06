@@ -76,6 +76,17 @@ It is evidence only; it does not itself promote an asset.
 - intended use: ambient/environment decoration without gameplay collision semantics.
 - reason: individual concrete prop dimensions are not yet verified, exact binary is not acquired/hashed, and no visual approval has been granted.
 
+## ART-007 — Props / environment research candidate P2
+- decision: `REWORK`
+- required base modules: `16×16 px`; larger objects must use integer multiples of `16 px` per axis.
+- candidate: `intrix.mini-platformer-pack-props`
+- source: https://opengameart.org/content/mini-platformer-pack
+- creator: Intrix
+- licence: CC0
+- concrete size evidence: source page states tileset blocks are `16×16`, big tree is `32×32`, and small tree, rock, bush and dead tree are `16×16`.
+- intended use: ambient/environment decoration without gameplay collision semantics.
+- reason: exact binary identity is not acquired/hashed and no visual approval has been granted.
+
 ## Promotion boundary
 
 A candidate marked `APPROVE` here is approved by the product owner under the recorded size gate, but runtime integration still requires:
