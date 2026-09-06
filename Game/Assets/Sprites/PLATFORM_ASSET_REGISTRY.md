@@ -88,7 +88,7 @@ The C++ selector remains metadata-only: it consumes the identity supplied by the
 - `asset_id`: `doughnutdev.cartoon-platformer-goal-flag`
 - source: `https://doughnutdev.itch.io/platformer-assetpack`
 - creator: DoughnutDev
-- licence: Creative Commons Attribution-NoDerivatives 4.0 International; author requires credit and permits commercial/non-commercial use and modification, but prohibits redistribution/resale of the asset itself
+- licence: source page labels the asset `Creative Commons Attribution-NoDerivatives 4.0 International`; the page text also describes permitted project use/editing and separately states credit is required. Treat the formal CC BY-ND label as the governing licensing signal pending provenance review.
 - asset/version identifier: `PlatformerAssets.zip` (12 kB download listed on source page; exact file to be acquired and hashed before promotion)
 - retrieval date: 2026-09-06
 - concrete size evidence: source page states the flag is `16×80`, i.e. five 16×16 units stacked vertically
