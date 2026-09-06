@@ -20,6 +20,11 @@ FIELD_RE = re.compile(r"^[-*]\s+`(runtime_path|content_sha256)`:\s+`([^`]*)`\s*$
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$")
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 UNPOPULATED = "UNPOPULATED"
+UNPOPULATED_PREFIX = "UNPOPULATED — "
+
+
+def is_unpopulated(value: str | None) -> bool:
+    return value is None or value == UNPOPULATED or value.startswith(UNPOPULATED_PREFIX)
 
 
 def path_is_safe(value: str) -> bool:
@@ -47,8 +52,8 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
             return
 
         label = current_section
-        path_unpopulated = runtime_path is None or runtime_path.startswith(UNPOPULATED)
-        hash_unpopulated = content_sha256 is None or content_sha256.startswith(UNPOPULATED)
+        path_unpopulated = is_unpopulated(runtime_path)
+        hash_unpopulated = is_unpopulated(content_sha256)
         if path_unpopulated and hash_unpopulated:
             runtime_path = None
             content_sha256 = None
