@@ -54,15 +54,27 @@ It is evidence only; it does not itself promote an asset.
 - concrete repository file: `Game/Assets/Sprites/personagem.png`
 - editable source: `Game/Assets/Sprites/Source/personagem.pixil`
 
-## ART-006 — Flag / goal
+## ART-006 — Flag / goal research candidate F1
 - decision: `REWORK`
 - required base unit: `16×16 px`
-- status: no concrete candidate supplied yet.
+- candidate: `doughnutdev.cartoon-platformer-goal-flag`
+- source: https://doughnutdev.itch.io/platformer-assetpack
+- creator: DoughnutDev
+- licence: CC BY-ND 4.0; not CC0
+- concrete size evidence: source page states `16×80`, equivalent to five stacked `16×16` units.
+- intended use: level goal/end-point flag reference candidate.
+- reason: exact binary is not acquired/hashed and no visual approval has been granted; licence is also not CC0.
 
-## ART-007 — Props / environment
+## ART-007 — Props / environment research candidate P1
 - decision: `REWORK`
 - required base modules: `16×16 px`; larger objects must use integer multiples of `16 px` per axis.
-- status: no concrete candidate supplied yet.
+- candidate: `aldrin572.tiny-forest-16x16-props`
+- source: https://aldrin572.itch.io/tiny-forest-16x16-platformer-asset-pack
+- creator: Aldrin572
+- licence: CC0
+- concrete size evidence: source page states a 16×16 terrain grid and lists scenery props; individual prop PNG dimensions are not stated.
+- intended use: ambient/environment decoration without gameplay collision semantics.
+- reason: individual concrete prop dimensions are not yet verified, exact binary is not acquired/hashed, and no visual approval has been granted.
 
 ## Promotion boundary
 
