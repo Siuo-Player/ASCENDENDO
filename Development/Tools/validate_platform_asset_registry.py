@@ -18,12 +18,18 @@ REGISTRY = Path("Game/Assets/Sprites/PLATFORM_ASSET_REGISTRY.md")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 FIELD_RE = re.compile(r"^[-*]\s+`(runtime_path|content_sha256)`:\s+`([^`]*)`\s*$")
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$")
+WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 UNPOPULATED = "UNPOPULATED"
 
 
 def path_is_safe(value: str) -> bool:
     path = Path(value)
-    if not value or path.is_absolute() or "\\" in value:
+    if (
+        not value
+        or path.is_absolute()
+        or "\\" in value
+        or WINDOWS_DRIVE_RE.match(value) is not None
+    ):
         return False
     parts = value.split("/")
     return all(part not in ("", ".", "..") for part in parts)
