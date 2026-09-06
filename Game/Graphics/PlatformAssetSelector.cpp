@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <string_view>
 #include <tuple>
 
 namespace gfx::assets {
@@ -23,8 +24,40 @@ bool validSha256(const std::string& sha256) {
     });
 }
 
+bool validRuntimePath(std::string_view path) {
+    if (path.empty())
+        return false;
+
+    // Runtime asset paths are repository-relative, portable across the
+    // project's Windows/Linux builds, and must not contain traversal.
+    if (path.front() == '/' || path.front() == '\\')
+        return false;
+    if (path.size() >= 2 && std::isalpha(static_cast<unsigned char>(path[0])) &&
+        path[1] == ':')
+        return false;
+
+    std::size_t segmentStart = 0;
+    for (std::size_t i = 0; i <= path.size(); ++i) {
+        const bool separator = i == path.size() || path[i] == '/' || path[i] == '\\';
+        if (!separator)
+            continue;
+
+        const std::size_t segmentLength = i - segmentStart;
+        if (segmentLength == 0)
+            return false;
+
+        const std::string_view segment = path.substr(segmentStart, segmentLength);
+        if (segment == "." || segment == "..")
+            return false;
+
+        segmentStart = i + 1;
+    }
+
+    return true;
+}
+
 bool exactFileIdentityPresent(const PlatformAssetCandidate& candidate) {
-    return !candidate.runtimePath.empty() && validSha256(candidate.contentSha256);
+    return validRuntimePath(candidate.runtimePath) && validSha256(candidate.contentSha256);
 }
 
 int topologyMatchRank(const PlatformAssetCandidate& candidate,
