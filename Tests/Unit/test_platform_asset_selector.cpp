@@ -150,6 +150,34 @@ TEST_SUITE("16x16 semantic compositor — asset selection") {
         CHECK(selectBestPlatformAsset(accepted, request) == std::optional<std::string>("valid"));
     }
 
+    TEST_CASE("runtime path must be repository-relative and traversal-free") {
+        const PlatformAssetRequest request{
+            compositor::TopologyClass::Interior, 1, 1, 1, false, 1};
+
+        auto absoluteUnix = candidate("absolute-unix", compositor::TopologyClass::Interior, 1, 0);
+        absoluteUnix.runtimePath = "/Game/Assets/platform.png";
+        auto absoluteWindows = candidate("absolute-windows", compositor::TopologyClass::Interior, 1, 0);
+        absoluteWindows.runtimePath = "C:\\Game\\Assets\\platform.png";
+        auto leadingSlash = candidate("leading-slash", compositor::TopologyClass::Interior, 1, 0);
+        leadingSlash.runtimePath = "\\Game\\Assets\\platform.png";
+        auto traversal = candidate("traversal", compositor::TopologyClass::Interior, 1, 0);
+        traversal.runtimePath = "Game/Assets/../platform.png";
+        auto trailingSeparator = candidate("trailing-separator", compositor::TopologyClass::Interior, 1, 0);
+        trailingSeparator.runtimePath = "Game/Assets/platform/";
+        auto doubleSeparator = candidate("double-separator", compositor::TopologyClass::Interior, 1, 0);
+        doubleSeparator.runtimePath = "Game//Assets/platform.png";
+
+        const std::array<PlatformAssetCandidate, 6> blocked = {
+            absoluteUnix, absoluteWindows, leadingSlash,
+            traversal, trailingSeparator, doubleSeparator};
+        CHECK_FALSE(selectBestPlatformAsset(blocked, request).has_value());
+
+        auto valid = candidate("valid-relative", compositor::TopologyClass::Interior, 1, 0);
+        valid.runtimePath = "Game/Assets/Sprites/platform.png";
+        const std::array<PlatformAssetCandidate, 1> accepted = {valid};
+        CHECK(selectBestPlatformAsset(accepted, request) == std::optional<std::string>("valid-relative"));
+    }
+
     TEST_CASE("topology mask can cover multiple classes") {
         auto multi = candidate("multi", compositor::TopologyClass::Interior, 1, 0);
         multi.topologyMask = static_cast<std::uint16_t>(
