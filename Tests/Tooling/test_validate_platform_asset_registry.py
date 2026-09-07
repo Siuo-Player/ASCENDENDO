@@ -14,8 +14,8 @@ from Development.Tools.validate_platform_asset_registry import validate_registry
 VALID_SHA = "a" * 64
 
 
-def populated_registry(path: str, digest: str) -> str:
-    return f"""# Registry\n\n## Candidate A\n- `runtime_path`: `{path}`\n- `content_sha256`: `{digest}`\n"""
+def populated_registry(path: str, digest: str, section: str = "Candidate A") -> str:
+    return f"""# Registry\n\n## {section}\n- `runtime_path`: `{path}`\n- `content_sha256`: `{digest}`\n"""
 
 
 class PlatformAssetRegistryValidatorTests(unittest.TestCase):
@@ -77,6 +77,38 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             target.write_bytes(b"different bytes")
             text = populated_registry("Game/Assets/A.png", VALID_SHA)
             self.assertTrue(validate_registry(text, root))
+
+    def test_duplicate_runtime_path_fails(self) -> None:
+        text = """## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`\n"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "Game" / "Assets" / "A.png"
+            target.parent.mkdir(parents=True)
+            target.write_bytes(b"unused")
+            self.assertTrue(any("duplicate runtime_path" in error for error in validate_registry(text, root)))
+
+    def test_duplicate_hash_fails_case_insensitively(self) -> None:
+        digest = "a" * 64
+        text = f"""## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `{digest}`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/B.png`\n- `content_sha256`: `{digest.upper()}`\n"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assets = root / "Game" / "Assets"
+            assets.mkdir(parents=True)
+            (assets / "A.png").write_bytes(b"A")
+            (assets / "B.png").write_bytes(b"B")
+            self.assertTrue(any("duplicate content_sha256" in error for error in validate_registry(text, root)))
+
+    def test_distinct_populated_identities_pass(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assets = root / "Game" / "Assets"
+            assets.mkdir(parents=True)
+            a = assets / "A.png"
+            b = assets / "B.png"
+            a.write_bytes(b"A")
+            b.write_bytes(b"B")
+            text = f"""## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `{hashlib.sha256(a.read_bytes()).hexdigest()}`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/B.png`\n- `content_sha256`: `{hashlib.sha256(b.read_bytes()).hexdigest()}`\n"""
+            self.assertEqual(validate_registry(text, root), [])
 
 
 if __name__ == "__main__":
