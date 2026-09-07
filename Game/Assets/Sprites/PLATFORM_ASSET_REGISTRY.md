@@ -114,6 +114,21 @@ The C++ selector remains metadata-only: it consumes the identity supplied by the
 - `content_sha256`: `UNPOPULATED`
 - local modifications: none
 
+## ART-007 — PROPS research candidate P2
+- `asset_id`: `intrix.mini-platformer-pack-props`
+- source: `https://opengameart.org/content/mini-platformer-pack`
+- creator: Intrix
+- licence: CC0 (verified against the OpenGameArt source page)
+- asset/version identifier: `mini_platform_pack_2.zip` (8.1 kB download listed on source page; exact files to be acquired and hashed before promotion)
+- retrieval date: 2026-09-06
+- concrete size evidence: source page states tileset blocks are `16×16`, big tree is `32×32`, and small tree, rock, bush and dead tree are `16×16`
+- role: ambient/environment decoration without gameplay collision semantics
+- human review: `REWORK`
+- status: `REWORK — stronger concrete size evidence than P1, but exact binary identity is not yet acquired and no visual approval has been granted`
+- `runtime_path`: `UNPOPULATED`
+- `content_sha256`: `UNPOPULATED`
+- local modifications: none
+
 ## Other approval-inbox IDs
 
 - `ART-001` actual player sprite: concrete PNG is 32×32 px, so human review is `APPROVE`; required player size remains `32×32 px`.
