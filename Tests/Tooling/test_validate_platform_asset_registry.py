@@ -14,23 +14,40 @@ from Development.Tools.validate_platform_asset_registry import validate_registry
 VALID_SHA = "a" * 64
 
 
-def populated_registry(path: str, digest: str, section: str = "Candidate A") -> str:
-    return f"""# Registry\n\n## {section}\n- `runtime_path`: `{path}`\n- `content_sha256`: `{digest}`\n"""
+def registry_entry(
+    section: str,
+    asset_id: str,
+    path: str,
+    digest: str,
+) -> str:
+    return f"""## {section}\n- `asset_id`: `{asset_id}`\n- `runtime_path`: `{path}`\n- `content_sha256`: `{digest}`\n"""
 
 
 class PlatformAssetRegistryValidatorTests(unittest.TestCase):
     def test_unpopulated_identity_is_allowed(self) -> None:
-        text = """## Candidate A\n- `runtime_path`: `UNPOPULATED — exact binary not yet staged`\n- `content_sha256`: `UNPOPULATED — exact binary not yet staged`\n"""
+        text = """## Candidate A
+- `asset_id`: `candidate.a`
+- `runtime_path`: `UNPOPULATED — exact binary not yet staged`
+- `content_sha256`: `UNPOPULATED — exact binary not yet staged`
+"""
         with tempfile.TemporaryDirectory() as tmp:
             self.assertEqual(validate_registry(text, Path(tmp)), [])
 
+    def test_missing_asset_id_fails_closed(self) -> None:
+        text = """## Candidate A
+- `runtime_path`: `UNPOPULATED`
+- `content_sha256`: `UNPOPULATED`
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertTrue(any("asset_id is required" in error for error in validate_registry(text, Path(tmp))))
+
     def test_partial_identity_fails_closed(self) -> None:
-        text = f"""## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `UNPOPULATED`\n"""
+        text = registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", "UNPOPULATED")
         with tempfile.TemporaryDirectory() as tmp:
             self.assertTrue(validate_registry(text, Path(tmp)))
 
     def test_malformed_hash_fails(self) -> None:
-        text = populated_registry("Game/Assets/A.png", "not-a-sha256")
+        text = registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", "not-a-sha256")
         with tempfile.TemporaryDirectory() as tmp:
             self.assertTrue(validate_registry(text, Path(tmp)))
 
@@ -41,21 +58,25 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             "C:/absolute/path.png",
             "C:relative.png",
         ):
-            text = populated_registry(path, VALID_SHA)
+            text = registry_entry("Candidate A", "candidate.a", path, VALID_SHA)
             with tempfile.TemporaryDirectory() as tmp:
                 self.assertTrue(validate_registry(text, Path(tmp)), path)
 
     def test_unpopulated_sentinel_is_exact(self) -> None:
-        text = populated_registry("UNPOPULATEDevil/path.png", VALID_SHA)
+        text = registry_entry("Candidate A", "candidate.a", "UNPOPULATEDevil/path.png", VALID_SHA)
         with tempfile.TemporaryDirectory() as tmp:
             self.assertTrue(validate_registry(text, Path(tmp)))
 
-        text = """## Candidate A\n- `runtime_path`: `UNPOPULATEDfoo`\n- `content_sha256`: `UNPOPULATEDfoo`\n"""
+        text = """## Candidate A
+- `asset_id`: `candidate.a`
+- `runtime_path`: `UNPOPULATEDfoo`
+- `content_sha256`: `UNPOPULATEDfoo`
+"""
         with tempfile.TemporaryDirectory() as tmp:
             self.assertTrue(validate_registry(text, Path(tmp)))
 
     def test_missing_file_fails(self) -> None:
-        text = populated_registry("Game/Assets/A.png", VALID_SHA)
+        text = registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", VALID_SHA)
         with tempfile.TemporaryDirectory() as tmp:
             self.assertTrue(validate_registry(text, Path(tmp)))
 
@@ -66,7 +87,7 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             target.parent.mkdir(parents=True)
             target.write_bytes(b"exact asset bytes")
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
-            text = populated_registry("Game/Assets/A.png", digest)
+            text = registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", digest)
             self.assertEqual(validate_registry(text, root), [])
 
     def test_hash_mismatch_fails(self) -> None:
@@ -75,11 +96,29 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             target = root / "Game" / "Assets" / "A.png"
             target.parent.mkdir(parents=True)
             target.write_bytes(b"different bytes")
-            text = populated_registry("Game/Assets/A.png", VALID_SHA)
+            text = registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", VALID_SHA)
             self.assertTrue(validate_registry(text, root))
 
+    def test_duplicate_asset_id_fails(self) -> None:
+        text = (
+            registry_entry("Candidate A", "same.id", "Game/Assets/A.png", VALID_SHA)
+            + "\n"
+            + registry_entry("Candidate B", "same.id", "Game/Assets/B.png", "b" * 64)
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            assets = root / "Game" / "Assets"
+            assets.mkdir(parents=True)
+            (assets / "A.png").write_bytes(b"A")
+            (assets / "B.png").write_bytes(b"B")
+            self.assertTrue(any("duplicate asset_id" in error for error in validate_registry(text, root)))
+
     def test_duplicate_runtime_path_fails(self) -> None:
-        text = """## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`\n"""
+        text = (
+            registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", VALID_SHA)
+            + "\n"
+            + registry_entry("Candidate B", "candidate.b", "Game/Assets/A.png", "b" * 64)
+        )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             target = root / "Game" / "Assets" / "A.png"
@@ -89,7 +128,11 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
 
     def test_duplicate_hash_fails_case_insensitively(self) -> None:
         digest = "a" * 64
-        text = f"""## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `{digest}`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/B.png`\n- `content_sha256`: `{digest.upper()}`\n"""
+        text = (
+            registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", digest)
+            + "\n"
+            + registry_entry("Candidate B", "candidate.b", "Game/Assets/B.png", digest.upper())
+        )
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             assets = root / "Game" / "Assets"
@@ -107,7 +150,11 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             b = assets / "B.png"
             a.write_bytes(b"A")
             b.write_bytes(b"B")
-            text = f"""## Candidate A\n- `runtime_path`: `Game/Assets/A.png`\n- `content_sha256`: `{hashlib.sha256(a.read_bytes()).hexdigest()}`\n\n## Candidate B\n- `runtime_path`: `Game/Assets/B.png`\n- `content_sha256`: `{hashlib.sha256(b.read_bytes()).hexdigest()}`\n"""
+            text = (
+                registry_entry("Candidate A", "candidate.a", "Game/Assets/A.png", hashlib.sha256(a.read_bytes()).hexdigest())
+                + "\n"
+                + registry_entry("Candidate B", "candidate.b", "Game/Assets/B.png", hashlib.sha256(b.read_bytes()).hexdigest())
+            )
             self.assertEqual(validate_registry(text, root), [])
 
 
