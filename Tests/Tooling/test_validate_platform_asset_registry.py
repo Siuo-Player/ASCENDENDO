@@ -163,6 +163,30 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             errors = validate_registry(text, Path(tmp))
             self.assertTrue(any("duplicate runtime_path declaration" in error for error in errors))
 
+    def test_malformed_identity_field_fails_closed(self) -> None:
+        text = """## Candidate A
+- asset_id: candidate.a
+- `runtime_path`: `UNPOPULATED`
+- `content_sha256`: `UNPOPULATED`
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = validate_registry(text, Path(tmp))
+            self.assertTrue(any("malformed identity field declaration" in error for error in errors))
+
+    def test_malformed_identity_does_not_hide_existing_fields(self) -> None:
+        text = """## Candidate A
+- `asset_id`: `candidate.a`
+- `runtime_path`: `Game/Assets/A.png`
+- content_sha256: `bad`
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            target = root / "Game" / "Assets" / "A.png"
+            target.parent.mkdir(parents=True)
+            target.write_bytes(b"asset")
+            errors = validate_registry(text, root)
+            self.assertTrue(any("malformed identity field declaration" in error for error in errors))
+
     def test_distinct_populated_identities_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

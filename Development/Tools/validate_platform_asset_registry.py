@@ -18,6 +18,7 @@ from pathlib import Path
 REGISTRY = Path("Game/Assets/Sprites/PLATFORM_ASSET_REGISTRY.md")
 SHA256_RE = re.compile(r"^[0-9a-fA-F]{64}$")
 FIELD_RE = re.compile(r"^[-*]\s+`(asset_id|runtime_path|content_sha256)`:\s+`([^`]*)`\s*$")
+IDENTITY_LINE_RE = re.compile(r"^[-*]\s+.*\b(asset_id|runtime_path|content_sha256)\b.*:")
 SECTION_RE = re.compile(r"^##\s+(.+?)\s*$")
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 UNPOPULATED = "UNPOPULATED"
@@ -52,6 +53,7 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
     runtime_path: str | None = None
     content_sha256: str | None = None
     field_counts = {field: 0 for field in IDENTITY_FIELDS}
+    malformed_identity_lines: set[int] = set()
 
     def reset_entry() -> None:
         nonlocal asset_id, runtime_path, content_sha256
@@ -135,7 +137,7 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
 
         reset_entry()
 
-    for line in text.splitlines():
+    for line_number, line in enumerate(text.splitlines(), start=1):
         match = SECTION_RE.match(line)
         if match:
             flush()
@@ -143,16 +145,20 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
             continue
 
         match = FIELD_RE.match(line)
-        if not match:
+        if match:
+            field = match.group(1)
+            field_counts[field] += 1
+            if field == "asset_id":
+                asset_id = match.group(2)
+            elif field == "runtime_path":
+                runtime_path = match.group(2)
+            else:
+                content_sha256 = match.group(2)
             continue
-        field = match.group(1)
-        field_counts[field] += 1
-        if field == "asset_id":
-            asset_id = match.group(2)
-        elif field == "runtime_path":
-            runtime_path = match.group(2)
-        else:
-            content_sha256 = match.group(2)
+
+        if IDENTITY_LINE_RE.match(line) and line_number not in malformed_identity_lines:
+            errors.append(f"{current_section}: malformed identity field declaration on line {line_number}")
+            malformed_identity_lines.add(line_number)
 
     flush()
     return errors
