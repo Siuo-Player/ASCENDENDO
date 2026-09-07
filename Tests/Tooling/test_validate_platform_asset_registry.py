@@ -141,6 +141,28 @@ class PlatformAssetRegistryValidatorTests(unittest.TestCase):
             (assets / "B.png").write_bytes(b"B")
             self.assertTrue(any("duplicate content_sha256" in error for error in validate_registry(text, root)))
 
+    def test_duplicate_field_declaration_fails(self) -> None:
+        text = """## Candidate A
+- `asset_id`: `candidate.a`
+- `asset_id`: `candidate.a-again`
+- `runtime_path`: `UNPOPULATED`
+- `content_sha256`: `UNPOPULATED`
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = validate_registry(text, Path(tmp))
+            self.assertTrue(any("duplicate asset_id declaration" in error for error in errors))
+
+    def test_duplicate_field_does_not_hide_populated_identity(self) -> None:
+        text = """## Candidate A
+- `asset_id`: `candidate.a`
+- `runtime_path`: `Game/Assets/A.png`
+- `runtime_path`: `UNPOPULATED`
+- `content_sha256`: `UNPOPULATED`
+"""
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = validate_registry(text, Path(tmp))
+            self.assertTrue(any("duplicate runtime_path declaration" in error for error in errors))
+
     def test_distinct_populated_identities_pass(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
