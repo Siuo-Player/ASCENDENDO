@@ -4,7 +4,7 @@
 The registry intentionally permits an explicit UNPOPULATED state while an
 external binary has not yet been staged. Once identity is populated, this
 validator requires a repository-relative path, a 64-hex SHA-256, an existing
-file, and a matching content digest.
+file, a matching content digest, and unique exact identity across entries.
 """
 
 from __future__ import annotations
@@ -42,6 +42,8 @@ def path_is_safe(value: str) -> bool:
 
 def validate_registry(text: str, repo_root: Path) -> list[str]:
     errors: list[str] = []
+    seen_runtime_paths: dict[str, str] = {}
+    seen_hashes: dict[str, str] = {}
     current_section = "<root>"
     runtime_path: str | None = None
     content_sha256: str | None = None
@@ -77,12 +79,31 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
             content_sha256 = None
             return
 
+        normalized_hash = content_sha256.lower()
+        previous_path_owner = seen_runtime_paths.get(runtime_path)
+        if previous_path_owner is not None:
+            errors.append(
+                f"{label}: duplicate runtime_path {runtime_path}; "
+                f"already declared by {previous_path_owner}"
+            )
+        else:
+            seen_runtime_paths[runtime_path] = label
+
+        previous_hash_owner = seen_hashes.get(normalized_hash)
+        if previous_hash_owner is not None:
+            errors.append(
+                f"{label}: duplicate content_sha256 {content_sha256}; "
+                f"already declared by {previous_hash_owner}"
+            )
+        else:
+            seen_hashes[normalized_hash] = label
+
         target = repo_root / Path(runtime_path)
         if not target.is_file():
             errors.append(f"{label}: runtime_path does not exist: {runtime_path}")
         else:
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
-            if digest.lower() != content_sha256.lower():
+            if digest.lower() != normalized_hash:
                 errors.append(
                     f"{label}: SHA-256 mismatch for {runtime_path}: "
                     f"declared {content_sha256}, actual {digest}"
