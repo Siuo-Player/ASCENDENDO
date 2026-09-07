@@ -4,8 +4,8 @@
 The registry intentionally permits an explicit UNPOPULATED state while an
 external binary has not yet been staged. Once identity is populated, this
 validator requires an asset ID, a repository-relative path, a 64-hex SHA-256,
-an existing file, a matching content digest, and unique exact identity across
-entries.
+an existing file, a matching content digest, unique exact identity across
+entries, and at most one declaration of each identity field per entry.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ SECTION_RE = re.compile(r"^##\s+(.+?)\s*$")
 WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:")
 UNPOPULATED = "UNPOPULATED"
 UNPOPULATED_PREFIX = "UNPOPULATED — "
+IDENTITY_FIELDS = ("asset_id", "runtime_path", "content_sha256")
 
 
 def is_unpopulated(value: str | None) -> bool:
@@ -50,13 +51,27 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
     asset_id: str | None = None
     runtime_path: str | None = None
     content_sha256: str | None = None
+    field_counts = {field: 0 for field in IDENTITY_FIELDS}
+
+    def reset_entry() -> None:
+        nonlocal asset_id, runtime_path, content_sha256
+        asset_id = None
+        runtime_path = None
+        content_sha256 = None
+        for field in IDENTITY_FIELDS:
+            field_counts[field] = 0
 
     def flush() -> None:
         nonlocal asset_id, runtime_path, content_sha256
         if asset_id is None and runtime_path is None and content_sha256 is None:
+            reset_entry()
             return
 
         label = current_section
+        for field in IDENTITY_FIELDS:
+            if field_counts[field] > 1:
+                errors.append(f"{label}: duplicate {field} declaration")
+
         if not asset_id:
             errors.append(f"{label}: asset_id is required")
         elif asset_id in seen_asset_ids:
@@ -70,30 +85,22 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
         path_unpopulated = is_unpopulated(runtime_path)
         hash_unpopulated = is_unpopulated(content_sha256)
         if path_unpopulated and hash_unpopulated:
-            asset_id = None
-            runtime_path = None
-            content_sha256 = None
+            reset_entry()
             return
 
         if path_unpopulated != hash_unpopulated:
             errors.append(f"{label}: runtime_path and content_sha256 must be populated together")
-            asset_id = None
-            runtime_path = None
-            content_sha256 = None
+            reset_entry()
             return
 
         assert runtime_path is not None and content_sha256 is not None
         if not path_is_safe(runtime_path):
             errors.append(f"{label}: invalid repository-relative runtime_path: {runtime_path}")
-            asset_id = None
-            runtime_path = None
-            content_sha256 = None
+            reset_entry()
             return
         if SHA256_RE.fullmatch(content_sha256) is None:
             errors.append(f"{label}: content_sha256 must be exactly 64 hexadecimal characters")
-            asset_id = None
-            runtime_path = None
-            content_sha256 = None
+            reset_entry()
             return
 
         normalized_hash = content_sha256.lower()
@@ -126,9 +133,7 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
                     f"declared {content_sha256}, actual {digest}"
                 )
 
-        asset_id = None
-        runtime_path = None
-        content_sha256 = None
+        reset_entry()
 
     for line in text.splitlines():
         match = SECTION_RE.match(line)
@@ -140,9 +145,11 @@ def validate_registry(text: str, repo_root: Path) -> list[str]:
         match = FIELD_RE.match(line)
         if not match:
             continue
-        if match.group(1) == "asset_id":
+        field = match.group(1)
+        field_counts[field] += 1
+        if field == "asset_id":
             asset_id = match.group(2)
-        elif match.group(1) == "runtime_path":
+        elif field == "runtime_path":
             runtime_path = match.group(2)
         else:
             content_sha256 = match.group(2)
