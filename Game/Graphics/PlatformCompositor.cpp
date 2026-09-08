@@ -45,10 +45,6 @@ std::uint8_t neighbourMask(const std::map<CellKey, std::uint16_t>& cells,
 TopologyClass classify(const std::map<CellKey, std::uint16_t>& cells,
                        const GridCell& cell,
                        std::uint8_t mask) {
-    // Topology classes retain the original cardinal-neighbour semantics. The
-    // diagonal bits are additional semantic signature data and must not alter
-    // established left/right/up/down classification until a future topology
-    // contract explicitly promotes them.
     const int degree = ((mask & Left) != 0) + ((mask & Right) != 0) +
                        ((mask & Up) != 0) + ((mask & Down) != 0);
 
@@ -119,16 +115,6 @@ bool validRegion(const PlatformRegion& region, int& widthCells, int& heightCells
 float overlapLength(float lhsStart, float lhsEnd,
                     float rhsStart, float rhsEnd) {
     return std::min(lhsEnd, rhsEnd) - std::max(lhsStart, rhsStart);
-}
-
-const RegionCell* findRegionCell(const RegionCompositionResult& region,
-                                 int localX,
-                                 int localY) {
-    for (const RegionCell& cell : region.cells) {
-        if (cell.localX == localX && cell.localY == localY)
-            return &cell;
-    }
-    return nullptr;
 }
 
 RegionCell* findRegionCell(RegionCompositionResult& region,
@@ -314,6 +300,44 @@ std::vector<RegionContact> findRegionContacts(const PlatformRegion& lhs,
                     });
                 }
             }
+        }
+    }
+
+    struct CornerTouch {
+        float lhsX;
+        float lhsY;
+        float rhsX;
+        float rhsY;
+        int lhsLocalX;
+        int lhsLocalY;
+        int rhsLocalX;
+        int rhsLocalY;
+        std::uint8_t lhsNeighbour;
+        std::uint8_t rhsNeighbour;
+    };
+
+    const std::array<CornerTouch, 4> cornerTouches = {{
+        {lhsRight, lhsBottom, rhs.x, rhs.y,
+         lhsWidth - 1, lhsHeight - 1, 0, 0, DownRight, UpLeft},
+        {lhs.x, lhsBottom, rhsRight, rhs.y,
+         0, lhsHeight - 1, rhsWidth - 1, 0, DownLeft, UpRight},
+        {lhsRight, lhs.y, rhs.x, rhsBottom,
+         lhsWidth - 1, 0, 0, rhsHeight - 1, UpRight, DownLeft},
+        {lhs.x, lhs.y, rhsRight, rhsBottom,
+         0, 0, rhsWidth - 1, rhsHeight - 1, UpLeft, DownRight},
+    }};
+
+    for (const CornerTouch& corner : cornerTouches) {
+        if (std::fabs(corner.lhsX - corner.rhsX) <= tolerance &&
+            std::fabs(corner.lhsY - corner.rhsY) <= tolerance) {
+            contacts.push_back({
+                corner.lhsLocalX,
+                corner.lhsLocalY,
+                corner.rhsLocalX,
+                corner.rhsLocalY,
+                corner.lhsNeighbour,
+                corner.rhsNeighbour,
+            });
         }
     }
 
