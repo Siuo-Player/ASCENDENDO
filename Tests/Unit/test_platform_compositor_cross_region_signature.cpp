@@ -46,8 +46,6 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK((cellAt(lhsResult, 1, 0).neighbours & Right) != 0);
         CHECK((cellAt(rhsResult, 0, 0).neighbours & Left) != 0);
 
-        // TopologyClass is deliberately local to each region and therefore
-        // must not be recomputed from the cross-region presentation contact.
         const bool lhsTopologyIsRightEnd =
             static_cast<int>(cellAt(lhsResult, 1, 0).topology) ==
             static_cast<int>(TopologyClass::RightEnd);
@@ -122,5 +120,46 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         CHECK(applyRegionContacts(lhsResult, rhsResult, contacts));
         CHECK(cellAt(lhsResult, 0, 0).neighbours == lhsMask);
         CHECK(cellAt(rhsResult, 0, 0).neighbours == rhsMask);
+    }
+
+    TEST_CASE("T23 corner-only contact produces reciprocal diagonal signatures") {
+        PlatformRegion lhs{0.0f, 0.0f, 16.0f, 16.0f, 1};
+        PlatformRegion rhs{16.0f, 16.0f, 16.0f, 16.0f, 1};
+
+        RegionCompositionResult lhsResult = composeRegion(lhs);
+        RegionCompositionResult rhsResult = composeRegion(rhs);
+        REQUIRE(lhsResult.valid);
+        REQUIRE(rhsResult.valid);
+
+        const auto contacts = findRegionContacts(lhs, rhs);
+        REQUIRE(contacts.size() == 1);
+        CHECK(contacts.front().lhsLocalX == 0);
+        CHECK(contacts.front().lhsLocalY == 0);
+        CHECK(contacts.front().rhsLocalX == 0);
+        CHECK(contacts.front().rhsLocalY == 0);
+        CHECK(contacts.front().lhsNeighbour == DownRight);
+        CHECK(contacts.front().rhsNeighbour == UpLeft);
+
+        CHECK(applyRegionContacts(lhsResult, rhsResult, contacts));
+        CHECK((cellAt(lhsResult, 0, 0).neighbours & DownRight) != 0);
+        CHECK((cellAt(rhsResult, 0, 0).neighbours & UpLeft) != 0);
+    }
+
+    TEST_CASE("T24 diagonal-only contact tolerates small floating-point drift") {
+        PlatformRegion lhs{0.0f, 0.0f, 16.0f, 16.0f, 1};
+        PlatformRegion rhs{16.0f + 5.0e-5f, 16.0f - 4.0e-5f, 16.0f, 16.0f, 1};
+
+        const auto contacts = findRegionContacts(lhs, rhs, 1.0e-4f);
+        REQUIRE(contacts.size() == 1);
+        CHECK(contacts.front().lhsNeighbour == DownRight);
+        CHECK(contacts.front().rhsNeighbour == UpLeft);
+    }
+
+    TEST_CASE("T25 separated corners beyond tolerance remain disconnected") {
+        PlatformRegion lhs{0.0f, 0.0f, 16.0f, 16.0f, 1};
+        PlatformRegion rhs{16.0002f, 16.0f, 16.0f, 16.0f, 1};
+
+        const auto contacts = findRegionContacts(lhs, rhs, 1.0e-4f);
+        CHECK(contacts.empty());
     }
 }
