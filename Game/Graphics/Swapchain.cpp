@@ -126,7 +126,16 @@ bool Swapchain::init(VulkanContext* ctx, Window* window) {
 
     m_ctx = ctx;
     m_window = window;
-    return createResources(VK_NULL_HANDLE);
+    if (createResources(VK_NULL_HANDLE)) return true;
+
+    m_ctx = nullptr;
+    m_window = nullptr;
+    m_swapchain = VK_NULL_HANDLE;
+    m_extent = {};
+    m_imageFormat = {};
+    m_images.clear();
+    m_imageViews.clear();
+    return false;
 }
 
 bool Swapchain::recreate() {
@@ -135,15 +144,32 @@ bool Swapchain::recreate() {
     VkDevice device = m_ctx->device();
     if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
 
-    destroyImageResources();
-    if (m_swapchain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(device, m_swapchain, nullptr);
-        m_swapchain = VK_NULL_HANDLE;
-    }
-    m_extent = {};
-    m_imageFormat = {};
+    // Transactional recreation: retain the current valid resources until the
+    // replacement swapchain and all of its image views are completely ready.
+    const VkSwapchainKHR oldSwapchain = m_swapchain;
+    const VkFormat oldImageFormat = m_imageFormat;
+    const VkExtent2D oldExtent = m_extent;
+    const std::vector<VkImage> oldImages = m_images;
+    const std::vector<VkImageView> oldImageViews = m_imageViews;
 
-    return createResources(VK_NULL_HANDLE);
+    if (!createResources(oldSwapchain)) {
+        // createResources() commits member state only after all replacement
+        // resources have been created, so the old state remains usable here.
+        return false;
+    }
+
+    VkDevice newDevice = m_ctx->device();
+    for (auto view : oldImageViews) {
+        if (view != VK_NULL_HANDLE) vkDestroyImageView(newDevice, view, nullptr);
+    }
+    if (oldSwapchain != VK_NULL_HANDLE && oldSwapchain != m_swapchain) {
+        vkDestroySwapchainKHR(newDevice, oldSwapchain, nullptr);
+    }
+
+    (void)oldImageFormat;
+    (void)oldExtent;
+    (void)oldImages;
+    return true;
 }
 
 bool Swapchain::createResources(VkSwapchainKHR oldSwapchain) {
