@@ -186,4 +186,33 @@ TEST_SUITE("Campaign Editor") {
         CHECK_FALSE(editor.levels()[1].selected);
         CHECK(editor.levels()[2].selected);
     }
+
+    TEST_CASE("failed campaign load preserves the existing document") {
+        TempTree temp;
+        const auto levels = temp.root() / "Levels";
+        std::filesystem::create_directories(levels);
+        writeLevel(levels / "a.lvl", "A");
+        writeLevel(levels / "b.lvl", "B");
+
+        const auto campaign = levels / "campaign.txt";
+        {
+            std::ofstream file(campaign);
+            REQUIRE(file.is_open());
+            file << "a.lvl\n"
+                 << "b.lvl\n";
+        }
+
+        logic::CampaignEditorDocument editor;
+        REQUIRE(editor.loadFromCampaignFile(campaign.string()));
+        editor.select(1);
+
+        const auto missingCampaign = levels / "does-not-exist.txt";
+        CHECK_FALSE(editor.loadFromCampaignFile(missingCampaign.string()));
+        REQUIRE(editor.levelCount() == 2);
+        CHECK(editor.levels()[0].name == "A");
+        CHECK(editor.levels()[1].name == "B");
+        CHECK(editor.selectedIndex() == 1);
+        CHECK_FALSE(editor.levels()[0].selected);
+        CHECK(editor.levels()[1].selected);
+    }
 }
