@@ -61,6 +61,14 @@ public:
     const std::string& persistencePath() const { return m_persistencePath; }
     const std::string& documentName() const { return m_documentName; }
 
+    // Transactional replacement used by the Campaign Editor. The caller must
+    // load/parse the LevelData first; this operation only replaces the editor
+    // after the new data satisfies the selected level's final-level policy.
+    bool loadLevelData(const LevelData& data,
+                       bool finalCampaignLevel,
+                       std::string path,
+                       std::string name = "Editor Level");
+
     EditorSaveResult saveLevel();
     EditorSaveResult saveLevel(const std::string& path,
                                const std::string& name = "Editor Level");
