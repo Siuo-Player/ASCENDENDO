@@ -329,6 +329,52 @@ Não criar uma `Application` genérica, nem novas divisões de configuração, a
 
 Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
 
+## Sprint 20 — Foundation closure audit
+
+### Editor semantic-input boundary — concluído
+
+**PR:** #255  
+**Merge:** `53e1cb69965ced084a2a7f78c2e3c961b9757747`  
+**Estado:** **COMPLETED**
+
+`EditorSession` já não consulta diretamente `Key::P`, `Key::S` ou `Key::F` para selecionar a ferramenta de entidade. A seleção de plataforma, spawn e flag passa pelas `GameAction` semânticas e pela `KeyBindings`, mantendo a mesma interface física por defeito.
+
+As novas ações foram acrescentadas no fim de `GameAction`, preservando os valores numéricos das ações existentes e evitando uma regressão de compatibilidade do enum. Foram adicionados testes para defaults, round-trip de nomes e remapeamento real dentro de `EditorSession`.
+
+### CI evidence
+
+O head final de #255, `cc0d914ecf1746c7ee9d65866a3ad8317681905f`, passou:
+
+- Tests / Linux Clang C++20 Headless Vulkan;
+- Tests / Linux Clang ASan + UBSan Headless Vulkan;
+- Windows / Clang C++20;
+- Deterministic Capture Evidence para 4:3, 16:9 e 21:9 nos níveis cobertos.
+
+A integração só ocorreu depois de todos estes gates terminarem com sucesso.
+
+### Camera / viewport audit — sem nova tranche necessária
+
+A revisão da cadeia `world → NDC`, do letterbox, dos limites do viewport e do tracking confirmou que já existem contratos explícitos e testes para:
+
+- projeção da origem, centro e limites da câmara em NDC;
+- câmara deslocada verticalmente;
+- letterbox/pillarbox em janelas largas e altas;
+- rejeição natural de cliques nas barras laterais;
+- convergência do tracking vertical;
+- ausência de overshoot com `dt` grande;
+- limite inferior da câmara em `Y=0`;
+- rejeição de `NaN`/`Inf` em entradas de `follow()`.
+
+Não foi encontrada uma falha operacional demonstrável que justificasse alterar `worldToNDC`, introduzir uma nova política de viewport ou expandir o contrato da câmara apenas por consistência estética. A documentação anterior que lista esta auditoria como próxima investigação deve ser interpretada como concluída sem mudança de contrato.
+
+### Foundation decision
+
+**Sprint 20 FOUNDATION — CLOSED.**
+
+Os blocos necessários da fundação atualmente sob o escopo declarado estão implementados, integrados e cobertos pelas verificações críticas disponíveis. Não permanece um blocker E, uma ausência D ou uma implementação C/B que deva ser corrigida antes de avançar para a camada seguinte sem primeiro surgir nova evidência operacional.
+
+Qualquer trabalho seguinte deve entrar na fase posterior correspondente e não ser reintroduzido artificialmente como “foundation”. Em particular, o **Movement Feel Benchmark** continua posterior, assim como polish visual, conteúdo final, novas mecânicas e propriedades adiadas sem requisito novo.
+
 ## Princípios de execução
 
 ```text
