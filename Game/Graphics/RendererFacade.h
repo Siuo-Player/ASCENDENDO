@@ -5,6 +5,7 @@
 
 #include "Graphics/RenderState.h"
 #include "Graphics/RenderSnapshot.h"
+#include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
@@ -42,6 +43,7 @@ public:
     void attachText(TextPipeline* textPipeline, FontRenderer* font);
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
+    void attachCampaignEditorSnapshot(const logic::CampaignEditorRenderSnapshot* snapshot);
 
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
@@ -65,6 +67,8 @@ private:
     SpriteRenderer* m_sprite = nullptr;
     logic::EditorRenderSnapshot m_editorSnapshot{};
     const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
+    logic::CampaignEditorRenderSnapshot m_campaignEditorSnapshot{};
+    const logic::CampaignEditorRenderSnapshot* m_campaignEditorSnapshotPtr = nullptr;
 
     bool m_initialized = false;
 };
