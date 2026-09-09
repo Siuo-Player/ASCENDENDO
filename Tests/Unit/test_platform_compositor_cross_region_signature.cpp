@@ -162,4 +162,31 @@ TEST_SUITE("16x16 semantic compositor — cross-region signatures") {
         const auto contacts = findRegionContacts(lhs, rhs, 1.0e-4f);
         CHECK(contacts.empty());
     }
+
+    TEST_CASE("T26 all four corner orientations produce reciprocal diagonal signatures") {
+        struct CornerCase {
+            PlatformRegion lhs;
+            PlatformRegion rhs;
+            std::uint8_t lhsNeighbour;
+            std::uint8_t rhsNeighbour;
+        };
+
+        const std::array<CornerCase, 4> cases = {{
+            {{0.0f, 0.0f, 16.0f, 16.0f, 1}, {16.0f, 16.0f, 16.0f, 16.0f, 1}, DownRight, UpLeft},
+            {{16.0f, 0.0f, 16.0f, 16.0f, 1}, {0.0f, 16.0f, 16.0f, 16.0f, 1}, DownLeft, UpRight},
+            {{0.0f, 16.0f, 16.0f, 16.0f, 1}, {16.0f, 0.0f, 16.0f, 16.0f, 1}, UpRight, DownLeft},
+            {{16.0f, 16.0f, 16.0f, 16.0f, 1}, {0.0f, 0.0f, 16.0f, 16.0f, 1}, UpLeft, DownRight},
+        }};
+
+        for (const CornerCase& corner : cases) {
+            const auto contacts = findRegionContacts(corner.lhs, corner.rhs);
+            REQUIRE(contacts.size() == 1);
+            CHECK(contacts.front().lhsLocalX == 0);
+            CHECK(contacts.front().lhsLocalY == 0);
+            CHECK(contacts.front().rhsLocalX == 0);
+            CHECK(contacts.front().rhsLocalY == 0);
+            CHECK(contacts.front().lhsNeighbour == corner.lhsNeighbour);
+            CHECK(contacts.front().rhsNeighbour == corner.rhsNeighbour);
+        }
+    }
 }
