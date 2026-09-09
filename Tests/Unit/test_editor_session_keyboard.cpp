@@ -7,6 +7,9 @@ namespace {
 void press(logic::InputManager& input, int key) {
     input.beginFrame();
     input.onKeyEvent(key, logic::Action::PRESS);
+    // Unit tests model a complete physical tap so a later press of the same
+    // key is observed as a new edge, just as a real release+press sequence is.
+    input.onKeyEvent(key, logic::Action::RELEASE);
 }
 
 }
@@ -68,7 +71,7 @@ TEST_CASE("cursor teclado pode atravessar a altura de um nivel multi-screen") {
     input.injectCursorPos(0.0, 0.0);
     session.update(input, bindings, 640, 360);
 
-    for (int i = 0; i < 361; ++i) {
+    for (int i = 0; i < 360; ++i) {
         press(input, logic::Key::UP);
         session.update(input, bindings, 640, 360);
     }
