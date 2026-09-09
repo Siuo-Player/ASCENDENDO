@@ -106,7 +106,7 @@ TEST_CASE("render snapshot expoe entidades de spawn e FLAG") {
     const auto initialSpawn = session.document().spawnPosition();
     input.beginFrame();
     input.injectCursorPos(200.0, 270.0); // world x=200, y=90
-    input.onKeyEvent(logic::Key::S, logic::Action::PRESS);
+    input.onKeyEvent(logic::Key::T, logic::Action::PRESS);
     session.update(input, bindings, 640, 360);
     REQUIRE(session.controller().entityTool() == logic::EditorEntityTool::SPAWN);
 
