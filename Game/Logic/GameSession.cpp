@@ -9,6 +9,66 @@
 
 namespace logic {
 
+namespace {
+constexpr std::size_t INVALID_INDEX = static_cast<std::size_t>(-1);
+}
+
+void GameSession::configureCampaignEditor(std::string campaignFilePath) {
+    campaignEditorPath_ = std::move(campaignFilePath);
+    campaignEditorLoaded_ = false;
+    campaignEditorDirty_ = false;
+}
+
+bool GameSession::openCampaignEditor(core::GameState returnState) {
+    if (campaignEditorPath_.empty()) return false;
+
+    // Parse into a candidate first. CampaignEditorDocument owns the canonical
+    // campaign.txt semantics; a failed reload must not destroy the current UI
+    // selection or a valid in-memory document.
+    CampaignEditorDocument candidate;
+    if (!candidate.loadFromCampaignFile(campaignEditorPath_)) return false;
+    campaignEditor_ = std::move(candidate);
+    campaignEditorLoaded_ = true;
+    campaignEditorDirty_ = false;
+    stateMachine_.enterCampaignEditor(returnState);
+    return true;
+}
+
+bool GameSession::openSelectedCampaignLevel() {
+    if (!campaignEditorLoaded_) return false;
+    const CampaignLevelBlock* selected = campaignEditor_.selectedLevel();
+    if (!selected) return false;
+
+    // LevelDataIO is the only technical level parser here. Do not change
+    // campaign selection or the active Level Editor until parsing and
+    // final-level validation have succeeded.
+    const std::optional<LevelData> data = LevelDataIO::load(selected->path);
+    if (!data) return false;
+
+    const bool finalCampaignLevel =
+        campaignEditor_.selectedIndex() + 1 == campaignEditor_.levelCount();
+    const std::string levelName = data->name.empty() ? selected->name : data->name;
+
+    if (!editorSession_.loadLevelData(*data,
+                                      finalCampaignLevel,
+                                      selected->path,
+                                      levelName)) {
+        return false;
+    }
+
+    editorSession_.cancelInteraction();
+    stateMachine_.enterEditor(core::GameState::CAMPAIGN_EDITOR);
+    return true;
+}
+
+CampaignEditorRenderSnapshot GameSession::campaignEditorSnapshot() const {
+    CampaignEditorRenderSnapshot snapshot;
+    snapshot.levels = campaignEditor_.levels();
+    snapshot.selectedIndex = campaignEditor_.selectedIndex();
+    snapshot.contentHeight = campaignEditor_.contentHeight();
+    return snapshot;
+}
+
 void GameSession::resetGame(float logicalWidth) {
     // Bootstrap the new campaign state transactionally. A failed load must not
     // leave the session in PLAYING with an empty or stale level.
@@ -84,16 +144,31 @@ GameSessionUpdateResult GameSession::update(float dt,
         core::isActionJustPressed(bindings, input, core::GameAction::Quit);
     const bool openEditorPressed =
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
+    const bool openCampaignEditorPressed =
+        core::isActionJustPressed(bindings, input, core::GameAction::OpenCampaignEditor);
 
-    // PhysicsWorld already rejects invalid deltas. The session must also
-    // prevent an invalid render-frame delta from contaminating elapsed time.
+    const bool campaignPrevious =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignSelectPrevious);
+    const bool campaignNext =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignSelectNext);
+    const bool campaignEarlier =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignMoveEarlier);
+    const bool campaignLater =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignMoveLater);
+    const bool campaignOpen =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignOpenLevel);
+    const bool campaignSave =
+        core::isActionJustPressed(bindings, input, core::GameAction::CampaignSave);
+
     const float safeDt = (std::isfinite(dt) && dt >= 0.0f) ? dt : 0.0f;
 
     switch (currentState) {
     case core::GameState::PLAYING:
         elapsedTime_ += safeDt;
 
-        if (openEditorPressed) {
+        if (openCampaignEditorPressed) {
+            openCampaignEditor(core::GameState::PLAYING);
+        } else if (openEditorPressed) {
             openEditor(core::GameState::PLAYING);
         } else if (quitPressed) {
             editorSession_.cancelInteraction();
@@ -166,6 +241,10 @@ GameSessionUpdateResult GameSession::update(float dt,
             break;
         }
 
+        if (openCampaignEditorPressed) {
+            openCampaignEditor(core::GameState::MENU);
+            break;
+        }
         if (openEditorPressed) {
             openEditor(core::GameState::MENU);
             break;
@@ -193,6 +272,46 @@ GameSessionUpdateResult GameSession::update(float dt,
             } else {
                 result.quitRequested = true;
             }
+        }
+        break;
+    }
+
+    case core::GameState::CAMPAIGN_EDITOR: {
+        if (quitPressed || pausePressed) {
+            campaignEditorDirty_ = false;
+            stateMachine_.returnFromCampaignEditor();
+            break;
+        }
+
+        const std::size_t count = campaignEditor_.levelCount();
+        if (count == 0) break;
+
+        const std::size_t selected = campaignEditor_.selectedIndex();
+        if (campaignPrevious && selected != INVALID_INDEX) {
+            campaignEditor_.select(selected == 0 ? count - 1 : selected - 1);
+        }
+        if (campaignNext && selected != INVALID_INDEX) {
+            campaignEditor_.select((selected + 1) % count);
+        }
+
+        const std::size_t current = campaignEditor_.selectedIndex();
+        if (campaignEarlier && current != INVALID_INDEX && current > 0) {
+            campaignEditor_.moveLevel(current, current - 1);
+            campaignEditorDirty_ = true;
+        }
+        if (campaignLater && current != INVALID_INDEX && current + 1 < count) {
+            campaignEditor_.moveLevel(current, current + 1);
+            campaignEditorDirty_ = true;
+        }
+
+        if (campaignSave) {
+            const CampaignSaveResult saved =
+                campaignEditor_.saveToCampaignFile(campaignEditorPath_);
+            if (saved.success) campaignEditorDirty_ = false;
+        }
+
+        if (campaignOpen) {
+            openSelectedCampaignLevel();
         }
         break;
     }
