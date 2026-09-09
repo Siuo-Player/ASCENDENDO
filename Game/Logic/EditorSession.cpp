@@ -180,6 +180,7 @@ EditorRenderSnapshot EditorSession::renderSnapshot() const {
 
     snapshot.levelWidth = m_document.levelWidth();
     snapshot.levelHeight = m_document.levelHeight();
+    snapshot.viewBottomY = m_viewBottomY;
     snapshot.screenCount = m_document.screenCount();
 
     snapshot.hasSelection = m_controller.hasSelection();
@@ -214,7 +215,10 @@ void EditorSession::updateCursor(const InputManager& input,
         mouseLogical.x != m_lastMouseLogical.x ||
         mouseLogical.y != m_lastMouseLogical.y) {
         m_cursor.logical = mouseLogical;
-        m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, {0.0f, 0.0f}).world;
+        m_cursor.world = m_controller.cursorFromLogical(
+            m_cursor.logical, {0.0f, m_viewBottomY}).world;
+        m_cursor.world.x = std::clamp(m_cursor.world.x, 0.0f, m_document.levelWidth());
+        m_cursor.world.y = std::clamp(m_cursor.world.y, 0.0f, m_document.levelHeight());
         m_keyboardCursorActive = false;
     }
 
@@ -222,11 +226,19 @@ void EditorSession::updateCursor(const InputManager& input,
     m_haveMousePosition = true;
 }
 
+void EditorSession::followKeyboardCursor() {
+    const float viewportHeight = config::LOGICAL_HEIGHT;
+    const float maxView = std::max(0.0f, m_document.levelHeight() - viewportHeight);
+    m_viewBottomY = std::clamp(m_cursor.world.y - viewportHeight * 0.5f,
+                               0.0f, maxView);
+}
+
 void EditorSession::moveKeyboardCursor(float dx, float dy) {
     m_keyboardCursorActive = true;
     m_cursor.world.x = std::clamp(m_cursor.world.x + dx, 0.0f, m_document.levelWidth());
     m_cursor.world.y = std::clamp(m_cursor.world.y + dy, 0.0f, m_document.levelHeight());
     m_cursor.logical = m_cursor.world;
+    followKeyboardCursor();
 }
 
 bool EditorSession::placeKeyboardEntity() {
@@ -313,6 +325,14 @@ void EditorSession::updateKeyboard(const InputManager& input,
         moveKeyboardCursor(0.0f, 1.0f);
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorDown))
         moveKeyboardCursor(0.0f, -1.0f);
+
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPanUp)) {
+        const float maxView = std::max(0.0f, m_document.levelHeight() - config::LOGICAL_HEIGHT);
+        m_viewBottomY = std::clamp(m_viewBottomY + 16.0f, 0.0f, maxView);
+    }
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPanDown))
+        m_viewBottomY = std::clamp(m_viewBottomY - 16.0f, 0.0f,
+                                   std::max(0.0f, m_document.levelHeight() - config::LOGICAL_HEIGHT));
 
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorToggleMode))
         m_controller.toggleToolMode();
