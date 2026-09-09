@@ -4,6 +4,7 @@
 #include "Logic/LevelEditor.h"
 
 #include <filesystem>
+#include <fstream>
 
 TEST_SUITE("Foundation — vertical level layout") {
 
@@ -66,7 +67,7 @@ TEST_CASE("FLAG de level final é restrita à última screen") {
     CHECK_FALSE(document.setFlag({{320.0f, 100.0f}, {384.0f, 116.0f}}));
     REQUIRE(document.setFlag({{320.0f, 1440.0f}, {384.0f, 1456.0f}}));
     CHECK(document.hasFlag());
-    CHECK(document.flag()->min.y >= doctest::Approx(1440.0f));
+    CHECK(document.flag()->min.y == doctest::Approx(1440.0f));
 }
 
 TEST_CASE("SCREENS é persistido e níveis antigos continuam a carregar como uma screen") {
