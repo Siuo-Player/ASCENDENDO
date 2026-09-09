@@ -414,6 +414,7 @@ void EditorSession::update(const InputManager& input,
                            const core::KeyBindings& bindings,
                            int32_t windowWidth,
                            int32_t windowHeight) {
+    const LevelData before = m_document.toLevelData(m_documentName);
     const bool undoPressed = core::isActionJustPressed(
         bindings, input, core::GameAction::EditorUndo);
     const bool redoPressed = core::isActionJustPressed(
@@ -428,17 +429,12 @@ void EditorSession::update(const InputManager& input,
         return;
     }
 
-    const LevelData before = m_document.toLevelData(m_documentName);
-    const std::uint64_t generationBefore = m_document.generation();
-    const bool interactionWasActive = m_leftDragActive;
-
     updateKeyboard(input, bindings);
     updateMouse(input);
 
-    if (!m_applyingHistory && m_document.generation() != generationBefore &&
-        !interactionWasActive) {
+    const LevelData after = m_document.toLevelData(m_documentName);
+    if (!sameDocumentState(before, after))
         recordEditBaseline(before);
-    }
 
     refreshValidationResult();
 }
