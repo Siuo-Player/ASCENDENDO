@@ -40,10 +40,6 @@ public:
     float levelWidth() const { return m_layout.width(); }
     float levelHeight() const { return m_layout.height(); }
 
-    static float snap(float value);
-    static Vec2 snap(const Vec2& point);
-    static AABB snap(const AABB& rect);
-
     bool addPlatform(const AABB& requested, std::size_t* createdIndex = nullptr);
     bool movePlatform(std::size_t index, const Vec2& requestedMin);
     bool removePlatform(std::size_t index);
