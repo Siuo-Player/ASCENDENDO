@@ -2,10 +2,13 @@
 
 #include "Core/GameStateMachine.h"
 #include "Core/KeyBindings.h"
+#include "Logic/CampaignEditor.h"
+#include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/CampaignRuntime.h"
 #include "Logic/EditorSession.h"
 #include "Logic/InputManager.h"
 #include "Logic/Level.h"
+#include "Logic/LevelDataIO.h"
 #include "Logic/Physics.h"
 #include "Logic/Player.h"
 #include "Logic/SimulationOrchestrator.h"
@@ -43,6 +46,9 @@ public:
 
     void beginPlaying(float logicalWidth);
     bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
+    void configureCampaignEditor(std::string campaignFilePath);
+    bool openCampaignEditor(core::GameState returnState);
+    bool openSelectedCampaignLevel();
     void openEditor(core::GameState returnState) noexcept;
 
     GameSessionUpdateResult update(float dt,
@@ -64,6 +70,10 @@ public:
     const Level& level() const noexcept { return level_; }
     EditorSession& editorSession() noexcept { return editorSession_; }
     const EditorSession& editorSession() const noexcept { return editorSession_; }
+    CampaignEditorDocument& campaignEditor() noexcept { return campaignEditor_; }
+    const CampaignEditorDocument& campaignEditor() const noexcept { return campaignEditor_; }
+    CampaignEditorRenderSnapshot campaignEditorSnapshot() const;
+    bool campaignEditorDirty() const noexcept { return campaignEditorDirty_; }
 
 private:
     int clickedMenuBox(const InputManager& input,
@@ -80,8 +90,12 @@ private:
     SimulationOrchestrator simulation_;
     Player player_;
     EditorSession editorSession_;
+    CampaignEditorDocument campaignEditor_;
     core::GameStateMachine stateMachine_;
 
+    std::string campaignEditorPath_;
+    bool campaignEditorLoaded_ = false;
+    bool campaignEditorDirty_ = false;
     std::string campaignID_;
     std::string runsCsvPath_;
     float elapsedTime_ = 0.0f;
