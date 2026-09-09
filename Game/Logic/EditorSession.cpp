@@ -202,11 +202,11 @@ void EditorSession::updateKeyboard(const InputManager& input,
         }
     }
 
-    if (input.isKeyJustPressed(Key::P)) {
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectPlatform)) {
         m_controller.setEntityTool(EditorEntityTool::PLATFORM);
-    } else if (input.isKeyJustPressed(Key::S)) {
+    } else if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectSpawn)) {
         m_controller.setEntityTool(EditorEntityTool::SPAWN);
-    } else if (input.isKeyJustPressed(Key::F)) {
+    } else if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectFlag)) {
         m_controller.setEntityTool(EditorEntityTool::FLAG);
     }
 
