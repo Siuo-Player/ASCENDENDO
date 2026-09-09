@@ -9,10 +9,9 @@ namespace logic {
 
 namespace {
 
-bool insideEditorCanvas(const AABB& bounds) {
+bool insideEditorCanvas(const AABB& bounds, float levelWidth, float levelHeight) {
     return bounds.min.x >= 0.0f && bounds.min.y >= 0.0f &&
-           bounds.max.x <= config::LOGICAL_WIDTH &&
-           bounds.max.y <= config::LOGICAL_HEIGHT;
+           bounds.max.x <= levelWidth && bounds.max.y <= levelHeight;
 }
 
 bool sameDocumentState(const LevelData& a, const LevelData& b) {
@@ -140,7 +139,9 @@ EditorPreview EditorSession::preview() const {
     if (m_controller.hasSelection() &&
         m_controller.mode() == EditorMouseMode::MOVING) {
         const AABB bounds = m_document.platforms()[m_controller.selectedIndex()].bounds;
-        result.visible = insideEditorCanvas(bounds);
+        result.visible = insideEditorCanvas(bounds,
+                                            m_document.levelWidth(),
+                                            m_document.levelHeight());
         result.bounds = bounds;
         return result;
     }
@@ -151,7 +152,9 @@ EditorPreview EditorSession::preview() const {
             {m_cursor.world.x - size.x * 0.5f, m_cursor.world.y - size.y * 0.5f},
             {m_cursor.world.x + size.x * 0.5f, m_cursor.world.y + size.y * 0.5f},
         };
-        result.visible = insideEditorCanvas(result.bounds);
+        result.visible = insideEditorCanvas(result.bounds,
+                                            m_document.levelWidth(),
+                                            m_document.levelHeight());
         return result;
     }
 
@@ -162,7 +165,9 @@ EditorPreview EditorSession::preview() const {
             {std::max(m_pressedWorld.x, m_cursor.world.x),
              std::max(m_pressedWorld.y, m_cursor.world.y)},
         };
-        result.visible = insideEditorCanvas(result.bounds);
+        result.visible = insideEditorCanvas(result.bounds,
+                                            m_document.levelWidth(),
+                                            m_document.levelHeight());
     }
     return result;
 }
@@ -172,6 +177,10 @@ EditorRenderSnapshot EditorSession::renderSnapshot() const {
     snapshot.platforms.reserve(m_document.platformCount());
     for (const auto& platform : m_document.platforms())
         snapshot.platforms.push_back(platform.bounds);
+
+    snapshot.levelWidth = m_document.levelWidth();
+    snapshot.levelHeight = m_document.levelHeight();
+    snapshot.screenCount = m_document.screenCount();
 
     snapshot.hasSelection = m_controller.hasSelection();
     snapshot.selectedIndex = snapshot.hasSelection
@@ -241,7 +250,6 @@ bool EditorSession::placeKeyboardEntity() {
     }
 
     if (hit < m_document.platformCount()) {
-        // Select an existing platform at the keyboard cursor.
         m_controller.clearSelection();
         m_controller.setToolMode(EditorToolMode::STAMP);
         if (!m_controller.beginMove(m_cursor.world)) return false;
