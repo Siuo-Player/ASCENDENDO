@@ -16,11 +16,55 @@ investigar
 
 Não trabalhamos directamente em `main`.
 
+## 1.1 Sprint 21 — estado operacional
+
+O Sprint 21 está a executar a integração da autoria de campanha sobre a fundação fechada.
+
+### PR #265 — fundação vertical + editor keyboard-first
+
+Estado: aberto, dependente de CI verde.
+
+Já implementa o contrato de level com largura fixa de 640 px, `N × 360` screens, compatibilidade de `.lvl` legado como `N=1`, `SCREENS N` persistido, regra de FLAG na última screen para o level final e cursor/colocação/undo/redo por acções semânticas.
+
+A última falha de CI identificada foi reduzida a uma expectativa incorrecta no teste do cursor multi-screen: `(0,0)` é coordenada de janela e converte para o topo lógico devido à inversão do eixo Y. O teste foi corrigido para iniciar em `(0,360)` e percorrer explicitamente os 720 px do level de duas screens.
+
+### PR #268 / Issue #267 — Campaign Editor no runtime real
+
+Estado: implementação activa, dependente da integração de #265.
+
+A cadeia agora está desenhada como:
+
+```text
+campaign.txt
+→ CampaignEditorDocument
+→ GameSession::CAMPAIGN_EDITOR
+→ selection/reorder/open/save
+→ LevelDataIO
+→ EditorSession / LevelEditorDocument
+→ GameState::EDITOR
+→ retorno a CAMPAIGN_EDITOR com a selecção preservada
+```
+
+O renderer recebe um snapshot específico do Campaign Editor. A UI mostra nome, ordem, ficheiro e estado não guardado; não cria uma segunda fonte de verdade para `campaign.txt`.
+
+Falhas de carregamento são transaccionais: o documento actualmente aberto e a identidade seleccionada não são substituídos antes de o novo `.lvl` ser lido e validado.
+
+### Pendências de Sprint 21
+
+- CI completo de #265 após a correcção final do teste;
+- integração final de #268 após #265 ficar integrado;
+- cobertura CI Linux/ASan/UBSan/Windows/determinística para o novo fluxo;
+- política de `Esc` com alterações não guardadas no Campaign Editor alinhada com o carrinho global;
+- navegação visual do Level Editor sobre todas as screens verticais, não apenas a persistência do modelo;
+- remover/justificar o `EDITOR_GRID_SNAP` de 4 px, porque a visão de produto define colocação pixel-perfect sem grelha obrigatória.
+
+Nenhum destes itens deve ser marcado como concluído apenas porque existe código; requer evidência correspondente.
+
 # 2. Fundação ✅ FECHADA
 
 A fundação actual cobre separação Core/Logic/Presentation, contratos de input semântico, determinismo/fixed timestep, validação fail-closed e lifecycle gráfico.
 
-A fundação fechada não significa que features futuras não possam exigir novas abstrações; significa que os contratos existentes têm evidência suficiente para servir de base.
+A fundação fechada não significa que features futuras não possam exigir novas abstracções; significa que os contratos existentes têm evidência suficiente para servir de base.
 
 # 3. Fase 9 — Sistema de autoria 🔄 ACTIVA
 
@@ -40,16 +84,17 @@ Já existe `GameAction`/`KeyBindings` e bindings para acções do editor.
 
 Toda operação essencial do editor deve funcionar com **teclado apenas**. Mouse/drag é atalho de conveniência.
 
-## 9.2 Modelo espacial vertical 🔄 EM IMPLEMENTAÇÃO
+## 9.2 Modelo espacial vertical 🔄 EM INTEGRAÇÃO
 
-Objetivos:
+Objectivos:
 
 - largura exactamente 640;
 - altura `N × 360`;
 - N variável;
 - mapeamento screen ↔ coordenada mundial determinístico;
 - `.lvl` antigo continua a significar N=1;
-- nova metadata `SCREENS N` persistida no `.lvl`.
+- nova metadata `SCREENS N` persistida no `.lvl`;
+- integração do modelo com o Level Editor real.
 
 ### Porque agora
 
@@ -65,11 +110,13 @@ A navegação deve funcionar só com teclado e com teclado+rato.
 
 Consolidar um histórico geral de alterações. `Esc` apresenta mudanças pendentes como carrinho e permite guardar tudo, descartar tudo ou rever/desfazer selectivamente.
 
+A base de undo/redo do documento já existe; o fluxo de carrinho continua a exigir fecho de UX/estado, incluindo alterações de campanha.
+
 ## 9.5 Playtest não persistente 🟡
 
 Executar o level actualmente editado, regressar ao editor e preservar o documento em memória sem save automático.
 
-## 9.6 Campaign Editor 🔄
+## 9.6 Campaign Editor 🔄 EM INTEGRAÇÃO
 
 Integrar `CampaignEditorDocument` + snapshot + UI:
 
@@ -83,7 +130,7 @@ seleccionar
 → reabrir
 ```
 
-Criar/remover entries directamente da UI permanece em investigação UX.
+A integração de runtime já está em execução no Sprint 21. Criar/remover entries directamente da UI permanece em investigação UX.
 
 ## 9.7 Selecção de campanha 🟡
 
