@@ -62,6 +62,7 @@ public:
     const AABB* flag() const { return m_flag.has_value() ? &*m_flag : nullptr; }
 
     LevelData toLevelData(const std::string& name) const;
+    bool restoreFromLevelData(const LevelData& data);
 
     static Vec2 presetSize(EditorSizePreset preset);
 
