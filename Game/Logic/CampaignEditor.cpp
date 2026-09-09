@@ -58,15 +58,29 @@ bool CampaignEditorDocument::moveLevel(std::size_t index, std::size_t newOrder) 
     if (index >= m_levels.size() || newOrder >= m_levels.size()) return false;
     if (index == newOrder) return true;
 
+    const std::size_t previousSelected = m_selectedIndex;
     CampaignLevelBlock moved = m_levels[index];
     m_levels.erase(m_levels.begin() + static_cast<std::ptrdiff_t>(index));
     m_levels.insert(m_levels.begin() + static_cast<std::ptrdiff_t>(newOrder), std::move(moved));
 
-    for (std::size_t i = 0; i < m_levels.size(); ++i) {
+    for (std::size_t i = 0; i < m_levels.size(); ++i)
         m_levels[i].order = i;
+
+    if (previousSelected == index) {
+        m_selectedIndex = newOrder;
+    } else if (previousSelected != static_cast<std::size_t>(-1)) {
+        if (index < previousSelected && previousSelected <= newOrder) {
+            m_selectedIndex = previousSelected - 1;
+        } else if (newOrder <= previousSelected && previousSelected < index) {
+            m_selectedIndex = previousSelected + 1;
+        } else {
+            m_selectedIndex = previousSelected;
+        }
     }
-    m_selectedIndex = newOrder;
+
     rebuildPositions();
+    for (std::size_t i = 0; i < m_levels.size(); ++i)
+        m_levels[i].selected = (i == m_selectedIndex);
     return true;
 }
 

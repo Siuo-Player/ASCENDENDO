@@ -126,4 +126,64 @@ TEST_SUITE("Campaign Editor") {
         CHECK_FALSE(validation.valid);
         CHECK(validation.message.find("escapes") != std::string::npos);
     }
+
+    TEST_CASE("reordering a different level preserves the selected level") {
+        TempTree temp;
+        const auto levels = temp.root() / "Levels";
+        std::filesystem::create_directories(levels);
+        writeLevel(levels / "a.lvl", "A");
+        writeLevel(levels / "b.lvl", "B");
+        writeLevel(levels / "c.lvl", "C");
+
+        const auto campaign = levels / "campaign.txt";
+        std::ofstream file(campaign);
+        REQUIRE(file.is_open());
+        file << "a.lvl\n"
+             << "b.lvl\n"
+             << "c.lvl\n";
+        file.close();
+
+        logic::CampaignEditorDocument editor;
+        REQUIRE(editor.loadFromCampaignFile(campaign.string()));
+        editor.select(0);
+
+        REQUIRE(editor.moveLevel(2, 0));
+        CHECK(editor.levels()[0].name == "C");
+        CHECK(editor.levels()[1].name == "A");
+        CHECK(editor.levels()[2].name == "B");
+        CHECK(editor.selectedIndex() == 1);
+        CHECK_FALSE(editor.levels()[0].selected);
+        CHECK(editor.levels()[1].selected);
+        CHECK_FALSE(editor.levels()[2].selected);
+    }
+
+    TEST_CASE("reordering the selected level moves selection with it") {
+        TempTree temp;
+        const auto levels = temp.root() / "Levels";
+        std::filesystem::create_directories(levels);
+        writeLevel(levels / "a.lvl", "A");
+        writeLevel(levels / "b.lvl", "B");
+        writeLevel(levels / "c.lvl", "C");
+
+        const auto campaign = levels / "campaign.txt";
+        std::ofstream file(campaign);
+        REQUIRE(file.is_open());
+        file << "a.lvl\n"
+             << "b.lvl\n"
+             << "c.lvl\n";
+        file.close();
+
+        logic::CampaignEditorDocument editor;
+        REQUIRE(editor.loadFromCampaignFile(campaign.string()));
+        editor.select(1);
+
+        REQUIRE(editor.moveLevel(1, 2));
+        CHECK(editor.levels()[0].name == "A");
+        CHECK(editor.levels()[1].name == "C");
+        CHECK(editor.levels()[2].name == "B");
+        CHECK(editor.selectedIndex() == 2);
+        CHECK_FALSE(editor.levels()[0].selected);
+        CHECK_FALSE(editor.levels()[1].selected);
+        CHECK(editor.levels()[2].selected);
+    }
 }
