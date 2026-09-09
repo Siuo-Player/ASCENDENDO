@@ -4,7 +4,7 @@
 
 namespace {
 
-void press(logic::InputManager& input, logic::Key key) {
+void press(logic::InputManager& input, int key) {
     input.beginFrame();
     input.onKeyEvent(key, logic::Action::PRESS);
 }
@@ -59,7 +59,7 @@ TEST_CASE("cursor teclado pode atravessar a altura de um nivel multi-screen") {
         "multi",
         {{{0.0f, 0.0f}, {640.0f, 16.0f}},
          {{100.0f, 380.0f}, {220.0f, 400.0f}}},
-        Vec2{0.0f, 16.0f},
+        logic::Vec2{0.0f, 16.0f},
         std::nullopt,
         2
     }));
