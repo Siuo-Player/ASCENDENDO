@@ -53,7 +53,7 @@ public:
     EditorSizePreset sizePreset() const { return m_controller.sizePreset(); }
     EditorToolMode toolMode() const { return m_controller.toolMode(); }
     std::uint64_t documentGeneration() const { return m_document.generation(); }
-    bool canUndo() const { return m_undoHistory.size() > 1; }
+    bool canUndo() const { return !m_undoHistory.empty(); }
     bool canRedo() const { return !m_redoHistory.empty(); }
 
     void setPersistenceTarget(std::string path,
@@ -100,8 +100,11 @@ private:
     LevelEditorDocument m_document;
     EditorInteractionController m_controller;
     EditorCursor m_cursor{};
+    Vec2 m_lastMouseLogical{};
     Vec2 m_pressedWorld{};
     bool m_leftDragActive = false;
+    bool m_haveMousePosition = false;
+    bool m_keyboardCursorActive = false;
 
     std::string m_persistencePath;
     std::string m_documentName = "Editor Level";
