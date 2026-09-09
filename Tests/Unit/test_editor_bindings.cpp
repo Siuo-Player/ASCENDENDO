@@ -7,17 +7,21 @@ using namespace logic;
 
 TEST_SUITE("Fase 9.4 — Editor KeyBindings") {
 
-TEST_CASE("defaults do editor são G, [, ], DELETE/BACKSPACE") {
+TEST_CASE("defaults do editor são configuráveis por ação") {
     KeyBindings kb;
     CHECK(kb.keysFor(GameAction::EditorToggleMode) == std::vector<int>{Key::G});
     CHECK(kb.keysFor(GameAction::EditorSizeDown) == std::vector<int>{Key::LBRACKET});
     CHECK(kb.keysFor(GameAction::EditorSizeUp) == std::vector<int>{Key::RBRACKET});
+    CHECK(kb.keysFor(GameAction::EditorSelectPlatform) == std::vector<int>{Key::P});
+    CHECK(kb.keysFor(GameAction::EditorSelectSpawn) == std::vector<int>{Key::S});
+    CHECK(kb.keysFor(GameAction::EditorSelectFlag) == std::vector<int>{Key::F});
     CHECK(kb.keysFor(GameAction::DeleteSelection) == std::vector<int>{Key::DELETE_KEY, Key::BACKSPACE});
 }
 
 TEST_CASE("nomes das teclas do editor fazem round-trip") {
     const int keys[] = {
-        Key::G, Key::LBRACKET, Key::RBRACKET, Key::DELETE_KEY, Key::BACKSPACE
+        Key::G, Key::LBRACKET, Key::RBRACKET, Key::P, Key::S, Key::F,
+        Key::DELETE_KEY, Key::BACKSPACE
     };
     for (int key : keys) {
         int parsed = -1;
@@ -39,6 +43,29 @@ TEST_CASE("duas teclas podem representar a mesma ação de apagar") {
     input.beginFrame();
     input.onKeyEvent(Key::DELETE_KEY, Action::PRESS);
     CHECK(isActionJustPressed(kb, input, GameAction::DeleteSelection));
+}
+
+TEST_CASE("editor entity selection follows rebound semantic actions") {
+    KeyBindings kb;
+    InputManager input;
+
+    kb.rebind(GameAction::EditorSelectPlatform, Key::C);
+    kb.rebind(GameAction::EditorSelectSpawn, Key::E);
+    kb.rebind(GameAction::EditorSelectFlag, Key::Q);
+
+    input.beginFrame();
+    input.onKeyEvent(Key::C, Action::PRESS);
+    CHECK(isActionJustPressed(kb, input, GameAction::EditorSelectPlatform));
+    CHECK_FALSE(isActionJustPressed(kb, input, GameAction::EditorSelectSpawn));
+    CHECK_FALSE(isActionJustPressed(kb, input, GameAction::EditorSelectFlag));
+
+    input.beginFrame();
+    input.onKeyEvent(Key::E, Action::PRESS);
+    CHECK(isActionJustPressed(kb, input, GameAction::EditorSelectSpawn));
+
+    input.beginFrame();
+    input.onKeyEvent(Key::Q, Action::PRESS);
+    CHECK(isActionJustPressed(kb, input, GameAction::EditorSelectFlag));
 }
 
 }
