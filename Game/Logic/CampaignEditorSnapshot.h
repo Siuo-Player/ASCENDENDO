@@ -20,6 +20,7 @@ struct CampaignEditorRenderSnapshot {
     std::vector<ValidatorRunPreview> validatorRuns;
     std::size_t selectedIndex = static_cast<std::size_t>(-1);
     float contentHeight = 0.0f;
+    bool dirty = false;
 };
 
 } // namespace logic
