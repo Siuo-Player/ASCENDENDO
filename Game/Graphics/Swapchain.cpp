@@ -144,31 +144,22 @@ bool Swapchain::recreate() {
     VkDevice device = m_ctx->device();
     if (vkDeviceWaitIdle(device) != VK_SUCCESS) return false;
 
-    // Transactional recreation: retain the current valid resources until the
-    // replacement swapchain and all of its image views are completely ready.
+    // Transactional recreation: keep the current resources alive until the
+    // replacement swapchain and all of its image views are fully constructed.
+    // createResources() changes member state only on complete success.
     const VkSwapchainKHR oldSwapchain = m_swapchain;
-    const VkFormat oldImageFormat = m_imageFormat;
-    const VkExtent2D oldExtent = m_extent;
-    const std::vector<VkImage> oldImages = m_images;
     const std::vector<VkImageView> oldImageViews = m_imageViews;
 
     if (!createResources(oldSwapchain)) {
-        // createResources() commits member state only after all replacement
-        // resources have been created, so the old state remains usable here.
         return false;
     }
 
-    VkDevice newDevice = m_ctx->device();
     for (auto view : oldImageViews) {
-        if (view != VK_NULL_HANDLE) vkDestroyImageView(newDevice, view, nullptr);
+        if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
     }
     if (oldSwapchain != VK_NULL_HANDLE && oldSwapchain != m_swapchain) {
-        vkDestroySwapchainKHR(newDevice, oldSwapchain, nullptr);
+        vkDestroySwapchainKHR(device, oldSwapchain, nullptr);
     }
-
-    (void)oldImageFormat;
-    (void)oldExtent;
-    (void)oldImages;
     return true;
 }
 
