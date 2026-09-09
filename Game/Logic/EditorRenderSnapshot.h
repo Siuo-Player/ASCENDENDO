@@ -23,6 +23,11 @@ struct EditorRenderSnapshot {
     AABB flagBounds{};
     AABB previewBounds{};
 
+    float levelWidth = 640.0f;
+    float levelHeight = 360.0f;
+    float viewBottomY = 0.0f;
+    std::size_t screenCount = 1;
+
     bool hasSelection = false;
     bool hasFlag = false;
     bool previewVisible = false;

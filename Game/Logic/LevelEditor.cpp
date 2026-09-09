@@ -228,6 +228,15 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
     return true;
 }
 
+bool LevelEditorDocument::restoreFromLevelData(const LevelData& data,
+                                               bool finalCampaignLevel) {
+    const bool previousFinal = m_finalCampaignLevel;
+    m_finalCampaignLevel = finalCampaignLevel;
+    if (restoreFromLevelData(data)) return true;
+    m_finalCampaignLevel = previousFinal;
+    return false;
+}
+
 Vec2 LevelEditorDocument::presetSize(EditorSizePreset preset) {
     switch (preset) {
         case EditorSizePreset::SMALL: return {64.0f, 16.0f};

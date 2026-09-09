@@ -8,8 +8,6 @@ void press(logic::InputManager& input, int key) {
     input.beginFrame();
     input.onKeyEvent(key, logic::Action::PRESS);
     input.onKeyEvent(key, logic::Action::RELEASE);
-    // Model a complete physical tap so a later press of the same key produces
-    // a fresh edge, matching the GLFW press/release contract.
 }
 
 }
@@ -67,8 +65,8 @@ TEST_CASE("cursor teclado percorre integralmente um nivel multi-screen") {
         2
     }));
 
-    // GLFW window coordinates have their origin at the top-left while the
-    // editor's logical world uses bottom-left coordinates.
+    // GLFW window Y=360 corresponds to the bottom of the initial logical
+    // viewport; keyboard navigation then traverses the complete 720 px level.
     input.beginFrame();
     input.injectCursorPos(0.0, 360.0);
     session.update(input, bindings, 640, 360);
@@ -80,6 +78,7 @@ TEST_CASE("cursor teclado percorre integralmente um nivel multi-screen") {
 
     CHECK(session.cursor().world.y == doctest::Approx(720.0f));
     CHECK(session.document().levelHeight() == doctest::Approx(720.0f));
+    CHECK(session.renderSnapshot().viewBottomY == doctest::Approx(360.0f));
 }
 
 TEST_CASE("undo e redo restauram edicoes do documento") {
