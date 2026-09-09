@@ -4,6 +4,13 @@
 //
 //  Owned swapchain resources plus explicit recreation support after
 //  VK_ERROR_OUT_OF_DATE_KHR / VK_SUBOPTIMAL_KHR.
+//
+//  Recreation contract:
+//    - keep the current swapchain/resources alive while the replacement is
+//      being constructed;
+//    - publish the replacement only after all image views are ready;
+//    - destroy the previous resources only after successful publication;
+//    - on failure, preserve the previous valid state.
 // =============================================================================
 
 #include <vulkan/vulkan.h>
