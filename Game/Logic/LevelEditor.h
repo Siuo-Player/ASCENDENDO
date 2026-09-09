@@ -64,6 +64,7 @@ public:
 
     LevelData toLevelData(const std::string& name) const;
     bool restoreFromLevelData(const LevelData& data);
+    bool restoreFromLevelData(const LevelData& data, bool finalCampaignLevel);
 
     static Vec2 presetSize(EditorSizePreset preset);
 
