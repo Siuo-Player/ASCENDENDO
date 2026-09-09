@@ -1,5 +1,6 @@
 #include "doctest/doctest.h"
 #include "Core/KeyBindings.h"
+#include "Logic/EditorSession.h"
 #include "Logic/InputManager.h"
 
 using namespace core;
@@ -45,7 +46,22 @@ TEST_CASE("duas teclas podem representar a mesma ação de apagar") {
     CHECK(isActionJustPressed(kb, input, GameAction::DeleteSelection));
 }
 
-TEST_CASE("editor entity selection follows rebound semantic actions") {
+TEST_CASE("editor session usa a ação reconfigurada para selecionar ferramenta") {
+    KeyBindings kb;
+    InputManager input;
+    EditorSession session(false);
+
+    session.controller().setEntityTool(EditorEntityTool::SPAWN);
+    kb.rebind(GameAction::EditorSelectPlatform, Key::C);
+
+    input.beginFrame();
+    input.onKeyEvent(Key::C, Action::PRESS);
+    session.update(input, kb, 640, 360);
+
+    CHECK(session.controller().entityTool() == EditorEntityTool::PLATFORM);
+}
+
+TEST_CASE("ações de seleção permanecem independentes após rebind") {
     KeyBindings kb;
     InputManager input;
 
