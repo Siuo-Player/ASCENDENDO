@@ -1,15 +1,18 @@
 // =============================================================================
 //  Tests/Unit/test_camera.cpp
 //
-//  @version 6.4
+//  @version 6.5
 //  @history
 //    v4.1  — worldToNDC (projecao world→NDC, Y invertido para Vulkan)
 //    v6.4  — follow() (tracking vertical suave)
+//    v6.5  — follow() ignora inputs nao-finitos sem contaminar o estado
 // =============================================================================
 #include "doctest/doctest.h"
 #include "Graphics/Camera.h"
 #include "Logic/Physics.h"
 #include "Core/Config.h"
+
+#include <limits>
 
 using namespace gfx;
 using namespace logic;
@@ -103,5 +106,48 @@ TEST_SUITE("Fase 6.4 — Camera Tracking Vertical") {
         cam.follow(playerPos, PhysicsWorld::FIXED_STEP);
 
         CHECK(cam.position.x == doctest::Approx(0.0f)); // X inalterado
+    }
+
+    TEST_CASE("follow() ignora dt NaN e preserva estado") {
+        Camera cam;
+        cam.position = {0.0f, 100.0f};
+        const Vec2 playerPos = {320.0f, 400.0f};
+        const float nan = std::numeric_limits<float>::quiet_NaN();
+
+        cam.follow(playerPos, nan);
+
+        CHECK(cam.position.y == doctest::Approx(100.0f));
+    }
+
+    TEST_CASE("follow() ignora dt infinito e preserva estado") {
+        Camera cam;
+        cam.position = {0.0f, 100.0f};
+        const Vec2 playerPos = {320.0f, 400.0f};
+        const float infinity = std::numeric_limits<float>::infinity();
+
+        cam.follow(playerPos, infinity);
+
+        CHECK(cam.position.y == doctest::Approx(100.0f));
+    }
+
+    TEST_CASE("follow() ignora speed nao-finito e preserva estado") {
+        Camera cam;
+        cam.position = {0.0f, 100.0f};
+        const Vec2 playerPos = {320.0f, 400.0f};
+        const float nan = std::numeric_limits<float>::quiet_NaN();
+
+        cam.follow(playerPos, PhysicsWorld::FIXED_STEP, nan);
+
+        CHECK(cam.position.y == doctest::Approx(100.0f));
+    }
+
+    TEST_CASE("follow() ignora target Y nao-finito e preserva estado") {
+        Camera cam;
+        cam.position = {0.0f, 100.0f};
+        const float infinity = std::numeric_limits<float>::infinity();
+
+        cam.follow({320.0f, infinity}, PhysicsWorld::FIXED_STEP);
+
+        CHECK(cam.position.y == doctest::Approx(100.0f));
     }
 }
