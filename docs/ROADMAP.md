@@ -1,389 +1,539 @@
-# Roadmap de desenvolvimento
+# Roadmap de desenvolvimento — ASCENDENDO
 
-## Regra de leitura — antes de cada branch
+> Documento operacional canónico. A história detalhada pertence ao Git e aos registos históricos. Este ficheiro descreve o motivo do projecto, o estado actual, a ordem de execução, o que falta e porque cada etapa deve acontecer no momento indicado.
+>
+> **Visão canónica do produto:** `docs/PRODUCT_VISION.md`  
+> **Decisões funcionais canónicas:** `docs/PRODUCT_DECISIONS.md`  
+> **Especificação UX do editor:** `docs/EDITOR_UX_SPEC.md`
 
-O roadmap orienta a ordem do trabalho, mas uma propriedade só muda de estado quando existe evidência suficiente para a alegação correspondente.
+## 1. Porque existe o projecto
 
-## Gate 9.6 — Base Engineering Gate
+ASCENDENDO é um **Vertical Precision Platformer** construído sobre um motor 2D próprio. O projecto não pretende ser apenas uma demonstração técnica nem apenas uma campanha fixa: pretende resultar num jogo de plataforma vertical preciso, difícil de dominar, acompanhado por um sistema de autoria que permita continuar a produzir e validar conteúdo sem depender permanentemente da equipa original.
 
-O Gate está **CLOSED** a partir da integração da revisão final do Gate (PR #118) e da confirmação de fecho formal (PR #119).
-
-## RenderSnapshot
-
-**Issue:** #122  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_RENDERSNAPSHOT_BOUNDARY_2026-08-28.md`  
-**Estado:** **FIRST TRANCHE CONCLUÍDA (PR #129) + editor boundary concluída (PR #132)**
-
-A primeira tranche separou o world/player path do domínio através de `gfx::RenderSnapshot` e `RenderSnapshotBuilder`. O editor passou a materializar `EditorRenderSnapshot` na composição e `RendererFacade` deixou de depender diretamente de `EditorSession`.
-
-## Shared Vulkan image upload
-
-**Issue:** #23  
-**Implementation:** PR #133  
-**Merge:** `e3871bc935dfa52124ec5244ddbb04714caec161`  
-**Estado:** **COMPLETED**
-
-A duplicação de lifecycle Vulkan entre `FontRendererGpu` e `SpriteRendererGpu` foi centralizada em `Game/Graphics/VulkanImageUpload.h/.cpp`, preservando `VkFormat`, `VkFilter`, descriptor policy e ownership nos consumidores.
-
-## EditorInteraction layer boundary
-
-**Issue:** #135  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_EDITOR_INTERACTION_LAYER_BOUNDARY_2026-08-28.md`  
-**Implementation:** PR #136  
-**Merge:** `4d587af1f8d4633e47d4c86b51fb503493f27550`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`Game/Logic/EditorInteraction.h` incluía `Graphics/Camera.h` e expunha `cursorFromLogical(..., const gfx::Camera&)`. A implementação usava somente `camera.position`, criando uma dependência de presentation desnecessária dentro da lógica do editor. Durante a validação também foi observada a mesma dependência concreta em `EditorSession.cpp`; no modelo atual de editor de tela única, a posição necessária é `{0,0}`.
-
-### Decisão
-
-Substituir `const gfx::Camera&` por `const Vec2& cameraPosition` e remover o uso de `gfx::Camera` de `EditorSession`. A `Camera` permanece propriedade da presentation; a lógica recebe somente os dados mínimos necessários.
+O produto tem, portanto, dois lados inseparáveis:
 
 ```text
-logical cursor + camera position
-→ world cursor
+jogo
+  + editor
+  + playtest
+  + validação
+  + determinismo/replay
+  + gestão de campanhas
+  + pipeline de assets
+  + distribuição
+  = ASCENDENDO
 ```
 
-No editor de tela única, `EditorSession` passa `Vec2{0.0f, 0.0f}`.
+### O motivo central
 
-### Evidência
+A experiência de jogo é baseada em **compromisso**: o jogador lê o espaço, carrega a força de um salto, decide quando libertar e aceita a trajectória escolhida. A simplicidade mecânica é intencional; o desafio deve nascer da precisão, do desenho do nível e da aprendizagem do movimento, não de uma quantidade arbitrária de sistemas.
 
-- `cursorFromLogical()` preserva exatamente a soma `logical + cameraPosition`;
-- characterization test foi migrado para `Vec2`;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**;
-- nenhum consumidor do contrato antigo permanece no build validado.
-
-Durante o primeiro ciclo de CI foi encontrado e corrigido o include concreto ausente de `Graphics/Camera.h` em `EditorRenderer.cpp`; a correção necessária ficou no mesmo ciclo de implementação antes do merge.
-
-### Fora de escopo
-
-- mudança de `Camera`;
-- mudança do sistema de coordenadas;
-- mudança da interação do editor;
-- nova abstração genérica de transformação.
-
-## GameState ownership boundary
-
-**Issue:** #137  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_CORE_GAMESTATE_BOUNDARY_2026-08-28.md`  
-**Implementation:** PR #137  
-**Merge:** `b9f0d0021bef341327bfde1cdd02d2be8171e0ba`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`Game/Core/GameStateMachine.h` dependia de `Graphics/GameState.h`, embora `GameState` seja apenas um enum de estado de runtime. Isso colocava um contrato de Core sob ownership de Graphics sem necessidade.
-
-### Decisão
-
-A definição canónica passou para `Game/Core/GameState.h`. `Game/Graphics/GameState.h` ficou como alias explícito de compatibilidade (`gfx::GameState = core::GameState`), enquanto `GameStateMachine`, `GameSession`, `main.cpp` e os testes passaram a usar diretamente `core::GameState`.
+O editor existe porque a vida útil do jogo não deve acabar quando os mapas iniciais acabam. Um nível criado pela comunidade precisa de poder passar pelo mesmo ciclo de qualidade que um nível oficial:
 
 ```text
-Core state contract
-        ↓
-GameSession / state machine
-        ↓
-Presentation
+criar
+→ testar
+→ diagnosticar
+→ validar
+→ guardar
+→ integrar na campanha
+→ jogar novamente
 ```
 
-Os estados e as transições não foram alterados.
+Confiabilidade, verificabilidade e determinismo são, por isso, requisitos de produto e não apenas detalhes internos de engenharia.
 
-### Evidência
+## 2. Princípios que governam o roadmap
 
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**;
-- `static_assert` confirma a identidade de tipo entre `gfx::GameState` e `core::GameState`;
-- issue #137 fechado como completed após integração.
-
-## Semantic TickInput boundary
-
-**Issue:** #138  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_TICK_INPUT_BOUNDARY_2026-08-28.md`  
-**Implementation:** `refactor/semantic-tick-input-boundary-20260828`  
-**Merge:** `7da5af74e2ccc9c2a33d43cbfbcfacc6f5c04381`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`Game/Logic/Player.h` incluía `Game/Logic/InputManager.h` apenas para conhecer `TickInput`. `Player` não utilizava a API de input físico; recebia somente cinco campos semânticos necessários para um tick de simulação.
-
-### Decisão
-
-`TickInput` foi extraído para `Game/Logic/TickInput.h`. `InputManager` continua a traduzir hardware/bindings para o value object e `Player` depende apenas desse contrato semântico.
-
-```text
-InputManager
-    ↓ produz
-TickInput
-    ↓ consome
-Player
-```
-
-O tipo permanece em `Logic`, porque a evidência não justifica transformá-lo num contrato transversal de `Core`.
-
-### Evidência
-
-- `Player.cpp` continua a consumir apenas os cinco campos do contrato;
-- `test_player.cpp` constrói `TickInput` diretamente;
-- `Player.h` deixou de incluir `InputManager.h`;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**;
-- issue #138 fechado como completed após integração.
-
-## Presentation configuration boundary
-
-**Issue:** #140  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_PRESENTATION_CONFIG_BOUNDARY_2026-08-28.md`  
-**Implementation:** `refactor/presentation-config-boundary-20260828`  
-**Merge:** `6885ae63f0aacab16be1505643182d25378c1747`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`Game/Core/Config.h` misturava constantes de Core/gameplay com configuração puramente visual. `WorldRenderer`, `EditorRenderer` e `RendererFacade` dependiam do header de Core para cores, clear colors e espaçamento visual.
-
-### Decisão
-
-Foi criado `Game/Graphics/PresentationConfig.h` para cores, clear colors e espaçamento visual do editor. `Core/Config.h` mantém dimensões lógicas, aspect ratio, timestep, física, gameplay e `EDITOR_GRID_SNAP`.
-
-`CAMERA_SPEED` e `CAMERA_OFFSET_Y` foram removidos por estarem sem uso efetivo no código atual; a implementação de `Camera` já define o speed efetivo e deriva o offset da altura lógica.
-
-```text
-Core/Config
-  → logical/gameplay semantics
-
-Graphics/PresentationConfig
-  → visual presentation policy
-```
-
-### Evidência
-
-- `WorldRenderer`, `EditorRenderer` e `RendererFacade` passaram a depender do header de presentation para valores visuais;
-- dimensões lógicas e `TARGET_ASPECT` continuam em Core;
-- teste independente caracteriza o novo header e valores representativos;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**;
-- issue #140 fechado como completed após integração.
-
-## Fase 10 — Semantic LevelData validation
-
-### Semantic geometry invariants — concluído
-
-**Issue:** #142  
-**WP:** `docs/05-work-packages/WORK_PACKAGE_LEVELDATA_SEMANTIC_VALIDATION_2026-08-28.md`  
-**Implementation:** `refactor/leveldata-semantic-validation-20260828`  
-**Merge:** `2ef4c1b4c25bbfe862ad8c05edad8f8438741835`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`LevelDataIO` era estrito quanto à sintaxe, mas aceitava `PLATFORM`/`FLAG` com largura ou altura `<= 0`. Isso permitia geometria degenerada/invertida chegar ao modelo `Level`.
-
-### Decisão
-
-Foi criada uma boundary semântica independente do parser:
-
-```text
-LevelDataIO
-  parse
-    ↓
-LevelDataValidator
-  validate
-    ↓
-CampaignRuntime
-  append/use
-```
-
-A primeira regra é deliberadamente mínima: plataformas e flags devem ter largura e altura estritamente positivas.
-
-### Evidência
-
-- `LevelDataValidator` valida `width > 0` e `height > 0` para plataformas e flag;
-- `CampaignRuntime` valida imediatamente após o parse e antes de `appendFromData()`;
-- testes verificam rejeição de geometria zero/negativa;
-- testes verificam que um chunk inválido não avança índice, spawn ou geometria acumulada;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**;
-- issue #142 fechado como completed após integração.
-
-### Semantic finite-geometry extension — concluído
-
-**Issue:** #144  
-**Implementation:** PR #145  
-**Merge:** `34c96b83573add90bd1f3d238f62d8f37ba3c9a9`  
-**Estado:** **COMPLETED**
-
-A boundary semântica passou a rejeitar coordenadas não-finitas em `PLATFORM`/`FLAG`, além das extensões não-positivas já validadas pela tranche #143.
-
-### Evidência
-
-- `LevelDataValidator` exige `std::isfinite(min/max x/y)`;
-- a validação continua separada do parser sintático;
-- testes cobrem `NaN`, `+Inf` e `-Inf`;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size e campaign validation: **success**.
-
-### Level/replay cleanup tranches — concluídas
-
-**PR #160 — ReplayManager → TickInput**  
-**Merge:** `0a798872685c668eaac1d1d2b9fbd08c66af1992`  
-**Estado:** **COMPLETED**
-
-`ReplayManager.h` deixou de depender de `InputManager.h` apenas para obter `TickInput`; passou a incluir diretamente `Logic/TickInput.h`, sem alteração da API ou da semântica do replay.
-
-**PR #161 — Level::clear() state reset**  
-**Merge:** `70d99a819746b89afd885cabaef16b5d8f2886ea`  
-**Estado:** **COMPLETED**
-
-`Level::clear()` passou a limpar simultaneamente plataformas, `name`, `hasFlag` e `flagBounds`, com teste regressivo dedicado.
-
-**PR #164 — Vulkan capability matrix test**  
-**Issue:** #162  
-**Merge:** `95419bf25adb2a2c7227b0a72b3a23d714aeaf30`  
-**Estado:** **COMPLETED**
-
-O teste de capability passou a modelar a política real de `VulkanContext`: dispositivos sem API suficiente ou sem `VK_KHR_swapchain`/graphics queue são ignorados, e a propriedade exigida é a existência de pelo menos uma candidatura válida para o runtime.
-
-## Fase 10 — Presentation + camera validation
-
-### Camera follow Lerp bound — concluído
-
-**WP:** `docs/05-work-packages/WORK_PACKAGE_CAMERA_FOLLOW_LERP_BOUND_2026-08-29.md`  
-**Implementation:** branch `fix/camera-follow-lerp-clamp-20260829`  
-**PR:** #170  
-**Merge:** `284d4c807569dc5960c349a67ce0ef87f0aed4ec`  
-**Estado:** **COMPLETED**
-
-### Descoberta
-
-`gfx::Camera::follow()` usava `speed * dt` diretamente como fator de interpolação. Com `speed * dt > 1`, a operação tornava-se extrapolação e podia ultrapassar o alvo.
-
-### Decisão
-
-O fator passou a ser limitado a `[0,1]` através de `std::clamp`, preservando o comportamento no fixed-step normal e eliminando o overshoot provocado por `dt` grande.
-
-### Evidência
-
-- teste regressivo adicionado com `dt = 1.0f` e `speed = 5.0f`;
-- Linux / Clang / C++20 / Headless Vulkan: **success**;
-- Linux / Clang / ASan + UBSan / Headless Vulkan: **success**;
-- Windows / Clang / C++20: **success**;
-- source-size, build/testes e campaign validation: **success**;
-- o head efetivamente validado foi `2a96eed38c7cc87e456c03a3b15d1f712d57d4ea`; o SHA anteriormente referido como `8feefa7869b0cab37986427776351c202de22ea4` já não era o head atual da PR no momento da validação.
-
-### Próxima investigação
-
-Auditar objetivamente:
-
-```text
-world → NDC
-viewport boundaries
-camera target tracking
-camera lower bound
-large/small viewport behavior
-finite camera state
-```
-
-Nenhuma nova regra deve ser implementada apenas por consistência estética. Para avançar é necessária uma propriedade operacional clara, consumidor afetado, risco/falha demonstrável e teste capaz de provar a propriedade.
-
-O estudo de 2026-08-29 também recomenda, como sequência de investigação posterior, um **Movement Feel Benchmark** determinístico que compare cenários pequenos de movimento/câmera/VFX. Esse benchmark permanece distinto do futuro benchmark de PCG e de player-conditioned generation.
-
-### Fora de escopo
-
-- schema/versioning;
-- migration;
-- política geral de bounds;
-- redesign de `Level`;
-- física/colisão;
-- replay persistence sem requisito de produto;
-- nova abstração genérica `Application`.
-
-As tranches #160/#161/#164 e #170 não alteram estes limites de escopo.
-
-## Próximo alvo — Fase 10 / invariantes semanticamente demonstráveis
-
-Após as tranches concluídas, não criar novos validators por organização. Uma nova regra só deve avançar quando houver uma propriedade semântica clara, um consumidor afetado e um teste capaz de demonstrá-la.
-
-Para Vulkan, capability/error semantics devem ser aprofundadas apenas onde houver uma propriedade operacional não coberta pelos testes atuais.
-
-Schema/versioning permanece reservado para um requisito real de compatibilidade/importação.
-
-A duplicação de parsing entre `CampaignLoader` e `CampaignID` permanece apenas como dívida potencial enquanto não houver divergência observável.
-
-Não criar uma `Application` genérica, nem novas divisões de configuração, apenas por organização.
-
-Não reabrir o Gate 9.6 por propriedades futuras já adiadas, como replay persistence, terminal/result replay ou live-input frame-rate independence, sem novo requisito ou evidência.
-
-## Sprint 20 — Foundation closure audit
-
-### Editor semantic-input boundary — concluído
-
-**PR:** #255  
-**Merge:** `53e1cb69965ced084a2a7f78c2e3c961b9757747`  
-**Estado:** **COMPLETED**
-
-`EditorSession` já não consulta diretamente `Key::P`, `Key::S` ou `Key::F` para selecionar a ferramenta de entidade. A seleção de plataforma, spawn e flag passa pelas `GameAction` semânticas e pela `KeyBindings`, mantendo a mesma interface física por defeito.
-
-As novas ações foram acrescentadas no fim de `GameAction`, preservando os valores numéricos das ações existentes e evitando uma regressão de compatibilidade do enum. Foram adicionados testes para defaults, round-trip de nomes e remapeamento real dentro de `EditorSession`.
-
-### CI evidence
-
-O head final de #255, `cc0d914ecf1746c7ee9d65866a3ad8317681905f`, passou:
-
-- Tests / Linux Clang C++20 Headless Vulkan;
-- Tests / Linux Clang ASan + UBSan Headless Vulkan;
-- Windows / Clang C++20;
-- Deterministic Capture Evidence para 4:3, 16:9 e 21:9 nos níveis cobertos.
-
-A integração só ocorreu depois de todos estes gates terminarem com sucesso.
-
-### Camera / viewport audit — sem nova tranche necessária
-
-A revisão da cadeia `world → NDC`, do letterbox, dos limites do viewport e do tracking confirmou que já existem contratos explícitos e testes para:
-
-- projeção da origem, centro e limites da câmara em NDC;
-- câmara deslocada verticalmente;
-- letterbox/pillarbox em janelas largas e altas;
-- rejeição natural de cliques nas barras laterais;
-- convergência do tracking vertical;
-- ausência de overshoot com `dt` grande;
-- limite inferior da câmara em `Y=0`;
-- rejeição de `NaN`/`Inf` em entradas de `follow()`.
-
-Não foi encontrada uma falha operacional demonstrável que justificasse alterar `worldToNDC`, introduzir uma nova política de viewport ou expandir o contrato da câmara apenas por consistência estética. A documentação anterior que lista esta auditoria como próxima investigação deve ser interpretada como concluída sem mudança de contrato.
-
-### Foundation decision
-
-**Sprint 20 FOUNDATION — CLOSED.**
-
-Os blocos necessários da fundação atualmente sob o escopo declarado estão implementados, integrados e cobertos pelas verificações críticas disponíveis. Não permanece um blocker E, uma ausência D ou uma implementação C/B que deva ser corrigida antes de avançar para a camada seguinte sem primeiro surgir nova evidência operacional.
-
-Qualquer trabalho seguinte deve entrar na fase posterior correspondente e não ser reintroduzido artificialmente como “foundation”. Em particular, o **Movement Feel Benchmark** continua posterior, assim como polish visual, conteúdo final, novas mecânicas e propriedades adiadas sem requisito novo.
-
-## Princípios de execução
+Toda a evolução deve seguir:
 
 ```text
 investigar
-→ documentar
-→ atualizar roadmap/architecture/tech-debt/WP
+→ documentar a decisão
+→ escolher a menor tranche suficiente
 → implementar
-→ testar/validar
-→ documentar resultado, falhas e próxima decisão
+→ testar
+→ validar em CI
+→ actualizar a documentação activa
+→ avançar
 ```
 
-A decomposição de `main.cpp` é incremental e baseada em ownership/responsabilidade/testabilidade; não criar uma `Application` genérica apenas para reduzir linhas.
+Uma propriedade só muda de estado quando existe evidência adequada. “O código parece correcto” não é o mesmo que “a propriedade foi validada”.
+
+Não se adicionam mecânicas ou abstrações apenas porque parecem interessantes. A ordem privilegia primeiro o que fecha o produto já definido ou remove uma dependência real para o próximo passo.
+
+---
+
+# 3. Ordem global do produto
+
+## Fase A — Fundação e confiança do motor ✅ FECHADA
+
+### O que foi feito
+
+A fundação consolidou os contratos críticos necessários para o crescimento do projecto: ownership de estado, fronteiras entre Core/Logic/Presentation, input semântico, validação de geometria, comportamento fail-closed, lifecycle gráfico e evidência multiplataforma.
+
+### Porque veio primeiro
+
+Sem uma base estável, alterações de editor ou gameplay poderiam introduzir regressões difíceis de localizar e tornar os resultados de testes pouco confiáveis. A fundação cria as condições para que o restante do roadmap possa avançar sem voltar repetidamente às mesmas questões estruturais.
+
+### Estado
+
+**FOUNDATION — CLOSED.**
+
+O estado fechado só é mantido enquanto a evidência operacional continuar válida. Não deve ser reaberta apenas para encaixar features futuras.
+
+---
+
+# 4. Fase 9 — Editor de níveis visual 🔄 ACTIVA
+
+A Fase 9 transforma o editor em parte real do produto. O editor vive dentro do próprio executável, usa o mesmo sistema de input/rendering e deve permitir fechar o ciclo de autoria sem criar uma ferramenta paralela.
+
+## 9.1 — Controlos e input semântico ✅ NÚCLEO IMPLEMENTADO
+
+### O que fazemos
+
+As acções são representadas semanticamente através de `GameAction`/`KeyBindings`, em vez de a lógica do editor depender directamente de teclas físicas.
+
+### Porque foi necessário nesta posição
+
+O editor precisa de crescer para várias ferramentas e modos. Uma dependência directa em teclas tornaria a UX difícil de remapear, testar e manter. A fronteira semântica foi portanto estabelecida antes da expansão das ferramentas.
+
+### O que ainda falta
+
+Um ecrã visual de **Controlos / Key Bindings**, descobrível dentro do jogo, onde o utilizador possa consultar as acções e remapeá-las sem documentação externa.
+
+---
+
+## 9.2 — Rato e viewport ✅ IMPLEMENTADO
+
+### O que fazemos
+
+Existe estado de cursor e botões, conversão determinística de coordenadas janela → espaço lógico com letterbox e hit-testing de UI.
+
+### Porque veio antes da edição visual
+
+Toda a edição com rato depende de o cursor físico mapear exactamente para o espaço lógico do nível. Se esta fronteira estiver errada, snapping, selecção e arrasto ficam errados simultaneamente.
+
+### Contrato
+
+O canvas do editor continua a ser `640×360`. Áreas de letterbox não são áreas editáveis.
+
+---
+
+## 9.3 — Estado EDITOR e infraestrutura ✅ IMPLEMENTADO / REVISÃO VISUAL PENDENTE
+
+### O que fazemos
+
+Existe `GameState::EDITOR`, grid visual, acesso pelo menu e separação entre documento de edição e snapshot consumido pela presentation.
+
+### Porque veio antes das ferramentas
+
+O editor precisa de um espaço de execução isolado do gameplay. Assim, adicionar uma ferramenta nova não exige misturar física/render/input do jogo principal com a lógica de autoria.
+
+### Pendente
+
+Confirmação visual humana do layout/menu/editor. Não deve ser fechada apenas alterando constantes sem observar o resultado final.
+
+---
+
+## 9.4 — Manipulação de entidades ✅ IMPLEMENTADO
+
+### O que fazemos
+
+O editor já suporta a base actualmente aprovada:
+
+- criar, mover e apagar plataformas;
+- snap determinístico;
+- spawn com Y fixo e X limitado à plataforma inicial segura;
+- FLAG apenas no nível final da campanha;
+- cancelamento transaccional de movimentos;
+- snapshot separado para rendering.
+
+### Porque veio antes de persistência
+
+Primeiro é necessário demonstrar que o conteúdo pode ser alterado correctamente em memória. Persistir antes de estabilizar essa representação apenas tornaria os erros mais permanentes.
+
+### Limite importante
+
+O Level Editor é de **uma tela 640×360**. Não deve ganhar pan ilimitado apenas para acomodar conteúdo que deveria ser composto em múltiplos níveis.
+
+---
+
+## 9.5 — Guardar e validar ✅ VERTICAL SLICE FECHADA
+
+### O que fazemos
+
+- serialização no `.lvl` já existente;
+- validação antes de escrever;
+- substituição através de ficheiro temporário;
+- validação assíncrona sobre snapshot imutável;
+- geração do documento para detectar resultados obsoletos;
+- integração de guardar/validar através de acções semânticas.
+
+### Porque veio antes da gestão de campanha
+
+Um editor que só cria estado efémero ainda não constitui um pipeline de autoria. O nível precisa de sair do editor de forma segura e verificável antes de a campanha poder tratá-lo como conteúdo persistente.
+
+### O que fica por exercitar
+
+O fluxo de produto completo ainda precisa de ser combinado com a gestão de campanha e com o playtest sem confundir estado persistido com alterações temporárias.
+
+---
+
+## 9.6 — Gestão de campanha 🔄 ACTIVA / INTEGRAÇÃO VISUAL POR CONCLUIR
+
+### O que já existe
+
+`CampaignEditorDocument` já implementa a base lógica de:
+
+- carregar `campaign.txt`;
+- representar níveis como blocos ordenados;
+- seleccionar um nível;
+- reordenar níveis;
+- preservar a identidade da selecção durante reorder;
+- rejeitar referências duplicadas;
+- rejeitar níveis inexistentes;
+- rejeitar path escape;
+- guardar apenas a ordem canónica em `campaign.txt`;
+- preservar a responsabilidade do routing físico em `reorganize.py`.
+
+A selecção foi endurecida contra reordenações e contra falhas de load. Existe também uma API null-safe preparada para o consumo de UI.
+
+### Porque esta é a prioridade actual
+
+O Level Editor pode produzir uma tela isolada, mas o produto precisa de saber como essa tela entra na progressão. A campanha é a ponte entre **conteúdo individual** e **experiência jogável completa**.
+
+### Próxima sequência de implementação
+
+```text
+CampaignEditorDocument
+        ↓
+CampaignEditorSnapshot
+        ↓
+UI visual de playlist/timeline
+        ↓
+selecção explícita
+        ↓
+drag/reorder
+        ↓
+abrir nível seleccionado
+        ↓
+salvar campaign.txt
+        ↓
+reabrir + validar
+```
+
+### Regras que não podem ser quebradas
+
+`campaign.txt` é a autoridade da ordem.  
+O editor organiza a campanha, não move ficheiros entre `Levels/`, `Unused/` e `NaoValidados/`.  
+`reorganize.py` mantém o routing físico.  
+O executável/validator continua a ser a autoridade final sobre validade jogável.
+
+---
+
+# 5. Fecho da Fase 9
+
+A Fase 9 só deve mudar para `CLOSED` quando o fluxo completo de autoria estiver realmente exercitável e validado.
+
+## 5.1 — Abrir níveis existentes no editor
+
+O utilizador deve conseguir seleccionar um nível da campanha e passar desse nível para o Level Editor sem reconstruir manualmente o conteúdo.
+
+**Porque depois de 9.6:** a campanha já é responsável pela selecção; reutiliza-se essa fonte de verdade em vez de criar uma segunda lista de níveis.
+
+## 5.2 — Playtest não persistente
+
+O autor deve poder testar o nível actualmente editado e regressar ao editor sem perder alterações não guardadas e sem transformar automaticamente o teste num save.
+
+**Porque neste momento:** esta é a ligação natural entre 9.4 e 9.5. Só deve ser fechada quando o estado temporário e o estado persistido estiverem claramente separados.
+
+## 5.3 — Selecção de campanha
+
+Mesmo existindo uma única campanha, o modelo deve permitir seleccionar uma campanha explicitamente. Isso prepara o produto para múltiplas campanhas sem uma nova arquitectura.
+
+**Porque depois de 9.6:** a noção de campanha e a sua ordenação já estarão estabilizadas.
+
+## 5.4 — Controlos descobríveis
+
+Adicionar a UI de consulta/remapeamento de bindings.
+
+**Porque depois da estabilização do editor:** a lista de acções deve representar as acções finais realmente usadas pelo produto e não uma interface transitória.
+
+## 5.5 — Revisão visual humana
+
+Confirmar os layouts finais do menu/editor, legibilidade, enquadramento e ausência de clipping.
+
+**Porque por último:** só vale a pena fechar a revisão visual quando o fluxo funcional que será observado já estiver completo.
+
+### Critério final de saída da Fase 9
+
+```text
+seleccionar campanha
+→ seleccionar nível
+→ editar
+→ testar sem persistir automaticamente
+→ regressar
+→ validar
+→ guardar
+→ reordenar campanha
+→ reabrir
+→ jogar
+```
+
+E todas as transições importantes precisam de testes/evidência apropriados.
+
+---
+
+# 6. Visual, arte e assets 🟡 PRÓXIMA CAMADA
+
+Esta camada transforma o editor estrutural num sistema de produção visual. Deve vir depois do núcleo de autoria porque a arte precisa de um caminho estável para entrar no conteúdo.
+
+## 6.1 — Identidade visual do jogo
+
+### Regra principal
+
+**Gameplay-first readability.** Personagem, plataformas, perigos e objectivos têm prioridade visual.
+
+A composição desejada é:
+
+```text
+foreground
+→ personagem + plataformas jogáveis
+
+background
+→ atmosfera + profundidade
+
+parallax
+→ movimento relativo das camadas de fundo
+```
+
+O fundo deve reforçar a sensação de subida e profundidade sem esconder informação necessária para executar saltos.
+
+## 6.2 — Sprites controlados
+
+O projecto suporta o sprite do protagonista e prevê escolhas controladas de sprites para personagem, plataformas/chão e decoração.
+
+Trocar um sprite é uma decisão visual. Não deve alterar silenciosamente a colisão ou a física.
+
+## 6.3 — Escala 16×16
+
+Existe uma direcção de assets base de pequena escala, incluindo `16×16` quando apropriado.
+
+Isto **não** significa que o posicionamento do nível tenha de ser preso a uma grelha rígida. O grid de autoria é uma ferramenta de alinhamento; não é uma mecânica visual obrigatória.
+
+## 6.4 — Licenciamento
+
+Preferência por:
+
+- arte própria;
+- CC0 ou licença claramente compatível;
+- origem/licença registada mesmo em CC0;
+- evitar assets pagos, de origem desconhecida ou com termos difíceis de distribuir.
+
+Não transformar o jogo num editor de arte livre. A complexidade de direitos e manutenção não serve o objectivo actual.
+
+## 6.5 — Background/parallax
+
+Deve ser introduzido quando houver corpus de níveis suficiente para testar a regra visual em situações variadas, em vez de optimizar uma única tela.
+
+---
+
+# 7. Determinismo, replay, telemetria e PES 🟡 CONTÍNUO
+
+O determinismo não é uma feature decorativa: é o mecanismo que permite reproduzir exactamente o que aconteceu.
+
+## Objectivos
+
+- replay determinístico;
+- save states;
+- reprodução de falhas;
+- capturas determinísticas;
+- comparação entre versões;
+- telemetria de runs quando houver uma pergunta concreta a responder.
+
+## Quando aprofundar
+
+Depois da integração de campanha, porque então haverá cenários de jogo/editor concretos que podem ser medidos de forma útil.
+
+## Próximo investimento
+
+O **Movement Feel Benchmark** já existe como ferramenta e deve ser usado/expandido para cenários pequenos de movimento/câmara/VFX. Ele permanece distinto de benchmarks futuros de PCG e de geração condicionada ao jogador.
+
+Não criar métricas apenas por acumulação: cada nova métrica deve responder a uma pergunta de engenharia ou design.
+
+---
+
+# 8. Qualidade de níveis e campanhas 🟡
+
+A qualidade deve ser separada em níveis de evidência:
+
+```text
+sintaxe válida
+→ geometria válida
+→ comportamento físico válido
+→ percurso/análise de execução
+→ transição de campanha
+→ experiência percebida
+```
+
+Ser válido não significa ser fácil. Ser difícil não significa ser defeituoso.
+
+## Corpus real
+
+`Game/Assets/Levels/NaoValidados/` pode legitimamente estar vazio. Não criar mapas artificiais só para produzir uma aparência de cobertura.
+
+Quando houver conteúdo comunitário ou mais mapas oficiais, a validação deve ser aplicada sobre esse corpus real.
+
+---
+
+# 9. Dificuldade, análise e geração 🟡 POSTERIOR
+
+A dificuldade deve ser tratada como propriedade distinta da validade:
+
+```text
+validade física
+→ dificuldade de execução
+→ desempenho observado
+→ dificuldade percebida
+```
+
+## Porque é posterior
+
+Antes de fazer inferências sobre dificuldade é necessário existir um pipeline estável de níveis, runs, replay e observação.
+
+## Regras
+
+Um analisador deve começar por ajudar o autor. Não deve alterar automaticamente geometria ou física authored.
+
+Adaptive difficulty não é uma decisão de produto aprovada por defeito. Só deve entrar depois de existir evidência de que resolve um problema real e de que o efeito pode ser medido.
+
+---
+
+# 10. Comunidade e partilha 🟡 POSTERIOR
+
+O objectivo futuro é permitir níveis e campanhas comunitárias, com validação local obrigatória antes de executar conteúdo externo.
+
+A sequência deve ser:
+
+```text
+conteúdo criado
+→ serialização
+→ validação local
+→ importação
+→ organização em campanha
+→ playtest
+```
+
+Partilha entre máquinas, distribuição online e funcionalidades multiplayer em tempo real não devem atrasar o núcleo local determinístico.
+
+---
+
+# 11. Distribuição final 🟡 ÚLTIMA FASE
+
+O produto final pretendido é um **Windows x64 portable/standalone**.
+
+## Requisitos
+
+- sem terminal visível;
+- sem instalador obrigatório;
+- recursos de runtime junto do executável;
+- funcionamento independente do ambiente de desenvolvimento;
+- sem dependência operacional de Python, Make, Vulkan SDK ou ferramentas de build.
+
+## Porque é último
+
+A embalagem só deve ser congelada quando gameplay, editor, campanha, assets e validação estiverem suficientemente estáveis. Caso contrário, cada alteração estrutural gera trabalho de empacotamento repetido.
+
+---
+
+# 12. Ordem prática actual
+
+```text
+1. Manter main saudável e integrar cada tranche com evidência
+   ↓
+2. Integrar CampaignEditorDocument/CampaignEditorSnapshot na UI real
+   ↓
+3. Seleccionar e abrir o nível escolhido no Level Editor
+   ↓
+4. Fechar o fluxo editar → playtest → regressar → validar → guardar
+   ↓
+5. Implementar selecção explícita de campanha
+   ↓
+6. Implementar ecrã visual de Controlos
+   ↓
+7. Fazer revisão visual humana final do editor/menu
+   ↓
+8. Fechar Fase 9 apenas após evidência completa
+   ↓
+9. Consolidar sprites/assets/licenciamento
+   ↓
+10. Integrar background/parallax gameplay-first
+   ↓
+11. Expandir replay/telemetria/Movement Feel Benchmark por casos concretos
+   ↓
+12. Qualificar corpus real e transições de campanha
+   ↓
+13. Analisar dificuldade e futuras formas de geração
+   ↓
+14. Preparar partilha/importação comunitária
+   ↓
+15. Fechar release portable/standalone
+```
+
+A ordem pode mudar apenas perante uma falha, dependência ou decisão de produto que justifique objectivamente a alteração.
+
+---
+
+# 13. Estado actual
+
+| Área | Estado | Porque está neste estado |
+|---|---|---|
+| Foundation | ✅ CLOSED | Contratos críticos e gates finais validados |
+| 9.1 Controlos | ✅ núcleo | Semântica pronta; UI de configuração ainda falta |
+| 9.2 Rato/viewport | ✅ | Boundary lógica/janela implementada |
+| 9.3 Editor state | ✅ | Infraestrutura pronta; revisão visual humana pendente |
+| 9.4 Entity authoring | ✅ | Plataformas, spawn, FLAG e cancelamento protegidos |
+| 9.5 Save/validate | ✅ | Vertical slice persistente/assíncrona fechada |
+| 9.6 Campaign | 🔄 | Modelo robusto; integração visual ainda falta |
+| Playtest integrado | 🟡 | Falta fechar separação entre edição temporária e persistida no fluxo completo |
+| Visual/assets | 🟡 | Direcção definida; produção visual estruturada ainda por consolidar |
+| Replay/telemetria/PES | 🟡 | Infraestrutura existente; expansão orientada por casos de uso |
+| Corpus/qualidade | 🟡 | Depende de conteúdo real e do ciclo de autoria completo |
+| Dificuldade/adaptive | 🟡 POSTERIOR | Requer métricas e evidência |
+| Partilha/comunidade | 🟡 POSTERIOR | Primeiro estabilizar conteúdo e validação local |
+| Release portable | 🟡 ÚLTIMA | Consolidação final do produto |
+
+---
+
+# 14. Critério de sucesso do roadmap
+
+O projecto deve aproximar-se de 1.0 quando um utilizador consegue, sem ferramentas externas de desenvolvimento:
+
+```text
+abrir o jogo
+→ escolher campanha
+→ jogar a progressão vertical
+→ compreender a força dos saltos
+→ abrir o editor
+→ criar/alterar um nível
+→ testar
+→ regressar sem perder trabalho não guardado
+→ validar
+→ guardar
+→ colocar na campanha
+→ voltar a jogar
+```
+
+E a equipa consegue transformar uma falha importante em:
+
+```text
+falha reproduzível
+→ evidência
+→ isolamento
+→ correcção
+→ teste
+→ validação CI
+→ documentação activa
+```
+
+Esse é o critério que une gameplay, editor, campanha, determinismo, assets e distribuição.
