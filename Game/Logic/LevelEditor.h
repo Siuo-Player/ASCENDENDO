@@ -28,10 +28,15 @@ struct EditorPlatform {
 
 class LevelEditorDocument {
 public:
-    LevelEditorDocument(bool finalCampaignLevel, const AABB& initialGround);
+    LevelEditorDocument(bool finalCampaignLevel,
+                         const AABB& initialGround,
+                         std::size_t screenCount = 1);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
     std::uint64_t generation() const { return m_generation; }
+    std::size_t screenCount() const { return m_screenCount; }
+    float levelWidth() const { return 640.0f; }
+    float levelHeight() const { return 360.0f * static_cast<float>(m_screenCount); }
 
     static float snap(float value);
     static Vec2 snap(const Vec2& point);
@@ -62,6 +67,7 @@ public:
 private:
     void bumpGeneration();
     bool insideLogicalBounds(const AABB& rect) const;
+    bool inFinalScreen(const AABB& rect) const;
     bool validPlatform(const AABB& rect) const;
     bool validFlag(const AABB& rect) const;
 
@@ -72,6 +78,7 @@ private:
     float m_spawnMinX = 0.0f;
     float m_spawnMaxX = 0.0f;
     std::optional<AABB> m_flag;
+    std::size_t m_screenCount = 1;
     std::uint64_t m_generation = 0;
 };
 
