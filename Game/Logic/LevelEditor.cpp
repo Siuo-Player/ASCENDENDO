@@ -8,8 +8,6 @@ namespace logic {
 
 namespace {
 constexpr float EPS = 0.0001f;
-constexpr float SCREEN_HEIGHT = 360.0f;
-constexpr float LEVEL_WIDTH = 640.0f;
 
 float snapScalar(float value) {
     const float grid = config::EDITOR_GRID_SNAP;
@@ -37,7 +35,7 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
                                          std::size_t screenCount)
     : m_finalCampaignLevel(finalCampaignLevel),
       m_initialGround(initialGround),
-      m_screenCount(std::max<std::size_t>(1, screenCount)) {
+      m_layout(screenCount) {
     m_spawnMinX = ceilToGrid(initialGround.min.x);
     m_spawnMaxX = floorToGrid(initialGround.max.x - config::PLAYER_WIDTH);
     if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
@@ -67,12 +65,12 @@ AABB LevelEditorDocument::snap(const AABB& rect) {
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
     return rect.min.x >= -EPS &&
            rect.min.y >= -EPS &&
-           rect.max.x <= LEVEL_WIDTH + EPS &&
-           rect.max.y <= levelHeight() + EPS;
+           rect.max.x <= m_layout.width() + EPS &&
+           rect.max.y <= m_layout.height() + EPS;
 }
 
 bool LevelEditorDocument::inFinalScreen(const AABB& rect) const {
-    const float finalScreenBottom = SCREEN_HEIGHT * static_cast<float>(m_screenCount - 1);
+    const float finalScreenBottom = m_layout.screenBottomY(m_layout.screenCount() - 1);
     return rect.min.y >= finalScreenBottom - EPS;
 }
 
@@ -170,7 +168,7 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     LevelData data;
     data.name = name;
     data.spawnPosition = m_spawnPosition;
-    data.screenCount = m_screenCount;
+    data.screenCount = m_layout.screenCount();
 
     // The initial ground is implicit in the editor document but remains
     // materialized in LevelData for backwards-compatible serialization.
