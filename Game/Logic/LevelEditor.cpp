@@ -182,6 +182,47 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     return data;
 }
 
+bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
+    if (data.platforms.empty() || data.screenCount == 0) return false;
+
+    core::LevelLayout restoredLayout(data.screenCount);
+    for (const AABB& platform : data.platforms) {
+        if (!insideLogicalBounds(platform) || !hasMinimumSize(platform)) return false;
+    }
+    if (data.spawnPosition &&
+        (data.spawnPosition->x < 0.0f ||
+         data.spawnPosition->x > restoredLayout.width()))
+        return false;
+    if (data.flag &&
+        (!m_finalCampaignLevel ||
+         data.flag->min.x < 0.0f || data.flag->min.y < 0.0f ||
+         data.flag->max.x > restoredLayout.width() ||
+         data.flag->max.y > restoredLayout.height() ||
+         data.flag->min.y < restoredLayout.screenBottomY(restoredLayout.screenCount() - 1)))
+        return false;
+
+    m_initialGround = data.platforms.front();
+    m_platforms.clear();
+    m_platforms.reserve(data.platforms.size() - 1);
+    for (std::size_t i = 1; i < data.platforms.size(); ++i) {
+        m_platforms.push_back({data.platforms[i]});
+    }
+
+    m_layout = restoredLayout;
+    m_spawnMinX = ceilToGrid(m_initialGround.min.x);
+    m_spawnMaxX = floorToGrid(m_initialGround.max.x - config::PLAYER_WIDTH);
+    if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
+    m_spawnPosition = data.spawnPosition.value_or(Vec2{
+        m_spawnMinX,
+        snapScalar(m_initialGround.max.y),
+    });
+    m_spawnPosition.x = snapScalar(m_spawnPosition.x);
+    m_spawnPosition.y = snapScalar(m_initialGround.max.y);
+    m_flag = data.flag;
+    bumpGeneration();
+    return true;
+}
+
 Vec2 LevelEditorDocument::presetSize(EditorSizePreset preset) {
     switch (preset) {
         case EditorSizePreset::SMALL: return {64.0f, 16.0f};
