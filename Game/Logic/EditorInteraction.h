@@ -36,12 +36,8 @@ public:
     explicit EditorInteractionController(LevelEditorDocument& document)
         : m_document(document) {}
 
-    // Camera remains a presentation concern; Logic receives only the
-    // position needed to map logical cursor coordinates into world space.
     EditorCursor cursorFromLogical(const Vec2& logical,
                                    const Vec2& cameraPosition) const;
-
-    // Devolve platformCount() quando nada foi encontrado.
     std::size_t hitPlatform(const Vec2& world) const;
 
     bool stampAt(const Vec2& world);
@@ -59,18 +55,16 @@ public:
     bool deleteAt(const Vec2& world);
 
     void clearSelection();
+    bool selectPlatform(std::size_t index);
     bool hasSelection() const { return m_selected != npos(); }
     std::size_t selectedIndex() const { return m_selected; }
 
     void setSizePreset(EditorSizePreset preset) { m_sizePreset = preset; }
     EditorSizePreset sizePreset() const { return m_sizePreset; }
 
-    // Ferramenta persistente de entidade. PLATFORM mantém STAMP/DRAG;
-    // SPAWN move a posição inicial e FLAG coloca/remove o objetivo final.
     void setEntityTool(EditorEntityTool tool) { m_entityTool = tool; }
     EditorEntityTool entityTool() const { return m_entityTool; }
 
-    // Ferramenta persistente do editor. O G alterna entre STAMP e DRAG.
     void setToolMode(EditorToolMode mode) { m_toolMode = mode; }
     void toggleToolMode() {
         m_toolMode = m_toolMode == EditorToolMode::STAMP

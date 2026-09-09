@@ -23,11 +23,14 @@ namespace Key {
     constexpr int D       = 68;
     constexpr int W       = 87;
     constexpr int S       = 83;
-    constexpr int F       = 70;
-    constexpr int P       = 80;
     constexpr int E       = 69;
     constexpr int Q       = 81;
     constexpr int G       = 71;
+    constexpr int P       = 80;
+    constexpr int F       = 70;
+    constexpr int T       = 84;
+    constexpr int Y       = 89;
+    constexpr int Z       = 90;
     constexpr int NUM0    = 48;
     constexpr int NUM1    = 49;
     constexpr int NUM2    = 50;
@@ -40,6 +43,7 @@ namespace Key {
     constexpr int DELETE_KEY = 261;
     constexpr int BACKSPACE  = 259;
     constexpr int SPACE   = 32;
+    constexpr int ENTER   = 257;
     constexpr int ESCAPE  = 256;
 }
 

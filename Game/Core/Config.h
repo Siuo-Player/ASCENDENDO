@@ -18,12 +18,10 @@ namespace config {
     constexpr float PLAYER_MAX_JUMP     = 600.0f;
     constexpr float PLAYER_CHARGE_TIME  = 0.4f;
 
-    // O editor faz snap aos 4 px; este valor pertence ao contrato de edição,
-    // não à apresentação visual da grelha.
-    constexpr float EDITOR_GRID_SNAP            = 4.0f;
+    // A resolução lógica da simulação é independente da quantização usada pela UI.
+    // Não apresentar uma escala inteira fictícia como precisão física ao jogador.
+    constexpr float EDITOR_GRID_SNAP    = 4.0f;
 
-    // Mantido para compatibilidade de configuração; o Level Editor de uma
-    // única tela não usa pan. O Campaign Editor será o primeiro estado a
-    // permitir deslocação vertical.
-    constexpr float EDITOR_CAMERA_PAN_SPEED     = 400.0f;
+    // Câmara de autoria: permite navegar verticalmente num Level que tenha N telas.
+    constexpr float EDITOR_CAMERA_PAN_SPEED = 400.0f;
 }

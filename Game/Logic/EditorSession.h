@@ -4,7 +4,7 @@
 //
 //  Camada de orquestração do editor.
 //  Liga InputManager + EditorInteractionController sem conhecer Vulkan nem
-//  estado de câmera: o Level Editor ocupa sempre uma única tela lógica 640x360.
+//  estado de câmera.
 // =============================================================================
 
 #include "Core/KeyBindings.h"
@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace logic {
 
@@ -52,6 +53,8 @@ public:
     EditorSizePreset sizePreset() const { return m_controller.sizePreset(); }
     EditorToolMode toolMode() const { return m_controller.toolMode(); }
     std::uint64_t documentGeneration() const { return m_document.generation(); }
+    bool canUndo() const { return !m_undoHistory.empty(); }
+    bool canRedo() const { return !m_redoHistory.empty(); }
 
     void setPersistenceTarget(std::string path,
                               std::string name = "Editor Level");
@@ -72,7 +75,6 @@ public:
     EditorPreview preview() const;
     EditorRenderSnapshot renderSnapshot() const;
 
-    // Atualiza input e interação para uma única tela lógica 640x360.
     void update(const InputManager& input,
                 const core::KeyBindings& bindings,
                 int32_t windowWidth,
@@ -89,17 +91,30 @@ private:
     void updateMouse(const InputManager& input);
     void refreshValidationResult();
 
+    void recordEditBaseline(const LevelData& before);
+    bool undo();
+    bool redo();
+    bool placeKeyboardEntity();
+    void moveKeyboardCursor(float dx, float dy);
+
     LevelEditorDocument m_document;
     EditorInteractionController m_controller;
     EditorCursor m_cursor{};
+    Vec2 m_lastMouseLogical{};
     Vec2 m_pressedWorld{};
     bool m_leftDragActive = false;
+    bool m_haveMousePosition = false;
+    bool m_keyboardCursorActive = false;
 
     std::string m_persistencePath;
     std::string m_documentName = "Editor Level";
     EditorSaveResult m_lastSaveResult{};
     EditorValidationTask m_validationTask;
     EditorAsyncValidationResult m_validationResult{};
+
+    std::vector<LevelData> m_undoHistory;
+    std::vector<LevelData> m_redoHistory;
+    bool m_applyingHistory = false;
 };
 
 } // namespace logic

@@ -148,4 +148,15 @@ void EditorInteractionController::clearSelection() {
     m_moveHasOriginal = false;
 }
 
+bool EditorInteractionController::selectPlatform(std::size_t index) {
+    if (index >= m_document.platformCount()) return false;
+    m_selected = index;
+    m_mode = EditorMouseMode::NONE;
+    m_moveOffsetX = 0.0f;
+    m_moveOffsetY = 0.0f;
+    m_moveOriginalBounds = {};
+    m_moveHasOriginal = false;
+    return true;
+}
+
 } // namespace logic

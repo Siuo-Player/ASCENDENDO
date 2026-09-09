@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/LevelLayout.h"
 #include "Logic/Physics.h"
 #include "Logic/LevelData.h"
 
@@ -28,10 +29,15 @@ struct EditorPlatform {
 
 class LevelEditorDocument {
 public:
-    LevelEditorDocument(bool finalCampaignLevel, const AABB& initialGround);
+    LevelEditorDocument(bool finalCampaignLevel,
+                         const AABB& initialGround,
+                         std::size_t screenCount = 1);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
     std::uint64_t generation() const { return m_generation; }
+    std::size_t screenCount() const { return m_layout.screenCount(); }
+    float levelWidth() const { return m_layout.width(); }
+    float levelHeight() const { return m_layout.height(); }
 
     static float snap(float value);
     static Vec2 snap(const Vec2& point);
@@ -56,12 +62,14 @@ public:
     const AABB* flag() const { return m_flag.has_value() ? &*m_flag : nullptr; }
 
     LevelData toLevelData(const std::string& name) const;
+    bool restoreFromLevelData(const LevelData& data);
 
     static Vec2 presetSize(EditorSizePreset preset);
 
 private:
     void bumpGeneration();
     bool insideLogicalBounds(const AABB& rect) const;
+    bool inFinalScreen(const AABB& rect) const;
     bool validPlatform(const AABB& rect) const;
     bool validFlag(const AABB& rect) const;
 
@@ -72,6 +80,7 @@ private:
     float m_spawnMinX = 0.0f;
     float m_spawnMaxX = 0.0f;
     std::optional<AABB> m_flag;
+    core::LevelLayout m_layout{};
     std::uint64_t m_generation = 0;
 };
 

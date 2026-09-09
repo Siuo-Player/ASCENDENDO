@@ -28,12 +28,21 @@ bool hasMinimumSize(const AABB& rect) {
     return rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
            rect.height() >= config::EDITOR_GRID_SNAP - EPS;
 }
+
+bool insideLayoutBounds(const AABB& rect, const core::LevelLayout& layout) {
+    return rect.min.x >= -EPS &&
+           rect.min.y >= -EPS &&
+           rect.max.x <= layout.width() + EPS &&
+           rect.max.y <= layout.height() + EPS;
+}
 }
 
 LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
-                                         const AABB& initialGround)
+                                         const AABB& initialGround,
+                                         std::size_t screenCount)
     : m_finalCampaignLevel(finalCampaignLevel),
-      m_initialGround(initialGround) {
+      m_initialGround(initialGround),
+      m_layout(screenCount) {
     m_spawnMinX = ceilToGrid(initialGround.min.x);
     m_spawnMaxX = floorToGrid(initialGround.max.x - config::PLAYER_WIDTH);
     if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
@@ -61,10 +70,12 @@ AABB LevelEditorDocument::snap(const AABB& rect) {
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
-    return rect.min.x >= -EPS &&
-           rect.min.y >= -EPS &&
-           rect.max.x <= config::LOGICAL_WIDTH + EPS &&
-           rect.max.y <= config::LOGICAL_HEIGHT + EPS;
+    return insideLayoutBounds(rect, m_layout);
+}
+
+bool LevelEditorDocument::inFinalScreen(const AABB& rect) const {
+    const float finalScreenBottom = m_layout.screenBottomY(m_layout.screenCount() - 1);
+    return rect.min.y >= finalScreenBottom - EPS;
 }
 
 bool LevelEditorDocument::validPlatform(const AABB& rect) const {
@@ -132,7 +143,7 @@ bool LevelEditorDocument::setSpawnX(float requestedX) {
 }
 
 bool LevelEditorDocument::validFlag(const AABB& rect) const {
-    return insideLogicalBounds(rect) && hasMinimumSize(rect);
+    return insideLogicalBounds(rect) && hasMinimumSize(rect) && inFinalScreen(rect);
 }
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
@@ -161,9 +172,10 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     LevelData data;
     data.name = name;
     data.spawnPosition = m_spawnPosition;
+    data.screenCount = m_layout.screenCount();
 
-    // The initial ground is implicit in the editor document but was historically
-    // materialized by saveEditorLevel(). Keep it materialized in LevelData too.
+    // The initial ground is implicit in the editor document but remains
+    // materialized in LevelData for backwards-compatible serialization.
     data.platforms.push_back(m_initialGround);
     data.platforms.reserve(m_platforms.size() + 1);
     for (const auto& platform : m_platforms) {
@@ -172,6 +184,48 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
 
     if (m_flag) data.flag = *m_flag;
     return data;
+}
+
+bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
+    if (data.platforms.empty() || data.screenCount == 0) return false;
+
+    const core::LevelLayout restoredLayout(data.screenCount);
+    for (const AABB& platform : data.platforms) {
+        if (!insideLayoutBounds(platform, restoredLayout) || !hasMinimumSize(platform)) return false;
+    }
+
+    if (data.spawnPosition &&
+        (data.spawnPosition->x < 0.0f ||
+         data.spawnPosition->x > restoredLayout.width()))
+        return false;
+
+    if (data.flag &&
+        (!m_finalCampaignLevel ||
+         !insideLayoutBounds(*data.flag, restoredLayout) ||
+         !hasMinimumSize(*data.flag) ||
+         data.flag->min.y < restoredLayout.screenBottomY(restoredLayout.screenCount() - 1)))
+        return false;
+
+    m_initialGround = data.platforms.front();
+    m_platforms.clear();
+    m_platforms.reserve(data.platforms.size() - 1);
+    for (std::size_t i = 1; i < data.platforms.size(); ++i) {
+        m_platforms.push_back({data.platforms[i]});
+    }
+
+    m_layout = restoredLayout;
+    m_spawnMinX = ceilToGrid(m_initialGround.min.x);
+    m_spawnMaxX = floorToGrid(m_initialGround.max.x - config::PLAYER_WIDTH);
+    if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
+    m_spawnPosition = data.spawnPosition.value_or(Vec2{
+        m_spawnMinX,
+        snapScalar(m_initialGround.max.y),
+    });
+    m_spawnPosition.x = snapScalar(m_spawnPosition.x);
+    m_spawnPosition.y = snapScalar(m_initialGround.max.y);
+    m_flag = data.flag;
+    bumpGeneration();
+    return true;
 }
 
 Vec2 LevelEditorDocument::presetSize(EditorSizePreset preset) {

@@ -10,19 +10,28 @@ TEST_SUITE("Fase 9.4 — Editor KeyBindings") {
 
 TEST_CASE("defaults do editor são configuráveis por ação") {
     KeyBindings kb;
+    CHECK(kb.keysFor(GameAction::EditorPanUp) == std::vector<int>{Key::W});
+    CHECK(kb.keysFor(GameAction::EditorPanDown) == std::vector<int>{Key::S});
+    CHECK(kb.keysFor(GameAction::EditorCursorLeft) == std::vector<int>{Key::LEFT});
+    CHECK(kb.keysFor(GameAction::EditorCursorRight) == std::vector<int>{Key::RIGHT});
+    CHECK(kb.keysFor(GameAction::EditorCursorUp) == std::vector<int>{Key::UP});
+    CHECK(kb.keysFor(GameAction::EditorCursorDown) == std::vector<int>{Key::DOWN});
     CHECK(kb.keysFor(GameAction::EditorToggleMode) == std::vector<int>{Key::G});
     CHECK(kb.keysFor(GameAction::EditorSizeDown) == std::vector<int>{Key::LBRACKET});
     CHECK(kb.keysFor(GameAction::EditorSizeUp) == std::vector<int>{Key::RBRACKET});
+    CHECK(kb.keysFor(GameAction::EditorPlace) == std::vector<int>{Key::ENTER});
+    CHECK(kb.keysFor(GameAction::EditorUndo) == std::vector<int>{Key::Z});
+    CHECK(kb.keysFor(GameAction::EditorRedo) == std::vector<int>{Key::Y});
     CHECK(kb.keysFor(GameAction::EditorSelectPlatform) == std::vector<int>{Key::P});
-    CHECK(kb.keysFor(GameAction::EditorSelectSpawn) == std::vector<int>{Key::S});
+    CHECK(kb.keysFor(GameAction::EditorSelectSpawn) == std::vector<int>{Key::T});
     CHECK(kb.keysFor(GameAction::EditorSelectFlag) == std::vector<int>{Key::F});
     CHECK(kb.keysFor(GameAction::DeleteSelection) == std::vector<int>{Key::DELETE_KEY, Key::BACKSPACE});
 }
 
 TEST_CASE("nomes das teclas do editor fazem round-trip") {
     const int keys[] = {
-        Key::G, Key::LBRACKET, Key::RBRACKET, Key::P, Key::S, Key::F,
-        Key::DELETE_KEY, Key::BACKSPACE
+        Key::G, Key::LBRACKET, Key::RBRACKET, Key::P, Key::T, Key::F,
+        Key::Z, Key::Y, Key::ENTER, Key::DELETE_KEY, Key::BACKSPACE
     };
     for (int key : keys) {
         int parsed = -1;

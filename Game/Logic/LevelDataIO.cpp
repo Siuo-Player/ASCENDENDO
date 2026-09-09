@@ -20,6 +20,7 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
     if (!file.is_open()) return std::nullopt;
 
     LevelData data;
+    bool screensSeen = false;
     std::string line;
     while (std::getline(file, line)) {
         if (!line.empty() && line.back() == '\r') line.pop_back();
@@ -31,6 +32,14 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
 
         if (type == "NAME") {
             std::getline(input >> std::ws, data.name);
+            continue;
+        }
+        if (type == "SCREENS") {
+            if (screensSeen) return std::nullopt;
+            std::size_t count = 0;
+            if (!(input >> count) || count == 0 || hasTrailingTokens(input)) return std::nullopt;
+            data.screenCount = count;
+            screensSeen = true;
             continue;
         }
         if (type == "PLATFORM") {
@@ -53,7 +62,6 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
         }
 
         // The parser is intentionally strict about the current grammar.
-        // Schema/version and semantic validation remain a later contract.
         return std::nullopt;
     }
 
@@ -63,6 +71,7 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
 bool LevelDataIO::save(const LevelData& data,
                        const std::filesystem::path& path) {
     try {
+        if (data.screenCount == 0) return false;
         if (path.has_parent_path()) {
             std::filesystem::create_directories(path.parent_path());
         }
@@ -72,8 +81,9 @@ bool LevelDataIO::save(const LevelData& data,
 
         out << std::fixed << std::setprecision(2);
         out << "NAME " << data.name << '\n';
+        out << "SCREENS " << data.screenCount << '\n';
         out << "# Gerado pelo Editor de Niveis ASCENDENDO\n";
-        out << "# Grid de edicao: 4 px; area jogavel: 640x360\n";
+        out << "# Largura fixa: 640 px; cada tela: 640x360; progressao: vertical ascendente\n";
         if (data.spawnPosition) {
             out << "SPAWN " << data.spawnPosition->x << ' '
                 << data.spawnPosition->y << '\n';
