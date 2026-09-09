@@ -1,15 +1,17 @@
 // =============================================================================
 //  Game/Graphics/Camera.cpp
 //
-//  @version 6.4
+//  @version 6.5
 //  @history
 //    v4.1  — worldToNDC criado
 //    v6.4  — follow() adicionado (tracking vertical Lerp)
+//    v6.5  — inputs nao-finitos ignorados para impedir contaminacao numerica
 // =============================================================================
 #include "Graphics/Camera.h"
 #include "Core/Config.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace gfx {
 
@@ -23,6 +25,11 @@ logic::Vec2 Camera::worldToNDC(const logic::Vec2& worldPos) const {
 }
 
 void Camera::follow(const logic::Vec2& target, float dt, float speed) {
+    // Um frame invalido nao deve contaminar permanentemente o estado da camera.
+    // A politica e fail-closed: ignorar o update e preservar a ultima posicao valida.
+    if (!std::isfinite(target.y) || !std::isfinite(dt) || !std::isfinite(speed))
+        return;
+
     // Offset vertical: jogador aparece no 35% inferior do ecra.
     // LOGICAL_HEIGHT * 0.35 = 360 * 0.35 = 126px
     constexpr float VERTICAL_OFFSET = config::LOGICAL_HEIGHT * 0.35f;
