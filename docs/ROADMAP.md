@@ -16,6 +16,48 @@ investigar
 
 Não trabalhamos directamente em `main`.
 
+## 1.1 Sprint 21 — estado operacional
+
+O Sprint 21 está a executar a integração da autoria de campanha sobre a fundação fechada.
+
+### PR #265 — fundação vertical + editor keyboard-first
+
+**✅ Integrado em `main`.**
+
+A integração foi aceite depois de Linux C++20, Linux ASan/UBSan, Windows e evidência determinística terem passado. O `main` actual é `1d2d1a511314c5c7a820c268c270b63be6f8e6b9`.
+
+### PR #270 / Issue #267 — Campaign Editor no runtime real
+
+**🔄 Em validação CI.**
+
+A cadeia está implementada como:
+
+```text
+campaign.txt
+→ CampaignEditorDocument
+→ GameSession::CAMPAIGN_EDITOR
+→ selection/reorder/open/save
+→ LevelDataIO
+→ EditorSession / LevelEditorDocument
+→ GameState::EDITOR
+→ retorno a CAMPAIGN_EDITOR com a selecção preservada
+```
+
+A integração inclui viewport vertical do Level Editor para `N × 360`, bindings semânticos próprios para o Campaign Editor, snapshot/renderização de campanha e testes de integração.
+
+No estado actual, Linux C++20 + ASan/UBSan já passaram; a bateria determinística estava a produzir captures válidas; Windows ainda está em execução no momento desta actualização.
+
+### Pendências de Sprint 21
+
+- concluir Windows e captura determinística do PR #270;
+- integrar #270 apenas depois de todos os gates verdes;
+- fechar #267 após evidência integrada;
+- alinhar `Esc` com alterações não guardadas do Campaign Editor através do carrinho global;
+- remover o snap obrigatório de 4 px através do issue #269;
+- continuar a validação visual do editor vertical depois do fluxo funcional.
+
+Nenhum destes itens deve ser marcado como concluído apenas porque existe código; requer evidência correspondente.
+
 # 2. Fundação ✅ FECHADA
 
 A fundação actual cobre separação Core/Logic/Presentation, contratos de input semântico, determinismo/fixed timestep, validação fail-closed e lifecycle gráfico.
@@ -34,32 +76,33 @@ campaign = sequência de levels
 
 ## 9.1 Input semântico e teclado-only ✅ núcleo
 
-Já existe `GameAction`/`KeyBindings` e bindings para acções do editor.
+Já existe `GameAction`/`KeyBindings` e bindings para acções do editor e do Campaign Editor.
 
 ### Requisito final
 
 Toda operação essencial do editor deve funcionar com **teclado apenas**. Mouse/drag é atalho de conveniência.
 
-## 9.2 Modelo espacial vertical 🔄 EM IMPLEMENTAÇÃO
+## 9.2 Modelo espacial vertical ✅ fundação / integração activa
 
-Objetivos:
+Objectivos:
 
 - largura exactamente 640;
 - altura `N × 360`;
 - N variável;
 - mapeamento screen ↔ coordenada mundial determinístico;
 - `.lvl` antigo continua a significar N=1;
-- nova metadata `SCREENS N` persistida no `.lvl`.
+- nova metadata `SCREENS N` persistida no `.lvl`;
+- integração do modelo com o Level Editor real.
 
 ### Porque agora
 
 O modelo anterior de um level = uma única tela limita a variedade do conteúdo. A screen mantém a legibilidade original; o level ganha profundidade vertical sem ampliar a largura.
 
-## 9.3 Editor vertical 🟡 PRÓXIMO
+## 9.3 Editor vertical 🔄 EM VALIDAÇÃO
 
-Adaptar viewport, câmara e ferramentas do Level Editor para navegar verticalmente pelo level completo.
+A viewport do Level Editor agora trabalha sobre a altura total do level e segue o cursor teclado/pan sem limitar a lógica aos 360 px iniciais.
 
-A navegação deve funcionar só com teclado e com teclado+rato.
+A navegação funciona por teclado; mouse continua como atalho de conveniência.
 
 ## 9.4 Undo/redo e carrinho 🟡
 
@@ -69,7 +112,7 @@ Consolidar um histórico geral de alterações. `Esc` apresenta mudanças penden
 
 Executar o level actualmente editado, regressar ao editor e preservar o documento em memória sem save automático.
 
-## 9.6 Campaign Editor 🔄
+## 9.6 Campaign Editor 🔄 EM VALIDAÇÃO
 
 Integrar `CampaignEditorDocument` + snapshot + UI:
 
