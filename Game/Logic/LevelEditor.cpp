@@ -9,28 +9,15 @@ namespace logic {
 namespace {
 constexpr float EPS = 0.0001f;
 
-float snapScalar(float value) {
-    const float grid = config::EDITOR_GRID_SNAP;
-    return std::round(value / grid) * grid;
-}
-
-float ceilToGrid(float value) {
-    const float grid = config::EDITOR_GRID_SNAP;
-    return std::ceil(value / grid) * grid;
-}
-
-float floorToGrid(float value) {
-    const float grid = config::EDITOR_GRID_SNAP;
-    return std::floor(value / grid) * grid;
-}
-
 bool hasMinimumSize(const AABB& rect) {
-    return rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
-           rect.height() >= config::EDITOR_GRID_SNAP - EPS;
+    return rect.width() >= config::MIN_PLATFORM_WIDTH - EPS &&
+           rect.height() >= config::MIN_PLATFORM_HEIGHT - EPS;
 }
 
 bool insideLayoutBounds(const AABB& rect, const core::LevelLayout& layout) {
-    return rect.min.x >= -EPS &&
+    return std::isfinite(rect.min.x) && std::isfinite(rect.min.y) &&
+           std::isfinite(rect.max.x) && std::isfinite(rect.max.y) &&
+           rect.min.x >= -EPS &&
            rect.min.y >= -EPS &&
            rect.max.x <= layout.width() + EPS &&
            rect.max.y <= layout.height() + EPS;
@@ -43,30 +30,17 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
     : m_finalCampaignLevel(finalCampaignLevel),
       m_initialGround(initialGround),
       m_layout(screenCount) {
-    m_spawnMinX = ceilToGrid(initialGround.min.x);
-    m_spawnMaxX = floorToGrid(initialGround.max.x - config::PLAYER_WIDTH);
-    if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
+    m_spawnMinX = initialGround.min.x;
+    m_spawnMaxX = std::max(m_spawnMinX, initialGround.max.x - config::PLAYER_WIDTH);
 
     m_spawnPosition = {
         m_spawnMinX,
-        snapScalar(initialGround.max.y),
+        initialGround.max.y,
     };
 }
 
 void LevelEditorDocument::bumpGeneration() {
     ++m_generation;
-}
-
-float LevelEditorDocument::snap(float value) {
-    return snapScalar(value);
-}
-
-Vec2 LevelEditorDocument::snap(const Vec2& point) {
-    return {snapScalar(point.x), snapScalar(point.y)};
-}
-
-AABB LevelEditorDocument::snap(const AABB& rect) {
-    return {snap(rect.min), snap(rect.max)};
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
@@ -84,12 +58,9 @@ bool LevelEditorDocument::validPlatform(const AABB& rect) const {
 
 bool LevelEditorDocument::addPlatform(const AABB& requested,
                                       std::size_t* createdIndex) {
-    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
+    if (!validPlatform(requested)) return false;
 
-    const AABB rect = snap(requested);
-    if (!validPlatform(rect)) return false;
-
-    m_platforms.push_back({rect});
+    m_platforms.push_back({requested});
     if (createdIndex) *createdIndex = m_platforms.size() - 1;
     bumpGeneration();
     return true;
@@ -98,21 +69,15 @@ bool LevelEditorDocument::addPlatform(const AABB& requested,
 bool LevelEditorDocument::movePlatform(std::size_t index,
                                        const Vec2& requestedMin) {
     if (index >= m_platforms.size()) return false;
+    if (!std::isfinite(requestedMin.x) || !std::isfinite(requestedMin.y)) return false;
 
     const AABB old = m_platforms[index].bounds;
-    const AABB requested = {
+    const AABB moved = {
         requestedMin,
         {requestedMin.x + old.width(), requestedMin.y + old.height()},
     };
-    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
-
-    const Vec2 newMin = snap(requestedMin);
-    const AABB moved = {
-        newMin,
-        {newMin.x + old.width(), newMin.y + old.height()},
-    };
-
     if (!validPlatform(moved)) return false;
+
     if (moved.min.x == old.min.x && moved.min.y == old.min.y &&
         moved.max.x == old.max.x && moved.max.y == old.max.y)
         return true;
@@ -130,14 +95,15 @@ bool LevelEditorDocument::removePlatform(std::size_t index) {
 }
 
 bool LevelEditorDocument::setSpawnX(float requestedX) {
-    if (requestedX < m_spawnMinX - EPS || requestedX > m_spawnMaxX + EPS) return false;
+    if (!std::isfinite(requestedX) ||
+        requestedX < m_spawnMinX - EPS ||
+        requestedX > m_spawnMaxX + EPS)
+        return false;
 
-    const float snappedX = snapScalar(requestedX);
-    if (snappedX < m_spawnMinX - EPS || snappedX > m_spawnMaxX + EPS) return false;
-    if (snappedX == m_spawnPosition.x) return true;
+    if (requestedX == m_spawnPosition.x) return true;
 
-    m_spawnPosition.x = snappedX;
-    m_spawnPosition.y = snapScalar(m_initialGround.max.y);
+    m_spawnPosition.x = requestedX;
+    m_spawnPosition.y = m_initialGround.max.y;
     bumpGeneration();
     return true;
 }
@@ -147,17 +113,14 @@ bool LevelEditorDocument::validFlag(const AABB& rect) const {
 }
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
-    if (!m_finalCampaignLevel) return false;
-    if (!insideLogicalBounds(requested) || !hasMinimumSize(requested)) return false;
+    if (!m_finalCampaignLevel || !validFlag(requested)) return false;
 
-    const AABB rect = snap(requested);
-    if (!validFlag(rect)) return false;
     if (m_flag &&
-        m_flag->min.x == rect.min.x && m_flag->min.y == rect.min.y &&
-        m_flag->max.x == rect.max.x && m_flag->max.y == rect.max.y)
+        m_flag->min.x == requested.min.x && m_flag->min.y == requested.min.y &&
+        m_flag->max.x == requested.max.x && m_flag->max.y == requested.max.y)
         return true;
 
-    m_flag = rect;
+    m_flag = requested;
     bumpGeneration();
     return true;
 }
@@ -195,7 +158,8 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
     }
 
     if (data.spawnPosition &&
-        (data.spawnPosition->x < 0.0f ||
+        (!std::isfinite(data.spawnPosition->x) || !std::isfinite(data.spawnPosition->y) ||
+         data.spawnPosition->x < 0.0f ||
          data.spawnPosition->x > restoredLayout.width()))
         return false;
 
@@ -214,15 +178,12 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
     }
 
     m_layout = restoredLayout;
-    m_spawnMinX = ceilToGrid(m_initialGround.min.x);
-    m_spawnMaxX = floorToGrid(m_initialGround.max.x - config::PLAYER_WIDTH);
-    if (m_spawnMaxX < m_spawnMinX) m_spawnMaxX = m_spawnMinX;
+    m_spawnMinX = m_initialGround.min.x;
+    m_spawnMaxX = std::max(m_spawnMinX, m_initialGround.max.x - config::PLAYER_WIDTH);
     m_spawnPosition = data.spawnPosition.value_or(Vec2{
         m_spawnMinX,
-        snapScalar(m_initialGround.max.y),
+        m_initialGround.max.y,
     });
-    m_spawnPosition.x = snapScalar(m_spawnPosition.x);
-    m_spawnPosition.y = snapScalar(m_initialGround.max.y);
     m_flag = data.flag;
     bumpGeneration();
     return true;
