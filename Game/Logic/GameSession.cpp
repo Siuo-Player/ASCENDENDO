@@ -8,12 +8,19 @@
 namespace logic {
 
 void GameSession::resetGame(float logicalWidth) {
+    // Bootstrap the new campaign state transactionally. A failed load must not
+    // leave the session in PLAYING with an empty or stale level.
+    CampaignRuntime candidateRuntime = campaignRuntime_;
+    Level candidateLevel;
+    if (!candidateRuntime.loadInitialLevel(candidateLevel, logicalWidth)) return;
+
     player_ = logic::Player{};
     player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
+    level_ = std::move(candidateLevel);
+    campaignRuntime_ = std::move(candidateRuntime);
 
-    campaignRuntime_.loadInitialLevel(level_, logicalWidth);
     stateMachine_.enterPlaying();
 }
 
@@ -22,12 +29,19 @@ void GameSession::beginPlaying(float logicalWidth) {
 }
 
 bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) {
+    // Load and validate the requested level before replacing the live session
+    // state, so an invalid/unreadable level leaves the current session intact.
+    CampaignRuntime candidateRuntime = campaignRuntime_;
+    Level candidateLevel;
+    if (!candidateRuntime.loadLevelAt(candidateLevel, levelIndex, logicalWidth)) return false;
+
     player_ = logic::Player{};
     player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
+    level_ = std::move(candidateLevel);
+    campaignRuntime_ = std::move(candidateRuntime);
 
-    if (!campaignRuntime_.loadLevelAt(level_, levelIndex, logicalWidth)) return false;
     stateMachine_.enterPlaying();
     return true;
 }
