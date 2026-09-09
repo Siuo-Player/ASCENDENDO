@@ -55,7 +55,6 @@ Falhas de carregamento são transaccionais: o documento actualmente aberto e a i
 - integração final de #268 após #265 ficar integrado;
 - cobertura CI Linux/ASan/UBSan/Windows/determinística para o novo fluxo;
 - política de `Esc` com alterações não guardadas no Campaign Editor alinhada com o carrinho global;
-- navegação visual do Level Editor sobre todas as screens verticais, não apenas a persistência do modelo;
 - remover/justificar o `EDITOR_GRID_SNAP` de 4 px, porque a visão de produto define colocação pixel-perfect sem grelha obrigatória.
 
 Nenhum destes itens deve ser marcado como concluído apenas porque existe código; requer evidência correspondente.
@@ -100,11 +99,11 @@ Objectivos:
 
 O modelo anterior de um level = uma única tela limita a variedade do conteúdo. A screen mantém a legibilidade original; o level ganha profundidade vertical sem ampliar a largura.
 
-## 9.3 Editor vertical 🟡 PRÓXIMO
+## 9.3 Editor vertical 🔄 EM INTEGRAÇÃO
 
-Adaptar viewport, câmara e ferramentas do Level Editor para navegar verticalmente pelo level completo.
+O Level Editor já transporta a altura real `N × 360` no snapshot, segue o cursor keyboard-first através das screens e permite deslocação vertical sem depender do rato. `W/S` fazem panning semântico; a apresentação desenha apenas a janela activa e marca as fronteiras das screens.
 
-A navegação deve funcionar só com teclado e com teclado+rato.
+A integração ainda exige validação CI e posterior revisão visual/responsiva.
 
 ## 9.4 Undo/redo e carrinho 🟡
 
