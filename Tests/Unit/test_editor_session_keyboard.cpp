@@ -7,9 +7,9 @@ namespace {
 void press(logic::InputManager& input, int key) {
     input.beginFrame();
     input.onKeyEvent(key, logic::Action::PRESS);
-    // Unit tests model a complete physical tap so a later press of the same
-    // key is observed as a new edge, just as a real release+press sequence is.
     input.onKeyEvent(key, logic::Action::RELEASE);
+    // Model a complete physical tap so a later press of the same key produces
+    // a fresh edge, matching the GLFW press/release contract.
 }
 
 }
@@ -53,7 +53,7 @@ TEST_CASE("ENTER coloca plataforma no cursor e DELETE funciona sem rato") {
     CHECK(session.document().platformCount() == 0);
 }
 
-TEST_CASE("cursor teclado pode atravessar a altura de um nivel multi-screen") {
+TEST_CASE("cursor teclado percorre integralmente um nivel multi-screen") {
     logic::EditorSession session(false);
     logic::InputManager input;
     core::KeyBindings bindings;
@@ -67,16 +67,18 @@ TEST_CASE("cursor teclado pode atravessar a altura de um nivel multi-screen") {
         2
     }));
 
+    // GLFW window coordinates have their origin at the top-left while the
+    // editor's logical world uses bottom-left coordinates.
     input.beginFrame();
-    input.injectCursorPos(0.0, 0.0);
+    input.injectCursorPos(0.0, 360.0);
     session.update(input, bindings, 640, 360);
 
-    for (int i = 0; i < 360; ++i) {
+    for (int i = 0; i < 720; ++i) {
         press(input, logic::Key::UP);
         session.update(input, bindings, 640, 360);
     }
 
-    CHECK(session.cursor().world.y == doctest::Approx(360.0f));
+    CHECK(session.cursor().world.y == doctest::Approx(720.0f));
     CHECK(session.document().levelHeight() == doctest::Approx(720.0f));
 }
 
