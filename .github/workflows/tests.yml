@@ -20,6 +20,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Isolate APT from unrelated third-party feeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' source; do
+            if grep -q 'dl.google.com/linux/chrome' "$source"; then
+              echo "Disabling unrelated Chrome APT source: $source"
+              sudo rm -f "$source"
+            fi
+          done < <(find /etc/apt/sources.list.d -type f \( -name '*.list' -o -name '*.sources' \) -print0)
+
       - name: Install toolchain and headless graphics dependencies
         run: |
           sudo apt-get update -qq
@@ -93,6 +104,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Isolate APT from unrelated third-party feeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' source; do
+            if grep -q 'dl.google.com/linux/chrome' "$source"; then
+              echo "Disabling unrelated Chrome APT source: $source"
+              sudo rm -f "$source"
+            fi
+          done < <(find /etc/apt/sources.list.d -type f \( -name '*.list' -o -name '*.sources' \) -print0)
 
       - name: Install toolchain and headless graphics dependencies
         run: |

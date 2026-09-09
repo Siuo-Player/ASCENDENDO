@@ -5,15 +5,24 @@
 #include "Core/Viewport.h"
 #include "Logic/RunHistory.h"
 
+#include <cmath>
+
 namespace logic {
 
 void GameSession::resetGame(float logicalWidth) {
+    // Bootstrap the new campaign state transactionally. A failed load must not
+    // leave the session in PLAYING with an empty or stale level.
+    CampaignRuntime candidateRuntime = campaignRuntime_;
+    Level candidateLevel;
+    if (!candidateRuntime.loadInitialLevel(candidateLevel, logicalWidth)) return;
+
     player_ = logic::Player{};
     player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
+    level_ = std::move(candidateLevel);
+    campaignRuntime_ = std::move(candidateRuntime);
 
-    campaignRuntime_.loadInitialLevel(level_, logicalWidth);
     stateMachine_.enterPlaying();
 }
 
@@ -22,12 +31,19 @@ void GameSession::beginPlaying(float logicalWidth) {
 }
 
 bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) {
+    // Load and validate the requested level before replacing the live session
+    // state, so an invalid/unreadable level leaves the current session intact.
+    CampaignRuntime candidateRuntime = campaignRuntime_;
+    Level candidateLevel;
+    if (!candidateRuntime.loadLevelAt(candidateLevel, levelIndex, logicalWidth)) return false;
+
     player_ = logic::Player{};
     player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
+    level_ = std::move(candidateLevel);
+    campaignRuntime_ = std::move(candidateRuntime);
 
-    if (!campaignRuntime_.loadLevelAt(level_, levelIndex, logicalWidth)) return false;
     stateMachine_.enterPlaying();
     return true;
 }
@@ -69,9 +85,13 @@ GameSessionUpdateResult GameSession::update(float dt,
     const bool openEditorPressed =
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
 
+    // PhysicsWorld already rejects invalid deltas. The session must also
+    // prevent an invalid render-frame delta from contaminating elapsed time.
+    const float safeDt = (std::isfinite(dt) && dt >= 0.0f) ? dt : 0.0f;
+
     switch (currentState) {
     case core::GameState::PLAYING:
-        elapsedTime_ += dt;
+        elapsedTime_ += safeDt;
 
         if (openEditorPressed) {
             openEditor(core::GameState::PLAYING);
@@ -81,7 +101,7 @@ GameSessionUpdateResult GameSession::update(float dt,
         } else if (pausePressed) {
             stateMachine_.pause();
         } else {
-            simulation_.advance(dt, input, bindings, player_, world_, level_);
+            simulation_.advance(safeDt, input, bindings, player_, world_, level_);
 
             if (player_.position().y >
                 campaignRuntime_.currentSpawnY() - logicalHeight) {
