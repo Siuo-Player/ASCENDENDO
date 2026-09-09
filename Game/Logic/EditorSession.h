@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace logic {
@@ -61,13 +62,28 @@ public:
     const std::string& persistencePath() const { return m_persistencePath; }
     const std::string& documentName() const { return m_documentName; }
 
-    // Transactional replacement used by the Campaign Editor. The caller must
-    // load/parse the LevelData first; this operation only replaces the editor
-    // after the new data satisfies the selected level's final-level policy.
+    // Campaign Editor calls this only after LevelDataIO has parsed the level.
+    // The LevelEditorDocument validates the new data with the selected
+    // campaign-level policy before replacing the current document.
     bool loadLevelData(const LevelData& data,
                        bool finalCampaignLevel,
                        std::string path,
-                       std::string name = "Editor Level");
+                       std::string name = "Editor Level") {
+        if (!m_document.restoreFromLevelData(data, finalCampaignLevel)) return false;
+
+        m_controller.clearSelection();
+        m_document.setFinalCampaignLevel(finalCampaignLevel);
+        setPersistenceTarget(std::move(path), std::move(name));
+        m_undoHistory.clear();
+        m_redoHistory.clear();
+        m_validationTask.discard();
+        m_validationResult = {};
+        m_lastSaveResult = {};
+        m_keyboardCursorActive = false;
+        m_haveMousePosition = false;
+        m_leftDragActive = false;
+        return true;
+    }
 
     EditorSaveResult saveLevel();
     EditorSaveResult saveLevel(const std::string& path,
