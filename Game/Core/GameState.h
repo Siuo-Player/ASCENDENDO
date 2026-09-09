@@ -10,6 +10,7 @@ enum class GameState {
     CREDITS,
     MENU,
     EDITOR,
+    CAMPAIGN_EDITOR,
 };
 
 } // namespace core
