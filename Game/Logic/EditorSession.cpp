@@ -15,7 +15,31 @@ bool insideEditorCanvas(const AABB& bounds) {
            bounds.max.y <= config::LOGICAL_HEIGHT;
 }
 
+bool sameDocumentState(const LevelData& a, const LevelData& b) {
+    if (a.screenCount != b.screenCount || a.platforms.size() != b.platforms.size() ||
+        a.spawnPosition.has_value() != b.spawnPosition.has_value() ||
+        a.flag.has_value() != b.flag.has_value())
+        return false;
+
+    for (std::size_t i = 0; i < a.platforms.size(); ++i) {
+        const auto& x = a.platforms[i];
+        const auto& y = b.platforms[i];
+        if (x.min.x != y.min.x || x.min.y != y.min.y ||
+            x.max.x != y.max.x || x.max.y != y.max.y)
+            return false;
+    }
+    if (a.spawnPosition &&
+        (a.spawnPosition->x != b.spawnPosition->x ||
+         a.spawnPosition->y != b.spawnPosition->y))
+        return false;
+    if (a.flag &&
+        (a.flag->min.x != b.flag->min.x || a.flag->min.y != b.flag->min.y ||
+         a.flag->max.x != b.flag->max.x || a.flag->max.y != b.flag->max.y))
+        return false;
+    return true;
 }
+
+} // namespace
 
 EditorSession::EditorSession(bool finalCampaignLevel, const AABB& initialGround)
     : m_document(finalCampaignLevel, initialGround),
@@ -175,15 +199,113 @@ void EditorSession::updateCursor(const InputManager& input,
         input.cursorX(), input.cursorY(),
         windowWidth, windowHeight,
         config::LOGICAL_WIDTH, config::LOGICAL_HEIGHT);
-    m_cursor.logical = {logical.x, logical.y};
+    const Vec2 mouseLogical{logical.x, logical.y};
 
-    // Level Editor = exactly one 640x360 screen. There is no camera transform
-    // here: cursor coordinates and rendered geometry share the same space.
-    m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, {0.0f, 0.0f}).world;
+    if (!m_keyboardCursorActive || !m_haveMousePosition ||
+        mouseLogical.x != m_lastMouseLogical.x ||
+        mouseLogical.y != m_lastMouseLogical.y) {
+        m_cursor.logical = mouseLogical;
+        m_cursor.world = m_controller.cursorFromLogical(m_cursor.logical, {0.0f, 0.0f}).world;
+        m_keyboardCursorActive = false;
+    }
+
+    m_lastMouseLogical = mouseLogical;
+    m_haveMousePosition = true;
+}
+
+void EditorSession::moveKeyboardCursor(float dx, float dy) {
+    m_keyboardCursorActive = true;
+    m_cursor.world.x = std::clamp(m_cursor.world.x + dx, 0.0f, m_document.levelWidth());
+    m_cursor.world.y = std::clamp(m_cursor.world.y + dy, 0.0f, m_document.levelHeight());
+    m_cursor.logical = m_cursor.world;
+}
+
+bool EditorSession::placeKeyboardEntity() {
+    switch (m_controller.entityTool()) {
+        case EditorEntityTool::SPAWN:
+            return m_controller.placeSpawnAt(m_cursor.world);
+        case EditorEntityTool::FLAG:
+            return m_controller.placeFlagAt(m_cursor.world);
+        case EditorEntityTool::PLATFORM:
+            break;
+    }
+
+    const std::size_t hit = m_controller.hitPlatform(m_cursor.world);
+    if (m_controller.hasSelection() && hit != m_controller.selectedIndex()) {
+        const auto& selected = m_document.platforms()[m_controller.selectedIndex()].bounds;
+        const Vec2 newMin{
+            m_cursor.world.x - selected.width() * 0.5f,
+            m_cursor.world.y - selected.height() * 0.5f,
+        };
+        return m_document.movePlatform(m_controller.selectedIndex(), newMin);
+    }
+
+    if (hit < m_document.platformCount()) {
+        // Select an existing platform at the keyboard cursor.
+        m_controller.clearSelection();
+        m_controller.setToolMode(EditorToolMode::STAMP);
+        if (!m_controller.beginMove(m_cursor.world)) return false;
+        m_controller.cancelMove();
+        return true;
+    }
+
+    return m_controller.stampAt(m_cursor.world);
+}
+
+void EditorSession::recordEditBaseline(const LevelData& before) {
+    if (m_applyingHistory) return;
+    if (!m_undoHistory.empty() && sameDocumentState(m_undoHistory.back(), before)) return;
+    m_undoHistory.push_back(before);
+    m_redoHistory.clear();
+}
+
+bool EditorSession::undo() {
+    if (m_undoHistory.empty()) return false;
+    m_applyingHistory = true;
+
+    const LevelData current = m_document.toLevelData(m_documentName);
+    const LevelData target = m_undoHistory.back();
+    if (!m_document.restoreFromLevelData(target)) {
+        m_applyingHistory = false;
+        return false;
+    }
+
+    m_undoHistory.pop_back();
+    m_redoHistory.push_back(current);
+    m_controller.clearSelection();
+    m_applyingHistory = false;
+    return true;
+}
+
+bool EditorSession::redo() {
+    if (m_redoHistory.empty()) return false;
+    m_applyingHistory = true;
+
+    const LevelData current = m_document.toLevelData(m_documentName);
+    const LevelData target = m_redoHistory.back();
+    if (!m_document.restoreFromLevelData(target)) {
+        m_applyingHistory = false;
+        return false;
+    }
+
+    m_redoHistory.pop_back();
+    m_undoHistory.push_back(current);
+    m_controller.clearSelection();
+    m_applyingHistory = false;
+    return true;
 }
 
 void EditorSession::updateKeyboard(const InputManager& input,
                                    const core::KeyBindings& bindings) {
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorLeft))
+        moveKeyboardCursor(-1.0f, 0.0f);
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorRight))
+        moveKeyboardCursor(1.0f, 0.0f);
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorUp))
+        moveKeyboardCursor(0.0f, 1.0f);
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorDown))
+        moveKeyboardCursor(0.0f, -1.0f);
+
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorToggleMode))
         m_controller.toggleToolMode();
 
@@ -204,11 +326,17 @@ void EditorSession::updateKeyboard(const InputManager& input,
 
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectPlatform)) {
         m_controller.setEntityTool(EditorEntityTool::PLATFORM);
+        m_controller.clearSelection();
     } else if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectSpawn)) {
         m_controller.setEntityTool(EditorEntityTool::SPAWN);
+        m_controller.clearSelection();
     } else if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSelectFlag)) {
         m_controller.setEntityTool(EditorEntityTool::FLAG);
+        m_controller.clearSelection();
     }
+
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPlace))
+        placeKeyboardEntity();
 
     if (core::isActionJustPressed(bindings, input, core::GameAction::DeleteSelection)) {
         if (m_controller.entityTool() == EditorEntityTool::FLAG) {
@@ -286,9 +414,32 @@ void EditorSession::update(const InputManager& input,
                            const core::KeyBindings& bindings,
                            int32_t windowWidth,
                            int32_t windowHeight) {
+    const bool undoPressed = core::isActionJustPressed(
+        bindings, input, core::GameAction::EditorUndo);
+    const bool redoPressed = core::isActionJustPressed(
+        bindings, input, core::GameAction::EditorRedo);
+
     updateCursor(input, windowWidth, windowHeight);
+
+    if (undoPressed || redoPressed) {
+        if (undoPressed) undo();
+        else redo();
+        refreshValidationResult();
+        return;
+    }
+
+    const LevelData before = m_document.toLevelData(m_documentName);
+    const std::uint64_t generationBefore = m_document.generation();
+    const bool interactionWasActive = m_leftDragActive;
+
     updateKeyboard(input, bindings);
     updateMouse(input);
+
+    if (!m_applyingHistory && m_document.generation() != generationBefore &&
+        !interactionWasActive) {
+        recordEditBaseline(before);
+    }
+
     refreshValidationResult();
 }
 
