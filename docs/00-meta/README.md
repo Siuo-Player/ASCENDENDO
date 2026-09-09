@@ -8,7 +8,9 @@ Documentos que definem **como** o projeto é gerido e como decisões permanecem 
 - `PRODUCT_DECISIONS.md`
 - `BRANCH_PLAN.md`
 - `AI_CREDITS.md`
-- `ROADMAP_2026-09-02.md` — referência operacional atual
-- `CURRENT_STATUS_2026-09-02.md` — snapshot datado do estado atual
+- `ACTIVE_ROADMAP.md` — ponte estável para a referência operacional atual
+- `ROADMAP_2026-09-09.md` — referência operacional atual
+- `CURRENT_STATUS_2026-09-09.md` — snapshot datado do estado atual
+- `ARTIFACT_FINALIZATION_INCIDENT_2026-09-09.md` — incidente de CI e resolução reproduzível
 
-Atualmente estes documentos permanecem no topo de `docs/` para preservar links existentes. Esta pasta é a classificação normativa para futuras movimentações sem alterar conteúdo.
+Os documentos datados anteriores permanecem como histórico. Não devem ser usados para inferir o estado atual do `main`.

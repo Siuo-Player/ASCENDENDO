@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install toolchain and headless graphics dependencies
         run: |
@@ -76,7 +76,7 @@ jobs:
           VK_LOADER_DEBUG: "error"
 
       - name: Upload PPM evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deterministic-capture-level-${{ matrix.level }}-${{ matrix.aspect }}
           path: artifacts/level-${{ matrix.level }}-${{ matrix.aspect }}.ppm
