@@ -2,10 +2,11 @@
 // =============================================================================
 // Game/Graphics/UiRenderer.h
 //
-// UI/presentation pass: menus, pause, credits and gameplay HUD.
+// UI/presentation pass: menus, pause, credits, campaign editor and gameplay HUD.
 // Não conhece Player/Level internamente; recebe apenas os dados necessários.
 // =============================================================================
 
+#include "Logic/CampaignEditorSnapshot.h"
 #include <vulkan/vulkan.h>
 
 namespace gfx {
@@ -39,6 +40,13 @@ public:
                      const ShapeRenderer& shapes,
                      TextPipeline* textPipeline,
                      FontRenderer* font) const;
+
+    void drawCampaignEditor(VkCommandBuffer cmd,
+                            const Pipeline& shapePipeline,
+                            const ShapeRenderer& shapes,
+                            TextPipeline* textPipeline,
+                            FontRenderer* font,
+                            const logic::CampaignEditorRenderSnapshot& snapshot) const;
 };
 
 } // namespace gfx
