@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/LevelLayout.h"
 #include "Logic/Physics.h"
 #include "Logic/LevelData.h"
 
@@ -34,9 +35,9 @@ public:
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
     std::uint64_t generation() const { return m_generation; }
-    std::size_t screenCount() const { return m_screenCount; }
-    float levelWidth() const { return 640.0f; }
-    float levelHeight() const { return 360.0f * static_cast<float>(m_screenCount); }
+    std::size_t screenCount() const { return m_layout.screenCount(); }
+    float levelWidth() const { return m_layout.width(); }
+    float levelHeight() const { return m_layout.height(); }
 
     static float snap(float value);
     static Vec2 snap(const Vec2& point);
@@ -78,7 +79,7 @@ private:
     float m_spawnMinX = 0.0f;
     float m_spawnMaxX = 0.0f;
     std::optional<AABB> m_flag;
-    std::size_t m_screenCount = 1;
+    core::LevelLayout m_layout{};
     std::uint64_t m_generation = 0;
 };
 
