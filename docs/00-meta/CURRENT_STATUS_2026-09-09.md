@@ -2,19 +2,31 @@
 
 ## Baseline exato
 
-`main`: `bae8ccdc2c4abd8da3c675893c7063731ba830b3`
+`main`: `2b6c1e8a1f8152e224b6bf806a398bd91d0db1af`
 
-Este snapshot reflete o `main` após PR #247 (adjacência diagonal), PR #248 (cobertura das quatro orientações diagonais), PR #249 (Actions/docs) e PR #250 (swapchain fail-closed).
+Este snapshot inclui a documentação consolidada do produto (PR #262), o fecho formal da Foundation no Sprint 20 (PR #256) e a integração do PR #261, que expôs a seleção de nível da Campaign Editor.
 
-## Estado técnico
+## Foundation
 
-### Editor
+**Sprint 20 Foundation — CLOSED.**
 
-O editor possui edição de entidades, save staged, validação síncrona e validação assíncrona sobre snapshots imutáveis com generation/STALE. A integração direta com o validator físico/campanha completo permanece separada.
+A decisão de fecho foi documentada em PR #256. Os gates declarados passaram e a auditoria camera/viewport não encontrou uma falha operacional que justificasse nova alteração de contrato. A Foundation não deve voltar a ser usada como contentor para trabalho posterior sem nova evidência ou requisito.
+
+## Estado técnico atual
+
+### Editor de níveis
+
+O editor possui edição de entidades, save staged, validação síncrona e validação assíncrona sobre snapshots imutáveis com generation/STALE.
+
+### Campaign Editor
+
+O modelo canónico de campanha suporta carregamento, seleção, reordenação, validação de referências e persistência de `campaign.txt`. A identidade do nível seleccionado é preservada através das operações já cobertas por regressões. PR #261 integrou a consulta null-safe do nível seleccionado no documento.
+
+**Próximo passo:** consumir este modelo no fluxo visual/session real do editor.
 
 ### Apresentação semântica
 
-A cadeia é:
+A cadeia permanece:
 
 ```text
 LevelData
@@ -25,66 +37,50 @@ LevelData
 → WorldRenderer
 ```
 
-O compositor preserva vizinhança cardinal e diagonal entre regiões modulares. Os contactos diagonais corner-only são recíprocos e tolerantes a pequeno drift sem alterar gameplay geometry.
-
-### Swapchain / Vulkan
-
-A recreation de swapchain agora é fail-closed: a geração atualmente válida permanece intacta enquanto a substituição é criada, os novos image views são verificados, e só depois o novo estado é publicado e os recursos antigos destruídos. O PR #250 foi integrado após CI Linux, Windows e deterministic capture verdes.
-
-Limitação: não existe ainda uma seam de injeção Vulkan determinística para exercitar individualmente falhas de criação de swapchain/image-view.
+A adjacência cardinal e diagonal cross-region e a recreation transacional de swapchain estão integradas e cobertas.
 
 ### Runtime/playability
 
-Existe cobertura runtime-grounded de start → jump → fixed timestep → collision → landing através do Player/PhysicsWorld/Level reais.
+Existe cobertura runtime-grounded para start → jump → fixed timestep → collision → landing através do Player/PhysicsWorld/Level reais.
 
 ### Assets
 
-Aprovação humana, provenance e elegibilidade técnica continuam separadas. Não existe promoção legítima de asset externo sem ficheiro binário exato, identidade verificável e gates correspondentes.
+Aprovação humana, provenance e elegibilidade técnica continuam separadas. Nenhum asset externo deve ser promovido sem ficheiro binário exato, identidade verificável e gates correspondentes.
 
 ## CI
 
-### Artifact finalization
+O `main` pós-PR #262 passou o workflow `Tests` e `Windows` em push. O PR #261, agora integrado, teve Linux normal, Linux ASan/UBSan, Windows e deterministic capture verdes antes do merge.
 
-O incidente `FinalizeArtifact 403` foi resolvido por rerun do mesmo job sem alteração de permissões ou código. A atualização da action não é apresentada como causalidade da correção do incidente.
+O incidente `FinalizeArtifact 403` continua registado como incidente operacional resolvido por rerun, sem alteração de permissões como pseudo-correção.
 
-Não foram introduzidas:
+Sanitizer coverage específica no caminho de `push` para `main` continua uma tranche de CI separada.
 
-- permissões `actions: write` como pseudo-correção;
-- colisão de nomes inexistente;
-- `retry-max-attempts`, que não é input suportado pela action;
-- wrapper externo de retry sem necessidade demonstrada.
+## Sprint 21 — estado
 
-Relatório detalhado: `ARTIFACT_FINALIZATION_INCIDENT_2026-09-09.md`.
+**OPEN — Campaign Editor integration**
 
-### Actions
+Objetivo: fazer o modelo 9.6 ser consumido pelo fluxo visual real do editor, mantendo `campaign.txt` como autoridade e sem duplicar semântica de campanha.
 
-Os workflows Linux foram alinhados com `actions/checkout@v6`; deterministic capture usa `actions/upload-artifact@v6`. A atualização elimina a deriva observada entre workflows e os avisos relacionados com as actions v4 em runners atuais.
-
-### Sanitizers
-
-A execução ASan/UBSan instrumentada do game code existe e está válida em PRs, mas ainda não cobre diretamente o caminho de `push` para `main` porque o job está condicionado pelo evento.
-
-Isto é dívida de CI separada, não parte da resolução do artifact 403.
+Tracking issue: **#263**  
+Work package: `docs/05-work-packages/SPRINT_21_CAMPAIGN_EDITOR_INTEGRATION_2026-09-09.md`
 
 ## Próximos gates
 
-1. **Fase 1.3:** consolidar camera bounds e estabilidade subpixel.
-2. **Fase 1.4:** validar diretamente os mapas `NaoValidados`.
-3. **Sanitizers/CI hardening:** garantir cobertura apropriada no caminho de integração de `main` sem duplicar custos desnecessários.
-4. Só depois: profiling e otimizações da Fase 2.
-5. Só depois da estabilidade estrutural: expansão de campanha/editor e validação visual humana.
-6. Audio permanece workstream independente.
+1. Integração Campaign Editor → UI/session real.
+2. Testes da boundary visual para seleção, reorder, load/save e failed-load preservation.
+3. Deterministic evidence aplicável à nova integração.
+4. Sanitizers/CI hardening no caminho de `main`, em tranche separada.
+5. Só depois: profiling/performance e os restantes workstreams de produto.
 
-## O que não está concluído
+## O que permanece explicitamente posterior
 
-- camera bounds/subpixel stability como contrato explícito e validado;
-- directed validation completa dos mapas `NaoValidados`;
-- seam de injeção de falhas Vulkan para testes determinísticos de recreation;
-- promoção de binários externos concretos para runtime;
+- seam de injeção de falhas Vulkan;
+- promoção de binários externos concretos;
 - validação visual humana completa;
 - props/environment curados em produção;
-- sanitizer coverage equivalente no `push` de `main`;
-- release hardening.
+- release hardening;
+- funcionalidades online/comunidade;
+- propriedades de replay anteriormente adiadas sem requisito novo.
 
 ## Gates permanentes
 
@@ -95,4 +91,5 @@ capture ≠ playtest
 metadata ≠ binary
 CC0 ≠ approval
 semantic validation ≠ full physical validation
+Foundation ≠ backlog permanente
 ```
