@@ -49,6 +49,12 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::EditorSave,           { Key::NUM1 } },
         { GameAction::EditorTest,           { Key::NUM2 } },
         { GameAction::EditorValidate,       { Key::NUM3 } },
+        { GameAction::CampaignSelectPrevious,{ Key::UP } },
+        { GameAction::CampaignSelectNext,    { Key::DOWN } },
+        { GameAction::CampaignMoveEarlier,   { Key::LEFT } },
+        { GameAction::CampaignMoveLater,     { Key::RIGHT } },
+        { GameAction::CampaignOpenLevel,     { Key::SPACE, Key::ENTER } },
+        { GameAction::CampaignSave,          { Key::NUM1 } },
     };
 }
 

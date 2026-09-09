@@ -10,6 +10,7 @@ public:
 
     GameState state() const noexcept { return state_; }
     GameState editorReturnState() const noexcept { return editorReturnState_; }
+    GameState campaignEditorReturnState() const noexcept { return campaignEditorReturnState_; }
     GameState creditsReturnState() const noexcept { return creditsReturnState_; }
     int menuSelection() const noexcept { return menuSelection_; }
 
@@ -18,8 +19,10 @@ public:
 
     void enterPlaying() noexcept;
     void enterEditor(GameState returnState) noexcept;
+    void enterCampaignEditor(GameState returnState) noexcept;
     void enterCredits(GameState returnState) noexcept;
     void returnFromEditor() noexcept;
+    void returnFromCampaignEditor() noexcept;
     void returnFromCredits() noexcept;
     void pause() noexcept;
     void resume() noexcept;
@@ -30,6 +33,7 @@ public:
 private:
     GameState state_;
     GameState editorReturnState_;
+    GameState campaignEditorReturnState_;
     GameState creditsReturnState_;
     int menuSelection_;
 };

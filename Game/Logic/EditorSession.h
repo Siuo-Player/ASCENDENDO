@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace logic {
@@ -61,6 +62,30 @@ public:
     const std::string& persistencePath() const { return m_persistencePath; }
     const std::string& documentName() const { return m_documentName; }
 
+    // Campaign Editor calls this only after LevelDataIO has parsed the level.
+    // The LevelEditorDocument validates the new data with the selected
+    // campaign-level policy before replacing the current document.
+    bool loadLevelData(const LevelData& data,
+                       bool finalCampaignLevel,
+                       std::string path,
+                       std::string name = "Editor Level") {
+        if (!m_document.restoreFromLevelData(data, finalCampaignLevel)) return false;
+
+        m_controller.clearSelection();
+        m_document.setFinalCampaignLevel(finalCampaignLevel);
+        setPersistenceTarget(std::move(path), std::move(name));
+        m_undoHistory.clear();
+        m_redoHistory.clear();
+        m_validationTask.discard();
+        m_validationResult = {};
+        m_lastSaveResult = {};
+        m_keyboardCursorActive = false;
+        m_haveMousePosition = false;
+        m_leftDragActive = false;
+        m_viewBottomY = 0.0f;
+        return true;
+    }
+
     EditorSaveResult saveLevel();
     EditorSaveResult saveLevel(const std::string& path,
                                const std::string& name = "Editor Level");
@@ -90,6 +115,7 @@ private:
                         const core::KeyBindings& bindings);
     void updateMouse(const InputManager& input);
     void refreshValidationResult();
+    void followKeyboardCursor();
 
     void recordEditBaseline(const LevelData& before);
     bool undo();
@@ -105,6 +131,7 @@ private:
     bool m_leftDragActive = false;
     bool m_haveMousePosition = false;
     bool m_keyboardCursorActive = false;
+    float m_viewBottomY = 0.0f;
 
     std::string m_persistencePath;
     std::string m_documentName = "Editor Level";

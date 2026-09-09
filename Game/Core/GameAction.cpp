@@ -38,6 +38,12 @@ const char* actionDisplayName(GameAction action) {
         case GameAction::EditorSelectPlatform:return "Editor: Selecionar Plataforma";
         case GameAction::EditorSelectSpawn:   return "Editor: Selecionar Spawn";
         case GameAction::EditorSelectFlag:    return "Editor: Selecionar Flag";
+        case GameAction::CampaignSelectPrevious:return "Campanha: Nivel Anterior";
+        case GameAction::CampaignSelectNext:    return "Campanha: Nivel Seguinte";
+        case GameAction::CampaignMoveEarlier:   return "Campanha: Mover Nivel para Tras";
+        case GameAction::CampaignMoveLater:     return "Campanha: Mover Nivel para Frente";
+        case GameAction::CampaignOpenLevel:     return "Campanha: Abrir Nivel";
+        case GameAction::CampaignSave:          return "Campanha: Guardar";
     }
     return "?";
 }
@@ -74,6 +80,12 @@ const char* actionSerializedName(GameAction action) {
         case GameAction::EditorSave:           return "EditorSave";
         case GameAction::EditorTest:           return "EditorTest";
         case GameAction::EditorValidate:       return "EditorValidate";
+        case GameAction::CampaignSelectPrevious:return "CampaignSelectPrevious";
+        case GameAction::CampaignSelectNext:    return "CampaignSelectNext";
+        case GameAction::CampaignMoveEarlier:   return "CampaignMoveEarlier";
+        case GameAction::CampaignMoveLater:     return "CampaignMoveLater";
+        case GameAction::CampaignOpenLevel:     return "CampaignOpenLevel";
+        case GameAction::CampaignSave:          return "CampaignSave";
     }
     return "Unknown";
 }

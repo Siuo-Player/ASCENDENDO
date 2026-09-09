@@ -10,6 +10,7 @@
 #include "Core/Viewport.h"
 
 #include <cstdio>
+#include <filesystem>
 #include <string>
 
 namespace gfx {
@@ -81,9 +82,9 @@ void drawControlsReference(VkCommandBuffer cmd,
         "G                   STAMP / DRAG",
         "[ / ]               tamanho menor / maior",
         "DELETE / BACKSPACE   apagar selecao",
-        "1                   guardar (editor)",
-        "2                   testar (editor)",
-        "3                   validar (editor)",
+        "1                   guardar",
+        "2                   testar (editor de nivel)",
+        "3                   validar (editor de nivel)",
     };
 
     float y = 255.0f;
@@ -235,6 +236,85 @@ void UiRenderer::drawCredits(VkCommandBuffer cmd,
                    80.0f, 98.0f, 0.65f, 0.60f, 0.90f, 0.78f, 1.0f);
     centerText(cmd, textPipeline, font, "ESPACO PARA CONTINUAR",
                centerX, 55.0f, 0.45f, 0.40f, 0.40f, 0.55f);
+}
+
+void UiRenderer::drawCampaignEditor(
+    VkCommandBuffer cmd,
+    const Pipeline& shapePipeline,
+    const ShapeRenderer& shapes,
+    TextPipeline* textPipeline,
+    FontRenderer* font,
+    const logic::CampaignEditorRenderSnapshot& snapshot) const {
+    const float centerX = config::LOGICAL_WIDTH / 2.0f;
+
+    shapes.drawRect(cmd, shapePipeline, 28.0f, 24.0f,
+                    584.0f, 312.0f, 0.025f, 0.035f, 0.065f, 0.96f);
+    shapes.drawRect(cmd, shapePipeline, 28.0f, 309.0f,
+                    584.0f, 2.0f, 0.45f, 0.48f, 0.64f);
+
+    if (!textPipeline || !font || !textPipeline->isInitialized()) return;
+    bindText(cmd, textPipeline, font);
+
+    centerText(cmd, textPipeline, font, "EDITOR DE CAMPANHA",
+               centerX, 324.0f, 0.92f, 0.95f, 0.80f, 0.10f);
+
+    std::string header = std::to_string(snapshot.levels.size()) + " NIVEIS";
+    if (snapshot.dirty) header += "   * NAO GUARDADO";
+    font->drawText(cmd, textPipeline->layout(), header.c_str(),
+                   48.0f, 292.0f, 0.44f, 0.72f, 0.75f, 0.86f, 1.0f);
+
+    const std::size_t count = snapshot.levels.size();
+    if (count > 0) {
+        const std::size_t selected =
+            snapshot.selectedIndex < count ? snapshot.selectedIndex : 0;
+        constexpr std::size_t visibleRows = 8;
+        std::size_t first = selected > visibleRows / 2 ? selected - visibleRows / 2 : 0;
+        if (first + visibleRows > count && count > visibleRows)
+            first = count - visibleRows;
+        const std::size_t last = std::min(count, first + visibleRows);
+
+        float y = 263.0f;
+        for (std::size_t i = first; i < last; ++i) {
+            const auto& level = snapshot.levels[i];
+            const bool isSelected = i == selected;
+            const float rowY = y;
+            shapes.drawRect(cmd, shapePipeline, 44.0f, rowY - 6.0f,
+                            552.0f, 27.0f,
+                            isSelected ? 0.16f : 0.045f,
+                            isSelected ? 0.14f : 0.050f,
+                            isSelected ? 0.025f : 0.085f,
+                            0.96f);
+            shapes.drawRect(cmd, shapePipeline, 44.0f, rowY - 6.0f,
+                            3.0f, 27.0f,
+                            isSelected ? 1.0f : 0.25f,
+                            isSelected ? 0.82f : 0.35f,
+                            isSelected ? 0.10f : 0.42f,
+                            1.0f);
+
+            const std::string number = std::to_string(i + 1) + ".";
+            const std::string filename = std::filesystem::path(level.path).filename().string();
+            font->drawText(cmd, textPipeline->layout(), number.c_str(),
+                           56.0f, rowY + 2.0f, 0.44f,
+                           isSelected ? 1.0f : 0.66f,
+                           isSelected ? 0.85f : 0.68f,
+                           isSelected ? 0.10f : 0.74f, 1.0f);
+            font->drawText(cmd, textPipeline->layout(), level.name.c_str(),
+                           88.0f, rowY + 3.0f, 0.47f, 0.92f, 0.93f, 0.96f, 1.0f);
+            font->drawText(cmd, textPipeline->layout(), filename.c_str(),
+                           390.0f, rowY + 3.0f, 0.32f, 0.52f, 0.55f, 0.68f, 1.0f);
+            y -= 31.0f;
+        }
+    } else {
+        centerText(cmd, textPipeline, font, "CAMPANHA SEM NIVEIS",
+                   centerX, 175.0f, 0.65f, 0.82f, 0.36f, 0.32f);
+    }
+
+    centerText(cmd, textPipeline, font,
+               "UP/DOWN SELECIONAR   LEFT/RIGHT REORDENAR",
+               centerX, 55.0f, 0.38f, 0.56f, 0.60f, 0.72f);
+    centerText(cmd, textPipeline, font,
+               "ESPACO ABRIR   1 GUARDAR   ESC VOLTAR",
+               centerX, 38.0f, 0.38f, 0.56f, 0.60f, 0.72f);
 }
 
 } // namespace gfx

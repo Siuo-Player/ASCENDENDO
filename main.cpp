@@ -11,6 +11,7 @@
 #include "Game/Graphics/RenderState.h"
 #include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Graphics/RenderSnapshotBuilder.h"
+#include "Game/Logic/CampaignEditorSnapshot.h"
 #include "Game/Logic/EditorRenderSnapshot.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
@@ -50,17 +51,22 @@ private:
 
 void setMenuTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E editor  Q sair");
+        "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E nivel  C campanha  Q sair");
 }
 
 void setPlayingTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | E editor  Q voltar ao menu  ESC pausa");
+        "ASCENDENDO | E editor de nivel  C campanha  Q menu  ESC pausa");
 }
 
 void setEditorTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
         "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
+}
+
+void setCampaignEditorTitle(GLFWwindow* window) {
+    glfwSetWindowTitle(window,
+        "ASCENDENDO | CAMPANHA | UP/DOWN selecionar  LEFT/RIGHT reordenar  SPACE abrir  1 guardar");
 }
 
 void setCreditsTitle(GLFWwindow* window) {
@@ -80,6 +86,9 @@ void applyStatePresentation(GLFWwindow* window,
     if (state == GameState::EDITOR && previousState != GameState::EDITOR) {
         camera = gfx::Camera{};
         setEditorTitle(window);
+    } else if (state == GameState::CAMPAIGN_EDITOR && previousState != GameState::CAMPAIGN_EDITOR) {
+        camera = gfx::Camera{};
+        setCampaignEditorTitle(window);
     } else if (state == GameState::PLAYING && previousState == GameState::MENU) {
         camera = gfx::Camera{};
         setPlayingTitle(window);
@@ -96,11 +105,12 @@ void applyStatePresentation(GLFWwindow* window,
 
 RenderState toRenderState(GameState state) {
     switch (state) {
-        case GameState::PLAYING: return RenderState::PLAYING;
-        case GameState::PAUSED:  return RenderState::PAUSED;
-        case GameState::CREDITS: return RenderState::CREDITS;
-        case GameState::MENU:    return RenderState::MENU;
-        case GameState::EDITOR:  return RenderState::EDITOR;
+        case GameState::PLAYING:          return RenderState::PLAYING;
+        case GameState::PAUSED:           return RenderState::PAUSED;
+        case GameState::CREDITS:          return RenderState::CREDITS;
+        case GameState::MENU:             return RenderState::MENU;
+        case GameState::EDITOR:           return RenderState::EDITOR;
+        case GameState::CAMPAIGN_EDITOR:  return RenderState::EDITOR;
     }
     return RenderState::MENU;
 }
@@ -202,6 +212,7 @@ int main(int argc, char** argv) {
             bootstrap.campaign,
             bootstrap.campaignID,
             bootstrap.runsFile().string());
+        session.configureCampaignEditor(bootstrap.paths.campaignFile().string());
         Camera camera;
 
         std::size_t captureLevelIndex = 0;
@@ -221,7 +232,7 @@ int main(int argc, char** argv) {
                       << " carregado isoladamente.\n";
         } else {
             setMenuTitle(win.handle());
-            std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor | Q sair\n";
+            std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor nivel | C editor campanha | Q sair\n";
         }
 
         bool captureFramePending = captureMode;
@@ -278,14 +289,22 @@ int main(int argc, char** argv) {
 
             RenderSnapshot renderSnapshot;
             logic::EditorRenderSnapshot editorSnapshot;
+            logic::CampaignEditorRenderSnapshot campaignSnapshot;
             if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
                 renderSnapshot = buildRenderSnapshot(session.player(), session.level());
                 renderer.attachEditorSnapshot(nullptr);
+                renderer.attachCampaignEditorSnapshot(nullptr);
             } else if (currentState == GameState::EDITOR) {
                 editorSnapshot = session.editorSession().renderSnapshot();
                 renderer.attachEditorSnapshot(&editorSnapshot);
+                renderer.attachCampaignEditorSnapshot(nullptr);
+            } else if (currentState == GameState::CAMPAIGN_EDITOR) {
+                campaignSnapshot = session.campaignEditorSnapshot();
+                renderer.attachEditorSnapshot(nullptr);
+                renderer.attachCampaignEditorSnapshot(&campaignSnapshot);
             } else {
                 renderer.attachEditorSnapshot(nullptr);
+                renderer.attachCampaignEditorSnapshot(nullptr);
             }
 
             if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),

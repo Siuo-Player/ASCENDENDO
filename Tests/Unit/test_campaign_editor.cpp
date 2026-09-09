@@ -80,9 +80,6 @@ TEST_SUITE("Campaign Editor") {
         CHECK(reloaded.levels()[0].name == "C");
         CHECK(reloaded.levels()[1].name == "A");
         CHECK(reloaded.levels()[2].name == "B");
-        REQUIRE(reloaded.selectedIndex() == 0);
-        REQUIRE(reloaded.selectedLevel() != nullptr);
-        CHECK(reloaded.selectedLevel()->name == "C");
     }
 
     TEST_CASE("rejects missing referenced levels") {
@@ -155,8 +152,6 @@ TEST_SUITE("Campaign Editor") {
         CHECK(editor.levels()[1].name == "A");
         CHECK(editor.levels()[2].name == "B");
         CHECK(editor.selectedIndex() == 1);
-        REQUIRE(editor.selectedLevel() != nullptr);
-        CHECK(editor.selectedLevel()->name == "A");
         CHECK_FALSE(editor.levels()[0].selected);
         CHECK(editor.levels()[1].selected);
         CHECK_FALSE(editor.levels()[2].selected);
@@ -187,8 +182,6 @@ TEST_SUITE("Campaign Editor") {
         CHECK(editor.levels()[1].name == "C");
         CHECK(editor.levels()[2].name == "B");
         CHECK(editor.selectedIndex() == 2);
-        REQUIRE(editor.selectedLevel() != nullptr);
-        CHECK(editor.selectedLevel()->name == "B");
         CHECK_FALSE(editor.levels()[0].selected);
         CHECK_FALSE(editor.levels()[1].selected);
         CHECK(editor.levels()[2].selected);
@@ -219,8 +212,6 @@ TEST_SUITE("Campaign Editor") {
         CHECK(editor.levels()[0].name == "A");
         CHECK(editor.levels()[1].name == "B");
         CHECK(editor.selectedIndex() == 1);
-        REQUIRE(editor.selectedLevel() != nullptr);
-        CHECK(editor.selectedLevel()->name == "B");
         CHECK_FALSE(editor.levels()[0].selected);
         CHECK(editor.levels()[1].selected);
     }

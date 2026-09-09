@@ -5,6 +5,7 @@ namespace core {
 GameStateMachine::GameStateMachine(GameState initialState) noexcept
     : state_(initialState),
       editorReturnState_(GameState::MENU),
+      campaignEditorReturnState_(GameState::MENU),
       creditsReturnState_(GameState::MENU),
       menuSelection_(0) {}
 
@@ -43,6 +44,12 @@ void GameStateMachine::enterEditor(GameState returnState) noexcept {
     menuSelection_ = 0;
 }
 
+void GameStateMachine::enterCampaignEditor(GameState returnState) noexcept {
+    campaignEditorReturnState_ = returnState;
+    state_ = GameState::CAMPAIGN_EDITOR;
+    menuSelection_ = 0;
+}
+
 void GameStateMachine::enterCredits(GameState returnState) noexcept {
     creditsReturnState_ = returnState;
     state_ = GameState::CREDITS;
@@ -51,6 +58,11 @@ void GameStateMachine::enterCredits(GameState returnState) noexcept {
 
 void GameStateMachine::returnFromEditor() noexcept {
     state_ = editorReturnState_;
+    menuSelection_ = 0;
+}
+
+void GameStateMachine::returnFromCampaignEditor() noexcept {
+    state_ = campaignEditorReturnState_;
     menuSelection_ = 0;
 }
 

@@ -34,6 +34,7 @@ public:
                          std::size_t screenCount = 1);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
+    void setFinalCampaignLevel(bool finalCampaignLevel) { m_finalCampaignLevel = finalCampaignLevel; }
     std::uint64_t generation() const { return m_generation; }
     std::size_t screenCount() const { return m_layout.screenCount(); }
     float levelWidth() const { return m_layout.width(); }
@@ -63,6 +64,7 @@ public:
 
     LevelData toLevelData(const std::string& name) const;
     bool restoreFromLevelData(const LevelData& data);
+    bool restoreFromLevelData(const LevelData& data, bool finalCampaignLevel);
 
     static Vec2 presetSize(EditorSizePreset preset);
 
