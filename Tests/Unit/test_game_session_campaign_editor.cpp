@@ -28,18 +28,24 @@ struct CampaignFixture {
         campaign = root / "campaign.txt";
         runs = root / "runs.csv";
 
-        std::ofstream first(firstLevel);
-        first << "NAME First\n"
-              << "PLATFORM 0 4 640 16\n"
-              << "PLATFORM 160 120 128 16\n";
-        std::ofstream second(secondLevel);
-        second << "NAME Second\n"
-               << "PLATFORM 0 4 640 16\n"
-               << "PLATFORM 420 160 128 16\n";
-        std::ofstream list(campaign);
-        list << "# canonical campaign order\n"
-             << "first.lvl\n"
-             << "second.lvl\n";
+        {
+            std::ofstream first(firstLevel);
+            first << "NAME First\n"
+                  << "PLATFORM 0 4 640 16\n"
+                  << "PLATFORM 160 120 128 16\n";
+        }
+        {
+            std::ofstream second(secondLevel);
+            second << "NAME Second\n"
+                   << "PLATFORM 0 4 640 16\n"
+                   << "PLATFORM 420 160 128 16\n";
+        }
+        {
+            std::ofstream list(campaign);
+            list << "# canonical campaign order\n"
+                 << "first.lvl\n"
+                 << "second.lvl\n";
+        }
     }
 
     ~CampaignFixture() {
