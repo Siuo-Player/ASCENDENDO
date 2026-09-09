@@ -1,229 +1,292 @@
 # Decisões de produto — ASCENDENDO
 
-Este documento regista decisões funcionais tomadas durante o desenvolvimento. A implementação futura deve respeitar estas regras; quando uma decisão mudar, atualiza-se este documento e o roadmap na mesma tranche.
+Documento canónico das decisões funcionais. Uma mudança de decisão deve actualizar este ficheiro e o roadmap na mesma tranche.
 
-## 1. Objetivo do editor
+## 1. Identidade do jogo
 
-O objetivo principal não é apenas fornecer uma ferramenta interna para criar os níveis iniciais. O **Level Editor é infraestrutura do produto**: depois da base do jogo estar pronta, a comunidade deve conseguir criar, testar, diagnosticar e partilhar mapas durante muitos anos sem depender da equipa original para corrigir manualmente cada mapa.
+ASCENDENDO é um **precision / masochist vertical platformer**. A simplicidade das regras é deliberada: a profundidade vem da precisão, da leitura espacial, do compromisso com cada salto e da aprendizagem.
 
-Por isso, confiabilidade, compatibilidade de formato, diagnósticos claros, playtest e validação são prioridades superiores a adicionar rapidamente muitos tipos de objetos.
+Não existe adaptive difficulty nem assistência automática de dificuldade. A dificuldade é uma propriedade do conteúdo e da execução.
 
-O roadmap pode introduzir tipos de conteúdo mais ricos mais tarde, mas a arquitetura deve deixar espaço para os suportar sem quebrar níveis existentes.
+## 2. Mecânica base — Commitment Jump
 
-## 2. Editores
+- salto parabólico;
+- ângulo base de `60°`;
+- sem controlo aéreo na versão base 1.0;
+- força determinada pelo tempo de carregamento;
+- enquanto Jump está premido, a carga sobe continuamente até ao máximo;
+- não faz reset nem ciclo durante a mesma carga;
+- crescimento linear em 1.0;
+- curva de carga parametrizável para experiências futuras sem alterar o contrato de input.
 
-### Level Editor = uma única tela
+A UI da força deve mostrar a **carga real**. Não deve apresentar `0–255`, barras com resolução artificial ou qualquer número que sugira uma precisão que a simulação não possui. A visualização pode ser contínua e colorida por intensidade; o valor interno da física permanece a autoridade.
 
-Um ficheiro `.lvl` representa exatamente uma tela lógica de `640x360`.
+## 3. Input do jogador
 
-O **Level Editor** edita apenas essa tela. Não existe navegação/pan da tela no editor. O canvas completo deve estar visível e os limites físicos devem ser imediatamente perceptíveis.
+Defaults:
 
-A grelha visual serve a construção dos blocos e não deve transformar o canvas numa malha de linhas excessiva. O snap pode ser mais fino do que a grelha visual.
+- `A` + `←` = esquerda;
+- `D` + `→` = direita;
+- `Space` = Jump.
 
-### Campaign Editor = linha do tempo vertical
+O jogador deve poder fazer rebind livre das acções suportadas.
 
-O **Campaign Editor** é uma ferramenta diferente do Level Editor.
+## 4. Unidade espacial 1.0
 
-As telas são apresentadas como blocos/miniaturas compactados verticalmente, mantendo a proporção `16:9`. Aqui a câmara pode deslocar-se verticalmente.
+A largura é **sempre e estritamente `640 px`**. Não existe largura configurável de level em 1.0.
 
-Cada nível é um bloco arrastável. A movimentação pode usar snap para facilitar a troca de posição e a ordem visual representa a ordem da campanha.
+Uma **screen** lógica é `640×360`.
 
-### Entrada entre editores
-
-É permitido abrir o Level Editor diretamente a partir do Campaign Editor, mas a mudança deve ocorrer através de uma mudança explícita de estado.
-
-## 3. Teste antes de guardar
-
-Um nível em construção deve poder ser testado antes de ser guardado definitivamente.
-
-Fluxo esperado:
-
-1. editar;
-2. testar imediatamente com o Player;
-3. observar a física e o percurso;
-4. voltar ao editor sem perder o documento editado;
-5. corrigir;
-6. validar;
-7. guardar.
-
-O playtest não deve transformar alterações experimentais em estado persistido automaticamente.
-
-Esta abordagem é coerente com editores integrados em jogos comunitários e com o workflow de criação/playtest usado pelo Jump King. citeturn687736search0turn687736search7
-
-## 4. Validação ao vivo e diagnóstico
-
-O editor deve apresentar o resultado da validação enquanto o nível está a ser construído.
-
-A validação rápida deve funcionar em memória e não executar um processo Python a cada frame.
-
-O feedback deve explicar a primeira causa útil de falha e servir como tutorial visual. O indicador de “inválido” sozinho não é suficiente.
-
-No Campaign Editor, vários agentes/runs podem ser mostrados em background. Idealmente cada nível tem pelo menos um agente ativo e pelo menos um agente atravessa a fronteira entre níveis para mostrar a fluidez da campanha.
-
-Esses agentes são ferramentas de visualização/debug e não substituem a validação final do EXE.
-
-### Diagnóstico do percurso
-
-Quando um agente falhar, a UI deve mostrar:
-
-- o percurso tentado;
-- o ponto aproximado onde a tentativa deixou de ser viável;
-- uma explicação curta quando possível, por exemplo: **alvo demasiado longe**, **ângulo impossível**, **plataforma fora da janela alcançável**, **colisão lateral**, ou **sequência seguinte inacessível**.
-
-No Campaign Editor, o diagnóstico deve tornar evidente se o problema é local ao nível ou surge na transição entre dois níveis.
-
-## 5. Feedback visual do salto
-
-A mecânica do salto continua a ser uma decisão de gameplay própria do ASCENDENDO; o Jump King é referência sobretudo para visual/composição e workflow de criação, não uma obrigação de copiar a sua física.
-
-O carregamento do salto deve ser **visível**. O jogador não deve ter de inferir a força apenas pelo tempo em que manteve uma tecla pressionada.
-
-A interface deve ter uma barra/indicador de força associada ao personagem que:
-
-- mostra continuamente a carga;
-- comunica claramente o estado mínimo/máximo;
-- acompanha visualmente o momento em que a ação pode ser libertada;
-- pode ter indicação de cancelamento/aborto quando isso melhorar acessibilidade ou evitar uma ação acidental.
-
-A forma exata da animação da barra (preencher, voltar ao início, ciclos, etc.) fica como decisão de UX a testar; a exigência é a **visibilidade clara do estado de carga**.
-
-## 6. Key bindings e descobribilidade
-
-As teclas importantes devem ser descobríveis sem consultar documentação externa.
-
-O menu principal terá uma área **Controlos / Key Bindings** para consultar as ações e respetivas teclas.
-
-Não é requisito atual permitir rebind arbitrário; consultar e perceber as teclas é obrigatório.
-
-Todos os menus devem mostrar no rodapé as ações essenciais do estado atual, pelo menos navegar, confirmar e voltar/sair.
-
-### Teclas acessíveis
-
-Não devemos depender de F2/F5/F6 para funcionalidades importantes do editor.
-
-Defaults previstos:
-
-- `1` — guardar;
-- `2` — testar;
-- `3` — validar;
-- `E` — editor de nível;
-- `C` — editor de campanha;
-- `G` — alternar STAMP/DRAG;
-- `[` / `]` — diminuir/aumentar preset;
-- `Delete` / `Backspace` — apagar seleção;
-- `Esc` — voltar/sair;
-- `Q` — sair/abandonar quando aplicável;
-- `0` — área de consulta de Controlos.
-
-Os atalhos são aceleradores. As ações essenciais devem continuar acessíveis visualmente.
-
-## 7. Layout e viewport
-
-O jogo mantém o espaço lógico `640x360` e o letterboxing para preservar o rácio.
-
-**Nenhum texto ou componente de UI pode depender de coordenadas fixas que façam o conteúdo desaparecer fora da área visível.**
-
-Usaremos layouts autoajustáveis para:
-
-- texto que possa ter comprimentos diferentes;
-- menus com diferentes números de opções;
-- rodapés/contextual help;
-- HUD do editor;
-- painéis de controlos;
-- seleção de campanhas.
-
-O fullscreen deve ser preservado. O tamanho da janela física pode mudar, mas o espaço lógico não é deformado nem cortado.
-
-O Level Editor deve conseguir mostrar a tela `640x360` completa dentro do viewport disponível. O Campaign Editor pode ocupar uma área vertical maior e usar scroll nessa área.
-
-## 8. Seleção de campanha
-
-`Começar` não inicia diretamente uma campanha por acidente.
-
-O fluxo é:
-
-`MENU → Seleção de campanha → campanha selecionada → PLAYING`
-
-Mesmo que exista apenas uma campanha, a seleção deve existir como conceito e UI. Isso evita ter de alterar o fluxo quando forem adicionadas outras campanhas.
-
-A seleção deve apresentar informação suficiente para escolher conscientemente, incluindo pelo menos:
-
-- nome;
-- preview/miniatura quando existir;
-- número de níveis;
-- estado de validade;
-- ação iniciar;
-- voltar.
-
-## 9. Conteúdo futuro e compatibilidade
-
-Os primeiros tipos de conteúdo podem permanecer simples, mas o modelo de nível deve ser extensível e versionável.
-
-Categorias futuras previstas, sem obrigação de implementação imediata:
-
-- superfícies e variantes de plataforma;
-- perigos;
-- elementos móveis;
-- objetos interativos;
-- triggers/zonas;
-- decoração;
-- metadados de identidade visual;
-- regras e eventos específicos da campanha.
-
-A introdução destes tipos deve ser aditiva e compatível com níveis antigos sempre que possível.
-
-## 10. Princípios de design adotados de projetos abertos
-
-As referências detalhadas encontram-se em `docs/DESIGN_REFERENCES.md`.
-
-Adotamos destes projetos sobretudo:
-
-- ferramentas explícitas e separadas por modo;
-- snapping visível e previsível;
-- viewport com limites/escala claros;
-- feedback imediato;
-- teste integrado no processo de criação;
-- distinção entre unidade jogável e organização de múltiplas unidades;
-- comunidade e distribuição como parte do produto, não como afterthought.
-
-Não copiamos a generalidade nem a complexidade de editores como Tiled/Godot, porque o problema do ASCENDENDO é intencionalmente menor e mais restrito.
-
-## 11. Portabilidade
-
-O objetivo final continua a ser um executável Windows x64 portátil, acompanhado dos recursos necessários, sem depender do ambiente de desenvolvimento.
-
-## 12. Mapas importados/partilhados
-
-Qualquer mapa obtido por importação, download ou partilha deve ser validado novamente pelo próprio EXE antes de poder ser jogado.
-
-O servidor nunca é a autoridade final de validade do mapa.
-
-## 13. Camadas de dificuldade — descoberta de 2026-08-25
-
-O produto deve distinguir explicitamente quatro conceitos que não podem ser colapsados em um único booleano de validade ou num único score arbitrário:
+Um **level** é uma sequência vertical de `N` screens:
 
 ```text
-validade física
-      ↓
-dificuldade executiva/motora
-      ↓
-desempenho observado
-      ↓
-dificuldade percebida / experiência
+LEVEL
+├── SCREEN 0   640×360
+├── SCREEN 1   640×360
+├── SCREEN 2   640×360
+└── SCREEN N-1 640×360
 ```
 
-A validação física continua a ser autoridade para saber se um nível respeita as regras do motor. Um futuro analisador de dificuldade deve ser uma camada de diagnóstico/apoio ao autor e não deve alterar silenciosamente a geometria, a física ou o conteúdo authored.
+`N` é variável; `1`, `3`, `5`, `10` e valores maiores são válidos. Cinco é uma dimensão de design possível, não uma constante do formato.
 
-A investigação de Francillette et al. (2025) suporta a separação de dificuldade executiva/motora através de perigos estáticos e dinâmicos, mas foi realizada num contexto de platformer próprio e validada em Super Mario Bros.; não adotamos os thresholds ou fórmulas diretamente.
+A altura total do level é `N × 360`.
 
-A investigação de Madineni (2025) mostra que ajuste de dificuldade baseado em desempenho pode funcionar de forma desigual entre perfis de jogadores. Portanto, nenhuma futura regra do tipo `falhou → baixar dificuldade` fica aprovada por defeito.
+A progressão é exclusivamente ascendente. O jogador pode cair para screens inferiores, mas isso representa regressão física e nunca progresso deliberado. Não existem ligações de navegação descendentes como parte da rota de 1.0.
 
-Antes de qualquer adaptive difficulty, o ASCENDENDO deve conseguir medir separadamente:
+Esta estrutura existe porque uma única screen oferece pouca diversidade estrutural quando o jogo mantém deliberadamente poucas mecânicas. Com várias screens, podemos criar níveis maiores e mais variados sem tornar cada unidade visualmente confusa.
 
-- dificuldade/modelo do conteúdo;
-- tentativas e resultados do jogador;
-- evolução do desempenho;
-- incerteza do modelo;
-- experiência percebida através de estudos/playtesting.
+## 5. Conteúdo de gameplay de 1.0
 
-Estas métricas devem permanecer reproduzíveis e compatíveis com a autoridade determinística do motor.
+Entidades jogáveis oficiais:
+
+- plataformas estáticas;
+- personagem/spawn;
+- FLAG.
+
+A FLAG é o objectivo final e pertence à última screen do level. Em 1.0 não existem colectáveis, checkpoints, perigos ou entidades que matem o jogador.
+
+O modelo deve permanecer extensível e versionável para permitir posteriormente perigos, plataformas móveis, triggers, colectáveis obrigatórios, checkpoints, objectivos adicionais e outros sistemas. Essas capacidades ficam desligadas/ausentes em 1.0.
+
+## 6. Falha, saída e conclusão
+
+Não existe um estado de “morte” nem uma aba de falha no gameplay de 1.0.
+
+O jogador pode abandonar o level e voltar ao menu.
+
+A arquitectura futura deve permitir entidades que introduzam morte ou outras condições de falha sem obrigar o núcleo 1.0 a usá-las.
+
+A conclusão normal é `spawn → percurso → FLAG`.
+
+## 7. Transição e streaming de levels/screens
+
+A subida é apresentada como uma transição vertical contínua, não como teletransporte entre telas.
+
+O runtime deve manter pelo menos as zonas necessárias acima e abaixo do jogador para que a passagem entre screens seja suave. Deve pré-carregar a próxima zona antes de ser necessária e manter zonas anteriores facilmente recuperáveis durante uma queda.
+
+Uma política de cache/streaming pode ser maior do que o mínimo, desde que não introduza comportamento perceptível nem altere a simulação determinística.
+
+## 8. Level Editor
+
+O Level Editor deve editar um **level completo de largura 640**, composto por `N` screens verticais.
+
+A screen continua a ser a unidade visual fundamental de `640×360`, mas o editor pode navegar verticalmente para trabalhar nas screens do mesmo level.
+
+O editor deve suportar tanto:
+
+```text
+teclado apenas
+```
+
+como:
+
+```text
+teclado + rato
+```
+
+O rato é conveniência, nunca requisito de acessibilidade ou operação.
+
+### Operações essenciais por teclado
+
+As operações essenciais do editor devem ter ações semânticas e bindings próprios, incluindo no mínimo:
+
+- navegar pela viewport vertical;
+- seleccionar ferramenta/entidade;
+- criar/colocar;
+- mover;
+- apagar;
+- mudar preset/tamanho;
+- undo;
+- redo;
+- guardar;
+- testar;
+- validar;
+- sair/voltar.
+
+Arrastar com rato pode ser mais rápido, mas todas as operações essenciais devem continuar a ser possíveis sem rato.
+
+## 9. Playtest e estado não guardado
+
+Testar um level dentro do editor não grava automaticamente as alterações.
+
+O autor pode testar, regressar ao editor e continuar com o documento em memória.
+
+Ao abandonar o editor com `Esc`, alterações pendentes são mostradas num **carrinho de alterações**. Deve ser possível:
+
+- guardar todas;
+- descartar todas;
+- rever alterações;
+- desfazer selectivamente algumas alterações e manter outras.
+
+Isto assenta num histórico geral de undo/redo; o carrinho é uma apresentação de alterações pendentes, não um segundo sistema de histórico.
+
+## 10. Campaign Editor
+
+O Campaign Editor organiza levels como uma playlist/timeline vertical.
+
+Em 1.0 a superfície inicial é:
+
+- seleccionar;
+- reordenar;
+- abrir no Level Editor;
+- voltar preservando contexto;
+- validar;
+- guardar a ordem em `campaign.txt`.
+
+Criar/remover entries directamente da UI permanece uma questão aberta de UX, não uma lacuna arquitectural.
+
+O Campaign Editor não move ficheiros físicos entre `Levels/`, `Unused/` e `NaoValidados/`; o routing continua sob responsabilidade de `reorganize.py`.
+
+## 11. Identidade de campanhas
+
+Uma campanha deve possuir pelo menos:
+
+- username permanente do criador;
+- display name mutável do criador;
+- nome público da campanha;
+- identificador estável;
+- versão;
+- número de levels/screens;
+- dificuldade;
+- estado de validação;
+- metadados e agregados de runs quando existirem.
+
+O mesmo criador não pode ter duas campanhas com o mesmo nome público. O stable ID continua a existir independentemente do nome.
+
+Não usar thumbnails como requisito de distinção de campanhas em 1.0; nome, conta e metadata são suficientes.
+
+## 12. Escala de conteúdo 1.0
+
+Mínimo oficial:
+
+| campanhas | levels por campanha |
+|---:|---:|
+| 1 | 10 |
+| 4 | 25 |
+| 3 | 50 |
+| 1 | 100 |
+| 1 | 250 |
+
+Total mínimo: **10 campanhas / 575 levels oficiais**.
+
+São mínimos; podem existir mais.
+
+## 13. Dificuldade
+
+Cada campanha deve ter progressão aproximadamente linear, do fácil para o extremo. Campanhas grandes podem ser divididas em blocos de dificuldade.
+
+O catálogo global deve aproximar-se de uma distribuição centrada na dificuldade normal, com menos campanhas muito fáceis e muito extremas.
+
+A escala nominal de dificuldades **não é fixada por um número arbitrário**. O número de classes deve ser derivado directamente do modelo/fórmula de dificuldade quando essa fórmula estiver definida. Se o modelo justificar 18, 19 ou outro número de separações, a UI e o catálogo usarão esse número.
+
+## 14. Difficulty Tester e validação
+
+A validação obrigatória de publicação distingue:
+
+```text
+formato
+→ geometria
+→ regras físicas
+→ conectividade/progressão
+→ análise de percurso
+→ dificuldade
+→ experiência humana
+```
+
+A comunidade deve passar pelo menos pelo validador antes de publicar.
+
+Um level difícil pode ser válido. O validador não deve reescrever automaticamente o conteúdo para o tornar fácil.
+
+## 15. Runs, replay e ranking
+
+A métrica principal de desempenho é **tempo**.
+
+Uma run começa no spawn e termina na FLAG. Não há mortes nem altura máxima em 1.0.
+
+Os dados desejados incluem:
+
+- melhor tempo global;
+- tempo médio;
+- melhor jogador;
+- tempo estimado por rotas mais rápidas/difíceis;
+- tempo estimado por rotas mais fáceis/demoradas.
+
+A run deve ser determinística: o replay representa os movimentos/inputs e o motor reproduz e valida esses inputs novamente. O tempo obtido pela reprodução válida é a medida autoritativa da run.
+
+A leaderboard pública pode ser construída em cima desse resultado quando a infraestrutura estiver pronta.
+
+## 16. Visual
+
+Direcção 1.0:
+
+- indie;
+- simples;
+- pixel art básica;
+- gameplay readability acima de decoração;
+- foreground para personagem/plataformas;
+- background em camadas;
+- parallax com velocidades relativas diferentes.
+
+Assets base podem ser compostos por peças `16×16`.
+
+A colocação no mundo é pixel-perfect e não é limitada a uma grelha de 16×16.
+
+## 17. Sprites e licenciamento
+
+Sprites e outros assets visuais são opções curadas. Não existe editor de arte livre no núcleo 1.0.
+
+Todo asset externo precisa de ficha formal de origem/licença no repositório, incluindo recursos CC0.
+
+## 18. Áudio
+
+1.0 inclui música retro simples e livre para redistribuição e efeitos de jogo/editor.
+
+Efeitos não-musicais podem ter vários takes/variações com selecção pseudo-aleatória controlada para reduzir repetição. A música permanece estável durante a reprodução.
+
+Pesquisa aprofundada de música e autoria áudio fica para a fase final de 1.0, não bloqueia agora a arquitectura.
+
+## 19. Partilha e comunidade
+
+A unidade principal de publicação é a **campanha**.
+
+`.lvl` continua a ser uma unidade técnica de import/export e armazenamento do level individual. Não é descartado.
+
+A arquitectura deve poder evoluir para um pacote de campanha superior a `.lvl`, contendo levels, layout, metadata, dificuldade, validação e assets.
+
+Importar/exportar campanhas é obrigatório para 1.0.
+
+## 20. Distribuição
+
+Obrigatório em 1.0:
+
+- Windows x64 standalone/executável;
+- site público para partilha de conteúdo e rankings;
+- validação de campanhas;
+- difficulty tester.
+
+Versão web é desejável, mas não bloqueia 1.0.
+
+## 21. Futuro / 1.1+
+
+A generalização de arquitectura deve favorecer mods, expansões e jogos derivados em direcções arbitrárias sem obrigar 1.0 a pagar o custo de mecânicas que ainda não têm razão de design.
+
+Candidatos incluem perigos, plataformas móveis, triggers, colectáveis obrigatórios, checkpoints, novos objectivos, conteúdos horizontais e outros modelos de jogo. Nada disto altera as regras de 1.0 descritas acima.
