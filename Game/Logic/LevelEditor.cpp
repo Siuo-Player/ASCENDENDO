@@ -28,6 +28,13 @@ bool hasMinimumSize(const AABB& rect) {
     return rect.width() >= config::EDITOR_GRID_SNAP - EPS &&
            rect.height() >= config::EDITOR_GRID_SNAP - EPS;
 }
+
+bool insideLayoutBounds(const AABB& rect, const core::LevelLayout& layout) {
+    return rect.min.x >= -EPS &&
+           rect.min.y >= -EPS &&
+           rect.max.x <= layout.width() + EPS &&
+           rect.max.y <= layout.height() + EPS;
+}
 }
 
 LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
@@ -63,10 +70,7 @@ AABB LevelEditorDocument::snap(const AABB& rect) {
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
-    return rect.min.x >= -EPS &&
-           rect.min.y >= -EPS &&
-           rect.max.x <= m_layout.width() + EPS &&
-           rect.max.y <= m_layout.height() + EPS;
+    return insideLayoutBounds(rect, m_layout);
 }
 
 bool LevelEditorDocument::inFinalScreen(const AABB& rect) const {
@@ -185,19 +189,20 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
 bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
     if (data.platforms.empty() || data.screenCount == 0) return false;
 
-    core::LevelLayout restoredLayout(data.screenCount);
+    const core::LevelLayout restoredLayout(data.screenCount);
     for (const AABB& platform : data.platforms) {
-        if (!insideLogicalBounds(platform) || !hasMinimumSize(platform)) return false;
+        if (!insideLayoutBounds(platform, restoredLayout) || !hasMinimumSize(platform)) return false;
     }
+
     if (data.spawnPosition &&
         (data.spawnPosition->x < 0.0f ||
          data.spawnPosition->x > restoredLayout.width()))
         return false;
+
     if (data.flag &&
         (!m_finalCampaignLevel ||
-         data.flag->min.x < 0.0f || data.flag->min.y < 0.0f ||
-         data.flag->max.x > restoredLayout.width() ||
-         data.flag->max.y > restoredLayout.height() ||
+         !insideLayoutBounds(*data.flag, restoredLayout) ||
+         !hasMinimumSize(*data.flag) ||
          data.flag->min.y < restoredLayout.screenBottomY(restoredLayout.screenCount() - 1)))
         return false;
 
