@@ -8,10 +8,12 @@ namespace logic {
 
 namespace {
 constexpr float EPS = 0.0001f;
+constexpr float MIN_PLATFORM_WIDTH = 4.0f;
+constexpr float MIN_PLATFORM_HEIGHT = 4.0f;
 
 bool hasMinimumSize(const AABB& rect) {
-    return rect.width() >= config::MIN_PLATFORM_WIDTH - EPS &&
-           rect.height() >= config::MIN_PLATFORM_HEIGHT - EPS;
+    return rect.width() >= MIN_PLATFORM_WIDTH - EPS &&
+           rect.height() >= MIN_PLATFORM_HEIGHT - EPS;
 }
 
 bool insideLayoutBounds(const AABB& rect, const core::LevelLayout& layout) {
