@@ -49,6 +49,9 @@ public:
     std::vector<CampaignLevelBlock>& levels() { return m_levels; }
     std::size_t levelCount() const { return m_levels.size(); }
     std::size_t selectedIndex() const { return m_selectedIndex; }
+    const CampaignLevelBlock* selectedLevel() const {
+        return m_selectedIndex < m_levels.size() ? &m_levels[m_selectedIndex] : nullptr;
+    }
     void select(std::size_t index);
 
     float contentHeight() const;
