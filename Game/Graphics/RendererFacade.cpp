@@ -54,6 +54,8 @@ void RendererFacade::cleanup() {
     m_shapePipeline = nullptr;
     m_editorSnapshotPtr = nullptr;
     m_editorSnapshot = {};
+    m_campaignEditorSnapshotPtr = nullptr;
+    m_campaignEditorSnapshot = {};
     m_textPipeline = nullptr;
     m_font = nullptr;
     m_spritePipeline = nullptr;
@@ -79,6 +81,19 @@ void RendererFacade::attachEditorSnapshot(const logic::EditorRenderSnapshot* sna
     }
     m_editorSnapshot = *snapshot;
     m_editorSnapshotPtr = &m_editorSnapshot;
+    m_campaignEditorSnapshotPtr = nullptr;
+}
+
+void RendererFacade::attachCampaignEditorSnapshot(
+    const logic::CampaignEditorRenderSnapshot* snapshot) {
+    if (!snapshot) {
+        m_campaignEditorSnapshot = {};
+        m_campaignEditorSnapshotPtr = nullptr;
+        return;
+    }
+    m_campaignEditorSnapshot = *snapshot;
+    m_campaignEditorSnapshotPtr = &m_campaignEditorSnapshot;
+    m_editorSnapshotPtr = nullptr;
 }
 
 bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
@@ -178,7 +193,11 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
             break;
 
         case RenderState::EDITOR:
-            if (m_editorSnapshotPtr) {
+            if (m_campaignEditorSnapshotPtr) {
+                m_ui->drawCampaignEditor(commandBuffer, *m_shapePipeline, *m_shapes,
+                                         m_textPipeline, m_font,
+                                         *m_campaignEditorSnapshotPtr);
+            } else if (m_editorSnapshotPtr) {
                 m_editor->draw(commandBuffer, *m_shapePipeline, *m_shapes,
                                *m_editorSnapshotPtr,
                                m_textPipeline, m_font);
