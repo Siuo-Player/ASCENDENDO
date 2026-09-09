@@ -82,6 +82,7 @@ public:
         m_keyboardCursorActive = false;
         m_haveMousePosition = false;
         m_leftDragActive = false;
+        m_viewBottomY = 0.0f;
         return true;
     }
 
@@ -114,6 +115,7 @@ private:
                         const core::KeyBindings& bindings);
     void updateMouse(const InputManager& input);
     void refreshValidationResult();
+    void followKeyboardCursor();
 
     void recordEditBaseline(const LevelData& before);
     bool undo();
@@ -129,6 +131,7 @@ private:
     bool m_leftDragActive = false;
     bool m_haveMousePosition = false;
     bool m_keyboardCursorActive = false;
+    float m_viewBottomY = 0.0f;
 
     std::string m_persistencePath;
     std::string m_documentName = "Editor Level";
