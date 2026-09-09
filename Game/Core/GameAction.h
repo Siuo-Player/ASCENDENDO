@@ -37,6 +37,11 @@ enum class GameAction {
     EditorSelectPlatform,
     EditorSelectSpawn,
     EditorSelectFlag,
+    CampaignSelectPrevious,
+    CampaignSelectNext,
+    CampaignMoveEarlier,
+    CampaignMoveLater,
+    CampaignOpenLevel,
 };
 
 inline constexpr GameAction ALL_ACTIONS[] = {
@@ -52,7 +57,9 @@ inline constexpr GameAction ALL_ACTIONS[] = {
     GameAction::DeleteSelection, GameAction::EditorSave,
     GameAction::EditorTest, GameAction::EditorValidate,
     GameAction::EditorSelectPlatform, GameAction::EditorSelectSpawn,
-    GameAction::EditorSelectFlag,
+    GameAction::EditorSelectFlag, GameAction::CampaignSelectPrevious,
+    GameAction::CampaignSelectNext, GameAction::CampaignMoveEarlier,
+    GameAction::CampaignMoveLater, GameAction::CampaignOpenLevel,
 };
 inline constexpr std::size_t ACTION_COUNT = sizeof(ALL_ACTIONS) / sizeof(ALL_ACTIONS[0]);
 
