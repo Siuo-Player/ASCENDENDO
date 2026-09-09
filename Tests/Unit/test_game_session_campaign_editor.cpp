@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -27,18 +28,18 @@ struct CampaignFixture {
         campaign = root / "campaign.txt";
         runs = root / "runs.csv";
 
-        std::ofstream(firstLevel)
-            << "NAME First\\n"
-            << "PLATFORM 0 4 640 16\\n"
-            << "PLATFORM 160 120 128 16\\n";
-        std::ofstream(secondLevel)
-            << "NAME Second\\n"
-            << "PLATFORM 0 4 640 16\\n"
-            << "PLATFORM 420 160 128 16\\n";
-        std::ofstream(campaign)
-            << "# canonical campaign order\\n"
-            << "first.lvl\\n"
-            << "second.lvl\\n";
+        std::ofstream first(firstLevel);
+        first << "NAME First\n"
+              << "PLATFORM 0 4 640 16\n"
+              << "PLATFORM 160 120 128 16\n";
+        std::ofstream second(secondLevel);
+        second << "NAME Second\n"
+               << "PLATFORM 0 4 640 16\n"
+               << "PLATFORM 420 160 128 16\n";
+        std::ofstream list(campaign);
+        list << "# canonical campaign order\n"
+             << "first.lvl\n"
+             << "second.lvl\n";
     }
 
     ~CampaignFixture() {
@@ -53,14 +54,8 @@ void tap(logic::InputManager& input, int key) {
     input.onKeyEvent(key, logic::Action::RELEASE);
 }
 
-logic::GameSession makeSession(const CampaignFixture& fixture) {
-    std::vector<std::filesystem::path> campaignLevels{
-        fixture.firstLevel,
-        fixture.secondLevel,
-    };
-    logic::GameSession session(std::move(campaignLevels), "test-campaign", fixture.runs.string());
+void configure(logic::GameSession& session, const CampaignFixture& fixture) {
     session.configureCampaignEditor(fixture.campaign.string());
-    return session;
 }
 
 } // namespace
@@ -69,7 +64,9 @@ TEST_SUITE("GameSession — Campaign Editor integration") {
 
 TEST_CASE("C abre o Campaign Editor e preserva a campanha carregada") {
     CampaignFixture fixture;
-    logic::GameSession session = makeSession(fixture);
+    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
+    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
+    configure(session, fixture);
     logic::InputManager input;
     core::KeyBindings bindings;
 
@@ -85,7 +82,9 @@ TEST_CASE("C abre o Campaign Editor e preserva a campanha carregada") {
 
 TEST_CASE("selecao e reordenacao funcionam por acoes sem duplicar campaign.txt") {
     CampaignFixture fixture;
-    logic::GameSession session = makeSession(fixture);
+    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
+    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
+    configure(session, fixture);
     logic::InputManager input;
     core::KeyBindings bindings;
 
@@ -106,7 +105,9 @@ TEST_CASE("selecao e reordenacao funcionam por acoes sem duplicar campaign.txt")
 
 TEST_CASE("falha ao abrir nivel nao troca selecao nem editor ativo") {
     CampaignFixture fixture;
-    logic::GameSession session = makeSession(fixture);
+    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
+    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
+    configure(session, fixture);
     logic::InputManager input;
     core::KeyBindings bindings;
 
@@ -126,7 +127,9 @@ TEST_CASE("falha ao abrir nivel nao troca selecao nem editor ativo") {
 
 TEST_CASE("abrir nivel e voltar preserva identidade da selecao") {
     CampaignFixture fixture;
-    logic::GameSession session = makeSession(fixture);
+    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
+    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
+    configure(session, fixture);
     logic::InputManager input;
     core::KeyBindings bindings;
 
