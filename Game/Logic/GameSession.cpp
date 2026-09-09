@@ -5,6 +5,8 @@
 #include "Core/Viewport.h"
 #include "Logic/RunHistory.h"
 
+#include <cmath>
+
 namespace logic {
 
 void GameSession::resetGame(float logicalWidth) {
@@ -83,9 +85,13 @@ GameSessionUpdateResult GameSession::update(float dt,
     const bool openEditorPressed =
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
 
+    // PhysicsWorld already rejects invalid deltas. The session must also
+    // prevent an invalid render-frame delta from contaminating elapsed time.
+    const float safeDt = (std::isfinite(dt) && dt >= 0.0f) ? dt : 0.0f;
+
     switch (currentState) {
     case core::GameState::PLAYING:
-        elapsedTime_ += dt;
+        elapsedTime_ += safeDt;
 
         if (openEditorPressed) {
             openEditor(core::GameState::PLAYING);
@@ -95,7 +101,7 @@ GameSessionUpdateResult GameSession::update(float dt,
         } else if (pausePressed) {
             stateMachine_.pause();
         } else {
-            simulation_.advance(dt, input, bindings, player_, world_, level_);
+            simulation_.advance(safeDt, input, bindings, player_, world_, level_);
 
             if (player_.position().y >
                 campaignRuntime_.currentSpawnY() - logicalHeight) {
