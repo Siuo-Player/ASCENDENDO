@@ -1,72 +1,215 @@
 # Roadmap de desenvolvimento — ASCENDENDO
 
-> Documento operacional canónico. O estado só avança quando existe evidência de implementação e testes adequados.
+> Documento operacional canónico do produto. A ordem abaixo define a sequência principal até ao 1.0. O progresso é ponderado por importância de produto; não representa ficheiros, linhas de código ou número de issues fechadas.
 
-## 1. Ordem de trabalho
+## Modelo de progresso até 1.0
+
+O produto é acompanhado por seis dimensões, nesta ordem:
+
+1. **Fundação** — contratos técnicos que tornam o resto do jogo previsível e seguro.
+2. **Gameplay** — experiência base de jogar uma run completa.
+3. **Conteúdo** — campanhas, levels e assets suficientes para o jogo ter conteúdo real e não apenas fixtures.
+4. **Validação** — garantir que levels, runs, dificuldade e replay são verificáveis e reproduzíveis.
+5. **Produto** — editor e fluxos de utilização completos, UX, partilha e integração das peças numa experiência coerente.
+6. **Release** — empacotamento, QA final, distribuição e operação pública.
+
+Esta ordem não proíbe trabalho paralelo. Significa que um bloco posterior não deve ser usado para esconder um blocker anterior. Trabalho paralelo é aceitável quando não cria uma dependência incorrecta nem transforma protótipos em critérios de 1.0.
+
+### Estado de referência
+
+**Estimativa global actual: ~55%.**
+
+| Dimensão | Peso conceptual | Estado estimado | Regra de avanço |
+|---|---:|---:|---|
+| Fundação | 10% | **~95%** | fechar todos os contratos base e deixar apenas extensões justificadas |
+| Gameplay | 20% | **~85%** | run 1.0 completa, previsível e jogável |
+| Conteúdo | 20% | **~35%** | conteúdo oficial suficiente, estruturado e validável |
+| Validação | 15% | **~35%** | validator, dificuldade e replay passam de infraestrutura a evidência usada em conteúdo real |
+| Produto | 25% | **~50%** | editor/campaign UX, fluxos principais e integração jogador↔editor completos |
+| Release | 10% | **~10%** | build distribuível, QA final, import/export e presença pública |
+
+Estas percentagens são **baseline de acompanhamento**, não critérios automáticos de fecho. Uma fase só fica `CLOSED` quando os seus critérios de saída têm implementação e evidência suficientes no `main`.
+
+---
+
+# 1. Fundação — FECHAR A 100%
+
+### Meta verdadeira
+
+A fundação deve deixar de ser um conjunto de componentes que “funcionam” e tornar-se uma base estável sobre a qual gameplay, editor, conteúdo e ferramentas possam evoluir sem reabrir constantemente contratos básicos.
+
+O objectivo é que o núcleo determine de forma clara:
+
+- estado do jogo e separação Core/Logic/Presentation;
+- input semântico e bindings;
+- determinismo;
+- fixed timestep;
+- lifecycle gráfico;
+- validação fail-closed;
+- contratos de save/load e estados relevantes;
+- fronteiras entre runtime, editor e tooling.
+
+### Estado actual
+
+**~95%.** A fundação foi declarada fechada nas fases anteriores e já suporta o desenvolvimento activo. O trabalho restante nesta dimensão deve limitar-se a lacunas concretas encontradas por features reais, não a reabrir a arquitectura por preferência estética.
+
+### Para atingir 100%
+
+A fundação fica efectivamente fechada quando:
+
+1. cada contrato base necessário ao Gameplay 1.0 está documentado;
+2. os fluxos críticos têm testes executáveis;
+3. alterações de editor, streaming ou replay não dependem de estados implícitos não documentados;
+4. nenhuma feature posterior precisa de duplicar a autoridade do motor;
+5. eventuais extensões da fundação aparecem como decisões motivadas, com contrato próprio.
+
+**Não significa:** que nunca mais haverá alterações arquitecturais. Significa que novas alterações são extensões justificadas, não dívida estrutural conhecida.
+
+---
+
+# 2. Gameplay — FECHAR DEPOIS DA FUNDAÇÃO
+
+### Meta verdadeira
+
+O jogador deve conseguir iniciar uma run, jogar com o modelo físico pretendido, progredir pelo level e atingir a `FLAG`, sem que a experiência dependa do editor, de ferramentas internas ou de comportamento experimental.
+
+A especificação 1.0 do gameplay é:
+
+- salto parabólico a 60°;
+- sem air control;
+- carga contínua;
+- carga linear em 1.0;
+- força apresentada com precisão real, sem compressão artificial `0–255`;
+- plataformas estáticas;
+- spawn e `FLAG` como entidades de 1.0;
+- `FLAG` localizada na última screen;
+- sem sistema de morte/failure em 1.0;
+- saída voluntária para o menu.
+
+A arquitectura deve continuar capaz de receber perigos, checkpoints, moving platforms, triggers, colectáveis e outras entidades futuras, mas essas mecânicas **não entram automaticamente em 1.0**.
+
+### Estado actual
+
+**~85%.** O runtime e o movimento já são uma parte forte do projecto. O que falta não é “inventar um platformer”; é tornar o gameplay base consistente em níveis verticais reais, com transições, regras de run e conteúdo que cubra os casos relevantes.
+
+### Critérios de fecho
+
+- uma run completa é jogável sem depender do editor;
+- colisão, movimento, câmara e progressão são determinísticos;
+- streaming/transição vertical não altera o resultado;
+- o contrato `spawn → inputs → FLAG` está estável;
+- o comportamento definido de 1.0 é testado nos cenários críticos;
+- não ficam mecânicas experimentais a fingir que são parte do 1.0.
+
+**Depois desta fase, o jogo base deve ser tratado como produto jogável estável, não como protótipo técnico.**
+
+---
+
+# 3. Conteúdo — CONSTRUIR O JOGO QUE O JOGADOR VAI JOGAR
+
+### Meta verdadeira
+
+Transformar o motor em conteúdo oficial suficiente para que ASCENDENDO tenha uma experiência completa e progressiva.
+
+O mínimo oficial previsto para 1.0 é:
+
+- **10 campanhas / 575 levels**;
+- 1×10;
+- 4×25;
+- 3×50;
+- 1×100;
+- 1×250.
+
+A campanha deve seguir aproximadamente fácil → difícil, sem assumir antecipadamente que um número fixo de classes de dificuldade é correcto. O número e os limites das classes devem resultar da fórmula e da validação final.
+
+### Conteúdo visual
+
+A direcção mantém-se:
+
+- indie simples;
+- pixel art básica;
+- assets-base em peças 16×16;
+- colocação pixel-perfect sem impor grelha ao level design;
+- foreground jogável;
+- backgrounds em camadas;
+- parallax;
+- sprites curados;
+- ficha formal de origem/licença para assets externos.
+
+Áudio 1.0 inclui música retro livre e efeitos de jogo/editor. A pesquisa musical aprofundada aproxima-se do fecho de 1.0.
+
+### Critérios de fecho
+
+- todas as campanhas oficiais existem nos formatos canónicos;
+- levels oficiais são válidos no mesmo motor usado pela comunidade;
+- o conteúdo representa realmente progressão e não apenas quantidade;
+- assets e licenças estão registados;
+- não há dependência de fixtures temporárias para preencher o catálogo.
+
+**Não conta como conteúdo final:** levels automáticos gerados só para testar o motor, exemplos de desenvolvimento ou placeholders sem revisão.
+
+---
+
+# 4. Validação — PROVAR QUE O CONTEÚDO FUNCIONA
+
+### Meta verdadeira
+
+Separar claramente quatro perguntas:
 
 ```text
-investigar
-→ documentar
-→ implementar
-→ testar
-→ validar em CI
-→ actualizar docs
-→ avançar
+validade
+    ↓
+progressão
+    ↓
+percurso
+    ↓
+dificuldade
+    ↓
+experiência humana
 ```
 
-Não trabalhamos directamente em `main`.
+Um level poder ser concluído não prova que é bom. Um level difícil não prova que é interessante. Um replay reproduzível não prova sozinho que a dificuldade foi calibrada.
 
-## 1.1 Sprint 21 — estado operacional
+### Componentes
 
-O Sprint 21 está a executar a integração da autoria de campanha sobre a fundação fechada.
+- validator de campanhas e levels;
+- Difficulty Tester;
+- runs determinísticas;
+- replay por reexecução do motor;
+- métricas de tempo;
+- análise de rotas rápidas/difíceis e fáceis/demoradas;
+- validação humana onde o critério é experiência e não apenas correção mecânica.
 
-### PR #265 — fundação vertical + editor keyboard-first
+### Regras de replay e runs
 
-**✅ Integrado em `main`.**
-
-A integração foi aceite depois de Linux C++20, Linux ASan/UBSan, Windows e evidência determinística terem passado. O `main` actual é `1d2d1a511314c5c7a820c268c270b63be6f8e6b9`.
-
-### PR #270 / Issue #267 — Campaign Editor no runtime real
-
-**🔄 Em validação CI.**
-
-A cadeia está implementada como:
+A unidade de run é:
 
 ```text
-campaign.txt
-→ CampaignEditorDocument
-→ GameSession::CAMPAIGN_EDITOR
-→ selection/reorder/open/save
-→ LevelDataIO
-→ EditorSession / LevelEditorDocument
-→ GameState::EDITOR
-→ retorno a CAMPAIGN_EDITOR com a selecção preservada
+spawn → inputs → FLAG
 ```
 
-A integração inclui viewport vertical do Level Editor para `N × 360`, bindings semânticos próprios para o Campaign Editor, snapshot/renderização de campanha e testes de integração.
+O replay é uma reexecução pelo motor. O tempo válido é o tempo autoritativo produzido pela execução válida.
 
-No estado actual, Linux C++20 + ASan/UBSan já passaram; a bateria determinística estava a produzir captures válidas; Windows ainda está em execução no momento desta actualização.
+Leaderboards usam **tempo**. Em 1.0 não se introduzem mortes nem uma pontuação baseada apenas em altura.
 
-### Pendências de Sprint 21
+### Critérios de fecho
 
-- concluir Windows e captura determinística do PR #270;
-- integrar #270 apenas depois de todos os gates verdes;
-- fechar #267 após evidência integrada;
-- alinhar `Esc` com alterações não guardadas do Campaign Editor através do carrinho global;
-- remover o snap obrigatório de 4 px através do issue #269;
-- continuar a validação visual do editor vertical depois do fluxo funcional.
+- validator detecta os defeitos de conteúdo previstos;
+- Difficulty Tester usa uma definição estável e documentada;
+- os resultados são reproduzíveis;
+- replays não são apenas armazenamento de inputs: demonstram reexecução válida;
+- as campanhas oficiais passam pelo pipeline real de validação;
+- os limites do que é inferido automaticamente e do que exige avaliação humana estão documentados.
 
-Nenhum destes itens deve ser marcado como concluído apenas porque existe código; requer evidência correspondente.
+---
 
-# 2. Fundação ✅ FECHADA
+# 5. Produto — FECHAR O FLUXO COMPLETO DO UTILIZADOR
 
-A fundação actual cobre separação Core/Logic/Presentation, contratos de input semântico, determinismo/fixed timestep, validação fail-closed e lifecycle gráfico.
+Esta é a grande camada actualmente em construção. O editor não é um fim em si mesmo: é a ferramenta que transforma o sistema de levels num produto utilizável.
 
-A fundação fechada não significa que features futuras não possam exigir novas abstrações; significa que os contratos existentes têm evidência suficiente para servir de base.
+## 5.1 Sistema de autoria vertical
 
-# 3. Fase 9 — Sistema de autoria 🔄 ACTIVA
-
-A Fase 9 transforma o editor num produto utilizável. A nova unidade é:
+Modelo canónico:
 
 ```text
 screen = 640×360
@@ -74,50 +217,50 @@ level  = N screens verticais, largura sempre 640
 campaign = sequência de levels
 ```
 
-## 9.1 Input semântico e teclado-only ✅ núcleo
+Requisitos:
 
-Já existe `GameAction`/`KeyBindings` e bindings para acções do editor e do Campaign Editor.
-
-### Requisito final
-
-Toda operação essencial do editor deve funcionar com **teclado apenas**. Mouse/drag é atalho de conveniência.
-
-## 9.2 Modelo espacial vertical ✅ fundação / integração activa
-
-Objectivos:
-
-- largura exactamente 640;
-- altura `N × 360`;
 - N variável;
 - mapeamento screen ↔ coordenada mundial determinístico;
 - `.lvl` antigo continua a significar N=1;
-- nova metadata `SCREENS N` persistida no `.lvl`;
-- integração do modelo com o Level Editor real.
+- metadata `SCREENS N` persistida no `.lvl`.
 
-### Porque agora
+## 5.2 Editor vertical
 
-O modelo anterior de um level = uma única tela limita a variedade do conteúdo. A screen mantém a legibilidade original; o level ganha profundidade vertical sem ampliar a largura.
+- viewport capaz de navegar pelo level completo;
+- câmara vertical previsível;
+- navegação por teclado;
+- mouse/drag como conveniência, não como requisito;
+- operações essenciais acessíveis sem mouse.
 
-## 9.3 Editor vertical 🔄 EM VALIDAÇÃO
+## 5.3 Undo/redo e carrinho
 
-A viewport do Level Editor agora trabalha sobre a altura total do level e segue o cursor teclado/pan sem limitar a lógica aos 360 px iniciais.
+Consolidar um histórico geral das alterações.
 
-A navegação funciona por teclado; mouse continua como atalho de conveniência.
-
-## 9.4 Undo/redo e carrinho 🟡
-
-Consolidar um histórico geral de alterações. `Esc` apresenta mudanças pendentes como carrinho e permite guardar tudo, descartar tudo ou rever/desfazer selectivamente.
-
-## 9.5 Playtest não persistente 🟡
-
-Executar o level actualmente editado, regressar ao editor e preservar o documento em memória sem save automático.
-
-## 9.6 Campaign Editor 🔄 EM VALIDAÇÃO
-
-Integrar `CampaignEditorDocument` + snapshot + UI:
+`Esc` deve permitir tratar mudanças pendentes como carrinho:
 
 ```text
-seleccionar
+guardar tudo
+ou
+fechar/descartar
+ou
+rever e desfazer selectivamente
+```
+
+O objectivo é evitar perda acidental de trabalho e tornar autoria iterativa segura.
+
+## 5.4 Playtest não persistente
+
+O autor deve conseguir testar o level actual e voltar ao editor sem save automático escondido.
+
+O documento em memória deve permanecer recuperável até a decisão explícita do autor.
+
+## 5.5 Campaign Editor
+
+Fluxo alvo:
+
+```text
+seleccionar campanha
+→ seleccionar level
 → reordenar
 → abrir level
 → voltar
@@ -126,129 +269,116 @@ seleccionar
 → reabrir
 ```
 
-Criar/remover entries directamente da UI permanece em investigação UX.
+A integração do Campaign Editor no fluxo real já começou a ser incorporada; o fecho exige tratar o fluxo completo como produto, não apenas a existência de `CampaignEditorDocument` e widgets isolados.
 
-## 9.7 Selecção de campanha 🟡
+## 5.6 Selecção e controlo
 
-Seleccionar explicitamente campanha mesmo com uma única campanha. A UI usa nome + username + metadata + stable ID; thumbnails não são requisito 1.0.
+- selecção explícita de campanha mesmo quando existe uma única campanha;
+- nome + username + metadata + stable ID;
+- thumbnails não são requisito 1.0;
+- ecrã de bindings descobrível;
+- remapeamento livre das acções suportadas;
+- teclado como método completo de operação.
 
-## 9.8 Controlos/rebind 🟡
+## 5.7 Revisão visual e UX
 
-Finalizar e tornar descobrível o ecrã de bindings, permitindo remapeamento livre das acções suportadas.
+Só depois do fluxo funcional estar consolidado:
 
-## 9.9 Revisão visual 🟡
+- menu;
+- editor;
+- viewport;
+- responsividade;
+- feedback visual;
+- acessibilidade e discoverability.
 
-Rever visualmente menu, editor, viewport e responsividade apenas depois de o fluxo funcional estar consolidado.
+### Critério de fecho de Produto
 
-# 4. Gameplay 1.0 🟡
-
-Base:
-
-- salto parabólico a 60°;
-- sem air control;
-- carga contínua;
-- carga linear em 1.0;
-- força visível com precisão real, sem `0–255` artificial;
-- plataformas estáticas + spawn + FLAG;
-- FLAG na última screen;
-- sem morte/failure em 1.0;
-- saída voluntária para menu.
-
-A arquitectura deve aceitar futuras entidades letais, colectáveis obrigatórios, checkpoints, moving platforms e triggers sem as activar em 1.0.
-
-# 5. Transição e streaming 🟡
-
-Implementar transição vertical contínua entre screens/levels, mantendo a zona actual e a necessária para a próxima transição, pré-carregando a próxima e mantendo zonas anteriores recuperáveis durante quedas.
-
-O streaming não pode alterar o resultado determinístico.
-
-# 6. Determinismo, replay e runs 🟡
-
-A run é `spawn → inputs → FLAG`.
-
-O replay é reexecutado pelo motor. A execução válida determina o tempo autoritativo.
-
-Leaderboards usam tempo; não há mortes nem métrica de altura em 1.0.
-
-Agregados planeados: melhor tempo global, média, melhor jogador e estimativas de rotas rápidas/difíceis e fáceis/demoradas.
-
-# 7. Difficulty Tester e catálogo 🟡
-
-Separar:
+Um utilizador novo deve conseguir, sem conhecer a implementação:
 
 ```text
-validade → progressão → percurso → dificuldade → experiência humana
+abrir
+→ escolher campanha
+→ jogar
+→ editar/criar conteúdo
+→ testar
+→ validar
+→ guardar/exportar
+→ voltar a abrir
 ```
 
-Derivar o número de classes de dificuldade da fórmula final, em vez de escolher previamente um número arbitrário.
+sem depender de scripts de desenvolvimento ou conhecimento interno do projecto.
 
-Cada campanha deve ser aproximadamente fácil → difícil. O catálogo global deve ser centrado no normal.
+---
 
-Mínimo 1.0: **10 campanhas / 575 levels oficiais**:
+# 6. Release — TRANSFORMAR O PROJECTO EM 1.0 DISTRIBUÍVEL
 
-- 1×10;
-- 4×25;
-- 3×50;
-- 1×100;
-- 1×250.
+### Meta verdadeira
 
-# 8. Visual e áudio 🟡
+Não é apenas “compilar”. É entregar uma versão que um utilizador externo consegue instalar, abrir, compreender, usar e manter num percurso suportado.
 
-Direcção: indie, simples, pixel art básica.
+Obrigatório para 1.0:
 
-Assets base em peças 16×16; colocação pixel-perfect, sem grelha obrigatória.
-
-Foreground jogável + backgrounds em camadas + parallax.
-
-Sprites curados. Todos os assets externos têm ficha formal de origem/licença.
-
-Áudio 1.0: música retro livre e efeitos de jogo/editor; efeitos não-musicais podem usar várias variações com randomização controlada.
-
-Pesquisa musical aprofundada fica próxima do fecho de 1.0.
-
-# 9. Comunidade e distribuição 🟡
-
-Unidade principal de publicação: **campanha**.
-
-`.lvl` continua unidade técnica de storage/import/export.
-
-Obrigatório 1.0:
-
-- importar/exportar campanhas;
 - Windows x64 standalone;
-- site público de partilha/rankings;
+- import/export de campanhas;
 - validação de campanhas;
-- difficulty tester.
+- Difficulty Tester;
+- catálogo oficial completo;
+- site público de partilha/rankings;
+- processo reprodutível de build;
+- QA de release;
+- revisão de assets/licenças;
+- documentação mínima para utilizadores e criadores.
 
-Versão web é desejável.
+A versão web é desejável, mas não deve invalidar o 1.0 desktop se não existir uma razão de produto que a torne obrigatória.
 
-# 10. Qualidade de conteúdo 🟡
+### Critérios de fecho
 
-A campanha oficial e a campanha comunitária devem ser validáveis pelo mesmo motor. A publicação não deve depender de validação manual da equipa.
+- instalação limpa funciona;
+- build de release é reproduzível;
+- saves/imports oficiais são compatíveis com a versão suportada;
+- campanhas publicadas passam pelo mesmo validator do jogo;
+- regressões de runtime e editor estão cobertas por QA;
+- licenciamento dos conteúdos está auditado;
+- documentação de utilização está coerente com o comportamento real.
 
-O routing físico dos ficheiros continua a cargo de `reorganize.py`; `campaign.txt` é autoridade da ordem.
+**Só aqui ASCENDENDO é 1.0.**
 
-# 11. 1.1+ e derivados 🔭
+---
 
-Depois de 1.0 fechado, a arquitectura pode receber novas direcções: perigos, moving platforms, triggers, colectáveis/checkpoints, novos objectivos, e variantes horizontais em jogos derivados.
-
-O princípio é generalizar interfaces e formatos sem antecipar mecânicas de produto antes de existir razão de design.
-
-# 12. Critério de 1.0
+# Ordem operacional definitiva
 
 ```text
-jogo base estável
-→ editor keyboard-first
-→ levels verticais N×360 @ 640 px
-→ playtest não persistente
-→ undo/redo + carrinho
-→ campaign editor
-→ campanhas oficiais completas
-→ validator + difficulty tester
-→ replay/runs determinísticos
-→ import/export
-→ Windows x64
-→ site público
+1. Fundação       [~95%] → FECHAR 100%
+        ↓
+2. Gameplay       [~85%] → FECHAR
+        ↓
+3. Conteúdo       [~35%] → CONSTRUIR E VALIDAR
+        ↓
+4. Validação      [~35%] → TORNAR EVIDÊNCIA OPERACIONAL
+        ↓
+5. Produto        [~50%] → FECHAR FLUXOS COMPLETOS
+        ↓
+6. Release        [~10%] → EMPACOTAR, TESTAR, PUBLICAR
 ```
 
-Só declarar 1.0 concluído quando este percurso for efectivamente exercitável e validado.
+### Paralelismo permitido
+
+O editor e ferramentas de autoria podem continuar enquanto Gameplay fecha, desde que não introduzam regras paralelas ao motor. Validação pode preparar tooling antes de todo o conteúdo existir, mas a aceitação final depende de dados reais. Arte/áudio podem avançar incrementalmente, mas só contam como conteúdo final quando integram o catálogo oficial e passam pelas regras de licença.
+
+### Regra de percentagem
+
+Uma percentagem só sobe materialmente quando uma **meta de produto ponderada** muda de estado. PRs pequenos, refactors internos e documentação isolada podem melhorar qualidade sem justificar vários pontos percentuais globais.
+
+### Critério absoluto de 1.0
+
+```text
+foundation stable
+→ gameplay 1.0 stable
+→ official content complete
+→ validation demonstrably used
+→ product/editor complete
+→ release QA + distribution
+→ public 1.0
+```
+
+Até esse percurso ser efectivamente exercitável, ASCENDENDO continua em desenvolvimento.
