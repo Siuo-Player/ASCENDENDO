@@ -23,7 +23,10 @@ TEST_SUITE("Deterministic capture level loading") {
     }
 
     TEST_CASE("Indice fora da campanha nao altera estado") {
-        CampaignRuntime runtime({"Game/Assets/Levels/inicio.lvl"});
+        CampaignRuntime runtime({
+            "Game/Assets/Levels/inicio.lvl",
+            "Game/Assets/Levels/precipicio.lvl"
+        });
         Level level;
         REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
 
@@ -31,7 +34,7 @@ TEST_SUITE("Deterministic capture level loading") {
         const float spawnBefore = runtime.currentSpawnY();
         const auto indexBefore = runtime.currentLevelIndex();
 
-        CHECK_FALSE(runtime.loadLevelAt(level, 1, config::LOGICAL_WIDTH));
+        CHECK_FALSE(runtime.loadLevelAt(level, 2, config::LOGICAL_WIDTH));
         CHECK(level.platformCount() == platformsBefore);
         CHECK(runtime.currentSpawnY() == doctest::Approx(spawnBefore));
         CHECK(runtime.currentLevelIndex() == indexBefore);
