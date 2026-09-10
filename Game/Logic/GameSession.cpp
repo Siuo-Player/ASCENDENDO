@@ -22,9 +22,6 @@ void GameSession::configureCampaignEditor(std::string campaignFilePath) {
 bool GameSession::openCampaignEditor(core::GameState returnState) {
     if (campaignEditorPath_.empty()) return false;
 
-    // Parse into a candidate first. CampaignEditorDocument owns the canonical
-    // campaign.txt semantics; a failed reload must not destroy the current UI
-    // selection or a valid in-memory document.
     CampaignEditorDocument candidate;
     if (!candidate.loadFromCampaignFile(campaignEditorPath_)) return false;
     campaignEditor_ = std::move(candidate);
@@ -39,9 +36,6 @@ bool GameSession::openSelectedCampaignLevel() {
     const CampaignLevelBlock* selected = campaignEditor_.selectedLevel();
     if (!selected) return false;
 
-    // LevelDataIO is the only technical level parser here. Do not change
-    // campaign selection or the active Level Editor until parsing and
-    // final-level validation have succeeded.
     const std::optional<LevelData> data = LevelDataIO::load(selected->path);
     if (!data) return false;
 
@@ -70,8 +64,6 @@ CampaignEditorRenderSnapshot GameSession::campaignEditorSnapshot() const {
 }
 
 void GameSession::resetGame(float logicalWidth) {
-    // Bootstrap the new campaign state transactionally. A failed load must not
-    // leave the session in PLAYING with an empty or stale level.
     CampaignRuntime candidateRuntime = campaignRuntime_;
     Level candidateLevel;
     if (!candidateRuntime.loadInitialLevel(candidateLevel, logicalWidth)) return;
@@ -91,8 +83,6 @@ void GameSession::beginPlaying(float logicalWidth) {
 }
 
 bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) {
-    // Load and validate the requested level before replacing the live session
-    // state, so an invalid/unreadable level leaves the current session intact.
     CampaignRuntime candidateRuntime = campaignRuntime_;
     Level candidateLevel;
     if (!candidateRuntime.loadLevelAt(candidateLevel, levelIndex, logicalWidth)) return false;
@@ -164,8 +154,6 @@ GameSessionUpdateResult GameSession::update(float dt,
 
     switch (currentState) {
     case core::GameState::PLAYING:
-        elapsedTime_ += safeDt;
-
         if (openCampaignEditorPressed) {
             openCampaignEditor(core::GameState::PLAYING);
         } else if (openEditorPressed) {
@@ -176,7 +164,9 @@ GameSessionUpdateResult GameSession::update(float dt,
         } else if (pausePressed) {
             stateMachine_.pause();
         } else {
-            simulation_.advance(safeDt, input, bindings, player_, world_, level_);
+            const int simulatedSteps =
+                simulation_.advance(safeDt, input, bindings, player_, world_, level_);
+            elapsedTime_ += static_cast<float>(simulatedSteps) * config::FIXED_STEP;
 
             const float streamTriggerY =
                 campaignRuntime_.currentSpawnY() - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
