@@ -9,3 +9,9 @@ nivel_06.lvl
 nivel_07.lvl
 nivel_08.lvl
 nivel_09.lvl
+nivel_10.lvl
+nivel_11.lvl
+nivel_12.lvl
+nivel_13.lvl
+nivel_14.lvl
+nivel_15.lvl
