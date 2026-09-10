@@ -175,6 +175,37 @@ TEST_SUITE("GameSession") {
         CHECK(session.elapsedTime() == doctest::Approx(elapsed));
     }
 
+    TEST_CASE("normal frame advances authoritative time by simulated fixed steps") {
+        logic::GameSession session(
+            {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
+            "campaign-id",
+            "runs.csv");
+        session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+        REQUIRE(session.state() == core::GameState::PLAYING);
+
+        logic::InputManager input;
+        core::KeyBindings bindings;
+
+        session.update(config::FIXED_STEP, input, bindings, 640, 360, 640.0f, 360.0f);
+        CHECK(session.elapsedTime() == doctest::Approx(config::FIXED_STEP));
+    }
+
+    TEST_CASE("long frame cannot advance authoritative time beyond simulated budget") {
+        logic::GameSession session(
+            {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
+            "campaign-id",
+            "runs.csv");
+        session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+        REQUIRE(session.state() == core::GameState::PLAYING);
+
+        logic::InputManager input;
+        core::KeyBindings bindings;
+
+        session.update(0.5f, input, bindings, 640, 360, 640.0f, 360.0f);
+
+        CHECK(session.elapsedTime() == doctest::Approx(0.25f));
+    }
+
     TEST_CASE("invalid frame delta does not contaminate elapsed time or simulation") {
         logic::GameSession session(
             {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
@@ -213,4 +244,4 @@ TEST_SUITE("GameSession") {
         CHECK(result.stateChanged == false);
         CHECK(session.state() == core::GameState::EDITOR);
     }
-} 
+}
