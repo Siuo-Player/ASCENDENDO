@@ -1,0 +1,9 @@
+# ASCENDENDO — Nivel 14: Recuperacao
+NAME Recuperacao
+# Wider surfaces intentionally alternate with displacement to create a recovery-focused level.
+PLATFORM 24 4 192 16
+PLATFORM 220 70 192 16
+PLATFORM 32 136 192 16
+PLATFORM 220 202 192 16
+PLATFORM 32 268 192 16
+FLAG 32 284 192 40

@@ -1,0 +1,9 @@
+# ASCENDENDO — Nivel 10: Cadencia
+NAME Cadencia
+# Wide landing surfaces introduce a longer authored sequence without changing physics.
+PLATFORM 48 4 160 16
+PLATFORM 300 70 160 16
+PLATFORM 52 136 160 16
+PLATFORM 300 202 160 16
+PLATFORM 48 268 160 16
+FLAG 48 284 160 40
