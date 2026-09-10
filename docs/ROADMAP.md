@@ -114,12 +114,20 @@ A campanha deve seguir aproximadamente fácil → difícil, sem assumir antecipa
 - indie simples;
 - pixel art básica;
 - assets-base em peças 16×16;
-- colocação pixel-perfect sem impor grelha ao level design;
+- **plataformas contínuas com largura e altura múltiplas de 16 px para composição visual**;
+- **posição das plataformas pixel-perfect, sem grelha global obrigatória**;
+- **auto-tiling automático para escolher sprites de topo, interior, bordas, cantos, ligações e variantes compatíveis**;
+- **adjacência entre regiões determinada pela geometria/world-space, permitindo ligação visual entre materiais diferentes quando existe contacto real**;
+- **variantes de terra/pixel art com randomização controlada e determinística para reduzir repetição**;
 - foreground jogável;
 - backgrounds em camadas;
 - parallax;
 - sprites curados;
 - ficha formal de origem/licença para assets externos.
+
+O auto-tiling é uma decisão de Presentation: o autor trabalha com uma plataforma contínua e não com pintura manual de tiles. A composição automática pode usar uma malha visual local `16×16`, mas nunca modifica a geometria de gameplay.
+
+A infraestrutura de compositor já existente cobre partes deste modelo, incluindo regiões visuais modulares, preservação de origens contínuas, selecção determinística, adjacência local e cross-region e assinaturas de vizinhança. O fecho de conteúdo ainda exige cobertura final de assets, integração de autoria e validação visual real; a existência do compositor não conta por si só como cobertura de arte 1.0.
 
 Áudio 1.0 inclui música retro livre e efeitos de jogo/editor.
 
@@ -129,6 +137,7 @@ A campanha deve seguir aproximadamente fácil → difícil, sem assumir antecipa
 - levels oficiais são válidos no mesmo motor usado pela comunidade;
 - o conteúdo representa progressão e não apenas quantidade;
 - assets e licenças estão registados;
+- a composição visual automática usa apenas variantes coerentes com geometria, vizinhança e material;
 - não há dependência de fixtures temporárias para preencher o catálogo.
 
 ---
@@ -215,6 +224,8 @@ Requisitos:
 - mouse/drag como conveniência;
 - operações essenciais acessíveis sem mouse.
 
+A autoria de plataformas deve ser feita ao nível da **região/material contínuo**. O autor não deve ter de pintar manualmente cada peça de 16×16 para obter bordas, cantos ou interiores. O editor mostra/actualiza a apresentação auto-composta enquanto a geometria contínua é editada.
+
 ## 5.3 Undo/redo e carrinho
 
 Consolidar um histórico geral das alterações.
@@ -270,7 +281,8 @@ Depois do fluxo funcional consolidado:
 - viewport;
 - responsividade;
 - feedback visual;
-- acessibilidade e discoverability.
+- acessibilidade e discoverability;
+- **qualidade da composição auto-tiled das plataformas e continuidade entre materiais**.
 
 ### Critério de fecho de Produto
 
@@ -344,7 +356,7 @@ A versão web é desejável, mas não invalida automaticamente o 1.0 desktop.
 
 ### Paralelismo permitido
 
-O editor e ferramentas de autoria podem continuar enquanto Gameplay fecha, desde que não introduzam regras paralelas ao motor. Validação pode preparar tooling antes de todo o conteúdo existir, mas a aceitação final depende de dados reais. Arte/áudio podem avançar incrementalmente, mas só contam como conteúdo final quando integram o catálogo oficial e passam pelas regras de licença.
+O editor e ferramentas de autoria podem continuar enquanto Gameplay fecha, desde que não introduzam regras paralelas ao motor. Validação pode preparar tooling antes de todo o conteúdo existir, mas a aceitação final depende de dados reais. Arte/áudio podem avançar incrementalmente, mas só contam como conteúdo final quando integram o catálogo oficial e passam pelas regras de licença. O compositor visual pode evoluir em paralelo, mas deve permanecer Presentation-only e respeitar a separação entre geometria contínua e composição 16×16.
 
 ### Regra de percentagem
 
