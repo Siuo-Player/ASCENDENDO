@@ -18,9 +18,10 @@ namespace config {
     constexpr float PLAYER_MAX_JUMP     = 600.0f;
     constexpr float PLAYER_CHARGE_TIME  = 0.4f;
 
-    // A resolução lógica da simulação é independente da quantização usada pela UI.
-    // Não apresentar uma escala inteira fictícia como precisão física ao jogador.
-    constexpr float EDITOR_GRID_SNAP    = 4.0f;
+    // Preload the next campaign screen before the player reaches the boundary.
+    // Half a logical screen keeps the next screen ready while preserving the
+    // intended upward progression and avoiding work on the initial spawn frame.
+    constexpr float CAMPAIGN_STREAM_PRELOAD_DISTANCE = LOGICAL_HEIGHT * 0.5f;
 
     // Câmara de autoria: permite navegar verticalmente num Level que tenha N telas.
     constexpr float EDITOR_CAMERA_PAN_SPEED = 400.0f;
