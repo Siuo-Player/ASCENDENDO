@@ -1,0 +1,9 @@
+# ASCENDENDO — Nivel 13: Pinball
+NAME Pinball
+# Alternating medium landings create repeated commitment decisions without new mechanics.
+PLATFORM 30 4 120 16
+PLATFORM 220 70 120 16
+PLATFORM 410 136 120 16
+PLATFORM 220 202 120 16
+PLATFORM 410 268 120 16
+FLAG 410 284 120 40
