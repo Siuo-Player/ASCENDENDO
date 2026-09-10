@@ -248,7 +248,39 @@ Direcção 1.0:
 
 Assets base podem ser compostos por peças `16×16`.
 
-A colocação no mundo é pixel-perfect e não é limitada a uma grelha de 16×16.
+A colocação no mundo é pixel-perfect e não é limitada a uma grelha global de `16×16`.
+
+### 16.1 Plataformas contínuas e auto-tiling
+
+A unidade lógica que o autor coloca no level é uma **plataforma contínua de um material**, não uma sequência de tiles pintados manualmente.
+
+A posição da plataforma no mundo é pixel-perfect e pode começar em qualquer coordenada válida. **Não existe lock obrigatório da posição a uma grelha global de 16×16.**
+
+Para a composição visual canónica, a largura e a altura da plataforma devem ser **positivas e múltiplas de `16 px`**. Assim, por exemplo, uma plataforma pode começar em `x = 347` e ter `160 px` de largura, mas não `163 px`.
+
+O sistema cria uma **malha visual local de `16×16`** a partir da geometria contínua da plataforma. Essa malha serve para decompor a superfície em peças de pixel art; não é uma nova autoridade de posicionamento ou colisão.
+
+O auto-tiling decide automaticamente que sprite/variante deve ser desenhado em cada célula visual com base, entre outros factores suportados, em:
+
+- exposição do topo, fundo e lados;
+- cantos e extremidades;
+- vizinhança cardinal e diagonal;
+- continuidade e contacto com outras regiões;
+- material da própria região e do vizinho;
+- fronteiras entre materiais;
+- variantes visuais elegíveis.
+
+Plataformas/regiões de materiais diferentes podem ligar-se visualmente quando a sua geometria realmente partilha pixels/arestas ou contacto relevante. O sistema deve usar a geometria em world-space para determinar essas adjacências, mesmo quando as origens locais das regiões não estão alinhadas a uma grelha global.
+
+A composição deve impedir escolhas visualmente incoerentes. Por exemplo, uma peça de topo com relva não deve aparecer numa zona que está visualmente coberta por outra região compatível imediatamente acima/abaixo.
+
+A variedade pode incluir **randomização controlada e determinística** entre sprites compatíveis para reduzir repetição de pedaços de terra simples, mantendo a aparência coerente com a topologia e material. A mesma entrada deve produzir a mesma escolha quando a reprodução determinística o exigir.
+
+A ausência de uma variante elegível deve produzir um fallback determinístico ou estado sem vencedor visual, mas **nunca deve alterar a geometria de gameplay**.
+
+O auto-tiling é exclusivamente uma decisão de **Presentation**. Nunca pode arredondar, mover, expandir, encolher ou substituir a geometria contínua usada pelo gameplay/collision.
+
+O objectivo de produto é que o autor possa dizer essencialmente **“esta é uma plataforma de terra”** e obter automaticamente a composição pixel-art adequada, em vez de ter de construir manualmente os cantos, bordas, interiores e ligações tile a tile.
 
 ## 17. Sprites e licenciamento
 
