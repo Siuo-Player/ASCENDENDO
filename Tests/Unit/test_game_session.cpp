@@ -106,7 +106,8 @@ TEST_SUITE("GameSession") {
         logic::GameSession session(
             {
                 std::filesystem::path("Game/Assets/Levels/inicio.lvl"),
-                std::filesystem::path("Game/Assets/Levels/zigzag.lvl")
+                std::filesystem::path("Game/Assets/Levels/zigzag.lvl"),
+                std::filesystem::path("Game/Assets/Levels/precipicio.lvl")
             },
             "campaign-id",
             "runs.csv");
@@ -127,7 +128,8 @@ TEST_SUITE("GameSession") {
         logic::GameSession session(
             {
                 std::filesystem::path("Game/Assets/Levels/inicio.lvl"),
-                std::filesystem::path("Game/Assets/Levels/zigzag.lvl")
+                std::filesystem::path("Game/Assets/Levels/zigzag.lvl"),
+                std::filesystem::path("Game/Assets/Levels/precipicio.lvl")
             },
             "campaign-id",
             "runs.csv");
@@ -153,7 +155,8 @@ TEST_SUITE("GameSession") {
         logic::GameSession session(
             {
                 std::filesystem::path("Game/Assets/Levels/inicio.lvl"),
-                std::filesystem::path("Game/Assets/Levels/zigzag.lvl")
+                std::filesystem::path("Game/Assets/Levels/zigzag.lvl"),
+                std::filesystem::path("Game/Assets/Levels/precipicio.lvl")
             },
             "campaign-id",
             "runs.csv");
@@ -210,4 +213,4 @@ TEST_SUITE("GameSession") {
         CHECK(result.stateChanged == false);
         CHECK(session.state() == core::GameState::EDITOR);
     }
-}
+} 
