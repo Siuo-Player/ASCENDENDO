@@ -95,7 +95,7 @@ TEST_SUITE("LevelDataValidator") {
         data.screenCount = 2;
         CHECK(LevelDataValidator::validate(data));
 
-        data.platforms[0].bounds.max.y = 721.0f;
+        data.platforms[0].max.y = 721.0f;
         CHECK_FALSE(LevelDataValidator::validate(data));
     }
 
