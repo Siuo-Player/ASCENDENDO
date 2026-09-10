@@ -81,17 +81,54 @@ O tamanho do elemento é um preset explícito. O preset `MEDIUM` é o default.
 
 ## 5. Snap e grelha
 
-A grelha visual e o snap não são necessariamente iguais.
+A grelha visual e as regras de composição visual não são necessariamente iguais à posição de autoria.
 
-Configuração atual:
+A posição de uma plataforma no mundo é **pixel-perfect** e não está bloqueada a uma grelha global de `16×16`. O editor não deve impor snap obrigatório de 4 px.
 
-- snap: 4 px;
-- grelha visual: 16 px;
-- linhas principais: 64 px.
+Para a composição automática de pixel art, a **largura e a altura da plataforma devem ser múltiplas de `16 px`**. O editor pode mostrar uma grelha visual de `16 px` como auxílio para dimensões e composição, mas essa grelha não restringe a coordenada inicial da plataforma.
 
-A grelha deve ajudar a alinhar blocos e não competir visualmente com eles.
+Assim, é válido ter, por exemplo, uma plataforma que começa em `x = 347` e tem `160 px` de largura. A plataforma é uma região contínua; as peças `16×16` usadas pelo renderer são uma decisão de apresentação.
 
-## 6. Feedback de seleção, preview e salto
+## 6. Auto-tiling e composição visual de plataformas
+
+O autor não deve precisar de colocar manualmente cada tile de uma plataforma.
+
+A operação lógica é criar/seleccionar uma **plataforma contínua de um material** — por exemplo, terra — e editar a sua posição e dimensões. O sistema compõe automaticamente a pixel art dessa região.
+
+```text
+plataforma contínua
+        ↓
+malha visual local 16×16
+        ↓
+análise de vizinhança/material
+        ↓
+auto-tiling
+        ↓
+escolha de sprite/variante
+        ↓
+render
+```
+
+A composição deve escolher automaticamente peças adequadas para:
+
+- topo exposto;
+- fundo e interior;
+- laterais e extremidades;
+- cantos;
+- ligações entre regiões;
+- fronteiras entre materiais;
+- vizinhança cardinal e diagonal;
+- variantes de pixel art compatíveis.
+
+Plataformas diferentes podem ligar-se visualmente quando a sua geometria realmente partilha pixels/arestas ou contacto relevante. Essa relação é determinada em world-space, não por uma grelha global.
+
+O sistema pode escolher variantes de terra simples e visualmente compatíveis com **randomização controlada e determinística**, reduzindo a repetição sem introduzir um sprite incompatível com a topologia. Repetir o mesmo conteúdo deve continuar a produzir uma composição reproduzível quando o contexto exige determinismo.
+
+O auto-tiling é exclusivamente visual. Nunca altera a posição, dimensões, colisão ou qualquer outra propriedade autoritativa da plataforma.
+
+Quando não existe uma variante perfeita, deve ser usada uma escolha de fallback determinística ou um estado visual sem vencedor. O sistema nunca deve alterar a geometria para resolver a falta de um asset.
+
+## 7. Feedback de seleção, preview e salto
 
 Uma seleção deve ser visualmente inequívoca.
 
@@ -108,7 +145,7 @@ O indicador deve comunicar:
 
 A animação exata da barra continua em aberto até à implementação e teste visual.
 
-## 7. Playtest
+## 8. Playtest
 
 O playtest deve ser um modo de observação, não uma gravação automática.
 
@@ -130,7 +167,7 @@ Guardar é sempre explícito.
 
 Durante o playtest, deve ser possível perceber claramente a força do salto, o percurso do jogador e o ponto em que uma tentativa falha.
 
-## 8. Validação
+## 9. Validação
 
 A validação deve produzir pelo menos:
 
@@ -151,7 +188,7 @@ As causas devem preferir mensagens compreensíveis, como:
 
 No Campaign Editor, runs visuais complementam esta informação mostrando onde uma tentativa está e onde uma transição falha.
 
-## 9. Campanhas
+## 10. Campanhas
 
 `Começar` passa por uma seleção explícita de campanha mesmo quando existe apenas uma opção.
 
@@ -164,7 +201,7 @@ A UI deve mostrar:
 - ação clara para iniciar;
 - voltar ao menu.
 
-## 10. Campaign Editor
+## 11. Campaign Editor
 
 O Campaign Editor deve:
 
@@ -178,7 +215,7 @@ O Campaign Editor deve:
 - mostrar pelo menos uma tentativa por nível quando a capacidade permitir;
 - mostrar tentativas que atravessem a fronteira entre níveis para diagnosticar a continuidade da campanha.
 
-## 11. Critérios de aceitação da 9.5
+## 12. Critérios de aceitação da 9.5
 
 A tranche é considerada UX-completa quando:
 
@@ -193,4 +230,7 @@ A tranche é considerada UX-completa quando:
 - `Começar` mostra seleção de campanha;
 - Campaign Editor permite ver e reorganizar a ordem vertical dos níveis;
 - nenhum texto importante ultrapassa as margens do viewport;
+- uma plataforma pode ser criada como uma região contínua sem pintura tile-a-tile;
+- a composição automática mantém bordas/cantos/ligações coerentes e usa apenas variantes compatíveis;
+- nenhuma decisão de auto-tiling altera a geometria de gameplay;
 - a introdução futura de conteúdo não exige substituir o modelo de nível já existente.
