@@ -1,4 +1,11 @@
-# Playlist da Campanha (A ordem das linhas define a ordem no jogo)
+# Playlist da Campanha
+# A ordem das linhas define a ordem no jogo.
 inicio.lvl
 zigzag.lvl
 precipicio.lvl
+nivel_04.lvl
+nivel_05.lvl
+nivel_06.lvl
+nivel_07.lvl
+nivel_08.lvl
+nivel_09.lvl
