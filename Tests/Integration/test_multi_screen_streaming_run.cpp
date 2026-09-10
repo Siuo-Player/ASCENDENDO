@@ -64,7 +64,6 @@ TEST_SUITE("MultiScreenStreamingRun") {
             "NAME Stream First\n"
             "SCREENS 1\n"
             "SPAWN 100 60\n"
-            "PLATFORM 0 44 640 16\n"
             "PLATFORM 0 120 640 16\n"
             "PLATFORM 0 220 640 16\n");
         const auto finalLevel = writeLevel(
@@ -87,7 +86,7 @@ TEST_SUITE("MultiScreenStreamingRun") {
         REQUIRE(session.state() == core::GameState::PLAYING);
         CHECK(session.player().position().x == doctest::Approx(100.0f));
         CHECK(session.player().position().y == doctest::Approx(60.0f));
-        CHECK(session.level().platformCount() == 3);
+        CHECK(session.level().platformCount() == 2);
         CHECK_FALSE(session.level().hasFlag);
 
         InputManager input;
@@ -100,14 +99,14 @@ TEST_SUITE("MultiScreenStreamingRun") {
         // Second jump reaches the next platform and crosses the streaming
         // preload threshold (180) before landing on the y=220 platform.
         runFullChargeJump(session, input, bindings);
-        CHECK(session.level().platformCount() == 4);
+        CHECK(session.level().platformCount() == 3);
         CHECK(session.level().hasFlag);
         CHECK(session.player().position().y < config::LOGICAL_HEIGHT);
         REQUIRE(waitForGroundedY(session, input, bindings, 236.0f));
 
-        // The final streamed platform is at world y=364. From y=236, the
-        // maximum jump arc is sufficient to land on it; the adjacent final
-        // FLAG overlaps the player's standing body and completes the run.
+        // The final streamed FLAG is in the next campaign level. A full charge
+        // takes the player upward through the streamed boundary; completion is
+        // checked through GameSession rather than manipulating player state.
         runFullChargeJump(session, input, bindings);
 
         bool completed = false;
