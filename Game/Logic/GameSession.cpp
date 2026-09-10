@@ -77,7 +77,7 @@ void GameSession::resetGame(float logicalWidth) {
     if (!candidateRuntime.loadInitialLevel(candidateLevel, logicalWidth)) return;
 
     player_ = logic::Player{};
-    player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+    player_.body.position = candidateLevel.spawnPosition;
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
     level_ = std::move(candidateLevel);
@@ -98,7 +98,7 @@ bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) 
     if (!candidateRuntime.loadLevelAt(candidateLevel, levelIndex, logicalWidth)) return false;
 
     player_ = logic::Player{};
-    player_.body.position = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+    player_.body.position = candidateLevel.spawnPosition;
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
     level_ = std::move(candidateLevel);
