@@ -1,51 +1,48 @@
 # ASCENDENDO — Estado actual
 
-**Data de referência:** 2026-09-10  
-**Fonte:** `main` + código/documentação actualizados nesta tranche.
+**Data de referência:** 2026-09-10
+**Fonte:** `main` e alterações desta tranche.
 
 ## Produto
 
-O núcleo jogável está funcional e a campanha é definida por `Game/Assets/Levels/campaign.txt`. O projecto já dispõe de editor de níveis integrado e editor de campanha, pelo que “construir o editor” deixou de ser o objectivo principal.
-
-O foco passa para conteúdo e validação humana.
+O núcleo jogável e os editores de nível/campanha já existem. O défice imediato é conteúdo validado por pessoas, não arquitectura adicional.
 
 ## Sistemas existentes
 
-- Vulkan + GLFW e renderização por `RenderSnapshot`.
+- Vulkan + GLFW e `RenderSnapshot`.
 - Física fixed timestep a 60 Hz.
 - Commitment Jump a 60° sem controlo aéreo.
 - Câmara vertical e viewport lógico 640×360.
 - Replay/save states e histórico de runs.
 - Menu, pausa, créditos e bindings persistentes.
-- `GameState::EDITOR` para autoria de níveis.
-- `GameState::CAMPAIGN_EDITOR` para ordenação/abertura de campanha.
-- Validação síncrona e assíncrona do documento do editor.
-- Composição de plataformas 8-neighbour, incluindo adjacência cross-region.
-- Swapchain recreation transaccional/fail-closed.
+- `GameState::EDITOR` e `GameState::CAMPAIGN_EDITOR`.
+- Validação síncrona e assíncrona do editor.
+- Composição de plataformas 8-neighbour com adjacência cross-region.
+- Swapchain recreation fail-closed.
 - CI Linux/Windows e deterministic capture.
 
-## Conteúdo
+## Conteúdo actual
 
-A campanha base foi historicamente pequena e este é o principal défice de produto identificado. Esta tranche adiciona níveis ao conjunto activo, sem alterar as regras físicas ou criar novo tooling.
+A campanha activa contém **15 níveis** em `Game/Assets/Levels/campaign.txt`.
+
+A tranche 10–15 acrescenta seis níveis sem alterar a física nem introduzir novo tooling. Cada um usa plataformas compatíveis com a grelha actual e uma sequência ascendente dentro do envelope do salto usado pelo validador.
+
+O `ai_validator.py --campaign` é um filtro de alcançabilidade algorítmica. Não prova diversão, dificuldade adequada, legibilidade, desempenho ou completabilidade humana.
 
 ## Assets
 
-O pipeline de aprovação/proveniência continua correcto como mecanismo de segurança, mas a integração de arte externa só deve acontecer quando existir um ficheiro binário concreto. Não se considera um candidato “integrado” apenas por metadata.
+A proveniência continua separada da integração. O `PLATFORM_ASSET_REGISTRY.md` ainda contém candidatos externos sem binário runtime concreto. Isso é intencional: não declarar integração antes de existir o ficheiro exacto, dimensões verificadas, hash e revisão visual.
 
-## O que fica deliberadamente fora desta tranche
+## Processo
 
-- nova expansão do compositor;
-- novas auditorias formais sem incidente concreto;
-- nova camada de roadmap;
-- optimizações sem profiling;
-- mudança da mecânica central.
+Não adicionar novas auditorias, snapshots de roadmap ou infraestrutura de apresentação sem evidência concreta. Problemas transitórios ficam no desenvolvimento/log; engenharia nova deve responder a uma necessidade demonstrada pelo produto.
 
-## Próxima verificação obrigatória
-
-Executar:
+## Próxima porta de qualidade
 
 ```text
-python Development/AI_Validation/ai_validator.py --campaign
+validação automática da campanha
+→ build/runtime real
+→ playtest humano externo
+→ corrigir níveis com base nas falhas
+→ só depois aprofundar apresentação/arte/performance
 ```
-
-e depois fazer uma run real da campanha. O primeiro resultado testa alcançabilidade algorítmica; o segundo testa se o jogo é realmente compreensível e jogável.
