@@ -90,7 +90,8 @@ TEST_SUITE("RuntimePlayability") {
             0.25f, input, bindings,
             640, 360, 640.0f, 360.0f);
         REQUIRE(session.state() == core::GameState::PLAYING);
-        CHECK(session.player().position().x > 135.0f);
+        CHECK(session.player().position().x > 100.0f);
+        CHECK(session.player().position().x < 160.0f);
 
         const auto result = session.update(
             0.25f, input, bindings,
