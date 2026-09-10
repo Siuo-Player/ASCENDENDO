@@ -178,8 +178,9 @@ GameSessionUpdateResult GameSession::update(float dt,
         } else {
             simulation_.advance(safeDt, input, bindings, player_, world_, level_);
 
-            if (player_.position().y >
-                campaignRuntime_.currentSpawnY() - logicalHeight) {
+            const float streamTriggerY =
+                campaignRuntime_.currentSpawnY() - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
+            if (player_.position().y >= streamTriggerY) {
                 campaignRuntime_.streamNextLevel(level_, logicalWidth);
             }
 
