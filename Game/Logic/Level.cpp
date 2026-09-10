@@ -11,6 +11,13 @@ float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY
     hasFlag = false;
     name = data.name;
 
+    if (!m_spawnInitialized) {
+        spawnPosition = data.spawnPosition.value_or(
+            Vec2{config::LOGICAL_WIDTH / 2.0f, 40.0f});
+        spawnPosition.y += offsetY;
+        m_spawnInitialized = true;
+    }
+
     float highestY = offsetY;
     for (const auto& localBounds : data.platforms) {
         if (localBounds.min.x < 0.0f || localBounds.max.x > maxWidth) {
