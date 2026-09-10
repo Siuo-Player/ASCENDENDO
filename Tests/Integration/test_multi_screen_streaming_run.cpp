@@ -27,6 +27,34 @@ void removeFile(const std::filesystem::path& path) {
     std::filesystem::remove(path, ec);
 }
 
+void runFullChargeJump(GameSession& session,
+                       InputManager& input,
+                       const core::KeyBindings& bindings) {
+    input.injectRawState(false, false, true, true, false);
+    session.update(0.25f, input, bindings, 640, 360, 640.0f, 360.0f);
+    session.update(0.15f, input, bindings, 640, 360, 640.0f, 360.0f);
+
+    input.injectRawState(false, false, false, false, true);
+    session.update(config::FIXED_STEP, input, bindings,
+                   640, 360, 640.0f, 360.0f);
+}
+
+bool waitForGroundedY(GameSession& session,
+                      InputManager& input,
+                      const core::KeyBindings& bindings,
+                      float expectedY) {
+    for (int frame = 0; frame < 120; ++frame) {
+        input.injectRawState(false, false, false, false, false);
+        session.update(config::FIXED_STEP, input, bindings,
+                       640, 360, 640.0f, 360.0f);
+        if (session.player().isGrounded() &&
+            session.player().position().y == doctest::Approx(expectedY)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 TEST_SUITE("MultiScreenStreamingRun") {
@@ -35,16 +63,17 @@ TEST_SUITE("MultiScreenStreamingRun") {
             "ascendendo-stream-run-first.lvl",
             "NAME Stream First\n"
             "SCREENS 1\n"
-            "SPAWN 100 20\n"
-            "PLATFORM 0 4 640 16\n"
-            "PLATFORM 0 180 640 16\n");
+            "SPAWN 100 60\n"
+            "PLATFORM 0 44 640 16\n"
+            "PLATFORM 0 120 640 16\n"
+            "PLATFORM 0 220 640 16\n");
         const auto finalLevel = writeLevel(
             "ascendendo-stream-run-final.lvl",
             "NAME Stream Final\n"
             "SCREENS 1\n"
-            "SPAWN 100 20\n"
+            "SPAWN 100 60\n"
             "PLATFORM 0 4 640 16\n"
-            "FLAG 0 40 640 32\n");
+            "FLAG 0 20 640 32\n");
         const auto runsPath = std::filesystem::temp_directory_path() /
             "ascendendo-stream-run.csv";
         removeFile(runsPath);
@@ -57,73 +86,37 @@ TEST_SUITE("MultiScreenStreamingRun") {
 
         REQUIRE(session.state() == core::GameState::PLAYING);
         CHECK(session.player().position().x == doctest::Approx(100.0f));
-        CHECK(session.player().position().y == doctest::Approx(20.0f));
-        CHECK(session.level().platformCount() == 2);
+        CHECK(session.player().position().y == doctest::Approx(60.0f));
+        CHECK(session.level().platformCount() == 3);
         CHECK_FALSE(session.level().hasFlag);
 
         InputManager input;
         core::KeyBindings bindings;
 
-        // Charge for the full configured 0.4 s, split around the runtime's
-        // 0.25 s frame cap, then release. This produces the strongest normal
-        // jump without changing any movement or physics constants.
-        input.injectRawState(false, false, true, true, false);
-        session.update(0.25f, input, bindings, 640, 360, 640.0f, 360.0f);
-        session.update(0.15f, input, bindings, 640, 360, 640.0f, 360.0f);
+        // First reachable step: spawn at y=60 -> platform top 120.
+        runFullChargeJump(session, input, bindings);
+        REQUIRE(waitForGroundedY(session, input, bindings, 136.0f));
 
-        input.injectRawState(false, false, false, false, true);
-        session.update(
-            config::FIXED_STEP, input, bindings,
-            640, 360, 640.0f, 360.0f);
+        // Second jump reaches the next platform and crosses the streaming
+        // preload threshold (180) before landing on the y=220 platform.
+        runFullChargeJump(session, input, bindings);
+        CHECK(session.level().platformCount() == 4);
+        CHECK(session.level().hasFlag);
+        CHECK(session.player().position().y < config::LOGICAL_HEIGHT);
+        REQUIRE(waitForGroundedY(session, input, bindings, 236.0f));
 
-        bool streamedBeforeBoundary = false;
-        for (int frame = 0; frame < 120; ++frame) {
-            input.injectRawState(false, false, false, false, false);
-            session.update(
-                config::FIXED_STEP, input, bindings,
-                640, 360, 640.0f, 360.0f);
-
-            if (session.level().platformCount() == 3) {
-                streamedBeforeBoundary = true;
-                CHECK(session.player().position().y < config::LOGICAL_HEIGHT);
-                CHECK(session.level().hasFlag);
-                break;
-            }
-        }
-
-        REQUIRE(streamedBeforeBoundary);
-
-        // The first elevated platform remains authoritative after streaming;
-        // the player must be able to settle on it without a position jump.
-        bool landedOnTransitionPlatform = false;
-        for (int frame = 0; frame < 120; ++frame) {
-            input.injectRawState(false, false, false, false, false);
-            session.update(
-                config::FIXED_STEP, input, bindings,
-                640, 360, 640.0f, 360.0f);
-            if (session.player().isGrounded() &&
-                session.player().position().y == doctest::Approx(196.0f)) {
-                landedOnTransitionPlatform = true;
-                break;
-            }
-        }
-        REQUIRE(landedOnTransitionPlatform);
-
-        // A second full charge crosses from the first screen into the final
-        // streamed level; its wide FLAG makes completion independent of
-        // horizontal drift while still exercising real collision/completion.
-        input.injectRawState(false, false, true, true, false);
-        session.update(0.25f, input, bindings, 640, 360, 640.0f, 360.0f);
-        session.update(0.15f, input, bindings, 640, 360, 640.0f, 360.0f);
-        input.injectRawState(false, false, false, false, true);
+        // The final streamed platform is at world y=364. From y=236, the
+        // maximum jump arc is sufficient to land on it; the adjacent final
+        // FLAG overlaps the player's standing body and completes the run.
+        runFullChargeJump(session, input, bindings);
 
         bool completed = false;
         float completionTime = 0.0f;
         for (int frame = 0; frame < 120; ++frame) {
+            input.injectRawState(false, false, false, false, false);
             const auto result = session.update(
                 config::FIXED_STEP, input, bindings,
                 640, 360, 640.0f, 360.0f);
-            input.injectRawState(false, false, false, false, false);
             if (result.campaignCompleted) {
                 completed = true;
                 completionTime = result.completionElapsedSeconds;
