@@ -1,11 +1,11 @@
 # ASCENDENDO — Roadmap operacional vivo
 
-**Fonte canónica:** este ficheiro. Snapshots `ROADMAP_YYYY-MM-DD.md` e `CURRENT_STATUS_YYYY-MM-DD.md` são apenas histórico.
+**Fonte canónica:** este ficheiro. Os restantes roadmaps/status datados são histórico, não estado actual.
 
 ## Regra de prioridade
 
 ```text
-correcção que bloqueia o jogador
+bloqueio real do jogador
 → conteúdo jogável
 → validação física
 → playtest humano
@@ -14,76 +14,83 @@ correcção que bloqueia o jogador
 → release
 ```
 
-Não adicionar nova infraestrutura quando uma melhoria equivalente pode ser feita usando o que já existe. O objectivo de cada tranche é aumentar a qualidade ou a quantidade de jogo jogável.
+A fundação existente é suficiente para produzir jogo. Não abrir novas camadas de infraestrutura sem uma necessidade demonstrada pelo conteúdo ou por um bug reproduzível.
 
-## 1. Produto jogável — AGORA
+## 1. Conteúdo — prioridade imediata
 
-### 1.1 Campanha
+A campanha activa tem agora **15 níveis** (`inicio.lvl` … `nivel_15.lvl`). Os níveis 10–15 acrescentam uma segunda tranche de conteúdo, usando apenas o formato `.lvl` e as regras físicas existentes.
 
-Aumentar a campanha progressivamente usando o formato `.lvl` existente e o editor já integrado. Cada nível novo deve ser carregável pelo runtime e aprovado pelo validador físico.
-
-**Definition of done:** o nível está em `campaign.txt`, passa `ai_validator.py --campaign`, inicia no runtime e foi verificado manualmente.
-
-### 1.2 Level design
-
-Criar sequências com dificuldade crescente, evitando apenas repetir o mesmo salto. Variar distância horizontal, largura das plataformas, ritmo e informação visual. O Commitment Jump continua a ser a regra central.
-
-### 1.3 Playtesting
-
-Depois de uma tranche de níveis, obter runs humanas externas. Registar apenas evidência útil: onde o jogador falha, o que não compreende, duração, frustração e se a mecânica incentiva nova tentativa.
-
-## 2. Editor — CONSOLIDAR
-
-O editor `EDITOR` e o `CAMPAIGN_EDITOR` já existem em `main`. Não reabrir uma fase conceptual de editor. Corrigir apenas lacunas observadas durante autoria real: ergonomia, preview, undo/redo, save e validação.
-
-## 3. Apresentação — USAR, NÃO EXPANDIR
-
-O compositor de plataformas e a cadeia `RenderSnapshot` já suportam apresentação semântica e adjacência cross-region. Congelar novas extensões até haver conteúdo suficiente para revelar uma necessidade concreta.
-
-Assets externos seguem a regra mínima:
+**Definition of done por nível:**
 
 ```text
-ficheiro exacto → licença/proveniência → dimensões → hash → teste visual → runtime
+entra em campaign.txt
+→ passa ai_validator.py --campaign
+→ carrega no runtime
+→ é jogado manualmente
+→ falhas e problemas de leitura ficam registados como evidência de produto
 ```
 
-Um candidato sem binário concreto não é tratado como asset integrado.
+O validador físico é um filtro de segurança, não uma prova de diversão, dificuldade adequada ou completabilidade humana.
 
-## 4. Engenharia — CORRIGIR SÓ COM EVIDÊNCIA
+## 2. Design de níveis — agora com variedade real
 
-A fundação Vulkan, física, replay e CI já é suficientemente madura para suportar desenvolvimento de conteúdo.
+A próxima tranche deve variar distância, largura, ritmo, recuperação e legibilidade. Não basta aumentar a quantidade repetindo o mesmo zig-zag. O Commitment Jump de 60° mantém-se como mecânica central; não criar novas mecânicas só para mascarar falta de conteúdo.
 
-Prioridades técnicas reais:
+## 3. Playtest humano — gate antes de nova arquitectura
 
-- camera bounds/subpixel quando existir uma falha reproduzível;
-- sanitizer coverage no caminho de integração de `main`;
-- profiling antes de qualquer cache/batching/solver pruning;
-- seams de fault injection Vulkan apenas se trouxerem valor de teste mensurável.
+A prioridade seguinte é obter runs de pessoas fora do desenvolvimento. Medir apenas sinais que possam mudar o jogo: onde falham, onde hesitam, duração, mortes/restarts, compreensão da rota e vontade de tentar novamente.
 
-## 5. Release
+Sem evidência humana, não declarar a mecânica “divertida”, a dificuldade “correcta” ou a apresentação “legível”.
 
-Só depois de existir uma pequena campanha coerente e jogada por pessoas externas:
+## 4. Editor — consolidar, não recomeçar
+
+`EDITOR` e `CAMPAIGN_EDITOR` já existem. Trabalhar neles apenas quando a autoria dos 15 níveis revelar uma lacuna concreta em preview, colocação, save, undo/redo ou validação.
+
+## 5. Apresentação e assets — usar o que existe
+
+O compositor e a cadeia de apresentação existentes devem ser exercitados pelo conteúdo actual, não ampliados preventivamente.
+
+Para assets externos, a cadeia mínima é:
 
 ```text
-build reproduzível
+ficheiro concreto
+→ licença/proveniência
+→ dimensões
+→ SHA-256
+→ revisão visual
+→ integração
+```
+
+Um candidato sem binário concreto continua a ser investigação, nunca “asset integrado”.
+
+## 6. Engenharia — só por evidência
+
+Só corrigir/expandir a fundação quando existir um problema reproduzível, uma falha de integração ou uma medição que justifique a alteração. Profiling precede optimização; incidentes transitórios permanecem no dev log em vez de gerar post-mortems novos.
+
+## 7. Release
+
+A ordem é:
+
+```text
+campanha coerente
+→ playtest externo
 → assets concretos
 → instalação simples
-→ execução limpa
+→ build reproduzível
 → release Windows
-→ decidir posteriormente distribuição Linux/macOS
+→ avaliar Linux/macOS com base em necessidade real
 ```
 
-## Métricas
-
-Os números que importam agora são:
+## Métricas de produto
 
 - níveis activos jogáveis;
 - minutos de gameplay únicos;
-- percentagem da campanha completável;
+- percentagem de campanha completável;
 - jogadores externos que completam a campanha;
 - bugs de gameplay reproduzíveis.
 
-Commits, número de auditorias e número de documentos não são métricas de produto.
+Commits, PRs, documentos e auditorias não são métricas de progresso do jogo.
 
 ## Anti-fragmentação
 
-Não criar novos roadmaps, status snapshots ou post-mortems por rotina. Alterar este ficheiro quando a prioridade muda. O `git log` preserva a evolução histórica.
+Não criar novos roadmaps, status snapshots ou post-mortems por rotina. Este é o documento vivo; o histórico fica no Git.
