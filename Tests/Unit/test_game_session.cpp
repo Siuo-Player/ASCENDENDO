@@ -37,7 +37,7 @@ TEST_SUITE("GameSession") {
 
     TEST_CASE("enters PLAYING with a valid campaign and reset gameplay state") {
         logic::GameSession session(
-            {std::filesystem::path("Game/Assets/Levels/inicio.lvl")},
+            {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
             "campaign-id",
             "runs.csv");
 
@@ -48,6 +48,7 @@ TEST_SUITE("GameSession") {
         CHECK(session.player().position().x == doctest::Approx(320.0f));
         CHECK(session.player().position().y == doctest::Approx(40.0f));
         CHECK(session.level().platformCount() > 0);
+        CHECK(session.level().hasFlag);
     }
 
     TEST_CASE("uses authored spawn for a real level run") {
@@ -56,7 +57,8 @@ TEST_SUITE("GameSession") {
             "NAME Authored Spawn\n"
             "SCREENS 1\n"
             "SPAWN 123.25 57.50\n"
-            "PLATFORM 80 40 160 20\n");
+            "PLATFORM 80 40 160 20\n"
+            "FLAG 80 80 160 40\n");
 
         logic::GameSession session({path}, "campaign-id", "runs.csv");
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
@@ -74,7 +76,8 @@ TEST_SUITE("GameSession") {
         const auto path = writeTestLevel(
             "ascendendo-legacy-spawn-runtime.lvl",
             "NAME Legacy Spawn\n"
-            "PLATFORM 80 40 160 20\n");
+            "PLATFORM 80 40 160 20\n"
+            "FLAG 80 80 160 40\n");
 
         logic::GameSession session({path}, "campaign-id", "runs.csv");
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
@@ -124,7 +127,7 @@ TEST_SUITE("GameSession") {
 
     TEST_CASE("invalid frame delta does not contaminate elapsed time or simulation") {
         logic::GameSession session(
-            {std::filesystem::path("Game/Assets/Levels/inicio.lvl")},
+            {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
             "campaign-id",
             "runs.csv");
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
