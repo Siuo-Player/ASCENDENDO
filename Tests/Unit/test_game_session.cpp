@@ -44,6 +44,53 @@ TEST_SUITE("GameSession") {
         CHECK(session.elapsedTime() == doctest::Approx(0.0f));
     }
 
+    TEST_CASE("does not stream the next level at the initial spawn") {
+        logic::GameSession session(
+            {
+                std::filesystem::path("Game/Assets/Levels/inicio.lvl"),
+                std::filesystem::path("Game/Assets/Levels/zigzag.lvl")
+            },
+            "campaign-id",
+            "runs.csv");
+
+        session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+        REQUIRE(session.state() == core::GameState::PLAYING);
+        const int initialPlatforms = session.level().platformCount();
+
+        logic::InputManager input;
+        core::KeyBindings bindings;
+        session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
+
+        CHECK(session.player().position().y == doctest::Approx(40.0f));
+        CHECK(session.level().platformCount() == initialPlatforms);
+    }
+
+    TEST_CASE("streams the next level only after the preload trigger") {
+        logic::GameSession session(
+            {
+                std::filesystem::path("Game/Assets/Levels/inicio.lvl"),
+                std::filesystem::path("Game/Assets/Levels/zigzag.lvl")
+            },
+            "campaign-id",
+            "runs.csv");
+
+        session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+        REQUIRE(session.state() == core::GameState::PLAYING);
+        const int initialPlatforms = session.level().platformCount();
+
+        logic::InputManager input;
+        core::KeyBindings bindings;
+        session.player().body.position.y =
+            config::LOGICAL_HEIGHT - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE - 1.0f;
+        session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
+        CHECK(session.level().platformCount() == initialPlatforms);
+
+        session.player().body.position.y =
+            config::LOGICAL_HEIGHT - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
+        session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
+        CHECK(session.level().platformCount() > initialPlatforms);
+    }
+
     TEST_CASE("failed specific level load preserves active session state") {
         logic::GameSession session(
             {
