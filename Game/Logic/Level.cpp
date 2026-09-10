@@ -25,10 +25,11 @@ float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY
                       << "': Plataforma fora dos limites laterais! X="
                       << localBounds.min.x << "\n";
         }
-        if (localBounds.max.y > config::LOGICAL_HEIGHT) {
+        if (localBounds.max.y >
+            static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT) {
             std::cerr << "[AVISO] Nivel '" << name
-                      << "': Plataforma ultrapassa uma tela de altura (Y_local="
-                      << localBounds.max.y << " > " << config::LOGICAL_HEIGHT << ")\n";
+                      << "': Plataforma ultrapassa a altura declarada do nivel (Y_local="
+                      << localBounds.max.y << ")\n";
         }
 
         addPlatform(localBounds.min.x,
@@ -45,17 +46,21 @@ float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY
             {data.flag->max.x, data.flag->max.y + offsetY}
         };
 
-        if (data.flag->max.y > config::LOGICAL_HEIGHT) {
+        if (data.flag->max.y >
+            static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT) {
             std::cerr << "[AVISO] Nivel '" << name
-                      << "': FLAG ultrapassa uma tela de altura (Y_local="
-                      << data.flag->max.y << " > " << config::LOGICAL_HEIGHT << ")\n";
+                      << "': FLAG ultrapassa a altura declarada do nivel (Y_local="
+                      << data.flag->max.y << ")\n";
         }
         highestY = std::max(highestY, data.flag->max.y + offsetY);
     }
 
+    const float chunkHeight =
+        static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT;
     std::cout << "[ASCENDENDO] Chunk colado em Y=" << offsetY
-              << ". O topo do conteudo e " << highestY << "\n";
-    return offsetY + config::LOGICAL_HEIGHT;
+              << ". O topo do conteudo e " << highestY
+              << "; altura declarada=" << chunkHeight << "\n";
+    return offsetY + chunkHeight;
 }
 
 void Level::addPlatform(float x, float y, float w, float h) {
