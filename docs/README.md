@@ -1,36 +1,20 @@
-# Documentação técnica do ASCENDENDO
+# Documentação — ASCENDENDO
 
-Esta pasta é organizada por **função documental**, não por uma coleção de fases ou branches históricas.
+A documentação acompanha o produto; não é um segundo sistema de gestão.
 
-## Fontes normativas
+## Essencial
 
-- [Roadmap](ROADMAP.md) — **fonte única da ordem de execução**.
-- [00-meta](00-meta/README.md) — processo, gestão, decisões de produto e continuidade.
-- [01-architecture](01-architecture/README.md) — arquitetura, ownership, dívida e fronteiras.
-- [02-engineering](02-engineering/README.md) — CI, testes e políticas de manutenção.
+- [Roadmap](ROADMAP.md) — única fonte viva de planeamento e estado.
+- [Architecture](ARCHITECTURE.md) — arquitectura técnica estável.
+- [Product Vision](PRODUCT_VISION.md) — propósito e direcção do jogo.
+- [Level Format](LEVEL_FORMAT.md) — formato oficial dos níveis.
+- [Testing](TESTING.md) — testes e validação.
+- [Release](RELEASE.md) — requisitos de distribuição.
 
-## Domínio do jogo
+## Referência
 
-- [03-gameplay-editor](03-gameplay-editor/README.md) — níveis, editor, campanhas e UX.
-- [04-research](04-research/README.md) — papers, referências técnicas e investigação.
-- [05-work-packages](05-work-packages/README.md) — contratos de implementação por tranche.
+Documentos de gameplay/editor, pesquisa, referências científicas, licenças e dívida técnica permanecem apenas quando têm valor contínuo para o produto.
 
-## Histórico
+O Git guarda o histórico de implementação. Não se criam snapshots de estado, roadmaps datados, work packages concluídos ou relatórios de CI como documentação permanente.
 
-- [99-history](99-history/README.md) — snapshots, changelogs e evidência histórica específica.
-
-## Regra de leitura antes de uma branch
-
-1. `ROADMAP.md`
-2. `docs/00-meta/` — processo e decisões
-3. `docs/01-architecture/` — fronteiras e dívida
-4. `docs/04-research/` + `Siuo-Player/Siuo-Player-PROJECT-STUDIES/ASCENDENDO` — evidência externa/consultiva
-5. work package relevante
-
-## Regra de manutenção
-
-Os ficheiros que ainda estão no topo de `docs/` não foram renomeados nesta tranche: o objetivo foi criar uma classificação estável **sem quebrar links existentes nem alterar conteúdo**. A migração física dos ficheiros será feita depois, em bloco mecânico e verificável.
-
-O `PROJECT-STUDIES/ASCENDENDO` é **somente leitura** a partir deste projeto.
-
-Cada descoberta material deve ser documentada antes da implementação, a validação deve produzir evidência observável e a documentação deve refletir o resultado real.
+A investigação em `RESEARCH_INBOX/`, `Research/` e no repositório `Siuo-Player/Siuo-Player-PROJECT-STUDIES` é consultiva; o código do ASCENDENDO continua a ser a autoridade sobre o comportamento implementado.
