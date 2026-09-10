@@ -32,6 +32,13 @@ bool hasValidSpawn(const Vec2& spawn, double levelHeight) noexcept {
 
 bool hasValidScreenCount(std::size_t screenCount, double& levelHeight) noexcept {
     if (screenCount == 0) return false;
+
+    constexpr std::size_t screenHeight =
+        static_cast<std::size_t>(config::LOGICAL_HEIGHT);
+    if (screenCount > std::numeric_limits<std::size_t>::max() / screenHeight) {
+        return false;
+    }
+
     levelHeight = static_cast<double>(screenCount) *
                   static_cast<double>(config::LOGICAL_HEIGHT);
     return std::isfinite(levelHeight) &&
