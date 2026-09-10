@@ -66,12 +66,52 @@ TEST_SUITE("CampaignRuntime") {
         CHECK(runtime.currentLevelIndex() == 3);
     }
 
-    TEST_CASE("Reset permite recomecar a campanha") {
-        CampaignRuntime runtime({"Game/Assets/Levels/inicio.lvl"});
+    TEST_CASE("SCREENS 2 ocupa duas screens antes do proximo chunk") {
+        const auto tallPath = std::filesystem::temp_directory_path() /
+            "ascendendo-two-screen-runtime.lvl";
+        const auto finalPath = std::filesystem::temp_directory_path() /
+            "ascendendo-two-screen-final.lvl";
+
+        writeLevel(tallPath,
+                   "NAME Tall\n"
+                   "SCREENS 2\n"
+                   "SPAWN 320 40\n"
+                   "PLATFORM 100 680 160 20\n");
+        writeLevel(finalPath,
+                   "NAME Final\n"
+                   "SCREENS 1\n"
+                   "PLATFORM 100 4 160 20\n"
+                   "FLAG 100 40 160 40\n");
+
+        CampaignRuntime runtime({tallPath, finalPath});
         Level level;
 
         REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 1);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(720.0f));
+        REQUIRE(level.platformCount() == 1);
+        CHECK(level.platforms()[0].bounds.min.y == doctest::Approx(680.0f));
+
+        REQUIRE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == 2);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(1080.0f));
+        REQUIRE(level.platformCount() == 2);
+        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(724.0f));
+        CHECK(level.hasFlag);
+
+        std::error_code ec;
+        std::filesystem::remove(tallPath, ec);
+        std::filesystem::remove(finalPath, ec);
+    }
+
+    TEST_CASE("Reset permite recomecar a campanha") {
+        CampaignRuntime runtime({"Game/Assets/Levels/precipicio.lvl"});
+        Level level;
+
+        REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == 1);
+        CHECK_FALSE(runtime.hasMoreLevels());
+        CHECK(level.hasFlag);
 
         runtime.reset();
         CHECK(runtime.currentLevelIndex() == 0);
@@ -82,7 +122,8 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Nivel inexistente nao e consumido") {
         CampaignRuntime runtime({
             "Game/Assets/Levels/inicio.lvl",
-            "Game/Assets/Levels/nao-existe.lvl"
+            "Game/Assets/Levels/nao-existe.lvl",
+            "Game/Assets/Levels/precipicio.lvl"
         });
         Level level;
 
@@ -135,7 +176,8 @@ TEST_SUITE("CampaignRuntime") {
 
         CampaignRuntime runtime({
             "Game/Assets/Levels/inicio.lvl",
-            invalidPath
+            invalidPath,
+            "Game/Assets/Levels/precipicio.lvl"
         });
         Level level;
 
@@ -147,7 +189,7 @@ TEST_SUITE("CampaignRuntime") {
         CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == indexBefore);
         CHECK(runtime.currentSpawnY() == doctest::Approx(spawnBefore));
-        CHECK(runtime.levelCount() == 2);
+        CHECK(runtime.levelCount() == 3);
         CHECK(level.platformCount() == platformsBefore);
         CHECK(runtime.hasMoreLevels());
 
