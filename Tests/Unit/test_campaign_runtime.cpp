@@ -67,11 +67,13 @@ TEST_SUITE("CampaignRuntime") {
     }
 
     TEST_CASE("Reset permite recomecar a campanha") {
-        CampaignRuntime runtime({"Game/Assets/Levels/inicio.lvl"});
+        CampaignRuntime runtime({"Game/Assets/Levels/precipicio.lvl"});
         Level level;
 
         REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 1);
+        CHECK_FALSE(runtime.hasMoreLevels());
+        CHECK(level.hasFlag);
 
         runtime.reset();
         CHECK(runtime.currentLevelIndex() == 0);
@@ -82,7 +84,8 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Nivel inexistente nao e consumido") {
         CampaignRuntime runtime({
             "Game/Assets/Levels/inicio.lvl",
-            "Game/Assets/Levels/nao-existe.lvl"
+            "Game/Assets/Levels/nao-existe.lvl",
+            "Game/Assets/Levels/precipicio.lvl"
         });
         Level level;
 
@@ -113,7 +116,7 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Nivel inicial semanticamente invalido e rejeitado") {
         const auto path = std::filesystem::temp_directory_path() /
             "ascendendo-semantic-invalid-initial.lvl";
-        writeLevel(path, "NAME Invalid\nPLATFORM 0 0 -16 20\n");
+        writeLevel(path, "NAME Invalid\nPLATFORM 0 0 -16 20\nFLAG 0 40 16 16\n");
 
         CampaignRuntime runtime({path});
         Level level;
@@ -128,6 +131,63 @@ TEST_SUITE("CampaignRuntime") {
         std::filesystem::remove(path, ec);
     }
 
+    TEST_CASE("FLAG em nivel nao final e rejeitada") {
+        const auto path = std::filesystem::temp_directory_path() /
+            "ascendendo-non-final-flag.lvl";
+        writeLevel(path, "NAME NonFinal\nPLATFORM 0 0 100 20\nFLAG 10 40 16 16\n");
+
+        CampaignRuntime runtime({
+            "Game/Assets/Levels/inicio.lvl",
+            path,
+            "Game/Assets/Levels/precipicio.lvl"
+        });
+        Level level;
+
+        REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == 1);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(config::LOGICAL_HEIGHT));
+        CHECK_FALSE(level.hasFlag);
+        CHECK(runtime.hasMoreLevels());
+
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+
+    TEST_CASE("nivel final com FLAG e aceito") {
+        const auto path = std::filesystem::temp_directory_path() /
+            "ascendendo-final-flag.lvl";
+        writeLevel(path, "NAME Final\nPLATFORM 0 0 100 20\nFLAG 10 40 16 16\n");
+
+        CampaignRuntime runtime({path});
+        Level level;
+
+        REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK_FALSE(runtime.hasMoreLevels());
+        CHECK(level.hasFlag);
+        CHECK(level.flagBounds.min.x == doctest::Approx(10.0f));
+
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+
+    TEST_CASE("nivel final sem FLAG e rejeitado") {
+        const auto path = std::filesystem::temp_directory_path() /
+            "ascendendo-final-without-flag.lvl";
+        writeLevel(path, "NAME MissingFlag\nPLATFORM 0 0 100 20\n");
+
+        CampaignRuntime runtime({path});
+        Level level;
+
+        CHECK_FALSE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK(runtime.currentLevelIndex() == 0);
+        CHECK(runtime.currentSpawnY() == doctest::Approx(0.0f));
+        CHECK_FALSE(level.hasFlag);
+
+        std::error_code ec;
+        std::filesystem::remove(path, ec);
+    }
+
     TEST_CASE("Chunk semanticamente invalido nao e consumido") {
         const auto invalidPath = std::filesystem::temp_directory_path() /
             "ascendendo-semantic-invalid-chunk.lvl";
@@ -135,7 +195,8 @@ TEST_SUITE("CampaignRuntime") {
 
         CampaignRuntime runtime({
             "Game/Assets/Levels/inicio.lvl",
-            invalidPath
+            invalidPath,
+            "Game/Assets/Levels/precipicio.lvl"
         });
         Level level;
 
@@ -147,7 +208,7 @@ TEST_SUITE("CampaignRuntime") {
         CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == indexBefore);
         CHECK(runtime.currentSpawnY() == doctest::Approx(spawnBefore));
-        CHECK(runtime.levelCount() == 2);
+        CHECK(runtime.levelCount() == 3);
         CHECK(level.platformCount() == platformsBefore);
         CHECK(runtime.hasMoreLevels());
 
