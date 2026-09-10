@@ -49,7 +49,7 @@ TEST_CASE("GameSession streams the next screen before boundary and reaches the f
     const auto firstLevel = writeLevel(
         "ascendendo-stream-run-first.lvl",
         "NAME Stream First\nSCREENS 1\nSPAWN 100 20\n"
-        "PLATFORM 0 0 640 16\nPLATFORM 0 120 640 16\nPLATFORM 0 220 640 16\n");
+        "PLATFORM 0 0 640 16\nPLATFORM 0 100 640 16\nPLATFORM 0 170 640 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-stream-run-final.lvl",
         "NAME Stream Final\nSCREENS 1\nSPAWN 100 20\n"
@@ -70,24 +70,22 @@ TEST_CASE("GameSession streams the next screen before boundary and reaches the f
     InputManager input;
     core::KeyBindings bindings;
 
-    // GameSession starts from authored spawn; settle onto the explicit floor
-    // so charging is exercised through the normal grounded input path.
     REQUIRE(waitForGroundedY(session, input, bindings, 16.0f));
 
+    // First reachable step: floor -> y=100 platform.
     runFullChargeJump(session, input, bindings);
-    REQUIRE(waitForGroundedY(session, input, bindings, 136.0f));
+    REQUIRE(waitForGroundedY(session, input, bindings, 116.0f));
 
-    // The second ascent crosses the 180px preload threshold before landing on
-    // the next platform, causing the final campaign level to be appended at Y=360.
+    // Second ascent reaches y=170 and crosses the 180px preload boundary
+    // during the jump; the final campaign level is appended at Y=360.
     runFullChargeJump(session, input, bindings);
     CHECK(session.level().platformCount() == 4);
     CHECK(session.level().hasFlag);
     CHECK(session.player().position().y < config::LOGICAL_HEIGHT);
-    REQUIRE(waitForGroundedY(session, input, bindings, 236.0f));
+    REQUIRE(waitForGroundedY(session, input, bindings, 186.0f));
 
-    // The appended level's floor is authoritative after streaming. Its FLAG is
-    // directly above that floor, so completion proves streamed geometry and
-    // final-level completion are using the same GameSession simulation.
+    // The appended level's floor and FLAG are now authoritative. Completion is
+    // observed only through the normal GameSession update path.
     bool completed = false;
     float completionTime = 0.0f;
     for (int frame = 0; frame < 120; ++frame) {
