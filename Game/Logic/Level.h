@@ -17,6 +17,7 @@ public:
     std::string name = "Sem Nome";
     bool hasFlag = false;
     AABB flagBounds;
+    Vec2 spawnPosition = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
 
     // Append one local LevelData chunk into world coordinates.
     // Returns offsetY + LOGICAL_HEIGHT so CampaignRuntime can stream fixed-height chunks.
@@ -33,11 +34,14 @@ public:
         name = "Sem Nome";
         hasFlag = false;
         flagBounds = {};
+        spawnPosition = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+        m_spawnInitialized = false;
     }
 
 private:
     static constexpr float SKIN_WIDTH = 1.0f;
     std::vector<Platform> m_platforms;
+    bool m_spawnInitialized = false;
 };
 
 } // namespace logic
