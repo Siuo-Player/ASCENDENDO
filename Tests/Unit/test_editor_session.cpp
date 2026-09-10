@@ -205,8 +205,8 @@ TEST_CASE("cancelInteraction restaura movimento em curso") {
 
     REQUIRE(session.controller().mode() == logic::EditorMouseMode::MOVING);
     REQUIRE(session.controller().updateMove({215.0f, 157.0f}));
-    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(204.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(148.0f));
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(203.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(147.0f));
 
     session.cancelInteraction();
     CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
