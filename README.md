@@ -2,82 +2,56 @@
 
 **2D vertical precision platformer com motor Vulkan próprio.**
 
-ASCENDENDO é um platformer de progressão vertical baseado no **Commitment Jump**: o jogador escolhe a força do salto, lança-se a um ângulo fixo e não corrige a trajectória no ar. A mecânica transforma limitação em precisão: observar, medir, decidir e assumir o salto.
+ASCENDENDO é construído à volta do **Commitment Jump**: o jogador escolhe a força do salto, lança-se a um ângulo fixo de 60° e não corrige a trajectória no ar. A ideia central é transformar limitação em precisão: observar, medir, decidir e assumir o salto.
 
 **Autor:** Rafael Gomes Bernardo  
-**Assistência de desenvolvimento:** Claude (Anthropic) e Gemini (Google)  
-**Repositório:** https://github.com/Siuo-Player/ASCENDENDO
+**Assistência de desenvolvimento:** Claude (Anthropic) e Gemini (Google)
 
-## Estado atual
+## Estado actual
 
-O `main` já ultrapassou a antiga descrição de “Fase 9.3”. O código actual inclui motor Vulkan/GLFW, física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, replay/save states, menu/pausa, controlos reconfiguráveis, **editor de níveis integrado**, **editor de campanha**, validação física automática, validação assíncrona no editor, compositor 8-neighbour com adjacência cross-region e swapchain fail-closed.
+O `main` contém um jogo executável com:
 
-A referência operacional viva é [`docs/00-meta/ROADMAP.md`](docs/00-meta/ROADMAP.md), e o estado actual está em [`docs/00-meta/CURRENT_STATUS.md`](docs/00-meta/CURRENT_STATUS.md). Snapshots datados são histórico, não a fonte de verdade.
+- simulação determinística a 60 Hz e Commitment Jump;
+- progressão vertical por níveis, câmara e transições entre ecrãs;
+- replay/save states e menus/pausa;
+- controlos reconfiguráveis;
+- editor de níveis integrado e editor de campanha;
+- validação física automática e validação no editor;
+- pipeline de apresentação de plataformas e captura determinística;
+- campanha actualmente com **15 níveis** em `Game/Assets/Levels/campaign.txt`.
 
-## Estrutura principal
+O principal trabalho em falta é **conteúdo jogável, qualidade da experiência e validação humana**. A infraestrutura existente só deve crescer quando um problema real do jogo o exigir.
 
-```text
-ASCENDENDO/
-├── Game/
-│   ├── Core/              # estado, acções, bindings, viewport, bootstrap
-│   ├── Graphics/          # Vulkan, renderer, camera, apresentação
-│   ├── Logic/             # gameplay, física, campanha, editor, replay
-│   └── Assets/Levels/     # campanha e níveis
-├── Development/
-│   ├── AI_Validation/     # simulador, solver e level generator/validator
-│   ├── LevelEditor/       # validação standalone
-│   └── Runs/              # dados gerados de execução local
-├── Tests/                 # unit + integration
-├── docs/00-meta/          # roadmap/estado operacionais
-├── main.cpp
-└── Makefile
-```
+## O jogo
 
-## Jogabilidade
+A campanha sobe verticalmente. Os níveis usam plataformas estáticas, spawn e `FLAG`. A dificuldade deve nascer sobretudo da geometria, leitura espacial, posicionamento e compromisso do salto, não de controlos cada vez mais complexos.
 
-A simulação usa fixed timestep de `1/60 s` e gravidade de `-980 px/s²`. A força do salto é carregada durante um período limitado e convertida num lançamento a 60°.
+O conteúdo visual segue uma direcção simples de pixel art, com módulos de plataforma de 16×16, foreground jogável e fundos em camadas com parallax. Assets externos só entram no jogo quando a origem, licença e ficheiro exacto estiverem verificados.
 
-O jogador não recebe controlo aéreo. A decisão acontece antes do salto; a execução acontece durante o voo. A dificuldade deve vir de geometria, posicionamento, leitura visual e compromisso, não de controlos arbitrariamente complexos.
+## Editor
 
-## Editor integrado
+O editor faz parte do produto. Permite criar e alterar níveis, navegar por níveis verticais, posicionar spawn/flag e plataformas, desfazer/refazer, guardar com validação e trabalhar sem depender de ferramentas externas. O editor de campanha organiza os níveis da campanha.
 
-O editor é parte do jogo, não uma ferramenta externa. O `GameState::EDITOR` suporta edição de plataformas, spawn e flag, selecção por teclado/rato, cursor de autoria, navegação vertical em níveis maiores que um ecrã, tamanhos predefinidos, undo/redo, gravação com validação e validação assíncrona com controlo de `generation`. O `GameState::CAMPAIGN_EDITOR` ordena e abre os níveis da campanha.
+## Documentação
 
-## Níveis e campanha
+Há uma única fonte viva para o planeamento: [`docs/ROADMAP.md`](docs/ROADMAP.md).
 
-`Game/Assets/Levels/campaign.txt` define a ordem da campanha. O foco actual deixou de ser expandir infraestrutura de apresentação sem conteúdo: o próximo progresso material é **mais minutos de jogo**.
+Documentação técnica estável: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).  
+Visão e regras de produto: [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md).  
+Formato dos níveis: [`docs/LEVEL_FORMAT.md`](docs/LEVEL_FORMAT.md).  
+Testes: [`docs/TESTING.md`](docs/TESTING.md).
 
-Formato:
+O Git preserva o histórico. Não são mantidos snapshots datados, estados correntes duplicados ou work packages concluídos apenas para registar o trabalho passado.
 
-```text
-NAME Nome
-PLATFORM x y largura altura
-FLAG x y largura altura
-```
+## Build e testes
 
-O `Development/AI_Validation/ai_validator.py` executa uma verificação determinística de alcançabilidade baseada na física do jogo.
+Dependências e comandos completos estão no `Makefile` e nos workflows de CI. O projecto usa C++17+, Vulkan SDK, GLFW e Python 3 para tooling/validação.
 
-## Build
-
-É necessário C++17+, CMake, Vulkan SDK com `glslc`, GLFW 3.4 e Python 3. Dependências header-only usadas pelo projecto estão em `external/`.
-
-No Windows, `external/glfw/lib-vc2022/` não deve ser presumido como uma biblioteca versionada no Git. O caminho reprodutível é obter o commit fixado do GLFW e construí-lo localmente com CMake/MSVC, como faz o workflow Windows.
-
-## Testes e validação
-
-Testes unitários, integração e validação de campanha protegem o comportamento. Captura determinística verifica múltiplos aspect ratios e níveis, mas **não substitui playtesting humano**.
+A validação automática demonstra correção e reprodutibilidade; **não substitui playtesting humano**.
 
 ```text
-código correto → nível jogável → campanha interessante → validação humana → release
+código correcto → nível jogável → campanha interessante → playtest → release
 ```
-
-Não confundimos `CI ≠ diversão`, `captura ≠ playtest`, `metadata ≠ ficheiro binário` e `validação semântica ≠ validação física completa`.
-
-## Desenvolvimento orientado ao produto
-
-O Git é o histórico. `ROADMAP.md` e `CURRENT_STATUS.md` são documentos vivos. Não são criados snapshots datados por rotina quando já existe um documento canónico. Um incidente só recebe post-mortem formal quando houve impacto relevante, perda de dados/credenciais, bloqueio real ou uma mudança de política que justifique registo.
-
-A métrica operacional passa a ser: **níveis jogáveis e validados, minutos de gameplay únicos e jogadores externos que conseguem completar a campanha**.
 
 ## Licença
 
