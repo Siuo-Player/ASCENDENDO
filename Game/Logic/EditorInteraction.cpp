@@ -7,16 +7,12 @@ namespace logic {
 
 EditorCursor EditorInteractionController::cursorFromLogical(const Vec2& logical,
                                                               const Vec2& cameraPosition) const {
-    // A câmara permanece uma preocupação de presentation. A lógica recebe
-    // apenas a posição necessária para converter coordenadas lógicas em mundo.
     return {logical, {logical.x + cameraPosition.x,
                       logical.y + cameraPosition.y}};
 }
 
 std::size_t EditorInteractionController::hitPlatform(const Vec2& world) const {
     const auto& platforms = m_document.platforms();
-    // Iteração inversa: quando entidades se sobrepõem, a última criada fica
-    // visualmente por cima e é portanto a mais natural para selecionar.
     for (std::size_t i = platforms.size(); i-- > 0;) {
         const AABB& b = platforms[i].bounds;
         if (world.x >= b.min.x && world.x < b.max.x &&
@@ -106,22 +102,20 @@ bool EditorInteractionController::cancelMove() {
 }
 
 bool EditorInteractionController::placeSpawnAt(const Vec2& world) {
+    (void)world;
     clearSelection();
-    return m_document.setSpawnX(world.x);
+    return false;
 }
 
 bool EditorInteractionController::placeFlagAt(const Vec2& world) {
+    (void)world;
     clearSelection();
-    // Keep the goal marker small and grid-aligned while using the existing
-    // document-level final-campaign validation.
-    return m_document.setFlag(centeredStamp(world, {64.0f, 16.0f}));
+    return false;
 }
 
 bool EditorInteractionController::removeFlag() {
-    if (!m_document.hasFlag()) return false;
-    m_document.removeFlag();
-    clearSelection();
-    return true;
+    // The campaign goal is derived from the highest platform and cannot be removed.
+    return false;
 }
 
 bool EditorInteractionController::deleteAt(const Vec2& world) {
