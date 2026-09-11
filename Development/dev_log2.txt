@@ -1,0 +1,121 @@
+# dev_log2.txt — Continuação do diário de desenvolvimento
+#
+# Este ficheiro CONTINUA `Development/dev_log.txt`.
+# Não substitui nem reescreve o diário anterior: o dev_log.txt preserva o histórico
+# até ao ponto em que atingiu o seu tamanho/estado actual.
+#
+# Regra de tamanho: cada ficheiro dev_logN.txt deve ter no máximo 500 linhas.
+# Quando o ficheiro actual atingir o limite, o diário continua em dev_log(N+1).txt,
+# com uma nota equivalente no cabeçalho a indicar explicitamente a continuação.
+# As entradas dentro de cada ficheiro são append-only; não editar entradas anteriores.
+#
+# Sequência actual:
+#   dev_log.txt   -> histórico anterior
+#   dev_log2.txt  -> continuação desta sessão
+#
+# Formato de entrada:
+#   [YYYY-MM-DD HH:MM:SS]
+#   Ideia: [o que foi investigado/decidido/implementado]
+#   Implementado: [resultado, problemas e validação]
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+[2026-09-11]
+Ideia: Continuação do diário após a reorganização da documentação e expansão da campanha.
+
+Implementado:
+  - Criado este `dev_log2.txt` como continuação explícita de
+    `Development/dev_log.txt`, sem reescrever o histórico anterior.
+  - Regra de continuidade estabelecida: cada `dev_logN.txt` terá no máximo
+    500 linhas; quando o limite for atingido, a sessão seguinte continua em
+    `dev_log(N+1).txt`.
+  - O objectivo da mudança é preservar um diário granular sem voltar a criar
+    dezenas de snapshots datados ou documentos de estado corrente.
+
+[2026-09-11]
+Ideia: Auditoria externa do estado do ASCENDENDO após a consolidação documental.
+
+Implementado:
+  - Foi comparado o estado anterior (`c2819e3`) com o estado posterior da
+    ronda (`4f8102f`) por revisão externa do repositório público.
+  - A consolidação reduziu substancialmente a documentação e removeu o antigo
+    conjunto de snapshots e post-mortems datados.
+  - A campanha passou de 3 para 25 níveis.
+  - O novo roadmap passou a tratar conteúdo jogável, minutos de jogo,
+    jogadores externos, problemas corrigidos e experiência pronta para release
+    como sinais de progresso relevantes.
+  - Foi identificado, contudo, que a sincronização entre documentação e código
+    ainda podia falhar durante uma mesma sessão de trabalho.
+
+[2026-09-11]
+Ideia: Corrigir a deriva entre o estado declarado e o estado real do produto.
+
+Implementado:
+  - Verificado directamente no `main` que `campaign.txt` contém 25 níveis,
+    enquanto README/ROADMAP ainda declaravam 15.
+  - Confirmado que `docs/AI_CREDITS.md` já incluía Claude, Gemini e
+    ChatGPT/GPT-5.6 Luna.
+  - Confirmado que o modelo de progresso ainda mantinha percentagens agregadas
+    que deixavam de ser informativas perante a nova escala de conteúdo.
+  - Criada a PR #330 para sincronizar as declarações actuais e introduzir uma
+    verificação automática de consistência do estado do repositório.
+  - A verificação é deliberadamente pequena: compara factos actuais relevantes
+    do repositório com as declarações user-facing, em vez de criar snapshots ou
+    tentar medir progresso por volume de código/documentação.
+
+[2026-09-11]
+Ideia: Preservar o equilíbrio entre diário histórico e documentação viva.
+
+Implementado:
+  - A análise externa identificou que o `dev_log.txt` tinha ficado sem nova
+    entrada durante uma sessão com mudanças substanciais.
+  - Em vez de reescrever o ficheiro append-only existente apenas para acrescentar
+    texto no fim, foi adoptado o diário sequencial `dev_log2.txt`.
+  - A regra de 500 linhas impede que um único ficheiro volte a crescer para um
+    documento difícil de utilizar, mantendo ao mesmo tempo continuidade explícita
+    entre volumes.
+  - O Git continua a ser a fonte do histórico completo; estes ficheiros preservam
+    o contexto de desenvolvimento que não fica expresso apenas pelo título de
+    um commit.
+
+[2026-09-11]
+Ideia: Verificar a decisão de auto-tiling contínuo contra a prioridade de conteúdo.
+
+Implementado:
+  - A decisão `docs/DECISIONS/2026-09-11-continuous-platform-auto-tiling.md`
+    foi revista.
+  - O documento descreve uma decisão de apresentação: plataformas continuam
+    a ser geometria de jogo e a composição 16×16 é uma decisão visual.
+  - Não foi encontrada nesta verificação evidência de que a decisão documental
+    implique, por si só, expansão adicional do compositor antes da integração
+    de assets reais.
+  - Regista-se como restrição de prioridade: nenhum novo crescimento substancial
+    do compositor deve preceder um problema real e um asset de terreno
+    verificado/licenciado.
+
+[2026-09-11]
+Ideia: Estado da campanha e próximo critério de progresso.
+
+Implementado:
+  - A campanha encontra-se actualmente com 25 entradas em `campaign.txt`.
+  - A expansão para 25 níveis já passou pelos gates mecânicos relevantes na
+    ronda anterior, incluindo correcções de geometria dos níveis 21–25.
+  - O próximo avanço de conteúdo não deve ser decidido apenas por contagem de
+    níveis. O critério passa a ser: qualidade do nível, minutos jogáveis,
+    leitura espacial, dificuldade adequada, recuperação após falha e validação
+    humana.
+  - A meta futura de 575 níveis deve ser tratada como hipótese de escala sujeita
+    a revisão por evidência de jogo e capacidade real de produção, não como uma
+    percentagem automática de progresso.
+
+[2026-09-11]
+Ideia: Estado da sessão após as correções de consistência.
+
+Implementado:
+  - PR #330 aberta sobre `main` para evitar nova divergência entre campanha e
+    documentação de estado actual.
+  - Não foi feita escrita directa em `main` para esta correcção.
+  - Os testes/CI da nova PR devem ser tratados pela evidência publicada pelo
+    GitHub; a existência da PR, por si só, não constitui aprovação ou estado
+    verde.
+  - Nenhuma alteração de gameplay/runtime foi incluída nesta entrada.
