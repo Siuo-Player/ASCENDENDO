@@ -48,6 +48,9 @@ jobs:
       - name: Test platform asset registry validator
         run: python3 Tests/Tooling/test_validate_platform_asset_registry.py
 
+      - name: Test authoritative map and difficulty validator
+        run: python3 -m unittest Tests/Python/test_campaign_validation.py
+
       - name: Validate visual stress scene manifest
         run: python3 Development/AI_Validation/visual_stress_scenes.py --json /tmp/visual-stress-manifest.json
 
@@ -94,7 +97,7 @@ jobs:
           VK_LOADER_DEBUG: "error"
 
       - name: Validate active campaign levels
-        run: python3 Development/AI_Validation/ai_validator.py --campaign
+        run: python3 Development/AI_Validation/validate_campaign.py --campaign
 
   asan-ubsan:
     name: Linux / Clang / ASan + UBSan / Headless Vulkan
@@ -133,6 +136,9 @@ jobs:
       - name: Test platform asset registry validator
         run: python3 Tests/Tooling/test_validate_platform_asset_registry.py
 
+      - name: Test authoritative map and difficulty validator
+        run: python3 -m unittest Tests/Python/test_campaign_validation.py
+
       - name: Select deterministic Vulkan software driver
         shell: bash
         run: |
@@ -157,4 +163,4 @@ jobs:
             CXXFLAGS_REL="$SAN_FLAGS"
 
       - name: Validate active campaign levels
-        run: python3 Development/AI_Validation/ai_validator.py --campaign
+        run: python3 Development/AI_Validation/validate_campaign.py --campaign
