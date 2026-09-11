@@ -1,9 +1,8 @@
 # ASCENDENDO — Nivel 15: Ascensao
 NAME Ascensao
-# Final content-tranche level: repeated offsets with a clean recovery path to the goal.
+# Becomes a non-final level as campaign production continues.
 PLATFORM 50 4 96 16
 PLATFORM 210 70 96 16
 PLATFORM 370 136 96 16
 PLATFORM 210 202 96 16
 PLATFORM 370 268 96 16
-FLAG 370 284 96 40
