@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -59,7 +60,13 @@ public:
         if (!data || !LevelDataValidator::validate(*data)) return false;
 
         player_ = logic::Player{};
-        player_.body.position = data->spawn.value_or(data->platforms.front().bounds.min);
+        if (data->spawn.has_value()) {
+            player_.body.position = data->spawn.value();
+        } else if (!data->platforms.empty()) {
+            player_.body.position = data->platforms.front().bounds.min;
+        } else {
+            player_.body.position = {0.0f, 0.0f};
+        }
         world_ = logic::PhysicsWorld{};
         elapsedTime_ = 0.0f;
         level_.clear();
