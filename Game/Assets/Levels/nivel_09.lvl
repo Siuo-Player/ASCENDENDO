@@ -1,5 +1,6 @@
 NAME Cume
 # Plataformas authored começam acima do chão implícito (Y=16).
-PLATFORM 176 89 80 16
-PLATFORM 320 174 80 16
-PLATFORM 256 259 112 16
+# Calibrado para permanecer easy antes da entrada na faixa média.
+PLATFORM 256 70 128 16
+PLATFORM 128 136 128 16
+PLATFORM 256 202 128 16
