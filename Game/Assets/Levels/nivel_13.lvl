@@ -1,9 +1,10 @@
 # ASCENDENDO — Nivel 13: Pinball
 NAME Pinball
 # Alternating medium landings create repeated commitment decisions without new mechanics.
-PLATFORM 30 4 120 16
-PLATFORM 220 70 120 16
-PLATFORM 410 136 120 16
-PLATFORM 220 202 120 16
-PLATFORM 410 268 120 16
-FLAG 410 284 120 40
+# Platform footprints use 16 px compositor modules.
+PLATFORM 30 4 112 16
+PLATFORM 220 70 112 16
+PLATFORM 410 136 112 16
+PLATFORM 220 202 112 16
+PLATFORM 410 268 112 16
+FLAG 410 284 112 40
