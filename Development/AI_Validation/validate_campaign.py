@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Authoritative mechanical campaign validation and deterministic difficulty report."""
+"""Authoritative mechanical campaign validation and control-space difficulty report."""
 from __future__ import annotations
 
 import argparse
+import heapq
 import json
 import math
 import os
-import random
 import sys
 from dataclasses import dataclass
 
@@ -16,11 +16,9 @@ from engine import LOGICAL_HEIGHT, LOGICAL_WIDTH, PLAYER_WIDTH, simulate_jump, s
 
 CHARGE_SAMPLES = 41
 LAUNCH_X_SAMPLES = 17
-ROBUSTNESS_TRIALS = 80
 AUTO_GROUND_HEIGHT = 16.0
 AUTO_GROUND_X = 0.0
 AUTO_FLAG_HEIGHT = 40.0
-AUTO_SPAWN_X = LOGICAL_WIDTH / 2.0
 
 
 @dataclass(frozen=True)
@@ -55,7 +53,6 @@ def parse_level(path: str) -> Level:
     platforms: list[Surface] = []
     screens = 1
     name = os.path.basename(path)
-
     with open(path, encoding="utf-8") as stream:
         for number, raw in enumerate(stream, 1):
             line = raw.strip()
@@ -87,123 +84,110 @@ def parse_level(path: str) -> Level:
             if x < 0 or x + width > LOGICAL_WIDTH or y < AUTO_GROUND_HEIGHT or y + height > level_height:
                 raise ValueError(f"{path}:{number}: geometry outside {LOGICAL_WIDTH}x{level_height} or below implicit ground")
             platforms.append(Surface(x, y, width, height))
-
     return Level(path, name, screens, tuple(platforms))
 
 
 def initial_surface(level: Level) -> Surface:
     del level
-    # The runtime creates a full-width implicit ground, while the player starts
-    # at AUTO_SPAWN_X on its top. Validation must therefore allow the player to
-    # walk anywhere on this ground before taking the first jump.
     return Surface(AUTO_GROUND_X, 0.0, LOGICAL_WIDTH, AUTO_GROUND_HEIGHT)
 
 
 def launch_positions(source: Surface) -> tuple[float, ...]:
-    """Possible player-body X positions while grounded on a source surface.
-
-    The player may walk along the full source before committing to a jump. The
-    validator therefore samples launch positions instead of always launching
-    from the source centre.
-    """
     minimum = max(0.0, source.x - PLAYER_WIDTH + 1.0)
     maximum = min(LOGICAL_WIDTH - PLAYER_WIDTH, source.right - 1.0)
-    if maximum < minimum:
-        launch_x = max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH,
-                                source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5))
-        return (launch_x,)
-    if maximum - minimum < 0.001:
-        return (minimum,)
+    if maximum <= minimum:
+        return (max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH, source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5)),)
     return tuple(
         minimum + (maximum - minimum) * index / (LAUNCH_X_SAMPLES - 1)
         for index in range(LAUNCH_X_SAMPLES)
     )
 
 
-def landing_transition(source: Surface, target: Surface):
-    best = None
-    for start_x in launch_positions(source):
-        for direction in (-1, 1):
-            for index in range(CHARGE_SAMPLES):
-                charge = index / (CHARGE_SAMPLES - 1)
-                landed, fx, fy, _, _ = simulate_jump(
-                    start_x,
-                    source.top,
-                    direction,
-                    charge,
-                    [rect(source), rect(target)],
-                )
-                if not landed or abs(fy - target.top) > 1.5:
-                    continue
-                center = fx + PLAYER_WIDTH * 0.5
-                if not target.x <= center <= target.right:
-                    continue
-                rng = random.Random(307)
-                successes = 0
-                launch_min = max(0.0, source.x - PLAYER_WIDTH + 1.0)
-                launch_max = min(LOGICAL_WIDTH - PLAYER_WIDTH, source.right - 1.0)
-                for _ in range(ROBUSTNESS_TRIALS):
-                    noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
-                    noisy_x = max(launch_min, min(launch_max,
-                                                  start_x + rng.uniform(-8.0, 8.0)))
-                    ok, nx, ny, _, _ = simulate_jump(
-                        noisy_x,
-                        source.top,
-                        direction,
-                        noisy_charge,
-                        [rect(source), rect(target)],
-                    )
-                    ncenter = nx + PLAYER_WIDTH * 0.5
-                    successes += int(ok and abs(ny - target.top) <= 1.5 and target.x <= ncenter <= target.right)
-                launch_margin = min(start_x - launch_min, launch_max - start_x)
-                candidate = (
-                    successes / ROBUSTNESS_TRIALS,
-                    direction,
-                    charge,
-                    min(center - target.x, target.right - center),
-                    launch_margin,
-                    min(charge, 1.0 - charge),
-                    -start_x,
-                )
-                if best is None or candidate > best:
-                    best = candidate
-    return best
-
-
-def derived_flag(level: Level) -> Surface | None:
-    if not level.platforms:
-        return None
-    highest = max(
-        level.platforms,
-        key=lambda platform: (platform.top, platform.w, -platform.x),
+def landing_success(source: Surface, target: Surface, start_x: float, direction: int, charge: float) -> bool:
+    landed, fx, fy, _, _ = simulate_jump(
+        start_x,
+        source.top,
+        direction,
+        charge,
+        [rect(source), rect(target)],
     )
-    return Surface(highest.x, highest.top, highest.w, AUTO_FLAG_HEIGHT)
+    if not landed or abs(fy - target.top) > 1.5:
+        return False
+    center = fx + PLAYER_WIDTH * 0.5
+    return target.x <= center <= target.right
 
 
-def flag_robustness(source: Surface, flag: Surface, level: Level) -> float:
-    rng = random.Random(307)
-    successes = 0
-    start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
-    for _ in range(ROBUSTNESS_TRIALS):
-        direction = rng.choice((-1, 1))
-        noisy_charge = max(0.0, min(1.0, rng.random() + rng.uniform(-0.08, 0.08)))
-        noisy_x = start_x + rng.uniform(-8.0, 8.0)
-        noisy_x = max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH, noisy_x))
-        hit, _, _ = simulate_jump_flag(
-            noisy_x,
-            source.top,
-            direction,
-            noisy_charge,
-            [rect(platform) for platform in level.platforms],
-            rect(flag),
-        )
-        successes += int(hit)
-    return successes / ROBUSTNESS_TRIALS
+def landing_profile(source: Surface, target: Surface) -> dict[str, float | int | str] | None:
+    """Measure the actual control-space available to land on the target.
 
-
-def flag_transition(source: Surface, flag: Surface, level: Level):
-    for start_x in launch_positions(source):
+    For each reachable launch position we allow the player to choose the better
+    direction and measure the fraction of charge values that succeed. This is
+    deliberately not based on the single best jump: it measures how forgiving
+    the entire usable control window is.
+    """
+    positions = launch_positions(source)
+    usable_positions = 0
+    charge_success_sum = 0
+    total_best_actions = 0
+    best_overall = None
+    for start_x in positions:
+        per_direction: list[tuple[int, int, int]] = []
         for direction in (-1, 1):
+            successes = sum(
+                landing_success(source, target, start_x, direction, index / (CHARGE_SAMPLES - 1))
+                for index in range(CHARGE_SAMPLES)
+            )
+            per_direction.append((successes, direction, start_x))
+        best_successes, best_direction, best_start = max(per_direction, key=lambda item: item[0])
+        if best_successes:
+            usable_positions += 1
+            charge_success_sum += best_successes / CHARGE_SAMPLES
+            total_best_actions += best_successes
+            candidate = (best_successes / CHARGE_SAMPLES, best_direction, best_start)
+            if best_overall is None or candidate[0] > best_overall[0]:
+                best_overall = candidate
+
+    if not usable_positions:
+        return None
+    launch_coverage = usable_positions / len(positions)
+    charge_coverage = charge_success_sum / usable_positions
+    control_success = math.sqrt(launch_coverage * charge_coverage)
+    return {
+        "control_success_probability": control_success,
+        "launch_coverage": launch_coverage,
+        "charge_coverage": charge_coverage,
+        "usable_launch_positions": usable_positions,
+        "sampled_launch_positions": len(positions),
+        "best_direction": int(best_overall[1]),
+        "best_charge": round(
+            next(
+                index / (CHARGE_SAMPLES - 1)
+                for index in range(CHARGE_SAMPLES)
+                if landing_success(source, target, best_overall[2], best_overall[1], index / (CHARGE_SAMPLES - 1))
+            ),
+            3,
+        ),
+        "horizontal_displacement_px": abs(
+            target.x + target.w * 0.5 - (best_overall[2] + PLAYER_WIDTH * 0.5)
+        ),
+        "vertical_gap_px": max(0.0, target.y - source.top),
+        "target_width_px": target.w,
+        "source_width_px": source.w,
+        "best_launch_x_px": best_overall[2],
+        "sampled_actions": total_best_actions,
+    }
+
+
+def flag_profile(source: Surface, flag: Surface, level: Level) -> dict[str, float | int | str] | None:
+    positions = launch_positions(source)
+    usable_positions = 0
+    success_sum = 0.0
+    best = None
+    platforms = [rect(platform) for platform in level.platforms]
+    for start_x in positions:
+        direction_results = []
+        for direction in (-1, 1):
+            successes = 0
             for index in range(CHARGE_SAMPLES):
                 charge = index / (CHARGE_SAMPLES - 1)
                 hit, _, _ = simulate_jump_flag(
@@ -211,88 +195,120 @@ def flag_transition(source: Surface, flag: Surface, level: Level):
                     source.top,
                     direction,
                     charge,
-                    [rect(platform) for platform in level.platforms],
+                    platforms,
                     rect(flag),
                 )
-                if hit:
-                    return charge, direction, flag_robustness(source, flag, level)
-    return None
+                successes += int(hit)
+            direction_results.append((successes, direction))
+        best_successes, best_direction = max(direction_results, key=lambda item: item[0])
+        if best_successes:
+            usable_positions += 1
+            success_sum += best_successes / CHARGE_SAMPLES
+            candidate = best_successes / CHARGE_SAMPLES
+            if best is None or candidate > best:
+                best = candidate
+    if not usable_positions:
+        return None
+    launch_coverage = usable_positions / len(positions)
+    charge_coverage = success_sum / usable_positions
+    return {
+        "control_success_probability": math.sqrt(launch_coverage * charge_coverage),
+        "launch_coverage": launch_coverage,
+        "charge_coverage": charge_coverage,
+        "usable_launch_positions": usable_positions,
+        "sampled_launch_positions": len(positions),
+        "best_direction": best_direction,
+        "best_charge_window": best,
+        "vertical_gap_px": max(0.0, flag.y - source.top),
+        "target_width_px": flag.w,
+    }
 
 
-def route(level: Level, final: bool):
-    surfaces = [initial_surface(level), *level.platforms]
-    queue = [0]
-    seen = {0}
-    transitions = 0
-    robustness = 1.0
-    min_margin = float("inf")
-    min_launch_margin = float("inf")
-    min_charge_margin = float("inf")
-    flag = derived_flag(level) if final else None
-
-    while queue:
-        source = surfaces[queue.pop(0)]
-        if flag is not None:
-            hit = flag_transition(source, flag, level)
-            if hit is not None:
-                charge, _, flag_rob = hit
-                return (
-                    transitions + 1,
-                    min(robustness, flag_rob),
-                    min_margin if min_margin != float("inf") else 0.0,
-                    min_launch_margin if min_launch_margin != float("inf") else 0.0,
-                    min_charge_margin if min_charge_margin != float("inf") else min(charge, 1.0 - charge),
-                    "spawn_to_derived_flag",
-                )
-        for target_index, target in enumerate(level.platforms, 1):
-            if target_index in seen:
-                continue
-            transition = landing_transition(source, target)
-            if transition is None:
-                continue
-            robustness_value, _, _, margin, launch_margin, charge_margin, _ = transition
-            seen.add(target_index)
-            queue.append(target_index)
-            transitions += 1
-            robustness = min(robustness, robustness_value)
-            min_margin = min(min_margin, margin)
-            min_launch_margin = min(min_launch_margin, launch_margin)
-            min_charge_margin = min(min_charge_margin, charge_margin)
-
+def derived_flag(level: Level) -> Surface | None:
     if not level.platforms:
-        return 0, 0.0, 0.0, 0.0, 0.0, "no_platforms"
-    highest = max(range(1, len(surfaces)), key=lambda index: surfaces[index].top)
-    if highest in seen:
-        return (
-            transitions,
-            robustness,
-            min_margin if min_margin != float("inf") else 0.0,
-            min_launch_margin if min_launch_margin != float("inf") else 0.0,
-            min_charge_margin if min_charge_margin != float("inf") else 0.0,
-            "top_reached",
-        )
-    return transitions, 0.0, 0.0, 0.0, 0.0, "highest_platform_unreachable"
+        return None
+    highest = max(level.platforms, key=lambda platform: (platform.top, platform.w, -platform.x))
+    return Surface(highest.x, highest.top, highest.w, AUTO_FLAG_HEIGHT)
 
 
-def difficulty(transitions: int, robustness: float, margin: float, launch_margin: float, charge_margin: float):
-    if transitions == 0:
-        return {"rating": "unreachable", "score": 100.0, "transitions": 0}
-    safety = (
-        0.40 * robustness
-        + 0.30 * max(0.0, min(1.0, margin / 48.0))
-        + 0.10 * max(0.0, min(1.0, launch_margin / 48.0))
-        + 0.20 * max(0.0, min(1.0, charge_margin / 0.25))
-    )
-    score = round(100.0 * (1.0 - safety), 2)
-    rating = "tutorial" if score < 20 else "easy" if score < 40 else "medium" if score < 60 else "hard" if score < 80 else "extreme"
+def build_graph(level: Level) -> dict[int, list[tuple[int, dict[str, float | int | str]]]]:
+    surfaces = [initial_surface(level), *level.platforms]
+    graph: dict[int, list[tuple[int, dict[str, float | int | str]]]] = {index: [] for index in range(len(surfaces))}
+    for source_index, source in enumerate(surfaces):
+        for target_index, target in enumerate(level.platforms, 1):
+            if target_index == source_index:
+                continue
+            profile = landing_profile(source, target)
+            if profile is not None and float(profile["control_success_probability"]) > 0.0:
+                graph[source_index].append((target_index, profile))
+    return graph
+
+
+def choose_route(level: Level, final: bool) -> tuple[list[dict[str, object]], float, str]:
+    graph = build_graph(level)
+    surfaces = [initial_surface(level), *level.platforms]
+    highest_index = max(range(1, len(surfaces)), key=lambda index: surfaces[index].top) if level.platforms else None
+    flag = derived_flag(level) if final else None
+    distances: dict[int, float] = {0: 0.0}
+    previous: dict[int, tuple[int, dict[str, float | int | str]]] = {}
+    heap = [(0.0, 0)]
+    terminal: tuple[float, int, dict[str, float | int | str] | None] | None = None
+    while heap:
+        cost, source_index = heapq.heappop(heap)
+        if cost != distances.get(source_index):
+            continue
+        if flag is not None:
+            profile = flag_profile(surfaces[source_index], flag, level)
+            if profile is not None:
+                candidate = (cost - math.log(float(profile["control_success_probability"])), source_index, profile)
+                if terminal is None or candidate[0] < terminal[0]:
+                    terminal = candidate
+        if highest_index is not None and source_index == highest_index:
+            terminal = (cost, source_index, None)
+            break
+        for target_index, profile in graph[source_index]:
+            probability = float(profile["control_success_probability"])
+            edge_cost = -math.log(probability)
+            next_cost = cost + edge_cost
+            if next_cost < distances.get(target_index, float("inf")):
+                distances[target_index] = next_cost
+                previous[target_index] = (source_index, profile)
+                heapq.heappush(heap, (next_cost, target_index))
+    if terminal is None:
+        return [], 0.0, "highest_platform_unreachable"
+    total_cost, terminal_source, terminal_profile = terminal
+    transitions: list[dict[str, object]] = []
+    current = terminal_source
+    while current != 0:
+        source_index, profile = previous[current]
+        transitions.append({"source_index": source_index, "target_index": current, "profile": profile})
+        current = source_index
+    transitions.reverse()
+    if terminal_profile is not None:
+        transitions.append({"source_index": terminal_source, "target_index": "flag", "profile": terminal_profile})
+    completion_probability = math.exp(-total_cost)
+    return transitions, completion_probability, "top_reached" if terminal_profile is None else "flag_reached"
+
+
+def difficulty_from_completion(completion_probability: float, transitions: int) -> dict[str, float | int | str]:
+    completion_probability = max(0.0, min(1.0, completion_probability))
+    score = round(100.0 * (1.0 - completion_probability), 2)
+    if score >= 80.0:
+        rating = "extreme"
+    elif score >= 55.0:
+        rating = "hard"
+    elif score >= 30.0:
+        rating = "medium"
+    elif score >= 10.0:
+        rating = "easy"
+    else:
+        rating = "tutorial"
     return {
         "rating": rating,
         "score": score,
-        "transitions": transitions,
-        "minimum_robustness": round(robustness, 3),
-        "minimum_horizontal_margin_px": round(margin, 2),
-        "minimum_launch_margin_px": round(launch_margin, 2),
-        "minimum_charge_margin": round(charge_margin, 3),
+        "estimated_route_completion": round(completion_probability, 3),
+        "required_jumps": transitions,
+        "model": "control_space_route_completion",
     }
 
 
@@ -302,9 +318,12 @@ def validate_level(path: str, strict_flag_policy: bool = False, final: bool = Fa
     errors = []
     if not level.platforms:
         errors.append("no platforms")
-    transitions, robustness, margin, launch_margin, charge_margin, reason = route(level, final=final)
+    transitions, completion_probability, reason = choose_route(level, final=final)
     if not transitions:
         errors.append(f"map is not mechanically reachable ({reason})")
+        difficulty = difficulty_from_completion(0.0, 0)
+    else:
+        difficulty = difficulty_from_completion(completion_probability, len(transitions))
     if final and derived_flag(level) is None:
         errors.append("final campaign level has no platform from which to derive the goal")
     return {
@@ -315,7 +334,8 @@ def validate_level(path: str, strict_flag_policy: bool = False, final: bool = Fa
         "has_flag": final and derived_flag(level) is not None,
         "valid": not errors,
         "errors": errors,
-        "difficulty": difficulty(transitions, robustness, margin, launch_margin, charge_margin),
+        "difficulty": difficulty,
+        "route": transitions,
     }
 
 
@@ -355,7 +375,8 @@ def main() -> int:
         for report in reports:
             status = "OK" if report["valid"] else "FAIL"
             diff = report["difficulty"]
-            print(f"[{status}] {report['name']}: {diff['rating']} ({diff['score']})")
+            print(f"[{status}] {report['name']}: {diff['rating']} ({diff['score']}) "
+                  f"completion={diff['estimated_route_completion']:.3f} jumps={diff['required_jumps']}")
             for error in report["errors"]:
                 print(f"  - {error}")
     return 0 if valid else 1
