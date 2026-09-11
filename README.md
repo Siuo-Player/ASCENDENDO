@@ -5,7 +5,7 @@
 ASCENDENDO é construído à volta do **Commitment Jump**: o jogador escolhe a força do salto, lança-se a um ângulo fixo de 60° e não corrige a trajectória no ar. A ideia central é transformar limitação em precisão: observar, medir, decidir e assumir o salto.
 
 **Autor:** Rafael Gomes Bernardo  
-**Assistência de desenvolvimento:** Claude (Anthropic) e Gemini (Google)
+**Assistência de desenvolvimento:** Claude (Anthropic), Gemini (Google) e ChatGPT — GPT-5.6 Luna (OpenAI)
 
 ## Estado actual
 
@@ -18,7 +18,7 @@ O `main` contém um jogo executável com:
 - editor de níveis integrado e editor de campanha;
 - validação física automática e validação no editor;
 - pipeline de apresentação de plataformas e captura determinística;
-- campanha actualmente com **15 níveis** em `Game/Assets/Levels/campaign.txt`.
+- campanha actualmente com **25 níveis** em `Game/Assets/Levels/campaign.txt`.
 
 O principal trabalho em falta é **conteúdo jogável, qualidade da experiência e validação humana**. A infraestrutura existente só deve crescer quando um problema real do jogo o exigir.
 
@@ -39,7 +39,8 @@ Há uma única fonte viva para o planeamento: [`docs/ROADMAP.md`](docs/ROADMAP.m
 Documentação técnica estável: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).  
 Visão e regras de produto: [`docs/PRODUCT_VISION.md`](docs/PRODUCT_VISION.md).  
 Formato dos níveis: [`docs/LEVEL_FORMAT.md`](docs/LEVEL_FORMAT.md).  
-Testes: [`docs/TESTING.md`](docs/TESTING.md).
+Testes: [`docs/TESTING.md`](docs/TESTING.md).  
+Créditos de assistência por IA: [`docs/AI_CREDITS.md`](docs/AI_CREDITS.md).
 
 O Git preserva o histórico. Não são mantidos snapshots datados, estados correntes duplicados ou work packages concluídos apenas para registar o trabalho passado.
 
