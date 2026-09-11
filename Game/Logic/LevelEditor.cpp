@@ -10,6 +10,7 @@ namespace {
 constexpr float EPS = 0.0001f;
 constexpr float MIN_PLATFORM_WIDTH = 4.0f;
 constexpr float MIN_PLATFORM_HEIGHT = 4.0f;
+constexpr float AUTO_FLAG_HEIGHT = 40.0f;
 
 bool hasMinimumSize(const AABB& rect) {
     return rect.width() >= MIN_PLATFORM_WIDTH - EPS &&
@@ -39,10 +40,32 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
         m_spawnMinX,
         initialGround.max.y,
     };
+    refreshAutomaticFlag();
 }
 
 void LevelEditorDocument::bumpGeneration() {
     ++m_generation;
+}
+
+void LevelEditorDocument::refreshAutomaticFlag() {
+    m_flag.reset();
+    if (!m_finalCampaignLevel) return;
+
+    const AABB* highest = &m_initialGround;
+    for (const auto& platform : m_platforms) {
+        const AABB& candidate = platform.bounds;
+        if (candidate.max.y > highest->max.y ||
+            (candidate.max.y == highest->max.y && candidate.width() > highest->width()) ||
+            (candidate.max.y == highest->max.y && candidate.width() == highest->width() &&
+             candidate.min.x < highest->min.x)) {
+            highest = &candidate;
+        }
+    }
+
+    m_flag = AABB{
+        {highest->min.x, highest->max.y},
+        {highest->max.x, highest->max.y + AUTO_FLAG_HEIGHT}
+    };
 }
 
 bool LevelEditorDocument::insideLogicalBounds(const AABB& rect) const {
@@ -63,6 +86,7 @@ bool LevelEditorDocument::addPlatform(const AABB& requested,
     if (!validPlatform(requested)) return false;
 
     m_platforms.push_back({requested});
+    refreshAutomaticFlag();
     if (createdIndex) *createdIndex = m_platforms.size() - 1;
     bumpGeneration();
     return true;
@@ -85,6 +109,7 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
         return true;
 
     m_platforms[index].bounds = moved;
+    refreshAutomaticFlag();
     bumpGeneration();
     return true;
 }
@@ -92,6 +117,7 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
 bool LevelEditorDocument::removePlatform(std::size_t index) {
     if (index >= m_platforms.size()) return false;
     m_platforms.erase(m_platforms.begin() + static_cast<std::ptrdiff_t>(index));
+    refreshAutomaticFlag();
     bumpGeneration();
     return true;
 }
@@ -115,22 +141,14 @@ bool LevelEditorDocument::validFlag(const AABB& rect) const {
 }
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
-    if (!m_finalCampaignLevel || !validFlag(requested)) return false;
-
-    if (m_flag &&
-        m_flag->min.x == requested.min.x && m_flag->min.y == requested.min.y &&
-        m_flag->max.x == requested.max.x && m_flag->max.y == requested.max.y)
-        return true;
-
-    m_flag = requested;
-    bumpGeneration();
-    return true;
+    (void)requested;
+    // FLAG placement is no longer an authored editor operation.
+    // The final-campaign goal is always derived from the highest platform.
+    return false;
 }
 
 void LevelEditorDocument::removeFlag() {
-    if (!m_flag) return;
-    m_flag.reset();
-    bumpGeneration();
+    // Deliberately a no-op: the automatic campaign goal cannot be manually removed.
 }
 
 LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
@@ -147,12 +165,13 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
         data.platforms.push_back(platform.bounds);
     }
 
-    if (m_flag) data.flag = *m_flag;
+    // FLAG is automatic campaign state and is intentionally never serialized.
     return data;
 }
 
 bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
     if (data.platforms.empty() || data.screenCount == 0) return false;
+    if (data.flag.has_value()) return false;
 
     const core::LevelLayout restoredLayout(data.screenCount);
     for (const AABB& platform : data.platforms) {
@@ -163,13 +182,6 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
         (!std::isfinite(data.spawnPosition->x) || !std::isfinite(data.spawnPosition->y) ||
          data.spawnPosition->x < 0.0f ||
          data.spawnPosition->x > restoredLayout.width()))
-        return false;
-
-    if (data.flag &&
-        (!m_finalCampaignLevel ||
-         !insideLayoutBounds(*data.flag, restoredLayout) ||
-         !hasMinimumSize(*data.flag) ||
-         data.flag->min.y < restoredLayout.screenBottomY(restoredLayout.screenCount() - 1)))
         return false;
 
     m_initialGround = data.platforms.front();
@@ -186,7 +198,7 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
         m_spawnMinX,
         m_initialGround.max.y,
     });
-    m_flag = data.flag;
+    refreshAutomaticFlag();
     bumpGeneration();
     return true;
 }
@@ -197,6 +209,7 @@ bool LevelEditorDocument::restoreFromLevelData(const LevelData& data,
     m_finalCampaignLevel = finalCampaignLevel;
     if (restoreFromLevelData(data)) return true;
     m_finalCampaignLevel = previousFinal;
+    refreshAutomaticFlag();
     return false;
 }
 
