@@ -1,9 +1,5 @@
 NAME O Precipicio
-# Geometria de plataforma alinhada a módulos visuais de 16 px.
-# As posições X/Y são coordenadas de mundo e não estão obrigadas ao grid de 16 px.
-# As superfícies superiores mantêm as altitudes originais.
-# 96 px nas plataformas estreitas e 128 px no pedestal final.
-PLATFORM 181 4 96 16
+# Plataformas authored começam acima do chão implícito (Y=16).
 PLATFORM 389 89 96 16
 PLATFORM 181 174 96 16
 PLATFORM 389 219 128 16
