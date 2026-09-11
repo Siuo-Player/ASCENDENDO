@@ -1,7 +1,6 @@
 # ASCENDENDO — Nivel 12: Corredor
 NAME Corredor
-# Broad surfaces keep the route readable while horizontal offsets increase.
-PLATFORM 24 4 160 16
+# Plataformas authored começam acima do chão implícito (Y=16).
 PLATFORM 340 70 160 16
 PLATFORM 170 136 160 16
 PLATFORM 350 202 160 16
