@@ -83,6 +83,17 @@ class CampaignCatalogueValidatorTests(unittest.TestCase):
             campaign.write_text("bonus/level.lvl\n", encoding="utf-8")
             self.assertEqual(validate_campaign_catalogue(campaign, levels), [])
 
+    def test_authored_flag_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, levels = self._root(tmp)
+            (levels / "one.lvl").write_text(
+                "NAME One\nPLATFORM 0 0 640 16\nFLAG 0 16 640 40\n",
+                encoding="utf-8",
+            )
+            campaign.write_text("one.lvl\n", encoding="utf-8")
+            errors = validate_campaign_catalogue(campaign, levels)
+            self.assertTrue(any("FLAG is not allowed" in error for error in errors))
+
 
 if __name__ == "__main__":
     unittest.main()
