@@ -48,18 +48,16 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
             data.platforms.push_back({{x, y}, {x + w, y + h}});
             continue;
         }
-        if (type == "FLAG") {
-            float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
-            if (!(input >> x >> y >> w >> h) || hasTrailingTokens(input)) return std::nullopt;
-            data.flag = AABB{{x, y}, {x + w, y + h}};
-            continue;
-        }
         if (type == "SPAWN") {
             Vec2 spawn{};
             if (!(input >> spawn.x >> spawn.y) || hasTrailingTokens(input)) return std::nullopt;
             data.spawnPosition = spawn;
             continue;
         }
+        // FLAG is intentionally not part of the .lvl format. The campaign
+        // runtime derives the only FLAG from the highest platform of the
+        // final campaign level.
+        if (type == "FLAG") return std::nullopt;
 
         // The parser is intentionally strict about the current grammar.
         return std::nullopt;
@@ -95,12 +93,7 @@ bool LevelDataIO::save(const LevelData& data,
                 << platform.width() << ' ' << platform.height() << '\n';
         }
 
-        if (data.flag) {
-            out << "FLAG "
-                << data.flag->min.x << ' ' << data.flag->min.y << ' '
-                << data.flag->width() << ' ' << data.flag->height() << '\n';
-        }
-
+        // FLAG is derived by CampaignRuntime and is never serialized into a .lvl file.
         return out.good();
     } catch (...) {
         return false;
