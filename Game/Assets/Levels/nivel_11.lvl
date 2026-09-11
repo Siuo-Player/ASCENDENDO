@@ -1,7 +1,6 @@
 # ASCENDENDO — Nivel 11: Alternancia
 NAME Alternancia
-# Narrower platforms demand cleaner horizontal commitment while remaining inside the validated jump envelope.
-PLATFORM 80 4 96 16
+# Plataformas authored começam acima do chão implícito (Y=16).
 PLATFORM 280 70 96 16
 PLATFORM 100 136 96 16
 PLATFORM 300 202 96 16
