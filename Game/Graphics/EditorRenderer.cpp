@@ -111,6 +111,20 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                     border, config::LOGICAL_HEIGHT,
                     borderR, borderG, borderB, 1.0f, &fixedCamera);
 
+    // The ground is derived state, not an authored platform. Show it in the
+    // editor so the canonical Y=0..16 starting surface is always visible.
+    const logic::AABB implicitGround{{0.0f, 0.0f}, {snapshot.levelWidth, 16.0f}};
+    if (implicitGround.max.y >= viewBottomY && implicitGround.min.y <= viewTopY) {
+        shapes.drawRect(cmd, shapePipeline,
+                        implicitGround.min.x, screenY(implicitGround.min.y),
+                        implicitGround.width(), implicitGround.height(),
+                        0.32f, 0.38f, 0.48f, 0.95f, &fixedCamera);
+        shapes.drawRect(cmd, shapePipeline,
+                        implicitGround.min.x, screenY(implicitGround.max.y) - 2.0f,
+                        implicitGround.width(), 2.0f,
+                        0.55f, 0.66f, 0.82f, 1.0f, &fixedCamera);
+    }
+
     for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
         const logic::AABB& platform = snapshot.platforms[i];
         if (platform.max.y < viewBottomY || platform.min.y > viewTopY) continue;
@@ -202,17 +216,14 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         const char* size = "MEDIUM";
         if (snapshot.sizePreset == logic::EditorSizePreset::SMALL) size = "SMALL";
         else if (snapshot.sizePreset == logic::EditorSizePreset::LARGE) size = "LARGE";
-        const char* entity = "PLATFORM";
-        if (snapshot.entityTool == logic::EditorEntityTool::SPAWN) entity = "SPAWN";
-        else if (snapshot.entityTool == logic::EditorEntityTool::FLAG) entity = "FLAG";
 
         const std::size_t currentScreen =
             std::min(snapshot.screenCount - 1,
                      static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight));
         char hud[192];
         std::snprintf(hud, sizeof(hud),
-                      "%s %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | P PLAT T SPAWN F FLAG | DEL APAGAR | ESC SAIR",
-                      entity, tool, size,
+                      "PLATFORM %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | PLATFORM SIZES | DEL APAGAR | ESC SAIR",
+                      tool, size,
                       currentScreen + 1, snapshot.screenCount,
                       viewBottomY, viewTopY);
         drawEditorText(cmd, textPipeline, font, hud,
