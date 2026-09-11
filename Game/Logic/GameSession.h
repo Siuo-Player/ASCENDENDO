@@ -9,12 +9,14 @@
 #include "Logic/InputManager.h"
 #include "Logic/Level.h"
 #include "Logic/LevelDataIO.h"
+#include "Logic/LevelDataValidator.h"
 #include "Logic/Physics.h"
 #include "Logic/Player.h"
 #include "Logic/SimulationOrchestrator.h"
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -46,6 +48,27 @@ public:
 
     void beginPlaying(float logicalWidth);
     bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
+
+    // Visual capture deliberately loads one authored level in isolation. It
+    // validates the level itself but does not apply the campaign-level FLAG
+    // policy, because capture is evidence for individual scenes, not a run.
+    bool beginPlayingLevelForCapture(std::size_t levelIndex, float logicalWidth) {
+        if (levelIndex >= campaignRuntime_.levelCount()) return false;
+
+        const auto& levelPath = campaignRuntime_.levels()[levelIndex];
+        const std::optional<LevelData> data = LevelDataIO::load(levelPath);
+        if (!data || !LevelDataValidator::validate(*data)) return false;
+
+        level_.clear();
+        level_.appendFromData(*data, logicalWidth, 0.0f);
+        player_ = logic::Player{};
+        player_.body.position = level_.spawnPosition;
+        world_ = logic::PhysicsWorld{};
+        elapsedTime_ = 0.0f;
+        stateMachine_.enterPlaying();
+        return true;
+    }
+
     void configureCampaignEditor(std::string campaignFilePath);
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
