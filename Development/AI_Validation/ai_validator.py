@@ -37,7 +37,6 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         return False, f"Erro ao ler {filepath}: {e}"
 
     platforms = []
-    goal      = None
 
     for i, raw in enumerate(lines, 1):
         line = raw.strip()
@@ -68,43 +67,29 @@ def validate_level(filepath: str) -> tuple[bool, str]:
                 return False, f"Linha {i}: plataforma ultrapassa a altura da tela (topo {y+h} > {LOGICAL_HEIGHT})"
             platforms.append({'type': 'platform', 'bounds': (x, y, w, h)})
         elif parts[0] == "FLAG":
-            if len(parts) != 5:
-                return False, f"Linha {i}: formato invalido — esperado 'FLAG x y w h'"
-            x, y, w, h = map(float, parts[1:])
-            if (y + h) > LOGICAL_HEIGHT:
-                return False, f"Linha {i}: FLAG ultrapassa a altura da tela"
-            goal = {'type': 'flag', 'bounds': (x, y, w, h)}
+            return False, f"Linha {i}: FLAG nao e permitida em .lvl — o objetivo final e derivado automaticamente da plataforma mais alta da campanha"
         else:
             return False, f"Linha {i}: directiva desconhecida '{parts[0]}'"
 
-    if not platforms and goal is None:
+    if not platforms:
         return True, "Nivel vazio (aceitavel)"
 
-    # BFS com fisica real. Niveis finais têm FLAG como objetivo; niveis
-    # intermédios são válidos quando todas as plataformas do segmento são
-    # alcançáveis, sem exigir que o segmento isolado chegue ao topo da tela.
+    # Os niveis intermédios terminam na plataforma mais alta do chunk; o
+    # único objetivo de campanha e derivado pelo runtime no último nível.
     ground = {'type': 'ground', 'bounds': (0, 0, LOGICAL_WIDTH, 20)}
     nodes  = [ground] + platforms
-    if goal is not None:
-        nodes.append(goal)
     visited = {0}
     queue   = [0]
 
     while queue:
         curr = queue.pop(0)
-        if goal is not None and curr == len(nodes) - 1:
-            return True, "Caminho fisicamente possivel encontrado"
         for j in range(1, len(nodes)):
             if j in visited: continue
             p1 = nodes[curr]['bounds']
-            n2 = nodes[j]
+            p2 = nodes[j]['bounds']
             y_start = p1[1] + p1[3]
-            if n2['type'] == 'flag':
-                p2 = n2['bounds']; y_end = p2[1]
-                dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
-            else:
-                p2 = n2['bounds']; y_end = p2[1] + p2[3]
-                dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
+            y_end = p2[1] + p2[3]
+            dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
             dy = y_end - y_start
             if dy > MAX_JUMP: continue
             disc = VY_eff**2 - 2 * G_val * max(0.0, dy)
@@ -113,7 +98,7 @@ def validate_level(filepath: str) -> tuple[bool, str]:
             if dx <= max_dx:
                 visited.add(j); queue.append(j)
 
-    if goal is None and len(visited) == len(nodes):
+    if len(visited) == len(nodes):
         return True, "Plataformas fisicamente alcançaveis"
 
     return False, "Nenhum caminho fisicamente possivel — nivel impossivel"
@@ -146,11 +131,9 @@ def main():
         sys.exit(1)
 
     if sys.argv[1] == "--campaign":
-        # Tentar encontrar campaign.txt relativo a este script
         script_dir = os.path.dirname(os.path.abspath(__file__))
         campaign   = os.path.join(script_dir, "..", "..", "Game", "Assets", "Levels", "campaign.txt")
         campaign   = os.path.normpath(campaign)
-        # Fallback: a partir da directoria de trabalho actual
         if not os.path.exists(campaign):
             campaign = os.path.normpath("Game/Assets/Levels/campaign.txt")
 
