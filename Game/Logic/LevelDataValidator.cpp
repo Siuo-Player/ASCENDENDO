@@ -55,7 +55,9 @@ bool LevelDataValidator::validate(const LevelData& data) noexcept {
         if (!isValidGeometry(platform, levelHeight)) return false;
     }
 
-    if (data.flag && !isValidGeometry(*data.flag, levelHeight)) return false;
+    // FLAG is not authored level data. CampaignRuntime derives it from the
+    // highest platform of the final campaign level.
+    if (data.flag.has_value()) return false;
     if (data.spawnPosition && !hasValidSpawn(*data.spawnPosition, levelHeight)) return false;
 
     return true;
