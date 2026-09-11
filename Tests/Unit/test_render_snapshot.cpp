@@ -117,14 +117,14 @@ TEST_SUITE("RenderSnapshot") {
 
         struct Case {
             const char* file;
-            std::size_t platformCount;
+            std::size_t runtimePlatformCount;
             std::size_t semanticCellCount;
         };
 
         const Case cases[] = {
             {"inicio.lvl", 4, 73},
-            {"precipicio.lvl", 4, 26},
-            {"zigzag.lvl", 4, 36},
+            {"precipicio.lvl", 4, 60},
+            {"zigzag.lvl", 4, 67},
         };
 
         for (const auto& test : cases) {
@@ -133,26 +133,33 @@ TEST_SUITE("RenderSnapshot") {
             REQUIRE_MESSAGE(data.has_value(), "failed to load campaign level: " << path.string());
 
             Level level;
-            const float nextOffset = level.appendFromData(*data, 640.0f, 0.0f);
-            REQUIRE(level.platformCount() == test.platformCount);
-            CHECK(data->platforms.size() == test.platformCount);
+            const float nextOffset = level.appendFromData(*data, 640.0f, 0.0f, false);
+            REQUIRE(level.platformCount() == test.runtimePlatformCount);
+            CHECK(data->platforms.size() + 1 == test.runtimePlatformCount);
             CHECK(nextOffset > 0.0f);
 
             const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
 
             REQUIRE(snapshot.semanticPlatformsValid);
             CHECK(snapshot.semanticPlatformCells.size() == test.semanticCellCount);
-            REQUIRE(snapshot.platforms.size() == test.platformCount);
+            REQUIRE(snapshot.platforms.size() == test.runtimePlatformCount);
 
-            for (std::size_t i = 0; i < snapshot.platforms.size(); ++i) {
-                CHECK(snapshot.platforms[i].x == doctest::Approx(data->platforms[i].min.x));
-                CHECK(snapshot.platforms[i].y == doctest::Approx(data->platforms[i].min.y));
-                CHECK(snapshot.platforms[i].width == doctest::Approx(data->platforms[i].width()));
-                CHECK(snapshot.platforms[i].height == doctest::Approx(data->platforms[i].height()));
+            CHECK(snapshot.platforms[0].x == doctest::Approx(0.0f));
+            CHECK(snapshot.platforms[0].y == doctest::Approx(0.0f));
+            CHECK(snapshot.platforms[0].width == doctest::Approx(640.0f));
+            CHECK(snapshot.platforms[0].height == doctest::Approx(16.0f));
+
+            for (std::size_t i = 0; i < data->platforms.size(); ++i) {
+                const auto& authored = data->platforms[i];
+                const auto& rendered = snapshot.platforms[i + 1];
+                CHECK(rendered.x == doctest::Approx(authored.min.x));
+                CHECK(rendered.y == doctest::Approx(authored.min.y));
+                CHECK(rendered.width == doctest::Approx(authored.width()));
+                CHECK(rendered.height == doctest::Approx(authored.height()));
             }
 
-            CHECK(snapshot.semanticPlatformCells.front().worldX == doctest::Approx(data->platforms.front().min.x));
-            CHECK(snapshot.semanticPlatformCells.front().worldY == doctest::Approx(data->platforms.front().min.y));
+            CHECK(snapshot.semanticPlatformCells.front().worldX == doctest::Approx(0.0f));
+            CHECK(snapshot.semanticPlatformCells.front().worldY == doctest::Approx(0.0f));
         }
     }
 
