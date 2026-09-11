@@ -80,7 +80,7 @@ def transition_diagnostic(source, target, transition, source_index, target_index
     )
 
 
-def diagnose_level(level: validator.Level, final: bool = False):
+def diagnose_level(level: validator.Level):
     surfaces = [validator.initial_surface(level), *level.platforms]
     queue = [0]
     seen = {0}
@@ -95,31 +95,42 @@ def diagnose_level(level: validator.Level, final: bool = False):
             transition = validator.landing_transition(source, target)
             if transition is None:
                 continue
-            diagnostic = transition_diagnostic(
-                source, target, transition, source_index, target_index
+            transitions.append(
+                transition_diagnostic(
+                    source, target, transition, source_index, target_index
+                )
             )
-            transitions.append(diagnostic)
             seen.add(target_index)
             queue.append(target_index)
-
-    unreachable = [
-        index
-        for index in range(1, len(surfaces))
-        if index not in seen
-    ]
 
     return {
         "level": level.name,
         "transitions": transitions,
-        "unreachable_platforms": unreachable,
+        "unreachable_platforms": [
+            index for index in range(1, len(surfaces)) if index not in seen
+        ],
     }
+
+
+def score_breakdown(difficulty: dict[str, float]) -> dict[str, float]:
+    robustness = difficulty.get("minimum_robustness", 1.0)
+    landing = difficulty.get("minimum_horizontal_margin_px", 48.0)
+    launch = difficulty.get("minimum_launch_margin_px", 48.0)
+    charge = difficulty.get("minimum_charge_margin", 0.25)
+    components = {
+        "robustness": 0.40 * (1.0 - max(0.0, min(1.0, robustness))),
+        "landing_margin": 0.30 * (1.0 - max(0.0, min(1.0, landing / 48.0))),
+        "launch_margin": 0.10 * (1.0 - max(0.0, min(1.0, launch / 48.0))),
+        "charge_margin": 0.20 * (1.0 - max(0.0, min(1.0, charge / 0.25))),
+    }
+    return {name: round(100.0 * value, 2) for name, value in components.items()}
 
 
 def explain_level(path: str, final: bool = False) -> None:
     level = validator.parse_level(path)
     report = validator.validate_level(path, final=final)
     difficulty = report["difficulty"]
-    diagnosis = diagnose_level(level, final=final)
+    diagnosis = diagnose_level(level)
     transitions = diagnosis["transitions"]
 
     print(f"\n=== {level.name} ===")
@@ -131,6 +142,18 @@ def explain_level(path: str, final: bool = False) -> None:
         f"launch_margin={difficulty.get('minimum_launch_margin_px', 0):.2f}px, "
         f"charge_margin={difficulty.get('minimum_charge_margin', 0):.3f}"
     )
+
+    breakdown = score_breakdown(difficulty)
+    print(
+        "score contributions: "
+        + ", ".join(f"{name}={value:.2f}" for name, value in breakdown.items())
+    )
+    if breakdown["charge_margin"] >= 20.0 and difficulty.get("minimum_charge_margin", 0.0) == 0.0:
+        print(
+            "charge note: a feasible solution uses the minimum charge boundary; "
+            "this is part of the current score formula, but is not treated as an "
+            "actionable bottleneck by this diagnostic."
+        )
 
     if diagnosis["unreachable_platforms"]:
         print(
@@ -145,7 +168,10 @@ def explain_level(path: str, final: bool = False) -> None:
     print("reachable transitions:")
     for transition in transitions:
         risks = transition.weighted_risks
-        dominant = max(risks, key=risks.get)
+        actionable = {
+            name: value for name, value in risks.items() if name != "charge_margin"
+        }
+        dominant = max(actionable, key=actionable.get)
         print(
             f"  {transition.source} -> {transition.target}: "
             f"rob={transition.robustness:.3f}, "
@@ -155,27 +181,28 @@ def explain_level(path: str, final: bool = False) -> None:
             f"dx={transition.horizontal_displacement_px:.1f}px, "
             f"dy={transition.vertical_gap_px:.1f}px, "
             f"width={transition.target_width_px:.1f}px, "
-            f"dominant={dominant}"
+            f"actionable={dominant}"
         )
 
     bottlenecks = {
         "robustness": min(transitions, key=lambda item: item.robustness),
         "landing_margin": min(transitions, key=lambda item: item.landing_margin_px),
         "launch_margin": min(transitions, key=lambda item: item.launch_margin_px),
-        "charge_margin": min(transitions, key=lambda item: item.charge_margin),
     }
-    print("bottlenecks:")
+    print("actionable bottlenecks:")
     for metric, transition in bottlenecks.items():
         value = {
             "robustness": transition.robustness,
             "landing_margin": transition.landing_margin_px,
             "launch_margin": transition.launch_margin_px,
-            "charge_margin": transition.charge_margin,
         }[metric]
         print(f"  {metric}: {transition.source} -> {transition.target} ({value:.3f})")
 
     strongest_risk = max(
-        ((name, transition.weighted_risks[name], transition) for name, transition in bottlenecks.items()),
+        (
+            (name, transition.weighted_risks[name], transition)
+            for name, transition in bottlenecks.items()
+        ),
         key=lambda item: item[1],
     )
     metric, risk, transition = strongest_risk
@@ -183,7 +210,6 @@ def explain_level(path: str, final: bool = False) -> None:
         "robustness": "o salto é sensível a erro; para aumentar dificuldade, reduza tolerância geométrica ou aumente o deslocamento lateral.",
         "landing_margin": "a aterragem é o gargalo; para aumentar dificuldade, reduza a largura útil do alvo ou desloque-o lateralmente.",
         "launch_margin": "o posicionamento de lançamento é o gargalo; para aumentar dificuldade, reduza a margem de preparação no suporte de origem.",
-        "charge_margin": "a janela de carga é o gargalo; para aumentar dificuldade, exija uma carga mais específica através da geometria alvo/origem.",
     }
     print(
         f"feedback principal: {metric} ({risk:.3f} weighted risk) em "
