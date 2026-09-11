@@ -1,35 +1,22 @@
 # Mapa de investigação — ASCENDENDO
 
-O projeto é dividido em subsistemas. Cada decisão importante deve consultar a investigação correspondente, em vez de procurar uma única "fonte mestre".
+Cada decisão importante consulta a investigação correspondente. A bibliografia detalhada está em `docs/SCIENTIFIC_REFERENCES.md`; este ficheiro é apenas o mapa de ligação entre perguntas do projecto e linhas de evidência.
 
 | Subsistema | Questão | Referências principais | Aplicação futura |
 |---|---|---|---|
-| Level design | Como compor desafios 2D? | Smith/Cha/Whitehead; Khalifa et al. | vocabulário de design, análise do editor |
-| Jump design | O salto é executável e com que margem? | Aramini/Lanzi/Loiacono | alcance, margem, diagnóstico |
-| Difficulty | O conteúdo é fisicamente válido, executivamente difícil e percebido como difícil? | Francillette et al. 2025; Pedersen; Fernández | score de dificuldade por camadas, expectativa vs realidade |
-| Motor difficulty | Quais perigos e margens tornam um nível difícil para executar? | Francillette et al. 2025 | danger zones, hazards, risco/margem, análise automática |
-| Player modelling | Como o desempenho do jogador deve informar uma estimativa de capacidade? | Madineni 2025 + futura telemetria própria | skill proxies, aprendizagem, incerteza |
-| Adaptive difficulty | Como adaptar sem degradar a experiência ou favorecer apenas certos perfis? | Madineni 2025 + player experience literature | fase posterior, só após calibração |
-| Progression | Como construir campanhas longas? | level-design patterns; learning-progress research | 50–200 níveis sem monotonia |
-| User Generated Content | Como autores trabalham e aprendem? | Super Mario Maker studies; SuperTux | onboarding, feedback, metadata |
-| Extreme levels | Como distinguir desafio intencional de erro? | Johnson 2019; Mario Maker studies | classificação e comunicação de dificuldade |
-| Authoring tools | Como misturar autor e assistência? | Tanagra | futura assistência com constraints |
-| Playtesting | Como testar sem depender só de humanos? | automated regression; smart playtesting | agentes, replay regression |
+| Level design | Como compor desafios 2D? | Smith et al. 2008; Khalifa et al. 2019 | vocabulário de design, análise do editor |
+| Jump design | O salto é executável e com que margem? | Aramini et al. 2018 | alcance, margem, diagnóstico |
+| Player simulation | Como procurar soluções de platformer? | Tremblay et al. 2014 | PES, replay analysis, shortcut detection |
+| Difficulty | O conteúdo é fisicamente válido, executivamente difícil e percebido como difícil? | Francillette 2025; Fernández 2018; CORGIS 2020 | score em camadas, expectativa vs realidade |
+| Challenge/rhythm | Como representar ritmo e desafio? | Sorenson et al. 2011; Khalifa et al. 2019 | secções, safe zones, pacing |
+| Player experience | Como relacionar nível, comportamento e experiência? | Pedersen et al. 2009, 2010 | telemetria e playtesting |
+| Player modelling | Como estimar capacidade sem confundir desempenho com skill? | Shaker et al. 2010; Madineni 2025 | skill proxies, aprendizagem, incerteza |
+| Adaptive difficulty | Quando e como adaptar? | Lopes & Bidarra 2011; DDA review 2024 | fase posterior, só após calibração |
+| Procedural generation | Como gerar sem perder autoria/qualidade? | Togelius et al. 2011; Yannakakis & Togelius 2011; Summerville et al. 2018 | PCG, repair, critique |
+| Authoring tools | Como misturar autor e assistência? | Tanagra 2010/2011 | constraints e mixed-initiative |
+| Game feel | Como preservar previsibilidade e melhorar feedback? | Designing Game Feel 2022 | tuning, feedback audiovisual, input support |
+| Progression | Como construir campanhas longas? | Khalifa et al. 2019; Pedersen et al. 2010; Sorenson et al. 2011 | progressão e variedade |
 | Camera | Que informação deve permanecer visível? | camera-control literature + platformer analyses | framing, lookahead, dead zones |
-| Physics | Como preservar determinismo? | engine/replay/testing practice | fixed timestep, replay |
-| C++ architecture | Como manter desempenho sem sobre-engineering? | coupling/cohesion/size research; architecture knowledge management | boundaries, ownership, testability |
-| Software architecture knowledge | Como preservar decisões e rationale? | Kruchten/Lago/van Vliet; AKM literature | ADRs/architecture docs, reviewability |
-| Project management | Como decompor trabalho sem perder a ligação à arquitetura? | Tausworthe WBS; software-engineering WBS practice | WBS, work packages, PR gates |
-| Dependency management | Como tornar dependências e coordenação visíveis? | Cataldo/Herbsleb/Carley; Begel/Nagappan; Bick et al.; Sablis et al. | dependency maps, coordination awareness |
-| Modularity | Quando uma fronteira reduz de facto a complexidade? | socio-technical congruence; modularity/architecture research | coupling, subsystem boundaries |
-| Architectural technical debt | Como evitar acumulação silenciosa de decisões subótimas? | ATD multiple-case studies; TD management studies | TECH_DEBT, refactoring gates |
-| Vulkan | Como otimizar sem quebrar sincronização? | Khronos spec/samples | barriers, queues, profiling |
-| Hardware | Como suportar GPUs diferentes? | Vulkan portability/version docs | feature detection, fallbacks |
-| Testing | Como detetar regressões? | game testing literature | CI, replay, hardware matrix |
-| Packaging | Como distribuir sem ambiente de desenvolvimento? | Microsoft deployment docs | portable archive/installer |
-| Sharing | Como transferir conteúdo não confiável? | OWASP; resumable upload protocols | import/export/site |
-| Community | Como gerir conteúdo e metadata? | UGC/Mario Maker research | IDs, stats, reports, moderation |
-| Base audit | Como fechar contradições entre arquitetura e implementação? | `docs/BASE_ARCHITECTURE_AUDIT.md` + referências técnicas | hardening antes de features |
 
 ## Hierarquia de evidência
 
@@ -41,46 +28,20 @@ Quando existem conflitos:
 4. testes internos, profiling e telemetria;
 5. preferência estética/pessoal.
 
-Isto não significa que um paper "vence" o playtest. A investigação dá-nos uma hipótese melhor; o jogo tem de confirmar se ela funciona para a nossa física e público.
-
-Para questões de processo, arquitetura e gestão de dependências, a literatura deve ser usada da mesma forma: como base para hipóteses e mecanismos verificáveis, não como receita rígida.
+Isto não significa que um paper “vence” o playtest. A investigação dá-nos uma hipótese melhor; o jogo tem de confirmar se ela funciona para a nossa física e público.
 
 ## Regra de múltiplas fontes
 
-Nenhuma decisão importante de level design ou UX deve ser justificada por apenas um jogo.
+Nenhuma decisão importante de level design, dificuldade ou UX deve ser justificada por uma única fonte.
 
-Por exemplo:
-
-```text
-Mario Maker
-   + papers de player experience
-   + papers de level design
-   + testes internos
-   = decisão ASCENDENDO
-```
-
-O mesmo princípio vale para Vulkan, arquitetura e web.
-
-Para planeamento:
-
-```text
-WBS / project management research
-        +
-architecture / dependency research
-        +
-repository history / current code
-        +
-CI + tests
-        ↓
-work package ASCENDENDO
-```
-
-Para dificuldade:
+Para dificuldade, o modelo de investigação é:
 
 ```text
 motor / física determinística
         +
-modelo de perigo/dificuldade executiva
+modelo de salto / perigo
+        +
+player simulation
         +
 telemetria de desempenho
         +
@@ -89,39 +50,33 @@ playtesting / experiência percebida
 modelo de dificuldade ASCENDENDO
 ```
 
-## Novas referências de 2025
+Para PCG:
 
-### Francillette et al. — dificuldade executiva em platformers
+```text
+conteúdo authored
+        ↓
+representação semântica
+        ↓
+função de qualidade
+        ↓
+geração / repair
+        ↓
+validação
+        ↓
+avaliação humana
+```
 
-**A Comprehensive Model of Automated Evaluation of Difficulty in Platformer Games**
-DOI: `10.1145/3705013`
+## Limite epistemológico
 
-O trabalho propõe avaliação automática de dificuldade game-centric/executiva por zonas de perigo estáticas e perigos dinâmicos. Foi validado nos níveis de Super Mario Bros. Para o ASCENDENDO, a principal contribuição é a separação conceptual entre validade do conteúdo e dificuldade executiva; as fórmulas e thresholds não são assumidos como válidos para a nossa física sem calibração interna.
+Uma métrica publicada é uma **hipótese de medição**, não um threshold do ASCENDENDO. Qualquer nova fórmula ou classe de dificuldade deve passar por:
 
-### Madineni — ajuste de dificuldade e player modelling
+```text
+literatura → protótipo → simulação → playtest → calibração → integração
+```
 
-**Analyzing Player Difficulty Perception in Platformers Through Procedural Level Generation**
-California Polytechnic State University, 2025.
+O mesmo vale para PES: um solver pode demonstrar existência e custo de uma solução sob execução perfeita, mas isso não é equivalente à dificuldade humana.
 
-A dissertação estuda ajuste de dificuldade em tempo real num platformer procedural e encontra desempenho desigual entre jogadores mais confortáveis e menos confortáveis com platformers. É uma fonte útil para a fase futura de player modelling, mas não é suficiente para definir uma política universal de adaptive difficulty.
+## Documento principal
 
-## Conteúdo oficial pretendido
-
-O objetivo editorial registado no roadmap é ter várias campanhas:
-
-- campanhas normais: ~50 níveis em média;
-- campanhas especiais: 100–200 níveis;
-- níveis muito difíceis/extremos;
-- conteúdo comunitário em escala muito superior.
-
-O número de níveis deve influenciar arquitetura, análise e tooling, mas não deve ser usado como objetivo vazio de quantidade.
-
-## Documentos relacionados
-
-- `docs/SCIENTIFIC_REFERENCES.md` — level design, platformers, difficulty, player experience e playtesting.
-- `docs/TECHNICAL_REFERENCES.md` — C++, Vulkan, profiling, hardware, packaging e web sharing.
-- `docs/DESIGN_REFERENCES.md` — Tiled, Godot, SuperTux, Jump King e Mario Maker como referências práticas.
-- `docs/BASE_ARCHITECTURE_AUDIT.md` — auditoria atual da base, prioridades P0/P1/P2 e critérios de saída.
-- `docs/PROJECT_MANAGEMENT.md` — WBS, work packages, dependency awareness, Definition of Ready/Done e relação arquitetura↔roadmap.
-- `docs/PRODUCT_DECISIONS.md` — decisões do autor.
-- `docs/ROADMAP.md` — ordem de implementação e gates.
+- `docs/SCIENTIFIC_REFERENCES.md` — referências, limitações e implicações práticas.
+- `docs/ROADMAP.md` — ordem de implementação.
