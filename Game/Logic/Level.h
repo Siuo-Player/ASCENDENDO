@@ -21,7 +21,12 @@ public:
 
     // Append one local LevelData chunk into world coordinates.
     // Returns offsetY + LOGICAL_HEIGHT so CampaignRuntime can stream fixed-height chunks.
-    float appendFromData(const LevelData& data, float maxWidth, float offsetY);
+    // The campaign FLAG is derived automatically from the highest platform only when
+    // this chunk is the final level of the campaign. LevelData never supplies a FLAG.
+    float appendFromData(const LevelData& data,
+                         float maxWidth,
+                         float offsetY,
+                         bool finalCampaignLevel = false);
 
     void addPlatform(float x, float y, float w, float h);
     bool resolveCollision(PhysicsBody& body) const;
@@ -40,6 +45,7 @@ public:
 
 private:
     static constexpr float SKIN_WIDTH = 1.0f;
+    static constexpr float AUTO_FLAG_HEIGHT = 40.0f;
     std::vector<Platform> m_platforms;
     bool m_spawnInitialized = false;
 };
