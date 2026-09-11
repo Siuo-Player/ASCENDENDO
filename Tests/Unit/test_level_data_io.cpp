@@ -55,8 +55,8 @@ TEST_SUITE("LevelDataIO malformed syntax") {
         CHECK_FALSE(logic::LevelDataIO::load(file.path()).has_value());
     }
 
-    TEST_CASE("trailing token after flag is rejected") {
-        TempLevelFile file("FLAG 0 0 8 8 unexpected\n");
+    TEST_CASE("authored flag is rejected") {
+        TempLevelFile file("FLAG 0 0 8 8\n");
         CHECK_FALSE(logic::LevelDataIO::load(file.path()).has_value());
     }
 
@@ -65,12 +65,11 @@ TEST_SUITE("LevelDataIO malformed syntax") {
         CHECK_FALSE(logic::LevelDataIO::load(file.path()).has_value());
     }
 
-    TEST_CASE("valid current grammar remains accepted") {
+    TEST_CASE("valid current grammar remains accepted without a flag") {
         TempLevelFile file(
             "NAME Valid\n"
             "SPAWN 16 32\n"
-            "PLATFORM 0 40 100 20\n"
-            "FLAG 80 20 8 20\n");
+            "PLATFORM 0 40 100 20\n");
 
         const auto data = logic::LevelDataIO::load(file.path());
         REQUIRE(data.has_value());
@@ -79,6 +78,6 @@ TEST_SUITE("LevelDataIO malformed syntax") {
         CHECK(data->spawnPosition->x == 16.0f);
         CHECK(data->spawnPosition->y == 32.0f);
         REQUIRE(data->platforms.size() == 1);
-        REQUIRE(data->flag.has_value());
+        CHECK_FALSE(data->flag.has_value());
     }
 }
