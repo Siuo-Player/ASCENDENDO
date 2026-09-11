@@ -37,7 +37,7 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         return False, f"Erro ao ler {filepath}: {e}"
 
     platforms = []
-    goal      = {'type': 'top'}
+    goal      = None
 
     for i, raw in enumerate(lines, 1):
         line = raw.strip()
@@ -77,27 +77,29 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         else:
             return False, f"Linha {i}: directiva desconhecida '{parts[0]}'"
 
-    if not platforms and goal['type'] == 'top':
+    if not platforms and goal is None:
         return True, "Nivel vazio (aceitavel)"
 
-    # BFS com fisica real
+    # BFS com fisica real. Niveis finais têm FLAG como objetivo; niveis
+    # intermédios são válidos quando todas as plataformas do segmento são
+    # alcançáveis, sem exigir que o segmento isolado chegue ao topo da tela.
     ground = {'type': 'ground', 'bounds': (0, 0, LOGICAL_WIDTH, 20)}
-    nodes  = [ground] + platforms + [goal]
+    nodes  = [ground] + platforms
+    if goal is not None:
+        nodes.append(goal)
     visited = {0}
     queue   = [0]
 
     while queue:
         curr = queue.pop(0)
-        if curr == len(nodes) - 1:
+        if goal is not None and curr == len(nodes) - 1:
             return True, "Caminho fisicamente possivel encontrado"
         for j in range(1, len(nodes)):
             if j in visited: continue
             p1 = nodes[curr]['bounds']
             n2 = nodes[j]
             y_start = p1[1] + p1[3]
-            if n2['type'] == 'top':
-                y_end = LOGICAL_HEIGHT + 20; dx = 0.0
-            elif n2['type'] == 'flag':
+            if n2['type'] == 'flag':
                 p2 = n2['bounds']; y_end = p2[1]
                 dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
             else:
@@ -110,6 +112,9 @@ def validate_level(filepath: str) -> tuple[bool, str]:
             max_dx = VX_eff * (VY_eff + math.sqrt(disc)) / G_val
             if dx <= max_dx:
                 visited.add(j); queue.append(j)
+
+    if goal is None and len(visited) == len(nodes):
+        return True, "Plataformas fisicamente alcançaveis"
 
     return False, "Nenhum caminho fisicamente possivel — nivel impossivel"
 
