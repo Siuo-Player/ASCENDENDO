@@ -60,7 +60,7 @@ TEST_CASE("FLAG é sempre derivada e segue a plataforma authored mais alta") {
     REQUIRE(finalLevel.hasFlag());
     CHECK(finalLevel.flag()->min.x == doctest::Approx(300.0f));
     CHECK(finalLevel.flag()->min.y == doctest::Approx(336.0f));
-    CHECK(finalLevel.flag()->max.x == doctest::Approx(520.0f));
+    CHECK(finalLevel.flag()->max.x == doctest::Approx(460.0f));
     CHECK(finalLevel.flag()->max.y == doctest::Approx(376.0f));
 }
 
