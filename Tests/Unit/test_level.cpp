@@ -20,13 +20,31 @@ TEST_SUITE("Level") {
         CHECK_FALSE(level.hasFlag);
         CHECK(level.flagBounds.min == Vec2{});
         CHECK(level.flagBounds.max == Vec2{});
+        CHECK(level.spawnPosition.x == Level::AUTO_GROUND_SPAWN_X);
+        CHECK(level.spawnPosition.y == Level::AUTO_GROUND_HEIGHT);
+    }
+
+    TEST_CASE("initial level gets implicit ground and fixed spawn") {
+        LevelData data;
+        data.name = "Start";
+        data.platforms = {
+            AABB{{120.0f, 80.0f}, {280.0f, 96.0f}},
+            AABB{{360.0f, 240.0f}, {520.0f, 256.0f}},
+        };
+
+        Level level;
+        level.appendFromData(data, 640.0f, 0.0f, false);
+
+        REQUIRE(level.platformCount() == 3);
+        CHECK(level.platforms().front().bounds.min == Vec2{0.0f, 0.0f});
+        CHECK(level.platforms().front().bounds.max == Vec2{640.0f, 16.0f});
+        CHECK(level.spawnPosition == Vec2{320.0f, 16.0f});
     }
 
     TEST_CASE("final campaign level derives flag from highest platform") {
         LevelData data;
         data.name = "Final";
         data.platforms = {
-            AABB{{0.0f, 0.0f}, {640.0f, 16.0f}},
             AABB{{120.0f, 80.0f}, {280.0f, 96.0f}},
             AABB{{360.0f, 240.0f}, {520.0f, 256.0f}},
         };
@@ -45,7 +63,6 @@ TEST_SUITE("Level") {
         LevelData data;
         data.name = "Intermediate";
         data.platforms = {
-            AABB{{0.0f, 0.0f}, {640.0f, 16.0f}},
             AABB{{300.0f, 240.0f}, {500.0f, 256.0f}},
         };
 
