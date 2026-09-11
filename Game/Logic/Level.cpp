@@ -15,8 +15,7 @@ float Level::appendFromData(const LevelData& data,
     name = data.name;
 
     if (!m_spawnInitialized) {
-        spawnPosition = data.spawnPosition.value_or(
-            Vec2{config::LOGICAL_WIDTH / 2.0f, 40.0f});
+        spawnPosition = {config::LOGICAL_WIDTH / 2.0f, AUTO_GROUND_HEIGHT};
         spawnPosition.y += offsetY;
         m_spawnInitialized = true;
     }
@@ -29,11 +28,12 @@ float Level::appendFromData(const LevelData& data,
                       << "': Plataforma fora dos limites laterais! X="
                       << localBounds.min.x << "\n";
         }
-        if (localBounds.max.y >
+        if (localBounds.min.y < AUTO_GROUND_HEIGHT ||
+            localBounds.max.y >
             static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT) {
             std::cerr << "[AVISO] Nivel '" << name
-                      << "': Plataforma ultrapassa a altura declarada do nivel (Y_local="
-                      << localBounds.max.y << ")\n";
+                      << "': Plataforma authored ocupa o chão implícito ou ultrapassa a altura declarada "
+                      << "(Y_local=" << localBounds.min.y << ".." << localBounds.max.y << ")\n";
         }
 
         addPlatform(localBounds.min.x,
