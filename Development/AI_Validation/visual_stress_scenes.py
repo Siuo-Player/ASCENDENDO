@@ -18,6 +18,9 @@ from pathlib import Path
 LOGICAL_WIDTH = 640
 LOGICAL_HEIGHT = 360
 TARGET_ASPECT = LOGICAL_WIDTH / LOGICAL_HEIGHT
+AUTO_GROUND_HEIGHT = 16
+AUTO_FLAG_HEIGHT = 40
+AUTO_SPAWN_X = LOGICAL_WIDTH / 2
 
 VIEWPORTS = (
     (1152, 648),   # 16:9
@@ -90,16 +93,24 @@ def viewport_geometry(width: int, height: int) -> tuple[int, int, int, int]:
 
 def parse_level(path: Path) -> tuple[list[Rect], Rect | None]:
     platforms: list[Rect] = []
-    flag: Rect | None = None
     for raw in path.read_text(encoding="utf-8").splitlines():
         fields = raw.split()
         if not fields or fields[0].startswith("#") or fields[0] == "NAME":
             continue
         if fields[0] == "PLATFORM" and len(fields) == 5:
             platforms.append(Rect(*(float(v) for v in fields[1:])))
-        elif fields[0] == "FLAG" and len(fields) == 5:
-            flag = Rect(*(float(v) for v in fields[1:]))
-    return platforms, flag
+        elif fields[0] == "FLAG":
+            raise ValueError(f"{path}: authored FLAG is not part of the level format")
+        elif fields[0] == "SPAWN":
+            raise ValueError(f"{path}: authored SPAWN is not part of the level format")
+    return platforms, derived_flag(platforms)
+
+
+def derived_flag(platforms: list[Rect]) -> Rect | None:
+    if not platforms:
+        return None
+    highest = max(platforms, key=lambda platform: (platform.y + platform.height, platform.width, -platform.x))
+    return Rect(highest.x, highest.y + highest.height, highest.width, AUTO_FLAG_HEIGHT)
 
 
 def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
@@ -115,8 +126,8 @@ def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
             "inicio",
             camera_x=0.0,
             camera_y=0.0,
-            player=Rect(312.0, 40.0, 16.0, 16.0),
-            platform_indices=(0, 1, 2, 3),
+            player=Rect(AUTO_SPAWN_X - 8.0, AUTO_GROUND_HEIGHT, 16.0, 16.0),
+            platform_indices=tuple(range(min(3, len(inicio)))),
         ),
         Scene(
             "B-dense-vertical",
@@ -125,7 +136,7 @@ def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
             camera_x=0.0,
             camera_y=85.0,
             player=Rect(418.0, 105.0, 16.0, 16.0),
-            platform_indices=(1, 2, 3),
+            platform_indices=tuple(range(len(zigzag))),
         ),
         Scene(
             "C-viewport-edge",
@@ -134,7 +145,7 @@ def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
             camera_x=0.0,
             camera_y=170.0,
             player=Rect(600.0, 175.0, 16.0, 16.0),
-            platform_indices=(1, 2, 3),
+            platform_indices=tuple(range(len(inicio))),
         ),
         Scene(
             "D-goal-salience",
@@ -143,7 +154,7 @@ def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
             camera_x=0.0,
             camera_y=170.0,
             player=Rect(405.0, 205.0, 16.0, 16.0),
-            platform_indices=(1, 2, 3),
+            platform_indices=tuple(range(len(precipicio))),
             flag=precip_flag,
         ),
         Scene(
@@ -153,7 +164,7 @@ def build_scenes(repo_root: Path) -> tuple[Scene, ...]:
             camera_x=0.0,
             camera_y=85.0,
             player=Rect(418.0, 105.0, 16.0, 16.0),
-            platform_indices=(1, 2, 3),
+            platform_indices=tuple(range(len(zigzag))),
         ),
     )
 
