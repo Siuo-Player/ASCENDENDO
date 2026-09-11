@@ -21,11 +21,21 @@ TEST_SUITE("Real campaign compositor corpus") {
         std::size_t totalCells = 0;
 
         for (const auto& levelPath : levelPaths) {
+            INFO("campaign level: " << levelPath.string());
             const auto level = logic::LevelDataIO::load(levelPath);
             REQUIRE(level.has_value());
             REQUIRE(!level->platforms.empty());
 
             const auto rasterized = gfx::presentation::rasterizePlatforms(*level);
+            if (!rasterized.valid) {
+                INFO("invalid rasterization dimensions:");
+                for (const auto& platform : level->platforms) {
+                    INFO("platform x=" << platform.min.x
+                         << " y=" << platform.min.y
+                         << " w=" << platform.width()
+                         << " h=" << platform.height());
+                }
+            }
             REQUIRE(rasterized.valid);
             REQUIRE(rasterized.regions.size() == level->platforms.size());
 
@@ -79,6 +89,7 @@ TEST_SUITE("Real campaign compositor corpus") {
         REQUIRE(levelPaths.size() >= 3);
 
         for (const auto& levelPath : levelPaths) {
+            INFO("campaign level: " << levelPath.string());
             const auto level = logic::LevelDataIO::load(levelPath);
             REQUIRE(level.has_value());
             const auto original = level->platforms;
