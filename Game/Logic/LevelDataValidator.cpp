@@ -1,6 +1,7 @@
 #include "Logic/LevelDataValidator.h"
 
 #include "Core/Config.h"
+#include "Logic/Level.h"
 
 #include <cmath>
 #include <limits>
@@ -21,13 +22,8 @@ bool hasPositiveExtent(const AABB& bounds) noexcept {
 bool isValidGeometry(const AABB& bounds, double levelHeight) noexcept {
     return hasFiniteCoordinates(bounds) && hasPositiveExtent(bounds) &&
            bounds.min.x >= 0.0f && bounds.max.x <= config::LOGICAL_WIDTH &&
-           bounds.min.y >= 0.0f && static_cast<double>(bounds.max.y) <= levelHeight;
-}
-
-bool hasValidSpawn(const Vec2& spawn, double levelHeight) noexcept {
-    return std::isfinite(spawn.x) && std::isfinite(spawn.y) &&
-           spawn.x >= 0.0f && spawn.x <= config::LOGICAL_WIDTH &&
-           spawn.y >= 0.0f && static_cast<double>(spawn.y) <= levelHeight;
+           bounds.min.y >= Level::AUTO_GROUND_HEIGHT &&
+           static_cast<double>(bounds.max.y) <= levelHeight;
 }
 
 bool hasValidScreenCount(std::size_t screenCount, double& levelHeight) noexcept {
@@ -51,14 +47,12 @@ bool LevelDataValidator::validate(const LevelData& data) noexcept {
     double levelHeight = 0.0;
     if (!hasValidScreenCount(data.screenCount, levelHeight)) return false;
 
+    // Ground, spawn and campaign goal are all derived state, never authored.
+    if (data.flag.has_value() || data.spawnPosition.has_value()) return false;
+
     for (const auto& platform : data.platforms) {
         if (!isValidGeometry(platform, levelHeight)) return false;
     }
-
-    // FLAG is not authored level data. CampaignRuntime derives it from the
-    // highest platform of the final campaign level.
-    if (data.flag.has_value()) return false;
-    if (data.spawnPosition && !hasValidSpawn(*data.spawnPosition, levelHeight)) return false;
 
     return true;
 }
