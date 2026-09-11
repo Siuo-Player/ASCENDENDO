@@ -1,5 +1,5 @@
 NAME Cume
-PLATFORM 0 4 640 16
+# Plataformas authored começam acima do chão implícito (Y=16).
 PLATFORM 176 89 80 16
 PLATFORM 320 174 80 16
 PLATFORM 256 259 112 16
