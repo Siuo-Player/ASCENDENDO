@@ -15,3 +15,13 @@ nivel_12.lvl
 nivel_13.lvl
 nivel_14.lvl
 nivel_15.lvl
+nivel_16.lvl
+nivel_17.lvl
+nivel_18.lvl
+nivel_19.lvl
+nivel_20.lvl
+nivel_21.lvl
+nivel_22.lvl
+nivel_23.lvl
+nivel_24.lvl
+nivel_25.lvl
