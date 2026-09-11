@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import sys
 import tempfile
 import unittest
 
@@ -8,6 +9,7 @@ MODULE_PATH = ROOT / "Development" / "AI_Validation" / "validate_campaign.py"
 spec = importlib.util.spec_from_file_location("validate_campaign", MODULE_PATH)
 assert spec and spec.loader
 module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 
 
