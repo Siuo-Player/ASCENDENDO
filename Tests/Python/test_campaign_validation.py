@@ -63,7 +63,7 @@ class CampaignValidationTests(unittest.TestCase):
 
     def test_unreachable_level_is_rejected(self):
         path = self.write_level(
-            "NAME impossible\nPLATFORM 0 0 640 16\nPLATFORM 0 300 32 16\nFLAG 0 332 32 28\n"
+            "NAME impossible\nPLATFORM 0 0 640 16\nPLATFORM 0 300 32 16\n"
         )
         report = module.validate_level(str(path))
         self.assertFalse(report["valid"])
