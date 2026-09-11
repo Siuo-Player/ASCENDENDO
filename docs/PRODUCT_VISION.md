@@ -1,6 +1,6 @@
 # ASCENDENDO — Visão do produto
 
-> Documento canónico de visão: define o jogo, a experiência e as propriedades deliberadas do produto. Decisões funcionais ficam em `docs/PRODUCT_DECISIONS.md`; a ordem de execução fica em `docs/ROADMAP.md`.
+> Documento canónico de visão: define o jogo, a experiência e as propriedades deliberadas do produto. A ordem de execução fica em `docs/ROADMAP.md`. Decisões históricas ficam em `docs/DECISIONS/`.
 
 ## 1. O que é
 
@@ -28,7 +28,7 @@ JOGO + AUTORIA + PLAYTEST + VALIDAÇÃO + DETERMINISMO/REPLAY
 - crescimento linear em 1.0;
 - função parametrizável para experiências futuras.
 
-A força apresentada ao jogador deve representar directamente o estado real da simulação. **Não existe UI `0–255` ou outra escala artificial de precisão.** A barra pode ser contínua, visual e colorida por intensidade.
+A força apresentada ao jogador representa directamente o estado real da simulação; não existe uma escala artificial `0–255`.
 
 ### Movimento e controlos
 
@@ -36,18 +36,14 @@ Defaults: `A`/`←` esquerda, `D`/`→` direita, `Space` Jump. O jogador pode re
 
 ## 3. Estrutura espacial
 
-A largura é uma constante do jogo em 1.0:
-
 ```text
 SCREEN = 640 × 360
 LEVEL  = 640 × (N × 360)
 ```
 
-Um `.lvl` representa um **level vertical composto por N screens de 640×360**. `N` é variável. Não há largura configurável.
+Um `.lvl` representa um level vertical composto por `N` screens de `640×360`. `N` é variável. Não há largura configurável.
 
 A progressão é exclusivamente ascendente. O jogador pode cair para screens inferiores e regressar fisicamente, mas nunca progride deliberadamente para baixo.
-
-Esta estrutura existe para aumentar a diversidade e escala dos desafios sem abandonar a legibilidade de uma tela de `640×360`. Uma campanha pode assim conter níveis curtos ou longos sem transformar cada screen num espaço excessivamente denso.
 
 ## 4. Conteúdo 1.0
 
@@ -57,110 +53,96 @@ Só existem três entidades de gameplay:
 - jogador/spawn;
 - FLAG.
 
-A FLAG fica no fim do level, na última screen. Não há morte em 1.0, nem estado de failure/death. O jogador pode apenas sair e regressar ao menu.
+A FLAG fica no fim do level, na última screen. Não há morte em 1.0 nem estado de failure/death.
 
-O formato e as interfaces devem ser extensíveis para futuras entidades como perigos, moving platforms, triggers, colectáveis obrigatórios, checkpoints e outros objectivos, mas essas mecânicas permanecem fora de 1.0.
+A arquitectura continua aberta a perigos, moving platforms, triggers, colectáveis, checkpoints e outros objectivos futuros, mas essas mecânicas ficam fora de 1.0.
 
 ## 5. Transição e streaming
 
-A passagem entre screens é contínua. O jogo deve manter simultaneamente a zona actual e as zonas necessárias para uma transição suave, pré-carregando a próxima e mantendo zonas anteriores recuperáveis durante uma queda.
-
-O carregamento nunca deve ser uma pausa visível nem alterar o resultado determinístico da simulação.
+A passagem entre screens é contínua. O jogo mantém as zonas necessárias para transições suaves e não introduz pausas visíveis nem altera a simulação determinística.
 
 ## 6. Level Editor
 
-O Level Editor edita o **level completo**, mas preserva a screen de `640×360` como unidade de autoria e leitura.
-
-O editor tem dois modos de utilização igualmente válidos:
+O Level Editor edita o level completo e preserva `640×360` como unidade de leitura.
 
 ```text
 teclado apenas
 teclado + rato
 ```
 
-As operações essenciais têm sempre acções semânticas e bindings de teclado: navegação vertical, selecção, colocar, mover, apagar, trocar ferramenta, undo, redo, guardar, testar, validar e sair. O rato/drag é acelerador, não requisito.
+As operações essenciais continuam disponíveis por bindings semânticos. Rato/drag é acelerador, não requisito.
 
-O playtest acontece dentro do jogo e não grava automaticamente as alterações.
+O playtest não grava automaticamente alterações.
 
-## 7. Estado de edição e alterações pendentes
+## 7. Estado de edição
 
-O documento em memória é separado do estado persistido.
-
-`Esc` abre um carrinho de alterações quando existem mudanças pendentes. O utilizador pode guardar tudo, descartar tudo ou rever alterações. A revisão permite desfazer selectivamente mudanças e manter as restantes quando suportado.
-
-Isto assenta num histórico geral de undo/redo.
+O documento em memória é separado do estado persistido. `Esc` pode tratar alterações pendentes como carrinho: guardar, descartar ou rever. Undo/redo continua a ser o histórico base.
 
 ## 8. Campaign Editor
 
-O Campaign Editor gere a sequência de levels como playlist/timeline vertical.
-
-1.0 começa com `select → reorder → open`, seguido de retorno preservando contexto, validação e escrita de `campaign.txt`.
-
-A criação/remoção de entries directamente nesta UI continua uma questão de investigação UX. Não é uma dependência para estabilizar a arquitectura.
+O Campaign Editor gere a sequência de levels. O fluxo 1.0 começa por seleccionar, reordenar, abrir, voltar, validar e guardar `campaign.txt`.
 
 ## 9. Campanhas 1.0
 
-Mínimo oficial: **10 campanhas e 575 levels**:
+Mínimo oficial: **10 campanhas / 575 levels**.
 
-| campanhas | levels |
-|---:|---:|
-| 1 | 10 |
-| 4 | 25 |
-| 3 | 50 |
-| 1 | 100 |
-| 1 | 250 |
-
-Cada campanha evolui aproximadamente do fácil para o difícil/extremo; campanhas grandes podem usar blocos internos. O catálogo global deve concentrar-se numa dificuldade normal e ter menos extremos.
-
-A escala nominal de dificuldades será derivada da fórmula/modelo real de dificuldade. Não existe ainda um número arbitrário congelado de classes.
+Cada campanha progride aproximadamente do fácil para o difícil/extremo. A escala nominal de dificuldade deriva do modelo e da validação reais, não de um número arbitrário congelado.
 
 ## 10. Validação, dificuldade e runs
 
-Conteúdo publicável deve passar pelo validador e pelo difficulty tester. A validação distingue formato, geometria, regras físicas, progressão, percurso e dificuldade.
-
-Uma run é determinística:
+Conteúdo publicável passa pelo validador e pelo difficulty tester.
 
 ```text
 spawn → inputs/movimentos gravados → FLAG
 ```
 
-O replay é reexecutado pelo motor e validado novamente. O tempo resultante dessa execução válida é a medida autoritativa.
-
-A métrica de ranking é tempo. Devem poder existir melhor tempo global, média, melhor jogador e estimativas de tempo por rotas rápidas/difíceis e fáceis/demoradas.
+O replay é reexecutado pelo motor e o tempo dessa execução válida é a medida autoritativa.
 
 ## 11. Visual
 
-Direcção 1.0: **indie, simples, pixel-art básica**. A legibilidade do gameplay é prioritária.
+Direcção 1.0: **indie, simples, pixel-art básica**, com legibilidade do gameplay acima da decoração.
 
-Foreground: jogador e plataformas. Background: atmosfera/profundidade. Parallax: camadas com velocidades relativas.
+Foreground contém jogador e plataformas; background cria profundidade; parallax usa velocidades relativas diferentes.
 
-Assets base usam peças `16×16`, mas a colocação no mundo é pixel-perfect e não está limitada a uma grelha de 16 px. Sprites são opções curadas.
+### Plataforma e auto-tiling
 
-Todo asset externo tem ficha formal de origem/licença no repositório, inclusive CC0.
+O autor trabalha com **uma plataforma contínua de um material**, não com pintura manual de tiles.
 
-## 12. Áudio
+- a posição no mundo é pixel-perfect e não está bloqueada a uma grelha global de `16×16`;
+- largura **e altura** da plataforma são múltiplas positivas de `16 px`;
+- a composição visual usa uma malha `16×16` local à região;
+- o renderer escolhe automaticamente sprites curados segundo adjacência, topologia, material, superfícies expostas, interiores, bordas, cantos e joins;
+- plataformas/regiões de materiais diferentes podem compor-se visualmente quando existe contacto geométrico real;
+- relva e outros tratamentos de borda só aparecem onde o contexto visual os torna coerentes;
+- variantes podem ser escolhidas com aleatoriedade controlada e determinística para reduzir repetição;
+- uma variante ausente ou inelegível produz fallback determinístico;
+- auto-tiling é **presentation-only**: nunca altera posição, dimensão, colisão ou outra geometria de gameplay.
 
-1.0 inclui música retro simples livre para redistribuição e efeitos para salto/carga/libertação, aterragem, conclusão e UI/editor. Efeitos não-musicais podem ter takes múltiplos com selecção aleatória controlada; a música permanece estável.
+`16×16` é unidade de composição visual, não unidade obrigatória de autoria do mundo.
 
-Pesquisa aprofundada de autoria musical fica para perto do fecho de 1.0.
+## 12. Sprites e licenciamento
 
-## 13. Comunidade e publicação
+Sprites são opções curadas. Todo asset externo tem ficha formal de origem/licença no repositório, inclusive CC0.
 
-A unidade principal de publicação é a **campanha**. `.lvl` continua a ser unidade técnica de armazenamento/import/export do level.
+## 13. Áudio
 
-Uma camada futura de package pode reunir campaign identity, levels, layout, metadata, difficulty, validation e assets.
+1.0 inclui música retro simples livre para redistribuição e efeitos de jogo/editor. Efeitos não-musicais podem ter takes múltiplos com selecção controlada; a música permanece estável.
+
+## 14. Comunidade e publicação
+
+A unidade principal de publicação é a campanha. `.lvl` continua a ser unidade técnica de armazenamento/import/export do level.
 
 1.0 requer import/export de campanhas e um site público para partilha e rankings.
 
-## 14. Distribuição e horizonte
+## 15. Distribuição e horizonte
 
 Obrigatório para 1.0:
 
 - Windows x64 standalone;
-- campanha validada;
+- catálogo validado;
 - difficulty tester;
 - site público de partilha/ranking.
 
-Versão web é desejável, não obrigatória.
+A versão web é desejável, não obrigatória.
 
-A arquitectura deve ser aberta a mods, expansões e jogos derivados em direcções futuras, mas sem introduzir em 1.0 mecânicas que ainda não tenham uma razão de design.
+A arquitectura permanece aberta a mods, expansões e jogos derivados sem introduzir em 1.0 mecânicas sem razão de design.
