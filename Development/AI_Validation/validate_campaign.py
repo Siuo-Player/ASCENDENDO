@@ -18,6 +18,7 @@ CHARGE_SAMPLES = 41
 LAUNCH_X_SAMPLES = 17
 ROBUSTNESS_TRIALS = 80
 AUTO_GROUND_HEIGHT = 16.0
+AUTO_GROUND_X = 0.0
 AUTO_FLAG_HEIGHT = 40.0
 AUTO_SPAWN_X = LOGICAL_WIDTH / 2.0
 
@@ -91,21 +92,22 @@ def parse_level(path: str) -> Level:
 
 
 def initial_surface(level: Level) -> Surface:
-    return Surface(AUTO_SPAWN_X, AUTO_GROUND_HEIGHT - 1.0, PLAYER_WIDTH, 1.0)
+    del level
+    # The runtime creates a full-width implicit ground, while the player starts
+    # at AUTO_SPAWN_X on its top. Validation must therefore allow the player to
+    # walk anywhere on this ground before taking the first jump.
+    return Surface(AUTO_GROUND_X, 0.0, LOGICAL_WIDTH, AUTO_GROUND_HEIGHT)
 
 
 def launch_positions(source: Surface) -> tuple[float, ...]:
     """Possible player-body X positions while grounded on a source surface.
 
     The player may walk along the full source before committing to a jump. The
-    previous validator always launched from the source centre, which caused
-    false negatives for otherwise reachable campaign layouts whose first jump
-    required horizontal repositioning on the implicit ground or on a landing.
+    validator therefore samples launch positions instead of always launching
+    from the source centre.
     """
-    minimum = source.x - PLAYER_WIDTH + 1.0
-    maximum = source.right - 1.0
-    minimum = max(0.0, minimum)
-    maximum = min(LOGICAL_WIDTH - PLAYER_WIDTH, maximum)
+    minimum = max(0.0, source.x - PLAYER_WIDTH + 1.0)
+    maximum = min(LOGICAL_WIDTH - PLAYER_WIDTH, source.right - 1.0)
     if maximum < minimum:
         launch_x = max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH,
                                 source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5))
@@ -138,10 +140,12 @@ def landing_transition(source: Surface, target: Surface):
                     continue
                 rng = random.Random(307)
                 successes = 0
+                launch_min = max(0.0, source.x - PLAYER_WIDTH + 1.0)
+                launch_max = min(LOGICAL_WIDTH - PLAYER_WIDTH, source.right - 1.0)
                 for _ in range(ROBUSTNESS_TRIALS):
                     noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
-                    noisy_x = start_x + rng.uniform(-8.0, 8.0)
-                    noisy_x = max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH, noisy_x))
+                    noisy_x = max(launch_min, min(launch_max,
+                                                  start_x + rng.uniform(-8.0, 8.0)))
                     ok, nx, ny, _, _ = simulate_jump(
                         noisy_x,
                         source.top,
@@ -151,10 +155,7 @@ def landing_transition(source: Surface, target: Surface):
                     )
                     ncenter = nx + PLAYER_WIDTH * 0.5
                     successes += int(ok and abs(ny - target.top) <= 1.5 and target.x <= ncenter <= target.right)
-                launch_margin = min(
-                    start_x - max(0.0, source.x - PLAYER_WIDTH + 1.0),
-                    min(LOGICAL_WIDTH - PLAYER_WIDTH, source.right - 1.0) - start_x,
-                )
+                launch_margin = min(start_x - launch_min, launch_max - start_x)
                 candidate = (
                     successes / ROBUSTNESS_TRIALS,
                     direction,
@@ -249,7 +250,7 @@ def route(level: Level, final: bool):
             transition = landing_transition(source, target)
             if transition is None:
                 continue
-            robustness_value, _, charge, margin, launch_margin, charge_margin, _ = transition
+            robustness_value, _, _, margin, launch_margin, charge_margin, _ = transition
             seen.add(target_index)
             queue.append(target_index)
             transitions += 1
@@ -284,7 +285,15 @@ def difficulty(transitions: int, robustness: float, margin: float, launch_margin
     )
     score = round(100.0 * (1.0 - safety), 2)
     rating = "tutorial" if score < 20 else "easy" if score < 40 else "medium" if score < 60 else "hard" if score < 80 else "extreme"
-    return {"rating": rating, "score": score, "transitions": transitions, "minimum_robustness": round(robustness, 3), "minimum_horizontal_margin_px": round(margin, 2), "minimum_launch_margin_px": round(launch_margin, 2), "minimum_charge_margin": round(charge_margin, 3)}
+    return {
+        "rating": rating,
+        "score": score,
+        "transitions": transitions,
+        "minimum_robustness": round(robustness, 3),
+        "minimum_horizontal_margin_px": round(margin, 2),
+        "minimum_launch_margin_px": round(launch_margin, 2),
+        "minimum_charge_margin": round(charge_margin, 3),
+    }
 
 
 def validate_level(path: str, strict_flag_policy: bool = False, final: bool = False):
