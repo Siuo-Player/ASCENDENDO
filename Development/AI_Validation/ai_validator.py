@@ -45,6 +45,19 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         parts = line.split()
         if parts[0] == "NAME":
             continue
+        elif parts[0] == "SPAWN":
+            if len(parts) != 3:
+                return False, f"Linha {i}: formato invalido — esperado 'SPAWN x y'"
+            try:
+                x, y = map(float, parts[1:])
+            except ValueError:
+                return False, f"Linha {i}: coordenadas SPAWN invalidas"
+            if not (math.isfinite(x) and math.isfinite(y)):
+                return False, f"Linha {i}: coordenadas SPAWN nao finitas"
+            if x < 0 or x > LOGICAL_WIDTH or y < 0 or y > LOGICAL_HEIGHT:
+                return False, f"Linha {i}: SPAWN fora dos limites da tela"
+            # Reachability continua a ser verificada pelo validador autoritativo.
+            continue
         elif parts[0] == "PLATFORM":
             if len(parts) != 5:
                 return False, f"Linha {i}: formato invalido — esperado 'PLATFORM x y w h'"
