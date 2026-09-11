@@ -27,19 +27,22 @@ TEST_CASE("saveLevel valida antes de escrever e grava um nível válido") {
     std::filesystem::remove(path, ec);
 }
 
-TEST_CASE("saveLevel recusa nível vazio sem criar o ficheiro") {
+TEST_CASE("saveLevel aceita nível vazio válido") {
     const auto path =
-        std::filesystem::temp_directory_path() / "ascendendo-session-save-invalid.lvl";
+        std::filesystem::temp_directory_path() / "ascendendo-session-save-empty.lvl";
     std::error_code ec;
     std::filesystem::remove(path, ec);
 
     logic::EditorSession session(true);
-    const auto result = session.saveLevel(path.string(), "Invalid Session Save");
+    const auto result = session.saveLevel(path.string(), "Empty Session Save");
 
-    CHECK_FALSE(result.success);
-    CHECK_FALSE(result.validationPassed);
+    CHECK(result.success);
+    CHECK(result.validationPassed);
     CHECK(result.generation == session.documentGeneration());
-    CHECK_FALSE(std::filesystem::exists(path));
+    CHECK(result.path == path.string());
+    CHECK(std::filesystem::exists(path));
+
+    std::filesystem::remove(path, ec);
 }
 
 TEST_CASE("EditorSave usa o target configurado pelo editor") {
