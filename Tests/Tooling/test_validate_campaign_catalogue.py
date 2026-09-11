@@ -87,12 +87,23 @@ class CampaignCatalogueValidatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             campaign, levels = self._root(tmp)
             (levels / "one.lvl").write_text(
-                "NAME One\nPLATFORM 0 0 640 16\nFLAG 0 16 640 40\n",
+                "NAME One\nPLATFORM 20 16 128 16\nFLAG 20 32 128 40\n",
                 encoding="utf-8",
             )
             campaign.write_text("one.lvl\n", encoding="utf-8")
             errors = validate_campaign_catalogue(campaign, levels)
             self.assertTrue(any("FLAG is not allowed" in error for error in errors))
+
+    def test_authored_spawn_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            campaign, levels = self._root(tmp)
+            (levels / "one.lvl").write_text(
+                "NAME One\nSPAWN 320 16\nPLATFORM 20 16 128 16\n",
+                encoding="utf-8",
+            )
+            campaign.write_text("one.lvl\n", encoding="utf-8")
+            errors = validate_campaign_catalogue(campaign, levels)
+            self.assertTrue(any("SPAWN is not allowed" in error for error in errors))
 
 
 if __name__ == "__main__":
