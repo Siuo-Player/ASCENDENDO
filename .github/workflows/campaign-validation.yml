@@ -1,0 +1,40 @@
+name: Campaign Validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  campaign-validation:
+    name: Campaign / mechanical validation + difficulty
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Run validator unit tests
+        run: python3 -m unittest Tests/Python/test_campaign_validation.py
+
+      - name: Validate active campaign mechanically
+        run: python3 Development/AI_Validation/validate_campaign.py --campaign
+
+      - name: Emit machine-readable campaign report
+        run: python3 Development/AI_Validation/validate_campaign.py --campaign --json > campaign-validation.json
+
+      - name: Upload campaign validation report
+        uses: actions/upload-artifact@v4
+        with:
+          name: campaign-validation-report
+          path: campaign-validation.json
+          if-no-files-found: error
