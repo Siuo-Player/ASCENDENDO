@@ -203,18 +203,19 @@ TEST_SUITE("CampaignRuntime") {
         std::filesystem::remove(path, ec);
     }
 
-    TEST_CASE("nivel final sem plataformas authored e rejeitado") {
+    TEST_CASE("nivel final vazio e aceite sem objetivo derivado") {
         const auto path = std::filesystem::temp_directory_path() /
             "ascendendo-final-without-platform.lvl";
-        writeLevel(path, "NAME MissingGoal\n");
+        writeLevel(path, "NAME EmptyFinal\n");
 
         CampaignRuntime runtime({path});
         Level level;
 
-        CHECK_FALSE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
-        CHECK(runtime.currentLevelIndex() == 0);
-        CHECK(runtime.currentSpawnY() == doctest::Approx(0.0f));
+        CHECK(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
+        CHECK_FALSE(runtime.hasMoreLevels());
         CHECK_FALSE(level.hasFlag);
+        CHECK(level.platformCount() == 1); // implicit ground
+        CHECK(runtime.currentLevelIndex() == 1);
 
         std::error_code ec;
         std::filesystem::remove(path, ec);
