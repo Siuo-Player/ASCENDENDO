@@ -34,7 +34,10 @@ public:
                          std::size_t screenCount = 1);
 
     bool isFinalCampaignLevel() const { return m_finalCampaignLevel; }
-    void setFinalCampaignLevel(bool finalCampaignLevel) { m_finalCampaignLevel = finalCampaignLevel; }
+    void setFinalCampaignLevel(bool finalCampaignLevel) {
+        m_finalCampaignLevel = finalCampaignLevel;
+        refreshAutomaticFlag();
+    }
     std::uint64_t generation() const { return m_generation; }
     std::size_t screenCount() const { return m_layout.screenCount(); }
     float levelWidth() const { return m_layout.width(); }
@@ -53,10 +56,12 @@ public:
     float spawnMinX() const { return m_spawnMinX; }
     float spawnMaxX() const { return m_spawnMaxX; }
 
+    // Final-campaign goal is derived automatically from the highest platform.
+    // It is presentation/runtime state only and is never authored to .lvl.
     bool setFlag(const AABB& requested);
     void removeFlag();
-    bool hasFlag() const { return m_flag.has_value(); }
-    const AABB* flag() const { return m_flag.has_value() ? &*m_flag : nullptr; }
+    bool hasFlag() const { return m_finalCampaignLevel && m_flag.has_value(); }
+    const AABB* flag() const { return hasFlag() ? &*m_flag : nullptr; }
 
     LevelData toLevelData(const std::string& name) const;
     bool restoreFromLevelData(const LevelData& data);
@@ -66,6 +71,7 @@ public:
 
 private:
     void bumpGeneration();
+    void refreshAutomaticFlag();
     bool insideLogicalBounds(const AABB& rect) const;
     bool inFinalScreen(const AABB& rect) const;
     bool validPlatform(const AABB& rect) const;
