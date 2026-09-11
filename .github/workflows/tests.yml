@@ -48,6 +48,12 @@ jobs:
       - name: Test platform asset registry validator
         run: python3 Tests/Tooling/test_validate_platform_asset_registry.py
 
+      - name: Validate campaign catalogue references
+        run: python3 Development/AI_Validation/validate_campaign_catalogue.py
+
+      - name: Test campaign catalogue validator
+        run: python3 -m unittest Tests/Tooling/test_validate_campaign_catalogue.py
+
       - name: Validate visual stress scene manifest
         run: python3 Development/AI_Validation/visual_stress_scenes.py --json /tmp/visual-stress-manifest.json
 
@@ -132,6 +138,12 @@ jobs:
 
       - name: Test platform asset registry validator
         run: python3 Tests/Tooling/test_validate_platform_asset_registry.py
+
+      - name: Validate campaign catalogue references
+        run: python3 Development/AI_Validation/validate_campaign_catalogue.py
+
+      - name: Test campaign catalogue validator
+        run: python3 -m unittest Tests/Tooling/test_validate_campaign_catalogue.py
 
       - name: Select deterministic Vulkan software driver
         shell: bash
