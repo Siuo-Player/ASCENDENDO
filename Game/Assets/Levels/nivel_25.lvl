@@ -1,6 +1,5 @@
 NAME Nivel 25 — Cume
-SPAWN 40 20
-PLATFORM 8 0 128 16
+# Plataforma mais alta: o objetivo final é derivado automaticamente pela campanha.
 PLATFORM 288 92 96 16
 PLATFORM 176 184 80 16
 PLATFORM 376 276 80 16
