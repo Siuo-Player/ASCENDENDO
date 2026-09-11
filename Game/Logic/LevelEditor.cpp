@@ -1,4 +1,5 @@
 #include "Logic/LevelEditor.h"
+#include "Logic/Level.h"
 #include "Core/Config.h"
 
 #include <algorithm>
@@ -21,7 +22,7 @@ bool insideLayoutBounds(const AABB& rect, const core::LevelLayout& layout) {
     return std::isfinite(rect.min.x) && std::isfinite(rect.min.y) &&
            std::isfinite(rect.max.x) && std::isfinite(rect.max.y) &&
            rect.min.x >= -EPS &&
-           rect.min.y >= -EPS &&
+           rect.min.y >= Level::AUTO_GROUND_HEIGHT - EPS &&
            rect.max.x <= layout.width() + EPS &&
            rect.max.y <= layout.height() + EPS;
 }
@@ -31,14 +32,15 @@ LevelEditorDocument::LevelEditorDocument(bool finalCampaignLevel,
                                          const AABB& initialGround,
                                          std::size_t screenCount)
     : m_finalCampaignLevel(finalCampaignLevel),
-      m_initialGround(initialGround),
+      m_initialGround({{0.0f, 0.0f},
+                       {config::LOGICAL_WIDTH, Level::AUTO_GROUND_HEIGHT}}),
       m_layout(screenCount) {
-    m_spawnMinX = initialGround.min.x;
-    m_spawnMaxX = std::max(m_spawnMinX, initialGround.max.x - config::PLAYER_WIDTH);
-
+    (void)initialGround;
+    m_spawnMinX = Level::AUTO_GROUND_SPAWN_X;
+    m_spawnMaxX = Level::AUTO_GROUND_SPAWN_X;
     m_spawnPosition = {
-        m_spawnMinX,
-        initialGround.max.y,
+        Level::AUTO_GROUND_SPAWN_X,
+        Level::AUTO_GROUND_HEIGHT,
     };
     refreshAutomaticFlag();
 }
@@ -49,9 +51,9 @@ void LevelEditorDocument::bumpGeneration() {
 
 void LevelEditorDocument::refreshAutomaticFlag() {
     m_flag.reset();
-    if (!m_finalCampaignLevel) return;
+    if (!m_finalCampaignLevel || m_platforms.empty()) return;
 
-    const AABB* highest = &m_initialGround;
+    const AABB* highest = &m_platforms.front().bounds;
     for (const auto& platform : m_platforms) {
         const AABB& candidate = platform.bounds;
         if (candidate.max.y > highest->max.y ||
@@ -123,81 +125,61 @@ bool LevelEditorDocument::removePlatform(std::size_t index) {
 }
 
 bool LevelEditorDocument::setSpawnX(float requestedX) {
-    if (!std::isfinite(requestedX) ||
-        requestedX < m_spawnMinX - EPS ||
-        requestedX > m_spawnMaxX + EPS)
-        return false;
-
-    if (requestedX == m_spawnPosition.x) return true;
-
-    m_spawnPosition.x = requestedX;
-    m_spawnPosition.y = m_initialGround.max.y;
-    bumpGeneration();
-    return true;
+    (void)requestedX;
+    return false;
 }
 
 bool LevelEditorDocument::validFlag(const AABB& rect) const {
-    return insideLogicalBounds(rect) && hasMinimumSize(rect) && inFinalScreen(rect);
+    (void)rect;
+    return false;
 }
 
 bool LevelEditorDocument::setFlag(const AABB& requested) {
     (void)requested;
-    // FLAG placement is no longer an authored editor operation.
-    // The final-campaign goal is always derived from the highest platform.
     return false;
 }
 
 void LevelEditorDocument::removeFlag() {
-    // Deliberately a no-op: the automatic campaign goal cannot be manually removed.
+    // Automatic campaign goal cannot be manually removed.
 }
 
 LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     LevelData data;
     data.name = name;
-    data.spawnPosition = m_spawnPosition;
     data.screenCount = m_layout.screenCount();
-
-    // The initial ground is implicit in the editor document but remains
-    // materialized in LevelData for backwards-compatible serialization.
-    data.platforms.push_back(m_initialGround);
-    data.platforms.reserve(m_platforms.size() + 1);
-    for (const auto& platform : m_platforms) {
+    data.platforms.reserve(m_platforms.size());
+    for (const auto& platform : m_platforms)
         data.platforms.push_back(platform.bounds);
-    }
-
-    // FLAG is automatic campaign state and is intentionally never serialized.
+    // Ground, spawn and campaign goal are derived and never serialized.
     return data;
 }
 
 bool LevelEditorDocument::restoreFromLevelData(const LevelData& data) {
-    if (data.platforms.empty() || data.screenCount == 0) return false;
-    if (data.flag.has_value()) return false;
+    if (data.screenCount == 0 || data.flag.has_value() || data.spawnPosition.has_value())
+        return false;
 
     const core::LevelLayout restoredLayout(data.screenCount);
     for (const AABB& platform : data.platforms) {
-        if (!insideLayoutBounds(platform, restoredLayout) || !hasMinimumSize(platform)) return false;
+        if (!insideLayoutBounds(platform, restoredLayout) || !hasMinimumSize(platform))
+            return false;
     }
 
-    if (data.spawnPosition &&
-        (!std::isfinite(data.spawnPosition->x) || !std::isfinite(data.spawnPosition->y) ||
-         data.spawnPosition->x < 0.0f ||
-         data.spawnPosition->x > restoredLayout.width()))
-        return false;
-
-    m_initialGround = data.platforms.front();
+    m_initialGround = {
+        {0.0f, 0.0f},
+        {config::LOGICAL_WIDTH, Level::AUTO_GROUND_HEIGHT}
+    };
     m_platforms.clear();
-    m_platforms.reserve(data.platforms.size() - 1);
-    for (std::size_t i = 1; i < data.platforms.size(); ++i) {
-        m_platforms.push_back({data.platforms[i]});
-    }
+    m_platforms.reserve(data.platforms.size());
+    for (const AABB& platform : data.platforms)
+        m_platforms.push_back({platform});
 
     m_layout = restoredLayout;
-    m_spawnMinX = m_initialGround.min.x;
-    m_spawnMaxX = std::max(m_spawnMinX, m_initialGround.max.x - config::PLAYER_WIDTH);
-    m_spawnPosition = data.spawnPosition.value_or(Vec2{
-        m_spawnMinX,
-        m_initialGround.max.y,
-    });
+    m_spawnMinX = Level::AUTO_GROUND_SPAWN_X;
+    m_spawnMaxX = Level::AUTO_GROUND_SPAWN_X;
+    m_spawnPosition = {
+        Level::AUTO_GROUND_SPAWN_X,
+        Level::AUTO_GROUND_HEIGHT,
+    };
     refreshAutomaticFlag();
     bumpGeneration();
     return true;
