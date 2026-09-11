@@ -17,7 +17,7 @@ Por isso uma plataforma `PLATFORM 100 40 80 20` no segundo chunk é colocada no 
 ```text
 NAME Nome humano-legível
 PLATFORM x y width height
-FLAG x y width height
+SPAWN x y
 ```
 
 Linhas vazias e linhas iniciadas por `#` são ignoradas.
@@ -26,11 +26,17 @@ Linhas vazias e linhas iniciadas por `#` são ignoradas.
 
 É uma AABB sólida. O editor deve produzi-la alinhada ao `EDITOR_GRID_SNAP`.
 
-### `FLAG`
+### `SPAWN`
 
-É uma área de conclusão. Não é uma plataforma física independente; o final da campanha é detetado por overlap entre o player e `flagBounds`.
+É a posição inicial do jogador no nível, quando explicitamente definida. A posição só pertence ao primeiro chunk efetivamente carregado numa run; o streaming mantém o spawn inicial.
 
-Regra de design: há **uma única FLAG por campanha** e ela pertence ao nível que estiver na última posição de `campaign.txt`. Isto evita colocar uma bandeira em cada tela e mantém a semântica de "fim da campanha" simples.
+### Objetivo final da campanha
+
+`FLAG` **não faz parte do formato `.lvl`** e não pode ser authored pelo editor nem persistido em ficheiro.
+
+O objectivo é derivado pelo runtime a partir da **plataforma mais alta do último nível da campanha**. A área de conclusão é colocada automaticamente imediatamente acima dessa plataforma, usando a mesma largura e uma altura fixa de `40` unidades.
+
+Consequentemente, alterar a ordem dos níveis em `campaign.txt` altera automaticamente qual nível recebe o objectivo final. Adicionar, remover ou mover a plataforma mais alta do último nível também altera automaticamente a posição do objectivo. Não existe uma `FLAG` escondida num ficheiro que possa ficar dessincronizada.
 
 ## `campaign.txt`
 
@@ -42,7 +48,7 @@ zigzag.lvl
 precipicio.lvl
 ```
 
-A ordem é significativa. É a ordem em que o motor faz streaming e também define qual nível é o último.
+A ordem é significativa. É a ordem em que o motor faz streaming e também define qual nível é o último e, portanto, qual nível recebe automaticamente o objectivo final.
 
 ## Invariantes
 
@@ -53,6 +59,7 @@ Um nível novo deve:
 - usar dimensões positivas;
 - usar valores representáveis pelo grid do editor;
 - não introduzir entidades desconhecidas no parser do motor;
+- não conter `FLAG`;
 - para a campanha, ser fisicamente alcançável segundo o validador.
 
 O editor não deve oferecer uma posição impossível quando a restrição puder ser aplicada diretamente na UI. A pasta `Game/Assets/Levels/NaoValidados/` existe para níveis que estão em construção ou que falham a validação depois de guardados.
