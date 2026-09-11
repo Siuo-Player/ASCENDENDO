@@ -220,8 +220,8 @@ int main(int argc, char** argv) {
         const bool captureMode = captureLevelEnv != nullptr && *captureLevelEnv != '\0';
         if (captureMode) {
             if (!readCaptureLevelIndex(captureLevelIndex)) return 2;
-            if (!session.beginPlayingLevel(captureLevelIndex,
-                                           static_cast<float>(config::LOGICAL_WIDTH))) {
+            if (!session.beginPlayingLevelForCapture(
+                    captureLevelIndex, static_cast<float>(config::LOGICAL_WIDTH))) {
                 std::cerr << "[ERRO] Nao foi possivel carregar o nivel de captura "
                           << captureLevelIndex << ".\n";
                 return 2;
