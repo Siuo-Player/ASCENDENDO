@@ -8,17 +8,11 @@ import math
 import os
 import random
 import sys
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "sim"))
-from engine import (  # type: ignore
-    LOGICAL_HEIGHT,
-    LOGICAL_WIDTH,
-    PLAYER_WIDTH,
-    simulate_jump,
-    simulate_jump_flag,
-)
+from engine import LOGICAL_HEIGHT, LOGICAL_WIDTH, PLAYER_WIDTH, simulate_jump, simulate_jump_flag  # type: ignore
 
 CHARGE_SAMPLES = 41
 ROBUSTNESS_TRIALS = 80
@@ -32,11 +26,11 @@ class Surface:
     h: float
 
     @property
-    right(self) -> float:
+    def right(self) -> float:
         return self.x + self.w
 
     @property
-    top(self) -> float:
+    def top(self) -> float:
         return self.y + self.h
 
 
@@ -56,8 +50,8 @@ def rect(s: Surface) -> tuple[float, float, float, float]:
 
 def parse_level(path: str) -> Level:
     platforms: list[Surface] = []
-    flag: Surface | None = None
-    spawn: tuple[float, float] | None = None
+    flag = None
+    spawn = None
     screens = 1
     name = os.path.basename(path)
 
@@ -68,7 +62,6 @@ def parse_level(path: str) -> Level:
                 continue
             fields = line.split()
             directive = fields[0]
-
             if directive == "NAME":
                 name = " ".join(fields[1:]) or name
                 continue
@@ -88,7 +81,6 @@ def parse_level(path: str) -> Level:
                 continue
             if directive not in {"PLATFORM", "FLAG"} or len(fields) != 5:
                 raise ValueError(f"{path}:{number}: invalid directive")
-
             values = tuple(float(value) for value in fields[1:])
             if not all(math.isfinite(value) for value in values):
                 raise ValueError(f"{path}:{number}: non-finite geometry")
@@ -97,10 +89,7 @@ def parse_level(path: str) -> Level:
                 raise ValueError(f"{path}:{number}: non-positive geometry")
             level_height = screens * LOGICAL_HEIGHT
             if x < 0 or x + width > LOGICAL_WIDTH or y < 0 or y + height > level_height:
-                raise ValueError(
-                    f"{path}:{number}: geometry outside {LOGICAL_WIDTH}x{level_height}"
-                )
-
+                raise ValueError(f"{path}:{number}: geometry outside {LOGICAL_WIDTH}x{level_height}")
             surface = Surface(x, y, width, height)
             if directive == "FLAG":
                 if flag is not None:
@@ -111,9 +100,8 @@ def parse_level(path: str) -> Level:
 
     if spawn is not None:
         sx, sy = spawn
-        if sx < 0 or sx > LOGICAL_WIDTH or sy < 0 or sy > screens * LOGICAL_HEIGHT:
+        if not (0 <= sx <= LOGICAL_WIDTH and 0 <= sy <= screens * LOGICAL_HEIGHT):
             raise ValueError(f"{path}: spawn outside level bounds")
-
     return Level(path, name, screens, tuple(platforms), flag, spawn)
 
 
@@ -123,8 +111,8 @@ def initial_surface(level: Level) -> Surface:
     return Surface(x, y - 1.0, PLAYER_WIDTH, 1.0)
 
 
-def landing_transition(source: Surface, target: Surface) -> tuple[float, int, float, float, float] | None:
-    best: tuple[float, int, float, float, float] | None = None
+def landing_transition(source: Surface, target: Surface):
+    best = None
     for direction in (-1, 1):
         for index in range(CHARGE_SAMPLES):
             charge = index / (CHARGE_SAMPLES - 1)
@@ -140,34 +128,36 @@ def landing_transition(source: Surface, target: Surface) -> tuple[float, int, fl
             center = fx + PLAYER_WIDTH * 0.5
             if not target.x <= center <= target.right:
                 continue
-
             rng = random.Random(307)
             successes = 0
             start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
             for _ in range(ROBUSTNESS_TRIALS):
                 noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
                 noisy_x = start_x + rng.uniform(-8.0, 8.0)
-                ok, nx, ny, _, _ = simulate_jump(
-                    noisy_x,
-                    source.top,
-                    direction,
-                    noisy_charge,
-                    [rect(source), rect(target)],
-                )
+                ok, nx, ny, _, _ = simulate_jump(noisy_x, source.top, direction, noisy_charge, [rect(source), rect(target)])
                 ncenter = nx + PLAYER_WIDTH * 0.5
-                successes += int(
-                    ok and abs(ny - target.top) <= 1.5 and target.x <= ncenter <= target.right
-                )
-            robustness = successes / ROBUSTNESS_TRIALS
-            margin = min(center - target.x, target.right - center)
-            charge_margin = min(charge, 1.0 - charge)
-            candidate = (robustness, direction, charge, margin, charge_margin)
+                successes += int(ok and abs(ny - target.top) <= 1.5 and target.x <= ncenter <= target.right)
+            candidate = (successes / ROBUSTNESS_TRIALS, direction, charge, min(center - target.x, target.right - center), min(charge, 1.0 - charge))
             if best is None or candidate > best:
                 best = candidate
     return best
 
 
-def flag_transition(source: Surface, level: Level) -> tuple[float, int, float] | None:
+def flag_robustness(source: Surface, level: Level) -> float:
+    assert level.flag is not None
+    rng = random.Random(307)
+    successes = 0
+    start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
+    for _ in range(ROBUSTNESS_TRIALS):
+        direction = rng.choice((-1, 1))
+        noisy_charge = max(0.0, min(1.0, rng.random() + rng.uniform(-0.08, 0.08)))
+        noisy_x = start_x + rng.uniform(-8.0, 8.0)
+        hit, _, _ = simulate_jump_flag(noisy_x, source.top, direction, noisy_charge, [rect(p) for p in level.platforms], rect(level.flag))
+        successes += int(hit)
+    return successes / ROBUSTNESS_TRIALS
+
+
+def flag_transition(source: Surface, level: Level):
     if level.flag is None:
         return None
     for direction in (-1, 1):
@@ -181,35 +171,12 @@ def flag_transition(source: Surface, level: Level) -> tuple[float, int, float] |
                 [rect(platform) for platform in level.platforms],
                 rect(level.flag),
             )
-            if not hit:
-                continue
-            return charge, direction, flag_robustness(source, level)
+            if hit:
+                return charge, direction, flag_robustness(source, level)
     return None
 
 
-def flag_robustness(source: Surface, level: Level) -> float:
-    assert level.flag is not None
-    rng = random.Random(307)
-    successes = 0
-    start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
-    for _ in range(ROBUSTNESS_TRIALS):
-        direction = rng.choice((-1, 1))
-        charge = rng.random()
-        noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
-        noisy_x = start_x + rng.uniform(-8.0, 8.0)
-        hit, _, _ = simulate_jump_flag(
-            noisy_x,
-            source.top,
-            direction,
-            noisy_charge,
-            [rect(platform) for platform in level.platforms],
-            rect(level.flag),
-        )
-        successes += int(hit)
-    return successes / ROBUSTNESS_TRIALS
-
-
-def route(level: Level) -> tuple[int, float, float, float, str]:
+def route(level: Level):
     surfaces = [initial_surface(level), *level.platforms]
     queue = [0]
     seen = {0}
@@ -219,15 +186,12 @@ def route(level: Level) -> tuple[int, float, float, float, str]:
     min_charge_margin = float("inf")
 
     while queue:
-        current = queue.pop(0)
-        source = surfaces[current]
-
+        source = surfaces[queue.pop(0)]
         if level.flag is not None:
             hit = flag_transition(source, level)
             if hit is not None:
                 charge, _, flag_robust = hit
                 return transitions + 1, min(robustness, flag_robust), min_margin if min_margin != float("inf") else 0.0, min_charge_margin if min_charge_margin != float("inf") else min(charge, 1.0 - charge), "spawn_to_flag"
-
         for target_index, target in enumerate(level.platforms, 1):
             if target_index in seen:
                 continue
@@ -250,71 +214,45 @@ def route(level: Level) -> tuple[int, float, float, float, str]:
     return transitions, 0.0, 0.0, 0.0, "highest_platform_unreachable"
 
 
-def difficulty(transitions: int, robustness: float, margin: float, charge_margin: float) -> dict[str, float | int | str]:
+def difficulty(transitions: int, robustness: float, margin: float, charge_margin: float):
     if transitions == 0:
         return {"rating": "unreachable", "score": 100.0, "transitions": 0}
-    safety = (
-        0.45 * robustness
-        + 0.35 * max(0.0, min(1.0, margin / 48.0))
-        + 0.20 * max(0.0, min(1.0, charge_margin / 0.25))
-    )
+    safety = 0.45 * robustness + 0.35 * max(0.0, min(1.0, margin / 48.0)) + 0.20 * max(0.0, min(1.0, charge_margin / 0.25))
     score = round(100.0 * (1.0 - safety), 2)
     rating = "tutorial" if score < 20 else "easy" if score < 40 else "medium" if score < 60 else "hard" if score < 80 else "extreme"
-    return {
-        "rating": rating,
-        "score": score,
-        "transitions": transitions,
-        "minimum_robustness": round(robustness, 3),
-        "minimum_horizontal_margin_px": round(margin, 2),
-    }
+    return {"rating": rating, "score": score, "transitions": transitions, "minimum_robustness": round(robustness, 3), "minimum_horizontal_margin_px": round(margin, 2), "minimum_charge_margin": round(charge_margin, 3)}
 
 
-def validate_level(path: str, strict_flag_policy: bool = False, final: bool = False) -> dict:
+def validate_level(path: str, strict_flag_policy: bool = False, final: bool = False):
     level = parse_level(path)
-    errors: list[str] = []
+    errors = []
     if not level.platforms:
         errors.append("no platforms")
     if strict_flag_policy and final and level.flag is None:
         errors.append("final campaign level must contain FLAG")
     if strict_flag_policy and not final and level.flag is not None:
         errors.append("non-final campaign level must not contain FLAG")
-
     transitions, robustness, margin, charge_margin, reason = route(level)
     if not transitions:
         errors.append(f"map is not mechanically reachable ({reason})")
-
-    return {
-        "path": os.path.normpath(path),
-        "name": level.name,
-        "screens": level.screens,
-        "platforms": len(level.platforms),
-        "has_flag": level.flag is not None,
-        "valid": not errors,
-        "errors": errors,
-        "difficulty": difficulty(transitions, robustness, margin, charge_margin),
-    }
+    return {"path": os.path.normpath(path), "name": level.name, "screens": level.screens, "platforms": len(level.platforms), "has_flag": level.flag is not None, "valid": not errors, "errors": errors, "difficulty": difficulty(transitions, robustness, margin, charge_margin)}
 
 
-def validate_campaign(campaign_path: str, strict_flag_policy: bool = False) -> list[dict]:
+def validate_campaign(campaign_path: str, strict_flag_policy: bool = False):
     base = os.path.dirname(campaign_path)
-    names = [line.strip() for line in open(campaign_path, encoding="utf-8") if line.strip() and not line.startswith("#")]
+    with open(campaign_path, encoding="utf-8") as stream:
+        names = [line.strip() for line in stream if line.strip() and not line.startswith("#")]
     if not names:
         raise ValueError("campaign contains no levels")
-    if len(set(os.path.normpath(name) for name in names)) != len(names):
+    normalized = [os.path.normpath(name) for name in names]
+    if len(set(normalized)) != len(names):
         raise ValueError("campaign contains duplicate level entries")
-
     reports = []
     for index, name in enumerate(names):
         path = os.path.join(base, name)
         if not os.path.isfile(path):
             raise ValueError(f"campaign references missing level: {name}")
-        reports.append(
-            validate_level(
-                path,
-                strict_flag_policy=strict_flag_policy,
-                final=index == len(names) - 1,
-            )
-        )
+        reports.append(validate_level(path, strict_flag_policy=strict_flag_policy, final=index == len(names) - 1))
     return reports
 
 
@@ -325,15 +263,9 @@ def main() -> int:
     parser.add_argument("--strict-campaign-policy", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-
     root = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".."))
     campaign = os.path.join(root, "Game", "Assets", "Levels", "campaign.txt")
-    reports = (
-        validate_campaign(campaign, strict_flag_policy=args.strict_campaign_policy)
-        if args.campaign
-        else [validate_level(args.level, strict_flag_policy=args.strict_campaign_policy, final=True)]
-    )
-
+    reports = validate_campaign(campaign, strict_flag_policy=args.strict_campaign_policy) if args.campaign else [validate_level(args.level, strict_flag_policy=args.strict_campaign_policy, final=True)]
     valid = all(report["valid"] for report in reports)
     if args.json:
         print(json.dumps(reports, indent=2, sort_keys=True))
