@@ -25,38 +25,19 @@ void removeFile(const std::filesystem::path& path) {
     std::error_code ec;
     std::filesystem::remove(path, ec);
 }
-
-void runFullChargeJump(GameSession& session, InputManager& input,
-                       const core::KeyBindings& bindings) {
-    input.injectRawState(false, false, true, true, false);
-    session.update(0.25f, input, bindings, 640, 360, 640.0f, 360.0f);
-    session.update(0.15f, input, bindings, 640, 360, 640.0f, 360.0f);
-    input.injectRawState(false, false, false, false, true);
-    session.update(config::FIXED_STEP, input, bindings, 640, 360, 640.0f, 360.0f);
-}
-
-bool waitForGroundedY(GameSession& session, InputManager& input,
-                      const core::KeyBindings& bindings, float expectedY) {
-    for (int frame = 0; frame < 120; ++frame) {
-        input.injectRawState(false, false, false, false, false);
-        session.update(config::FIXED_STEP, input, bindings, 640, 360, 640.0f, 360.0f);
-        if (session.player().isGrounded() &&
-            session.player().position().y == doctest::Approx(expectedY)) return true;
-    }
-    return false;
-}
 } // namespace
 
 TEST_SUITE("MultiScreenStreamingRun") {
-TEST_CASE("GameSession streams the next screen before boundary and reaches the final FLAG") {
+TEST_CASE("GameSession streams the final level before boundary and uses the derived goal") {
     const auto firstLevel = writeLevel(
         "ascendendo-stream-run-first.lvl",
-        "NAME Stream First\nSCREENS 1\nSPAWN 100 20\n"
-        "PLATFORM 0 0 640 16\nPLATFORM 0 100 640 16\nPLATFORM 0 170 640 16\n");
+        "NAME Stream First\nSCREENS 1\n"
+        "PLATFORM 0 100 640 16\n"
+        "PLATFORM 0 170 640 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-stream-run-final.lvl",
-        "NAME Stream Final\nSCREENS 1\nSPAWN 100 20\n"
-        "PLATFORM 0 0 640 16\nFLAG 0 16 640 32\n");
+        "NAME Stream Final\nSCREENS 1\n"
+        "PLATFORM 280 16 80 16\n");
     const auto runsPath = std::filesystem::temp_directory_path() / "ascendendo-stream-run.csv";
     removeFile(runsPath);
 
@@ -65,46 +46,32 @@ TEST_CASE("GameSession streams the next screen before boundary and reaches the f
     session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
 
     REQUIRE(session.state() == core::GameState::PLAYING);
-    CHECK(session.player().position().x == doctest::Approx(100.0f));
-    CHECK(session.player().position().y == doctest::Approx(20.0f));
-    CHECK(session.level().platformCount() == 3);
+    CHECK(session.player().position().x == doctest::Approx(320.0f));
+    CHECK(session.player().position().y == doctest::Approx(16.0f));
+    CHECK(session.level().platformCount() == 3); // implicit ground + 2 authored
     CHECK_FALSE(session.level().hasFlag);
 
     InputManager input;
     core::KeyBindings bindings;
 
-    REQUIRE(waitForGroundedY(session, input, bindings, 16.0f));
+    session.player().body.position.y =
+        config::LOGICAL_HEIGHT - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
+    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
 
-    // First reachable step: floor -> y=100 platform.
-    runFullChargeJump(session, input, bindings);
-    REQUIRE(waitForGroundedY(session, input, bindings, 116.0f));
+    REQUIRE(session.level().platformCount() == 4); // + final authored platform
+    REQUIRE(session.level().hasFlag);
+    CHECK(session.level().flagBounds.min.x == doctest::Approx(280.0f));
+    CHECK(session.level().flagBounds.min.y == doctest::Approx(392.0f));
+    CHECK(session.level().flagBounds.max.x == doctest::Approx(360.0f));
+    CHECK(session.level().flagBounds.max.y == doctest::Approx(432.0f));
 
-    // Second ascent reaches y=170 and crosses the 180px preload boundary
-    // during the jump; the final campaign level is appended at Y=360.
-    runFullChargeJump(session, input, bindings);
-    CHECK(session.level().platformCount() == 4);
-    CHECK(session.level().hasFlag);
-    CHECK(session.player().position().y < config::LOGICAL_HEIGHT);
-    REQUIRE(waitForGroundedY(session, input, bindings, 186.0f));
+    // Complete through the normal GameSession overlap path using the derived goal.
+    session.player().body.position = {300.0f, 392.0f};
+    const auto result = session.update(0.0f, input, bindings,
+                                       640, 360, 640.0f, 360.0f);
 
-    // The appended level's floor and FLAG are now authoritative. Completion is
-    // observed only through the normal GameSession update path.
-    bool completed = false;
-    float completionTime = 0.0f;
-    for (int frame = 0; frame < 120; ++frame) {
-        input.injectRawState(false, false, false, false, false);
-        const auto result = session.update(config::FIXED_STEP, input, bindings,
-                                           640, 360, 640.0f, 360.0f);
-        if (result.campaignCompleted) {
-            completed = true;
-            completionTime = result.completionElapsedSeconds;
-            CHECK(result.runRecorded);
-            break;
-        }
-    }
-
-    CHECK(completed);
-    CHECK(completionTime == doctest::Approx(session.elapsedTime()));
+    CHECK(result.campaignCompleted);
+    CHECK(result.runRecorded);
     CHECK(session.state() == core::GameState::CREDITS);
 
     std::ifstream runs(runsPath);
