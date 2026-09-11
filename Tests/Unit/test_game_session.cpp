@@ -46,45 +46,42 @@ TEST_SUITE("GameSession") {
         CHECK(session.state() == core::GameState::PLAYING);
         CHECK(session.elapsedTime() == doctest::Approx(0.0f));
         CHECK(session.player().position().x == doctest::Approx(320.0f));
-        CHECK(session.player().position().y == doctest::Approx(40.0f));
+        CHECK(session.player().position().y == doctest::Approx(16.0f));
         CHECK(session.level().platformCount() > 0);
         CHECK(session.level().hasFlag);
     }
 
-    TEST_CASE("uses authored spawn for a real level run") {
+    TEST_CASE("ignores authored spawn and uses the fixed derived spawn") {
         const auto path = writeTestLevel(
             "ascendendo-authored-spawn-runtime.lvl",
             "NAME Authored Spawn\n"
-            "SCREENS 1\n"
             "SPAWN 123.25 57.50\n"
-            "PLATFORM 80 40 160 20\n"
-            "FLAG 80 80 160 40\n");
+            "PLATFORM 80 80 160 20\n");
 
         logic::GameSession session({path}, "campaign-id", "runs.csv");
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
 
-        CHECK(session.state() == core::GameState::PLAYING);
-        CHECK(session.player().position().x == doctest::Approx(123.25f));
-        CHECK(session.player().position().y == doctest::Approx(57.50f));
-        CHECK(session.level().spawnPosition.x == doctest::Approx(123.25f));
-        CHECK(session.level().spawnPosition.y == doctest::Approx(57.50f));
+        CHECK(session.state() == core::GameState::MENU);
+        CHECK(session.level().platformCount() == 0);
 
         removeTestFile(path);
     }
 
-    TEST_CASE("legacy level without SPAWN keeps the documented fallback") {
+    TEST_CASE("levels without authored spawn or flag use derived gameplay state") {
         const auto path = writeTestLevel(
-            "ascendendo-legacy-spawn-runtime.lvl",
-            "NAME Legacy Spawn\n"
-            "PLATFORM 80 40 160 20\n"
-            "FLAG 80 80 160 40\n");
+            "ascendendo-derived-runtime.lvl",
+            "NAME Derived\n"
+            "PLATFORM 80 80 160 20\n");
 
         logic::GameSession session({path}, "campaign-id", "runs.csv");
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
 
         CHECK(session.state() == core::GameState::PLAYING);
-        CHECK(session.player().position().x == doctest::Approx(config::LOGICAL_WIDTH / 2.0f));
-        CHECK(session.player().position().y == doctest::Approx(40.0f));
+        CHECK(session.player().position().x == doctest::Approx(320.0f));
+        CHECK(session.player().position().y == doctest::Approx(16.0f));
+        CHECK(session.level().spawnPosition.x == doctest::Approx(320.0f));
+        CHECK(session.level().spawnPosition.y == doctest::Approx(16.0f));
+        CHECK(session.level().hasFlag);
 
         removeTestFile(path);
     }
@@ -120,7 +117,7 @@ TEST_SUITE("GameSession") {
         core::KeyBindings bindings;
         session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
 
-        CHECK(session.player().position().y == doctest::Approx(40.0f));
+        CHECK(session.player().position().y == doctest::Approx(16.0f));
         CHECK(session.level().platformCount() == initialPlatforms);
     }
 
@@ -185,7 +182,6 @@ TEST_SUITE("GameSession") {
 
         logic::InputManager input;
         core::KeyBindings bindings;
-
         session.update(config::FIXED_STEP, input, bindings, 640, 360, 640.0f, 360.0f);
         CHECK(session.elapsedTime() == doctest::Approx(config::FIXED_STEP));
     }
@@ -200,9 +196,7 @@ TEST_SUITE("GameSession") {
 
         logic::InputManager input;
         core::KeyBindings bindings;
-
         session.update(0.5f, input, bindings, 640, 360, 640.0f, 360.0f);
-
         CHECK(session.elapsedTime() == doctest::Approx(0.25f));
     }
 
@@ -231,7 +225,6 @@ TEST_SUITE("GameSession") {
 
     TEST_CASE("preserves explicit editor return state") {
         logic::GameSession session({}, "campaign-id", "runs.csv");
-
         session.openEditor(core::GameState::PLAYING);
 
         CHECK(session.state() == core::GameState::EDITOR);
