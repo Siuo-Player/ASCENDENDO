@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Authoritative static campaign validation and mechanical difficulty report.
-
-This tool validates the shipped .lvl contract, then uses the existing fixed-step
-simulation to search for a physically valid spawn->FLAG route. Difficulty is
-reported from measurable jump margins rather than a subjective label.
-"""
+"""Authoritative static campaign validation and mechanical difficulty report."""
 from __future__ import annotations
 
 import argparse
@@ -13,19 +8,12 @@ import math
 import os
 import random
 import sys
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SIM_DIR = os.path.join(SCRIPT_DIR, "sim")
 sys.path.insert(0, SIM_DIR)
-from engine import (  # type: ignore
-    FIXED_STEP,
-    LOGICAL_HEIGHT,
-    LOGICAL_WIDTH,
-    PLAYER_WIDTH,
-    simulate_jump,
-    simulate_jump_flag,
-)
+from engine import LOGICAL_HEIGHT, LOGICAL_WIDTH, PLAYER_WIDTH, simulate_jump, simulate_jump_flag  # type: ignore
 
 MAX_CHARGE_SAMPLES = 41
 ROBUSTNESS_TRIALS = 80
@@ -51,8 +39,10 @@ class Surface:
 class ParsedLevel:
     path: str
     name: str
+    screen_count: int
     platforms: tuple[Surface, ...]
     flag: Surface | None
+    spawn: tuple[float, float] | None
 
 
 @dataclass(frozen=True)
@@ -68,26 +58,52 @@ class Transition:
     robustness: float
 
 
-def _finite(v: float) -> bool:
-    return math.isfinite(v)
+def _finite(value: float) -> bool:
+    return math.isfinite(value)
 
 
 def parse_level(path: str) -> ParsedLevel:
     platforms: list[Surface] = []
     flag: Surface | None = None
+    spawn: tuple[float, float] | None = None
+    screen_count = 1
     name = os.path.basename(path)
+
     with open(path, "r", encoding="utf-8") as handle:
         for line_no, raw in enumerate(handle, 1):
-            line = raw.strip()
+            line = raw.rstrip("\r\n").strip()
             if not line or line.startswith("#"):
                 continue
             parts = line.split()
             directive = parts[0]
+
             if directive == "NAME":
                 name = " ".join(parts[1:]) or name
                 continue
+            if directive == "SCREENS":
+                if len(parts) != 2:
+                    raise ValueError(f"{path}:{line_no}: invalid SCREENS directive")
+                try:
+                    screen_count = int(parts[1])
+                except ValueError as exc:
+                    raise ValueError(f"{path}:{line_no}: invalid screen count") from exc
+                if screen_count < 1:
+                    raise ValueError(f"{path}:{line_no}: screen count must be positive")
+                continue
+            if directive == "SPAWN":
+                if len(parts) != 3:
+                    raise ValueError(f"{path}:{line_no}: invalid SPAWN directive")
+                try:
+                    x, y = (float(v) for v in parts[1:])
+                except ValueError as exc:
+                    raise ValueError(f"{path}:{line_no}: non-numeric spawn") from exc
+                if not all(_finite(v) for v in (x, y)):
+                    raise ValueError(f"{path}:{line_no}: non-finite spawn")
+                spawn = (x, y)
+                continue
             if directive not in {"PLATFORM", "FLAG"} or len(parts) != 5:
                 raise ValueError(f"{path}:{line_no}: invalid directive or arity")
+
             try:
                 x, y, w, h = (float(v) for v in parts[1:])
             except ValueError as exc:
@@ -96,8 +112,10 @@ def parse_level(path: str) -> ParsedLevel:
                 raise ValueError(f"{path}:{line_no}: non-finite geometry")
             if w <= 0 or h <= 0:
                 raise ValueError(f"{path}:{line_no}: non-positive geometry")
-            if x < 0 or x + w > LOGICAL_WIDTH or y < 0 or y + h > LOGICAL_HEIGHT:
-                raise ValueError(f"{path}:{line_no}: geometry outside 640x360 page")
+            level_height = screen_count * LOGICAL_HEIGHT
+            if x < 0 or x + w > LOGICAL_WIDTH or y < 0 or y + h > level_height:
+                raise ValueError(f"{path}:{line_no}: geometry outside {LOGICAL_WIDTH}x{level_height} level")
+
             surface = Surface(x, y, w, h)
             if directive == "FLAG":
                 if flag is not None:
@@ -105,60 +123,30 @@ def parse_level(path: str) -> ParsedLevel:
                 flag = surface
             else:
                 platforms.append(surface)
-    return ParsedLevel(path, name, tuple(platforms), flag)
+
+    level_height = screen_count * LOGICAL_HEIGHT
+    if spawn is not None:
+        x, y = spawn
+        if x < 0 or x > LOGICAL_WIDTH or y < 0 or y > level_height:
+            raise ValueError(f"{path}: SPAWN outside {LOGICAL_WIDTH}x{level_height} level")
+
+    return ParsedLevel(path, name, screen_count, tuple(platforms), flag, spawn)
 
 
 def _rect(surface: Surface) -> tuple[float, float, float, float]:
     return (surface.x, surface.y, surface.right, surface.top)
 
 
-def _target_dx(source: Surface, target: Surface) -> float:
-    return max(0.0, target.x - source.right, source.x - target.right)
-
-
-def _scan_transition(source: Surface, target: Surface) -> Transition | None:
-    best: Transition | None = None
-    source_y = source.top
-    target_y = target.top
-    dy = target_y - source_y
-    if dy > 0:
-        # A jump cannot land above the effective ballistic apex. The simulator
-        # is authoritative for actual collision placement; this is only a fast reject.
-        pass
-    center = target.x + target.w * 0.5
-    dx_gap = _target_dx(source, target)
-    for direction in (-1, 1):
-        for idx in range(MAX_CHARGE_SAMPLES):
-            charge = idx / (MAX_CHARGE_SAMPLES - 1)
-            landed, fx, fy, _, _ = simulate_jump(
-                source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5,
-                source_y,
-                direction,
-                charge,
-                [_rect(source), _rect(target)],
-            )
-            if not landed or abs(fy - target_y) > 1.5:
-                continue
-            body_center = fx + PLAYER_WIDTH * 0.5
-            if not (target.x <= body_center <= target.right):
-                continue
-            horizontal_margin = min(body_center - target.x, target.right - body_center)
-            charge_margin = min(charge, 1.0 - charge)
-            robustness = _robustness(source, target, direction, charge)
-            candidate = Transition(
-                0, 0, charge, direction, fx, fy,
-                horizontal_margin, charge_margin, robustness,
-            )
-            if best is None or (candidate.robustness, candidate.horizontal_margin) > (
-                best.robustness, best.horizontal_margin
-            ):
-                best = candidate
-    return best
+def _initial_surface(level: ParsedLevel) -> Surface:
+    if level.spawn is not None:
+        x, y = level.spawn
+        return Surface(x, y - 1.0, PLAYER_WIDTH, 1.0)
+    return Surface(320.0, -1.0, PLAYER_WIDTH, 1.0)
 
 
 def _robustness(source: Surface, target: Surface, direction: int, charge: float) -> float:
     rng = random.Random(307)
-    success = 0
+    successes = 0
     start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
     for _ in range(ROBUSTNESS_TRIALS):
         noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
@@ -166,15 +154,90 @@ def _robustness(source: Surface, target: Surface, direction: int, charge: float)
         landed, fx, fy, _, _ = simulate_jump(
             noisy_x, source.top, direction, noisy_charge, [_rect(source), _rect(target)]
         )
-        center = fx + PLAYER_WIDTH * 0.5
-        if landed and abs(fy - target.top) <= 1.5 and target.x <= center <= target.right:
-            success += 1
-    return success / ROBUSTNESS_TRIALS
+        body_center = fx + PLAYER_WIDTH * 0.5
+        if landed and abs(fy - target.top) <= 1.5 and target.x <= body_center <= target.right:
+            successes += 1
+    return successes / ROBUSTNESS_TRIALS
+
+
+def _scan_transition(source: Surface, target: Surface) -> Transition | None:
+    best: Transition | None = None
+    for direction in (-1, 1):
+        for index in range(MAX_CHARGE_SAMPLES):
+            charge = index / (MAX_CHARGE_SAMPLES - 1)
+            landed, fx, fy, _, _ = simulate_jump(
+                source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5,
+                source.top,
+                direction,
+                charge,
+                [_rect(source), _rect(target)],
+            )
+            if not landed or abs(fy - target.top) > 1.5:
+                continue
+            body_center = fx + PLAYER_WIDTH * 0.5
+            if not (target.x <= body_center <= target.right):
+                continue
+            candidate = Transition(
+                0,
+                0,
+                charge,
+                direction,
+                fx,
+                fy,
+                min(body_center - target.x, target.right - body_center),
+                min(charge, 1.0 - charge),
+                _robustness(source, target, direction, charge),
+            )
+            if best is None or (candidate.robustness, candidate.horizontal_margin) > (
+                best.robustness,
+                best.horizontal_margin,
+            ):
+                best = candidate
+    return best
+
+
+def _flag_robustness(
+    source: Surface,
+    flag: Surface,
+    direction: int,
+    charge: float,
+    platforms: list[Surface],
+) -> float:
+    rng = random.Random(307)
+    successes = 0
+    start_x = source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5
+    for _ in range(ROBUSTNESS_TRIALS):
+        noisy_charge = max(0.0, min(1.0, charge + rng.uniform(-0.08, 0.08)))
+        noisy_x = start_x + rng.uniform(-8.0, 8.0)
+        hit, _, _ = simulate_jump_flag(
+            noisy_x,
+            source.top,
+            direction,
+            noisy_charge,
+            [_rect(platform) for platform in platforms],
+            _rect(flag),
+        )
+        successes += int(hit)
+    return successes / ROBUSTNESS_TRIALS
+
+
+def _trace_path(
+    start: int,
+    target: int,
+    came_from: dict[int, int],
+    via: dict[int, Transition],
+) -> list[Transition]:
+    path: list[Transition] = []
+    node = target
+    while node != start:
+        path.append(via[node])
+        node = came_from[node]
+    return list(reversed(path))
 
 
 def _route(level: ParsedLevel) -> tuple[list[Transition], str]:
-    ground = Surface(0, 0, LOGICAL_WIDTH, 4)
-    surfaces = [ground, *level.platforms]
+    initial = _initial_surface(level)
+    surfaces = [initial, *level.platforms]
     start = 0
     came_from: dict[int, int] = {}
     via: dict[int, Transition] = {}
@@ -183,62 +246,75 @@ def _route(level: ParsedLevel) -> tuple[list[Transition], str]:
 
     while queue:
         current = queue.pop(0)
-        current_surface = surfaces[current]
+        source = surfaces[current]
+
         if level.flag is not None:
-            flag_rect = _rect(level.flag)
-            # Any airborne overlap is sufficient for the real runtime contract.
             for direction in (-1, 1):
-                for idx in range(MAX_CHARGE_SAMPLES):
-                    charge = idx / (MAX_CHARGE_SAMPLES - 1)
+                for index in range(MAX_CHARGE_SAMPLES):
+                    charge = index / (MAX_CHARGE_SAMPLES - 1)
                     hit, _, _ = simulate_jump_flag(
-                        current_surface.x + current_surface.w * 0.5 - PLAYER_WIDTH * 0.5,
-                        current_surface.top,
+                        source.x + source.w * 0.5 - PLAYER_WIDTH * 0.5,
+                        source.top,
                         direction,
                         charge,
-                        [_rect(p) for p in level.platforms],
-                        flag_rect,
+                        [_rect(platform) for platform in level.platforms],
+                        _rect(level.flag),
                     )
                     if hit:
-                        t = Transition(
-                            current, -1, charge, direction,
-                            0.0, level.flag.y, 0.0, min(charge, 1-charge), 1.0,
+                        transition = Transition(
+                            current,
+                            -1,
+                            charge,
+                            direction,
+                            0.0,
+                            level.flag.y,
+                            0.0,
+                            min(charge, 1.0 - charge),
+                            _flag_robustness(source, level.flag, direction, charge, list(level.platforms)),
                         )
-                        path = [t]
-                        node = current
-                        while node != start:
-                            path.append(via[node])
-                            node = came_from[node]
-                        return list(reversed(path)), "spawn_to_flag"
+                        return (
+                            _trace_path(start, current, came_from, via) + [transition],
+                            "spawn_to_flag",
+                        )
 
-        for idx, target in enumerate(surfaces[1:], 1):
-            if idx in seen:
+        for target_index, target in enumerate(level.platforms, 1):
+            if target_index in seen:
                 continue
-            transition = _scan_transition(current_surface, target)
+            transition = _scan_transition(source, target)
             if transition is None:
                 continue
             transition = Transition(
-                current, idx, transition.charge, transition.direction,
-                transition.landing_x, transition.landing_y,
-                transition.horizontal_margin, transition.charge_margin,
+                current,
+                target_index,
+                transition.charge,
+                transition.direction,
+                transition.landing_x,
+                transition.landing_y,
+                transition.horizontal_margin,
+                transition.charge_margin,
                 transition.robustness,
             )
-            seen.add(idx)
-            came_from[idx] = current
-            via[idx] = transition
-            queue.append(idx)
+            seen.add(target_index)
+            came_from[target_index] = current
+            via[target_index] = transition
+            queue.append(target_index)
 
-    return [], "unreachable_flag"
+    if not level.platforms:
+        return [], "no_platforms"
+
+    highest = max(range(1, len(surfaces)), key=lambda index: surfaces[index].top)
+    if highest in seen:
+        return _trace_path(start, highest, came_from, via), "top_reached"
+    return [], "highest_platform_unreachable"
 
 
-def difficulty_score(transitions: list[Transition]) -> dict[str, float | str]:
+def difficulty_score(transitions: list[Transition]) -> dict[str, float | str | int]:
     if not transitions:
-        return {"rating": "unreachable", "score": 100.0}
+        return {"rating": "unreachable", "score": 100.0, "transitions": 0}
     robustness = sum(t.robustness for t in transitions) / len(transitions)
-    margins = [max(0.0, min(1.0, t.horizontal_margin / 48.0)) for t in transitions]
-    charge_margins = [max(0.0, min(1.0, t.charge_margin / 0.25)) for t in transitions]
-    safety = 0.45 * robustness + 0.35 * (sum(margins) / len(margins)) + 0.20 * (
-        sum(charge_margins) / len(charge_margins)
-    )
+    margin = sum(max(0.0, min(1.0, t.horizontal_margin / 48.0)) for t in transitions) / len(transitions)
+    charge = sum(max(0.0, min(1.0, t.charge_margin / 0.25)) for t in transitions) / len(transitions)
+    safety = 0.45 * robustness + 0.35 * margin + 0.20 * charge
     score = 100.0 * (1.0 - safety)
     if score < 20:
         rating = "tutorial"
@@ -256,26 +332,36 @@ def difficulty_score(transitions: list[Transition]) -> dict[str, float | str]:
         "transitions": len(transitions),
         "mean_robustness": round(robustness, 3),
         "minimum_robustness": round(min(t.robustness for t in transitions), 3),
-        "mean_horizontal_margin_px": round(sum(t.horizontal_margin for t in transitions) / len(transitions), 2),
+        "mean_horizontal_margin_px": round(
+            sum(t.horizontal_margin for t in transitions) / len(transitions), 2
+        ),
     }
 
 
-def validate_level(path: str, require_flag: bool = True) -> dict:
+def validate_level(path: str, require_flag: bool = False, forbid_flag: bool = False) -> dict:
     level = parse_level(path)
     errors: list[str] = []
+    if not level.platforms:
+        errors.append("no platforms")
     if require_flag and level.flag is None:
-        errors.append("missing FLAG")
+        errors.append("missing final FLAG")
+    if forbid_flag and level.flag is not None:
+        errors.append("non-final level must not contain FLAG")
+
     transitions, reason = _route(level)
-    if level.flag is not None and not transitions:
-        errors.append(f"FLAG unreachable ({reason})")
+    if not transitions:
+        errors.append(f"map is not mechanically reachable ({reason})")
+
     report = {
         "path": os.path.normpath(path),
         "name": level.name,
+        "screens": level.screen_count,
+        "spawn": level.spawn,
         "platforms": len(level.platforms),
         "flag": asdict(level.flag) if level.flag else None,
         "valid": not errors,
         "errors": errors,
-        "route": [asdict(t) for t in transitions],
+        "route": [asdict(transition) for transition in transitions],
         "difficulty": difficulty_score(transitions),
     }
     return report
@@ -285,10 +371,26 @@ def validate_campaign(campaign_path: str) -> list[dict]:
     base = os.path.dirname(campaign_path)
     with open(campaign_path, "r", encoding="utf-8") as handle:
         names = [line.strip() for line in handle if line.strip() and not line.startswith("#")]
-    reports = []
+    if not names:
+        raise ValueError("campaign contains no levels")
+
+    reports: list[dict] = []
+    seen: set[str] = set()
     for index, name in enumerate(names):
+        normalized = os.path.normpath(name)
+        if normalized in seen:
+            raise ValueError(f"campaign contains duplicate level: {name}")
+        seen.add(normalized)
         path = os.path.join(base, name)
-        reports.append(validate_level(path, require_flag=(index == len(names) - 1)))
+        if not os.path.isfile(path):
+            raise ValueError(f"campaign references missing level: {name}")
+        reports.append(
+            validate_level(
+                path,
+                require_flag=(index == len(names) - 1),
+                forbid_flag=(index != len(names) - 1),
+            )
+        )
     return reports
 
 
@@ -301,16 +403,16 @@ def main() -> int:
     root = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".."))
     campaign = os.path.join(root, "Game", "Assets", "Levels", "campaign.txt")
     reports = validate_campaign(campaign) if args.campaign else [validate_level(args.level)]
-    ok = all(r["valid"] for r in reports)
+    ok = all(report["valid"] for report in reports)
     if args.json:
         print(json.dumps(reports, indent=2, sort_keys=True))
     else:
-        for r in reports:
-            status = "OK" if r["valid"] else "FAIL"
-            d = r["difficulty"]
-            print(f"[{status}] {r['name']}: {d['rating']} ({d['score']})")
-            for err in r["errors"]:
-                print(f"  - {err}")
+        for report in reports:
+            difficulty = report["difficulty"]
+            status = "OK" if report["valid"] else "FAIL"
+            print(f"[{status}] {report['name']}: {difficulty['rating']} ({difficulty['score']})")
+            for error in report["errors"]:
+                print(f"  - {error}")
     return 0 if ok else 1
 
 
