@@ -1,32 +1,36 @@
 #!/usr/bin/env python3
-"""Lightweight authoritative-adjacent level reachability validator."""
+"""
+ai_validator.py — Validador de niveis do ASCENDENDO.
+Verifica se cada nivel da campanha e fisicamente passivel.
+Uso:
+    python3 ai_validator.py nivel.lvl          # valida um nivel
+    python3 ai_validator.py --campaign         # valida toda a campanha
+"""
+import sys, os, math
 
-from __future__ import annotations
+# Forcar UTF-8 no Windows (evita UnicodeEncodeError com emojis no cp1252)
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-import math
-import os
-import sys
+LOGICAL_WIDTH  = 640.0
+LOGICAL_HEIGHT = 360.0
+G_val          = 980.0
+V_MAX          = 600.0
+ANGLE          = math.pi / 3.0
+TOLERANCE      = 0.90
+GROUND_HEIGHT  = 16.0
 
-try:
-    from sim.engine import LOGICAL_HEIGHT, LOGICAL_WIDTH, G, VY_EFFECTIVE  # type: ignore
-except ImportError:
-    LOGICAL_WIDTH = 640.0
-    LOGICAL_HEIGHT = 360.0
-    G = 1000.0
-    VY_EFFECTIVE = 420.0
+VY_eff   = V_MAX * math.sin(ANGLE) * TOLERANCE
+VX_eff   = V_MAX * math.cos(ANGLE) * TOLERANCE
+MAX_JUMP = (VY_eff**2) / (2 * G_val)
 
-MAX_JUMP = 260.0
-VX_EFFECTIVE = 260.0
-GROUND_HEIGHT = 16.0
-CAMPAIGN_FILE = os.path.join(
-    os.path.dirname(__file__), "..", "..", "Game", "Assets", "Levels", "campaign.txt"
-)
-
+CAMPAIGN_FILE = os.path.join(os.path.dirname(__file__),
+                             "..", "..", "Game", "Assets", "Levels", "campaign.txt")
 
 def validate_level(filepath: str) -> tuple[bool, str]:
     """Valida um ficheiro .lvl. Retorna (valido, mensagem)."""
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             lines = f.readlines()
     except FileNotFoundError:
         return False, f"Ficheiro nao encontrado: {filepath}"
@@ -37,8 +41,7 @@ def validate_level(filepath: str) -> tuple[bool, str]:
 
     for i, raw in enumerate(lines, 1):
         line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+        if not line or line.startswith('#'): continue
         parts = line.split()
         if parts[0] == "NAME":
             continue
@@ -51,15 +54,17 @@ def validate_level(filepath: str) -> tuple[bool, str]:
                 x, y, w, h = map(float, parts[1:])
             except ValueError:
                 return False, f"Linha {i}: coordenadas de plataforma invalidas"
-            if not all(math.isfinite(value) for value in (x, y, w, h)):
+            if not all(math.isfinite(v) for v in (x, y, w, h)):
                 return False, f"Linha {i}: coordenadas de plataforma nao finitas"
             if w <= 0 or h <= 0:
-                return False, f"Linha {i}: dimensao de plataforma invalida"
+                return False, f"Linha {i}: dimensoes de plataforma invalidas"
             if x < 0 or (x + w) > LOGICAL_WIDTH:
                 return False, f"Linha {i}: plataforma fora dos limites X ([{x},{x+w}] vs [0,{LOGICAL_WIDTH}])"
-            if y < GROUND_HEIGHT or (y + h) > LOGICAL_HEIGHT:
-                return False, f"Linha {i}: plataforma ocupa o chão implícito ou ultrapassa a altura da tela"
-            platforms.append({"type": "platform", "bounds": (x, y, w, h)})
+            if y < GROUND_HEIGHT:
+                return False, f"Linha {i}: plataforma ocupa o chão implícito (Y={y} < {GROUND_HEIGHT})"
+            if (y + h) > LOGICAL_HEIGHT:
+                return False, f"Linha {i}: plataforma ultrapassa a altura da tela (topo {y+h} > {LOGICAL_HEIGHT})"
+            platforms.append({'type': 'platform', 'bounds': (x, y, w, h)})
         elif parts[0] == "FLAG":
             return False, f"Linha {i}: FLAG nao e permitida em .lvl — o objetivo final e derivado automaticamente da plataforma mais alta da campanha"
         else:
@@ -68,45 +73,40 @@ def validate_level(filepath: str) -> tuple[bool, str]:
     if not platforms:
         return True, "Nivel vazio (aceitavel)"
 
-    # O mundo começa com chão implícito 640x16 e spawn centrado no seu topo.
-    ground = {"type": "ground", "bounds": (0.0, 0.0, LOGICAL_WIDTH, GROUND_HEIGHT)}
-    nodes = [ground] + platforms
+    # BFS com física real. O chão inicial é implícito e ocupa Y=0..16.
+    ground = {'type': 'ground', 'bounds': (0, 0, LOGICAL_WIDTH, GROUND_HEIGHT)}
+    nodes  = [ground] + platforms
     visited = {0}
-    queue = [0]
+    queue   = [0]
 
     while queue:
         curr = queue.pop(0)
         for j in range(1, len(nodes)):
-            if j in visited:
-                continue
-            p1 = nodes[curr]["bounds"]
-            p2 = nodes[j]["bounds"]
+            if j in visited: continue
+            p1 = nodes[curr]['bounds']
+            p2 = nodes[j]['bounds']
             y_start = p1[1] + p1[3]
             y_end = p2[1] + p2[3]
-            dx = max(0.0, p2[0] - (p1[0] + p1[2]), p1[0] - (p2[0] + p2[2]))
+            dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
             dy = y_end - y_start
-            if dy > MAX_JUMP:
-                continue
-            disc = VY_EFFECTIVE**2 - 2 * G * max(0.0, dy)
-            if disc < 0:
-                continue
-            max_dx = VX_EFFECTIVE * (VY_EFFECTIVE + math.sqrt(disc)) / G
+            if dy > MAX_JUMP: continue
+            disc = VY_eff**2 - 2 * G_val * max(0.0, dy)
+            if disc < 0: continue
+            max_dx = VX_eff * (VY_eff + math.sqrt(disc)) / G_val
             if dx <= max_dx:
-                visited.add(j)
-                queue.append(j)
+                visited.add(j); queue.append(j)
 
     if len(visited) == len(nodes):
         return True, "Plataformas fisicamente alcançaveis"
 
     return False, "Nenhum caminho fisicamente possivel — nivel impossivel"
 
-
 def validate_campaign(campaign_path: str) -> bool:
     """Valida todos os niveis listados em campaign.txt. Retorna True se todos OK."""
     base = os.path.dirname(campaign_path)
     try:
-        with open(campaign_path, "r", encoding="utf-8") as f:
-            level_files = [l.strip() for l in f if l.strip() and not l.startswith("#")]
+        with open(campaign_path, 'r', encoding='utf-8') as f:
+            level_files = [l.strip() for l in f if l.strip() and not l.startswith('#')]
     except FileNotFoundError:
         print(f"[ERRO] campaign.txt nao encontrado: {campaign_path}")
         return False
@@ -116,22 +116,39 @@ def validate_campaign(campaign_path: str) -> bool:
         path = os.path.join(base, lf)
         ok, msg = validate_level(path)
         status = "[OK]   " if ok else "[ERRO] "
-        print(f"{status}{lf}: {msg}")
+        print(f"  {status} {lf}: {msg}")
         if not ok:
             all_ok = False
+
     return all_ok
 
+def main():
+    if len(sys.argv) < 2:
+        print("Uso: python3 ai_validator.py <nivel.lvl>")
+        print("     python3 ai_validator.py --campaign")
+        sys.exit(1)
 
-def main() -> int:
-    if len(sys.argv) > 1 and sys.argv[1] == "--campaign":
-        return 0 if validate_campaign(CAMPAIGN_FILE) else 1
-    if len(sys.argv) > 1:
-        ok, msg = validate_level(sys.argv[1])
-        print(("[OK] " if ok else "[ERRO] ") + msg)
-        return 0 if ok else 1
-    print("Uso: ai_validator.py --campaign | <level.lvl>")
-    return 2
+    if sys.argv[1] == "--campaign":
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        campaign = os.path.join(script_dir, "..", "..", "Game", "Assets", "Levels", "campaign.txt")
+        campaign = os.path.normpath(campaign)
+        if not os.path.exists(campaign):
+            campaign = os.path.normpath("Game/Assets/Levels/campaign.txt")
 
+        print(f"\n  Campanha: {campaign}\n")
+        ok = validate_campaign(campaign)
+        print()
+        if ok:
+            print("  [OK] Campanha validada -- todos os niveis sao passiveis.")
+        else:
+            print("  [ERRO] Campanha INVALIDA -- ver erros acima.")
+        sys.exit(0 if ok else 1)
+    else:
+        path = sys.argv[1]
+        ok, msg = validate_level(path)
+        status = "[OK]  " if ok else "[ERRO]"
+        print(f"  {status} {path}: {msg}")
+        sys.exit(0 if ok else 1)
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
