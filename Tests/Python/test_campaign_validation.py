@@ -24,7 +24,7 @@ class CampaignValidationTests(unittest.TestCase):
 
     def test_rejects_out_of_bounds_geometry(self):
         path = self.write_level("NAME bad\nPLATFORM 0 0 641 16\nFLAG 0 16 640 32\n")
-        with self.assertRaisesRegex(ValueError, "outside 640x360"):
+        with self.assertRaisesRegex(ValueError, r"geometry outside 640\.0x360\.0"):
             module.validate_level(str(path))
 
     def test_rejects_multiple_flags(self):
@@ -61,8 +61,8 @@ class CampaignValidationTests(unittest.TestCase):
     def test_reports_mechanical_difficulty_for_reachable_level(self):
         path = self.write_level(
             "NAME reachable\nSPAWN 312 16\nPLATFORM 280 0 160 16\n"
-            "PLATFORM 436 89 176 16\nPLATFORM 148 174 176 16\n"
-            "PLATFORM 436 219 128 16\nFLAG 389 235 128 40\n"
+            "PLATFORM 436 60 176 16\nPLATFORM 148 120 176 16\n"
+            "PLATFORM 436 175 128 16\nFLAG 389 195 128 40\n"
         )
         report = module.validate_level(str(path), require_flag=True)
         self.assertTrue(report["valid"], report["errors"])
@@ -77,7 +77,7 @@ class CampaignValidationTests(unittest.TestCase):
 
     def test_non_final_level_gets_difficulty_from_reachable_top(self):
         path = self.write_level(
-            "NAME noflag\nSPAWN 312 16\nPLATFORM 280 0 160 16\nPLATFORM 300 70 128 16\n"
+            "NAME noflag\nSPAWN 312 16\nPLATFORM 280 0 160 16\nPLATFORM 300 35 128 16\n"
         )
         report = module.validate_level(str(path))
         self.assertTrue(report["valid"], report["errors"])
