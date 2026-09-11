@@ -77,7 +77,7 @@ class CampaignValidationTests(unittest.TestCase):
 
     def test_non_final_level_gets_difficulty_from_reachable_top(self):
         path = self.write_level(
-            "NAME noflag\nSPAWN 312 16\nPLATFORM 280 0 160 16\nPLATFORM 300 35 128 16\n"
+            "NAME noflag\nSPAWN 312 16\nPLATFORM 280 0 160 16\nPLATFORM 460 35 128 16\n"
         )
         report = module.validate_level(str(path))
         self.assertTrue(report["valid"], report["errors"])
