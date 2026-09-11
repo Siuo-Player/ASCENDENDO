@@ -14,15 +14,18 @@ struct Platform {
 
 class Level {
 public:
+    static constexpr float AUTO_GROUND_HEIGHT = 16.0f;
+    static constexpr float AUTO_GROUND_SPAWN_X = config::LOGICAL_WIDTH / 2.0f;
+
     std::string name = "Sem Nome";
     bool hasFlag = false;
     AABB flagBounds;
-    Vec2 spawnPosition = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+    Vec2 spawnPosition = {AUTO_GROUND_SPAWN_X, AUTO_GROUND_HEIGHT};
 
     // Append one local LevelData chunk into world coordinates.
-    // Returns offsetY + LOGICAL_HEIGHT so CampaignRuntime can stream fixed-height chunks.
-    // The campaign FLAG is derived automatically from the highest platform only when
-    // this chunk is the final level of the campaign. LevelData never supplies a FLAG.
+    // The implicit ground exists only at world Y=0..16 for the initial chunk.
+    // The campaign FLAG is derived automatically from the highest authored
+    // platform only when this chunk is the final campaign level.
     float appendFromData(const LevelData& data,
                          float maxWidth,
                          float offsetY,
@@ -39,7 +42,7 @@ public:
         name = "Sem Nome";
         hasFlag = false;
         flagBounds = {};
-        spawnPosition = {config::LOGICAL_WIDTH / 2.0f, 40.0f};
+        spawnPosition = {AUTO_GROUND_SPAWN_X, AUTO_GROUND_HEIGHT};
         m_spawnInitialized = false;
     }
 
