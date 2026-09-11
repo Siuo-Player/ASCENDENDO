@@ -4,7 +4,7 @@ Este é o **único documento vivo de planeamento do produto**. O Git é o histó
 
 ## Estado actual
 
-O jogo já tem uma base jogável e uma campanha de **15 níveis**. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura.
+O jogo já tem uma base jogável e uma campanha de **25 níveis**. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura.
 
 O problema principal já não é falta de arquitectura. É transformar essa base num jogo que outras pessoas consigam jogar, entender e terminar.
 
@@ -24,7 +24,7 @@ A física 1.0 continua simples: salto a 60°, sem air control, plataformas está
 
 A campanha deve deixar de ser apenas demonstração técnica. Criar níveis deliberados, com progressão de dificuldade, leitura visual clara e variedade suficiente para que a mecânica principal se mantenha interessante.
 
-Objectivo de conteúdo para 1.0: **10 campanhas / 575 níveis**, com tamanhos de campanha de 10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis. A distribuição exacta de dificuldade deve ser decidida pela experiência e pela validação, não por percentagens artificiais.
+Objectivo de conteúdo para 1.0: **10 campanhas**, começando com um conjunto inicial de tamanhos de referência de **10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis**. Esta é uma hipótese de escala de conteúdo, não uma obrigação de produzir exactamente 575 níveis independentemente dos resultados de playtesting. A quantidade final deve ser revista quando houver dados de minutos de jogo, retenção, ritmo de produção e qualidade dos níveis.
 
 Cada nível só conta como concluído quando:
 
