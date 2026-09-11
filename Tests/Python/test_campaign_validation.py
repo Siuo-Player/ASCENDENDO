@@ -41,7 +41,7 @@ class CampaignValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SPAWN is derived"):
             module.parse_level(str(path))
 
-    def test_reachable_level_gets_difficulty_report(self):
+    def test_reachable_level_gets_control_space_difficulty_report(self):
         path = self.write_level(
             "NAME reachable\n"
             "PLATFORM 280 16 160 16\n"
@@ -51,9 +51,39 @@ class CampaignValidationTests(unittest.TestCase):
         )
         report = module.validate_level(str(path))
         self.assertTrue(report["valid"], report["errors"])
-        self.assertIn(report["difficulty"]["rating"], {"tutorial", "easy", "medium", "hard", "extreme"})
-        self.assertGreaterEqual(report["difficulty"]["score"], 0.0)
-        self.assertLessEqual(report["difficulty"]["score"], 100.0)
+        difficulty = report["difficulty"]
+        self.assertIn(difficulty["rating"], {"tutorial", "easy", "medium", "hard", "extreme"})
+        self.assertGreaterEqual(difficulty["score"], 0.0)
+        self.assertLessEqual(difficulty["score"], 100.0)
+        self.assertEqual(difficulty["model"], "control_space_route_completion")
+        self.assertGreaterEqual(difficulty["estimated_route_completion"], 0.0)
+        self.assertLessEqual(difficulty["estimated_route_completion"], 1.0)
+        self.assertGreater(difficulty["required_jumps"], 0)
+        self.assertTrue(report["route"])
+        self.assertIn("profile", report["route"][0])
+        self.assertIn("control_success_probability", report["route"][0]["profile"])
+
+    def test_harder_geometry_has_lower_completion_probability(self):
+        easy = self.write_level(
+            "NAME easy\n"
+            "PLATFORM 240 40 240 16\n"
+            "PLATFORM 200 104 240 16\n"
+            "PLATFORM 160 168 240 16\n"
+        )
+        hard = self.write_level(
+            "NAME hard\n"
+            "PLATFORM 304 40 64 16\n"
+            "PLATFORM 96 120 64 16\n"
+            "PLATFORM 352 200 64 16\n"
+        )
+        easy_report = module.validate_level(str(easy))
+        hard_report = module.validate_level(str(hard))
+        self.assertTrue(easy_report["valid"], easy_report["errors"])
+        self.assertTrue(hard_report["valid"], hard_report["errors"])
+        self.assertGreaterEqual(
+            easy_report["difficulty"]["estimated_route_completion"],
+            hard_report["difficulty"]["estimated_route_completion"],
+        )
 
     def test_final_level_derives_goal_from_highest_platform(self):
         path = self.write_level(
