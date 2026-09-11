@@ -61,6 +61,7 @@ TEST_SUITE("CampaignRuntime") {
         REQUIRE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 3);
         CHECK_FALSE(runtime.hasMoreLevels());
+        CHECK(level.hasFlag);
 
         CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 3);
@@ -75,13 +76,11 @@ TEST_SUITE("CampaignRuntime") {
         writeLevel(tallPath,
                    "NAME Tall\n"
                    "SCREENS 2\n"
-                   "SPAWN 320 40\n"
                    "PLATFORM 100 680 160 20\n");
         writeLevel(finalPath,
                    "NAME Final\n"
                    "SCREENS 1\n"
-                   "PLATFORM 100 4 160 20\n"
-                   "FLAG 100 40 160 40\n");
+                   "PLATFORM 100 16 160 20\n");
 
         CampaignRuntime runtime({tallPath, finalPath});
         Level level;
@@ -89,15 +88,17 @@ TEST_SUITE("CampaignRuntime") {
         REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 1);
         CHECK(runtime.currentSpawnY() == doctest::Approx(720.0f));
-        REQUIRE(level.platformCount() == 1);
-        CHECK(level.platforms()[0].bounds.min.y == doctest::Approx(680.0f));
+        REQUIRE(level.platformCount() == 2); // implicit ground + authored platform
+        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(680.0f));
 
         REQUIRE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 2);
         CHECK(runtime.currentSpawnY() == doctest::Approx(1080.0f));
-        REQUIRE(level.platformCount() == 2);
-        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(724.0f));
+        REQUIRE(level.platformCount() == 3); // existing + final authored platform
+        CHECK(level.platforms()[2].bounds.min.y == doctest::Approx(736.0f));
         CHECK(level.hasFlag);
+        CHECK(level.flagBounds.min.x == doctest::Approx(100.0f));
+        CHECK(level.flagBounds.min.y == doctest::Approx(756.0f));
 
         std::error_code ec;
         std::filesystem::remove(tallPath, ec);
@@ -142,7 +143,7 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Nivel inicial inexistente nao altera o progresso") {
         CampaignRuntime runtime({"Game/Assets/Levels/nao-existe.lvl"});
         Level level;
-        level.addPlatform(0.0f, 0.0f, 16.0f, 16.0f);
+        level.addPlatform(32.0f, 16.0f, 16.0f, 16.0f);
 
         CHECK_FALSE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
         CHECK(runtime.currentLevelIndex() == 0);
@@ -154,7 +155,7 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Nivel inicial semanticamente invalido e rejeitado") {
         const auto path = std::filesystem::temp_directory_path() /
             "ascendendo-semantic-invalid-initial.lvl";
-        writeLevel(path, "NAME Invalid\nPLATFORM 0 0 -16 20\nFLAG 0 40 16 16\n");
+        writeLevel(path, "NAME Invalid\nPLATFORM 0 16 -16 20\n");
 
         CampaignRuntime runtime({path});
         Level level;
@@ -169,33 +170,23 @@ TEST_SUITE("CampaignRuntime") {
         std::filesystem::remove(path, ec);
     }
 
-    TEST_CASE("FLAG em nivel nao final e rejeitada") {
+    TEST_CASE("SPAWN e FLAG authored sao rejeitados") {
         const auto path = std::filesystem::temp_directory_path() /
-            "ascendendo-non-final-flag.lvl";
-        writeLevel(path, "NAME NonFinal\nPLATFORM 0 0 100 20\nFLAG 10 40 16 16\n");
+            "ascendendo-derived-directives.lvl";
+        writeLevel(path, "NAME Invalid\nSPAWN 320 16\nPLATFORM 0 16 100 20\n");
 
-        CampaignRuntime runtime({
-            "Game/Assets/Levels/inicio.lvl",
-            path,
-            "Game/Assets/Levels/precipicio.lvl"
-        });
+        CampaignRuntime runtime({path});
         Level level;
-
-        REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
-        CHECK_FALSE(runtime.streamNextLevel(level, config::LOGICAL_WIDTH));
-        CHECK(runtime.currentLevelIndex() == 1);
-        CHECK(runtime.currentSpawnY() == doctest::Approx(config::LOGICAL_HEIGHT));
-        CHECK_FALSE(level.hasFlag);
-        CHECK(runtime.hasMoreLevels());
+        CHECK_FALSE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
 
         std::error_code ec;
         std::filesystem::remove(path, ec);
     }
 
-    TEST_CASE("nivel final com FLAG e aceito") {
+    TEST_CASE("nivel final recebe objetivo derivado sem FLAG authored") {
         const auto path = std::filesystem::temp_directory_path() /
-            "ascendendo-final-flag.lvl";
-        writeLevel(path, "NAME Final\nPLATFORM 0 0 100 20\nFLAG 10 40 16 16\n");
+            "ascendendo-final-derived-goal.lvl";
+        writeLevel(path, "NAME Final\nPLATFORM 100 80 120 20\nPLATFORM 300 180 160 20\n");
 
         CampaignRuntime runtime({path});
         Level level;
@@ -203,16 +194,19 @@ TEST_SUITE("CampaignRuntime") {
         REQUIRE(runtime.loadInitialLevel(level, config::LOGICAL_WIDTH));
         CHECK_FALSE(runtime.hasMoreLevels());
         CHECK(level.hasFlag);
-        CHECK(level.flagBounds.min.x == doctest::Approx(10.0f));
+        CHECK(level.flagBounds.min.x == doctest::Approx(300.0f));
+        CHECK(level.flagBounds.min.y == doctest::Approx(200.0f));
+        CHECK(level.flagBounds.max.x == doctest::Approx(460.0f));
+        CHECK(level.flagBounds.max.y == doctest::Approx(240.0f));
 
         std::error_code ec;
         std::filesystem::remove(path, ec);
     }
 
-    TEST_CASE("nivel final sem FLAG e rejeitado") {
+    TEST_CASE("nivel final sem plataformas authored e rejeitado") {
         const auto path = std::filesystem::temp_directory_path() /
-            "ascendendo-final-without-flag.lvl";
-        writeLevel(path, "NAME MissingFlag\nPLATFORM 0 0 100 20\n");
+            "ascendendo-final-without-platform.lvl";
+        writeLevel(path, "NAME MissingGoal\n");
 
         CampaignRuntime runtime({path});
         Level level;
@@ -229,7 +223,7 @@ TEST_SUITE("CampaignRuntime") {
     TEST_CASE("Chunk semanticamente invalido nao e consumido") {
         const auto invalidPath = std::filesystem::temp_directory_path() /
             "ascendendo-semantic-invalid-chunk.lvl";
-        writeLevel(invalidPath, "NAME Invalid\nPLATFORM 0 0 20 0\n");
+        writeLevel(invalidPath, "NAME Invalid\nPLATFORM 0 16 20 0\n");
 
         CampaignRuntime runtime({
             "Game/Assets/Levels/inicio.lvl",
@@ -256,7 +250,7 @@ TEST_SUITE("CampaignRuntime") {
 
     TEST_CASE("LevelDataIO rejects unknown directives") {
         const auto path = std::filesystem::temp_directory_path() / "ascendendo-unknown-directive.lvl";
-        writeLevel(path, "NAME Valid\nPLATFORM 0 0 16 16\nUNKNOWN 1 2 3\n");
+        writeLevel(path, "NAME Valid\nPLATFORM 0 16 16 16\nUNKNOWN 1 2 3\n");
 
         CHECK_FALSE(LevelDataIO::load(path).has_value());
         std::error_code ec;
@@ -265,7 +259,7 @@ TEST_SUITE("CampaignRuntime") {
 
     TEST_CASE("LevelDataIO rejects trailing tokens") {
         const auto path = std::filesystem::temp_directory_path() / "ascendendo-trailing-tokens.lvl";
-        writeLevel(path, "NAME Valid\nPLATFORM 0 0 16 16 extra\n");
+        writeLevel(path, "NAME Valid\nPLATFORM 0 16 16 16 extra\n");
 
         CHECK_FALSE(LevelDataIO::load(path).has_value());
         std::error_code ec;
