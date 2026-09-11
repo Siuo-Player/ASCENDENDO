@@ -59,18 +59,12 @@ public:
         const std::optional<LevelData> data = LevelDataIO::load(levelPath);
         if (!data || !LevelDataValidator::validate(*data)) return false;
 
-        player_ = logic::Player{};
-        if (data->spawn.has_value()) {
-            player_.body.position = data->spawn.value();
-        } else if (!data->platforms.empty()) {
-            player_.body.position = data->platforms.front().bounds.min;
-        } else {
-            player_.body.position = {0.0f, 0.0f};
-        }
-        world_ = logic::PhysicsWorld{};
-        elapsedTime_ = 0.0f;
         level_.clear();
         level_.appendFromData(*data, logicalWidth, 0.0f);
+        player_ = logic::Player{};
+        player_.body.position = level_.spawnPosition;
+        world_ = logic::PhysicsWorld{};
+        elapsedTime_ = 0.0f;
         stateMachine_.enterPlaying();
         return true;
     }
