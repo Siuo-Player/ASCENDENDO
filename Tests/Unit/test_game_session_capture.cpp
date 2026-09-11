@@ -5,7 +5,7 @@
 #include <filesystem>
 
 TEST_SUITE("GameSession capture mode") {
-    TEST_CASE("non-final campaign level can be loaded in isolation") {
+    TEST_CASE("non-final campaign level can be loaded in isolation without campaign goal") {
         logic::GameSession session(
             {
                 "Game/Assets/Levels/inicio.lvl",
@@ -17,7 +17,7 @@ TEST_SUITE("GameSession capture mode") {
 
         REQUIRE(session.beginPlayingLevelForCapture(2, config::LOGICAL_WIDTH));
         CHECK(session.state() == core::GameState::PLAYING);
-        CHECK(session.level().hasFlag);
+        CHECK_FALSE(session.level().hasFlag);
         CHECK(session.elapsedTime() == doctest::Approx(0.0f));
     }
 
