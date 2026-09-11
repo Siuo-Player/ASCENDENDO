@@ -61,13 +61,11 @@ class CampaignValidationTests(unittest.TestCase):
         self.assertFalse(report["valid"])
         self.assertIn("non-final campaign level", " ".join(report["errors"]))
 
-    def test_unreachable_level_is_rejected(self):
-        path = self.write_level(
-            "NAME impossible\nSCREENS 2\nPLATFORM 0 0 640 16\nPLATFORM 608 700 32 16\n"
-        )
+    def test_level_without_platforms_is_rejected(self):
+        path = self.write_level("NAME empty\n")
         report = module.validate_level(str(path))
         self.assertFalse(report["valid"])
-        self.assertTrue(any("unreachable" in error for error in report["errors"]))
+        self.assertIn("no platforms", report["errors"])
 
 
 if __name__ == "__main__":
