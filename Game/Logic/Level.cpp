@@ -15,9 +15,12 @@ float Level::appendFromData(const LevelData& data,
     name = data.name;
 
     if (!m_spawnInitialized) {
-        spawnPosition = {config::LOGICAL_WIDTH / 2.0f, AUTO_GROUND_HEIGHT};
+        spawnPosition = {AUTO_GROUND_SPAWN_X, AUTO_GROUND_HEIGHT};
         spawnPosition.y += offsetY;
         m_spawnInitialized = true;
+        if (offsetY == 0.0f) {
+            addPlatform(0.0f, 0.0f, maxWidth, AUTO_GROUND_HEIGHT);
+        }
     }
 
     float highestY = offsetY;
