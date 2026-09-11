@@ -14,19 +14,19 @@ TEST_CASE("saveEditorLevel grava uma representação canónica que pode ser reab
     std::error_code ec;
     std::filesystem::remove(path, ec);
 
-    logic::LevelEditorDocument document(false, logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}});
+    logic::LevelEditorDocument document(false, logic::AABB{{0.0f, 0.0f}, {640.0f, 16.0f}});
     REQUIRE(document.addPlatform({{96.0f, 80.0f}, {224.0f, 100.0f}}));
-    REQUIRE(document.setSpawnX(128.0f));
 
     REQUIRE(logic::saveEditorLevel(document, path.string(), "IO Roundtrip"));
 
     const auto loaded = logic::LevelDataIO::load(path);
     REQUIRE(loaded.has_value());
     REQUIRE(loaded->name == "IO Roundtrip");
-    REQUIRE(loaded->spawnPosition.has_value());
-    REQUIRE(loaded->platforms.size() == 2);
-    CHECK(loaded->platforms[1].min.x == doctest::Approx(96.0f));
-    CHECK(loaded->platforms[1].min.y == doctest::Approx(80.0f));
+    CHECK_FALSE(loaded->spawnPosition.has_value());
+    CHECK_FALSE(loaded->flag.has_value());
+    REQUIRE(loaded->platforms.size() == 1);
+    CHECK(loaded->platforms[0].min.x == doctest::Approx(96.0f));
+    CHECK(loaded->platforms[0].min.y == doctest::Approx(80.0f));
 
     std::filesystem::remove(path, ec);
 }
@@ -38,7 +38,7 @@ TEST_CASE("saveEditorLevel não deixa um ficheiro temporário depois de uma grav
     std::filesystem::remove(path, ec);
     std::filesystem::remove(temporary, ec);
 
-    logic::LevelEditorDocument document(false, logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}});
+    logic::LevelEditorDocument document(false, logic::AABB{{0.0f, 0.0f}, {640.0f, 16.0f}});
     REQUIRE(logic::saveEditorLevel(document, path.string(), "Atomic Save"));
 
     CHECK(std::filesystem::exists(path));
