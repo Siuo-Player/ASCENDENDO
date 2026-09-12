@@ -6,10 +6,12 @@
 #include "Graphics/RenderState.h"
 #include "Graphics/RenderSnapshot.h"
 #include "Logic/CampaignEditorSnapshot.h"
+#include "Logic/CampaignValidation.h"
 #include "Logic/EditorRenderSnapshot.h"
 
 #include <vulkan/vulkan.h>
 #include <memory>
+#include <cstddef>
 
 namespace gfx {
 
@@ -44,12 +46,15 @@ public:
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
     void attachCampaignEditorSnapshot(const logic::CampaignEditorRenderSnapshot* snapshot);
+    void attachCampaignValidationSnapshot(const logic::CampaignValidationSnapshot* snapshot);
 
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
                    RenderState state,
                    int menuSelection = 0,
-                   float elapsedSeconds = 0.0f);
+                   float elapsedSeconds = 0.0f,
+                   bool adminValidationVisible = false,
+                   std::size_t currentCampaignLevelIndex = 0);
 
     bool isInitialized() const { return m_initialized; }
 
@@ -69,6 +74,8 @@ private:
     const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
     logic::CampaignEditorRenderSnapshot m_campaignEditorSnapshot{};
     const logic::CampaignEditorRenderSnapshot* m_campaignEditorSnapshotPtr = nullptr;
+    logic::CampaignValidationSnapshot m_campaignValidationSnapshot{};
+    const logic::CampaignValidationSnapshot* m_campaignValidationSnapshotPtr = nullptr;
 
     bool m_initialized = false;
 };

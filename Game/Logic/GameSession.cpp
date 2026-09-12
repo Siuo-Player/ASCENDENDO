@@ -103,6 +103,16 @@ void GameSession::openEditor(core::GameState returnState) noexcept {
     stateMachine_.enterEditor(returnState);
 }
 
+core::LogicalPoint GameSession::menuPointer(const InputManager& input,
+                                             int32_t windowWidth,
+                                             int32_t windowHeight,
+                                             float logicalWidth) const {
+    return core::windowToLogical(
+        input.cursorX(), input.cursorY(),
+        windowWidth, windowHeight,
+        static_cast<int32_t>(logicalWidth), config::LOGICAL_HEIGHT);
+}
+
 int GameSession::clickedMenuBox(const InputManager& input,
                                 int32_t windowWidth,
                                 int32_t windowHeight,
@@ -110,11 +120,16 @@ int GameSession::clickedMenuBox(const InputManager& input,
                                 float logicalWidth) const {
     if (!input.isMouseButtonJustPressed(MouseButton::LEFT)) return -1;
 
-    const core::LogicalPoint pt = core::windowToLogical(
-        input.cursorX(), input.cursorY(),
-        windowWidth, windowHeight,
-        static_cast<int32_t>(logicalWidth), config::LOGICAL_HEIGHT);
+    const core::LogicalPoint pt = menuPointer(input, windowWidth, windowHeight, logicalWidth);
+    return core::hitTestMenuBox(pt.x, pt.y, count, logicalWidth);
+}
 
+int GameSession::hoveredMenuBox(const InputManager& input,
+                                int32_t windowWidth,
+                                int32_t windowHeight,
+                                int count,
+                                float logicalWidth) const {
+    const core::LogicalPoint pt = menuPointer(input, windowWidth, windowHeight, logicalWidth);
     return core::hitTestMenuBox(pt.x, pt.y, count, logicalWidth);
 }
 
@@ -136,6 +151,8 @@ GameSessionUpdateResult GameSession::update(float dt,
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
     const bool openCampaignEditorPressed =
         core::isActionJustPressed(bindings, input, core::GameAction::OpenCampaignEditor);
+    const bool openControlsPressed =
+        core::isActionJustPressed(bindings, input, core::GameAction::OpenControls);
 
     const bool campaignPrevious =
         core::isActionJustPressed(bindings, input, core::GameAction::CampaignSelectPrevious);
@@ -195,6 +212,10 @@ GameSessionUpdateResult GameSession::update(float dt,
             break;
         }
 
+        const int hoveredPaused =
+            hoveredMenuBox(input, windowWidth, windowHeight, 3, logicalWidth);
+        if (hoveredPaused >= 0) stateMachine_.select(hoveredPaused, 3);
+
         const int clickedPaused =
             clickedMenuBox(input, windowWidth, windowHeight, 3, logicalWidth);
         if (clickedPaused >= 0) stateMachine_.select(clickedPaused, 3);
@@ -232,6 +253,22 @@ GameSessionUpdateResult GameSession::update(float dt,
             break;
         }
 
+        if (openControlsPressed) {
+            if (stateMachine_.menuSelection() == 4) {
+                stateMachine_.select(0, 5);
+            } else {
+                stateMachine_.select(4, 5);
+            }
+            break;
+        }
+
+        if (stateMachine_.menuSelection() == 4) {
+            if (pausePressed) {
+                stateMachine_.select(0, 5);
+            }
+            break;
+        }
+
         if (openCampaignEditorPressed) {
             openCampaignEditor(core::GameState::MENU);
             break;
@@ -240,6 +277,10 @@ GameSessionUpdateResult GameSession::update(float dt,
             openEditor(core::GameState::MENU);
             break;
         }
+
+        const int hoveredMenu =
+            hoveredMenuBox(input, windowWidth, windowHeight, 4, logicalWidth);
+        if (hoveredMenu >= 0) stateMachine_.select(hoveredMenu, 4);
 
         const int clickedMenu =
             clickedMenuBox(input, windowWidth, windowHeight, 4, logicalWidth);

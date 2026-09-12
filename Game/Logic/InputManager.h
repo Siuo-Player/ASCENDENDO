@@ -38,6 +38,7 @@ namespace Key {
     constexpr int F2      = 291;
     constexpr int F5      = 294;
     constexpr int F6      = 295;
+    constexpr int F10     = 299;
     constexpr int F11     = 300;
     constexpr int LBRACKET  = 91;
     constexpr int RBRACKET  = 93;
@@ -94,7 +95,7 @@ public:
 private:
     static void s_glfwKeyCallback(GLFWwindow*, int key, int, int action, int);
     static void s_glfwMouseButtonCallback(GLFWwindow*, int button, int action, int mods);
-    static void s_glfwCursorPosCallback(GLFWwindow*, double x, double y);
+    static void s_glfwCursorPosEvent(GLFWwindow*, double x, double y);
     static InputManager* s_instance;
 
     std::unordered_map<int, bool> m_current;

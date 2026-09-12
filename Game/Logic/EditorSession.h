@@ -133,6 +133,9 @@ private:
     bool m_keyboardCursorActive = false;
     float m_viewBottomY = 0.0f;
 
+    LevelData m_gestureBaseline;
+    bool m_gestureBaselineValid = false;
+
     std::string m_persistencePath;
     std::string m_documentName = "Editor Level";
     EditorSaveResult m_lastSaveResult{};

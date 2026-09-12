@@ -1,0 +1,59 @@
+name: UI and build quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Clang warnings-as-errors + UI contracts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install toolchain and graphics dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang make pkg-config libvulkan-dev libglfw3-dev glslc xvfb mesa-vulkan-drivers
+
+      - name: Run UI contract tests
+        run: python3 -m unittest Tests/Tooling/test_ui_contract.py
+
+      - name: Build with warnings as errors
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f build-quality.log
+          if ! make clean >build-quality.log 2>&1; then
+            cat build-quality.log
+            exit 1
+          fi
+          if ! make game WARNINGS_AS_ERRORS=1 -j2 >>build-quality.log 2>&1; then
+            cat build-quality.log
+            exit 1
+          fi
+
+          if grep -nE 'warning:' build-quality.log; then
+            echo 'Compiler warnings remain after the quality gate.'
+            exit 1
+          fi
+
+          if grep -nE '(^|\s)(error:|fatal error:)' build-quality.log; then
+            echo 'Compiler errors remain after the quality gate.'
+            exit 1
+          fi
+
+      - name: Run native test suite
+        shell: bash
+        run: xvfb-run -a -s '-screen 0 1280x720x24' make tests -j2
+
+      - name: Validate campaign catalogue and mechanics
+        run: |
+          python3 Development/AI_Validation/validate_campaign_catalogue.py
+          python3 Development/AI_Validation/ai_validator.py --campaign

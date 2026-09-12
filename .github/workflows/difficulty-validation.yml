@@ -1,0 +1,60 @@
+name: Difficulty validation
+
+on:
+  push:
+    branches:
+      - fix/ui-quality-audit-20260912
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  difficulty:
+    name: Physics episode difficulty report
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Run campaign difficulty model
+        run: |
+          python3 Development/AI_Validation/difficulty_report.py \
+            --campaign \
+            --agents 100 \
+            --seed 20260912 \
+            > difficulty-report.json
+          python3 - <<'PY'
+          import json
+          from collections import defaultdict
+
+          with open('difficulty-report.json', encoding='utf-8') as f:
+              report = json.load(f)
+
+          grouped = defaultdict(dict)
+          for result in report['results']:
+              grouped[result['level']][result['profile']] = result['summary']
+
+          print('=== ASCENDENDO difficulty model ===')
+          for level, profiles in grouped.items():
+              values = [
+                  (profile, data['completion_rate'], data['failure_count']['median'])
+                  for profile, data in profiles.items()
+              ]
+              print(level)
+              for profile, completion, failures in values:
+                  print(f'  {profile:12} completion={completion:0.3f} median_failures={failures}')
+          PY
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ascendendo-difficulty-report
+          path: difficulty-report.json
+          if-no-files-found: error

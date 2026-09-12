@@ -130,14 +130,24 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         if (platform.max.y < viewBottomY || platform.min.y > viewTopY) continue;
 
         const bool selected = snapshot.hasSelection && snapshot.selectedIndex == i;
-        const float r = selected ? 0.95f : presentation::COLOR_PLATFORM_R;
-        const float g = selected ? 0.78f : presentation::COLOR_PLATFORM_G;
-        const float b = selected ? 0.15f : presentation::COLOR_PLATFORM_B;
+        const bool knownReachability = snapshot.platformReachable.size() == snapshot.platforms.size();
+        const bool reachable = knownReachability && snapshot.platformReachable[i];
+        const float r = selected ? 0.95f : (reachable ? presentation::COLOR_PLATFORM_R : 0.52f);
+        const float g = selected ? 0.78f : (reachable ? presentation::COLOR_PLATFORM_G : 0.30f);
+        const float b = selected ? 0.15f : (reachable ? presentation::COLOR_PLATFORM_B : 0.34f);
+        const float alpha = selected ? 1.0f : (reachable ? 0.92f : 0.62f);
 
         shapes.drawRect(cmd, shapePipeline,
                         platform.min.x, screenY(platform.min.y),
                         platform.width(), platform.height(),
-                        r, g, b, selected ? 1.0f : 0.92f, &fixedCamera);
+                        r, g, b, alpha, &fixedCamera);
+
+        if (!reachable && !selected) {
+            shapes.drawRect(cmd, shapePipeline,
+                            platform.min.x, screenY(platform.max.y) - 2.0f,
+                            platform.width(), 2.0f,
+                            0.95f, 0.28f, 0.28f, 0.90f, &fixedCamera);
+        }
 
         if (selected) {
             constexpr float selectionBorder = 2.0f;
@@ -218,17 +228,37 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         else if (snapshot.sizePreset == logic::EditorSizePreset::LARGE) size = "LARGE";
 
         const std::size_t currentScreen =
-            std::min(snapshot.screenCount - 1,
-                     static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight));
-        char hud[192];
-        std::snprintf(hud, sizeof(hud),
-                      "PLATFORM %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | PLATFORM SIZES | DEL APAGAR | ESC SAIR",
-                      tool, size,
-                      currentScreen + 1, snapshot.screenCount,
-                      viewBottomY, viewTopY);
-        drawEditorText(cmd, textPipeline, font, hud,
-                       10.0f, config::LOGICAL_HEIGHT - 24.0f,
-                       0.34f, 0.86f, 0.90f, 0.95f, 0.95f);
+            snapshot.screenCount == 0
+                ? 1
+                : std::min(snapshot.screenCount - 1,
+                           static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight)) + 1;
+
+        char status[128];
+        std::snprintf(status, sizeof(status),
+                      "EDITOR | PLATFORM %s | %s | SEGMENT %zu/%zu",
+                      tool, size, currentScreen, snapshot.screenCount);
+
+        char controls[192];
+        std::snprintf(controls, sizeof(controls),
+                      "P colocar | TAB stamp/drag | [ ] tamanho | Del apagar | Ctrl+Z undo | Ctrl+Shift+Z redo");
+
+        char navigation[160];
+        std::snprintf(navigation, sizeof(navigation),
+                      "Setas mover | PgUp/PgDn navegar | Click mover | V validar | Ctrl+S guardar | Esc sair");
+
+        const float statusY = config::LOGICAL_HEIGHT - 14.0f;
+        const float controlsY = 18.0f;
+        const float navigationY = 7.0f;
+        drawEditorText(cmd, textPipeline, font, status,
+                       10.0f, statusY, 0.34f,
+                       0.92f, 0.95f, 1.0f, 0.98f);
+        drawEditorText(cmd, textPipeline, font, controls,
+                       10.0f, controlsY, 0.25f,
+                       0.75f, 0.82f, 0.92f, 0.94f);
+        drawEditorText(cmd, textPipeline, font, navigation,
+                       10.0f, navigationY, 0.25f,
+                       0.70f, 0.77f, 0.86f, 0.90f);
+
         shapes.bind(cmd, shapePipeline);
     }
 }

@@ -2,6 +2,7 @@
 
 #include "Core/GameStateMachine.h"
 #include "Core/KeyBindings.h"
+#include "Core/Viewport.h"
 #include "Logic/CampaignEditor.h"
 #include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/CampaignRuntime.h"
@@ -14,6 +15,7 @@
 #include "Logic/Player.h"
 #include "Logic/SimulationOrchestrator.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -49,9 +51,6 @@ public:
     void beginPlaying(float logicalWidth);
     bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
 
-    // Visual capture deliberately loads one authored level in isolation. It
-    // validates the level itself but does not apply the campaign-level FLAG
-    // policy, because capture is evidence for individual scenes, not a run.
     bool beginPlayingLevelForCapture(std::size_t levelIndex, float logicalWidth) {
         if (levelIndex >= campaignRuntime_.levelCount()) return false;
 
@@ -86,6 +85,11 @@ public:
     int menuSelection() const noexcept { return stateMachine_.menuSelection(); }
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
+    std::size_t currentCampaignLevelIndex() const noexcept {
+        if (campaignRuntime_.levelCount() == 0) return 0;
+        const std::size_t next = campaignRuntime_.currentLevelIndex();
+        return next == 0 ? 0 : std::min(next - 1, campaignRuntime_.levelCount() - 1);
+    }
 
     Player& player() noexcept { return player_; }
     const Player& player() const noexcept { return player_; }
@@ -99,7 +103,18 @@ public:
     bool campaignEditorDirty() const noexcept { return campaignEditorDirty_; }
 
 private:
+    core::LogicalPoint menuPointer(const InputManager& input,
+                                   int32_t windowWidth,
+                                   int32_t windowHeight,
+                                   float logicalWidth) const;
+
     int clickedMenuBox(const InputManager& input,
+                       int32_t windowWidth,
+                       int32_t windowHeight,
+                       int count,
+                       float logicalWidth) const;
+
+    int hoveredMenuBox(const InputManager& input,
                        int32_t windowWidth,
                        int32_t windowHeight,
                        int count,

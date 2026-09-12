@@ -2,10 +2,10 @@
 #include "Logic/LevelEditor.h"
 #include "Core/Config.h"
 
+#include <algorithm>
 #include <cmath>
 #include <deque>
 #include <vector>
-#include <algorithm>
 
 namespace logic {
 
@@ -72,9 +72,18 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
 
     Node goal{};
     goal.kind = Node::Kind::GOAL;
-    goal.bounds = document.hasFlag() && document.flag()
-        ? *document.flag()
-        : AABB{{0.0f, config::LOGICAL_HEIGHT}, {0.0f, config::LOGICAL_HEIGHT}};
+    if (document.hasFlag() && document.flag()) {
+        goal.bounds = *document.flag();
+    } else {
+        // Campaign levels without an authored flag finish at the actual top
+        // of the multi-screen layout. The implicit goal spans the whole level
+        // horizontally: only vertical reachability matters here, because no
+        // x-coordinate is authored for the automatic endpoint.
+        goal.bounds = AABB{
+            {0.0f, document.levelHeight()},
+            {document.levelWidth(), document.levelHeight()}
+        };
+    }
     nodes.push_back(goal);
 
     std::vector<bool> visited(nodes.size(), false);
@@ -85,11 +94,6 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
     while (!queue.empty()) {
         const std::size_t current = queue.front();
         queue.pop_front();
-
-        if (current == nodes.size() - 1) {
-            result.reachesGoal = true;
-            break;
-        }
 
         for (std::size_t j = 1; j < nodes.size(); ++j) {
             if (visited[j] || !reachable(nodes[current], nodes[j])) continue;
@@ -102,6 +106,7 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
         }
     }
 
+    result.reachesGoal = visited[nodes.size() - 1];
     result.valid = result.reachesGoal;
     if (result.reachesGoal) {
         result.message = "CAMINHO OK — objetivo alcancavel";
