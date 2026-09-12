@@ -86,20 +86,26 @@ Learning changes the error state between failed transitions, so repeated session
 6. accumulate completion time, spatial setbacks and recovery windows;
 7. finish naturally when the derived goal is reached.
 
+Nominal action planning is cached per level/source geometry and reused across all agents and seeds. The expensive physics search is therefore not repeated independently for every population member.
+
 `max_events` is only a computational safety guard for pathological experiments. It is not a gameplay timeout and an incomplete run is not assigned an artificial completion time.
 
 ## Population experiments
 
-Run one level for a population of agents:
+Population size is tiered by purpose:
+
+- one level: default `1000` agents for a stable distribution;
+- full campaign exploration: default `100` agents per profile and level;
+- targeted follow-up: increase the population only for selected levels/profiles after the exploration identifies interesting regions or campaign transitions.
+
+Examples:
 
 ```powershell
-python3 Development/AI_Validation/difficulty_report.py --level Game/Assets/Levels/nivel_18.lvl --agents 1000
-```
+# broad campaign exploration; 100 agents/profile/level
+python3 Development/AI_Validation/difficulty_report.py --campaign
 
-Run the entire campaign across all five hypothetical profiles:
-
-```powershell
-python3 Development/AI_Validation/difficulty_report.py --campaign --agents 1000
+# high-resolution study of one level; 1000 agents/profile
+python3 Development/AI_Validation/difficulty_report.py --level Game/Assets/Levels/nivel_18.lvl
 ```
 
 The result is a distribution, for example:
