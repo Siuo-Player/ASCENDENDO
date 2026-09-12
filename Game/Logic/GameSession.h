@@ -15,6 +15,7 @@
 #include "Logic/Player.h"
 #include "Logic/SimulationOrchestrator.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
