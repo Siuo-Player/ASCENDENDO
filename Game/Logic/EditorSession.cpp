@@ -448,6 +448,7 @@ void EditorSession::update(const InputManager& input,
                            int32_t windowWidth,
                            int32_t windowHeight) {
     const LevelData before = m_document.toLevelData(m_documentName);
+    const bool movingBefore = (m_controller.mode() == EditorMouseMode::MOVING);
     const bool undoPressed = core::isActionJustPressed(
         bindings, input, core::GameAction::EditorUndo);
     const bool redoPressed = core::isActionJustPressed(
@@ -458,6 +459,7 @@ void EditorSession::update(const InputManager& input,
     if (undoPressed || redoPressed) {
         if (undoPressed) undo();
         else redo();
+        m_gestureBaselineValid = false;
         refreshValidationResult();
         return;
     }
@@ -466,8 +468,19 @@ void EditorSession::update(const InputManager& input,
     updateMouse(input);
 
     const LevelData after = m_document.toLevelData(m_documentName);
-    if (!sameDocumentState(before, after))
-        recordEditBaseline(before);
+    const bool movingAfter = (m_controller.mode() == EditorMouseMode::MOVING);
+
+    if (!movingBefore && movingAfter) {
+        m_gestureBaseline = before;
+        m_gestureBaselineValid = true;
+    } else if (movingBefore && !movingAfter) {
+        if (m_gestureBaselineValid && !sameDocumentState(m_gestureBaseline, after))
+            recordEditBaseline(m_gestureBaseline);
+        m_gestureBaselineValid = false;
+    } else if (!movingBefore && !movingAfter) {
+        if (!sameDocumentState(before, after))
+            recordEditBaseline(before);
+    }
 
     refreshValidationResult();
 }
