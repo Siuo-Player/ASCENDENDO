@@ -62,11 +62,14 @@ def summarise(sessions: list[SessionTelemetry]) -> dict[str, object]:
 
 
 def run_level(path: Path, profile_name: str, agents: int, seed: int) -> dict[str, object]:
+    from validate_campaign import parse_level
+
     profile = profile_by_name(profile_name)
-    sessions = [simulate_session(path, profile, seed=seed + index) for index in range(agents)]
+    level = parse_level(str(path))
+    sessions = [simulate_session(level, profile, seed=seed + index) for index in range(agents)]
     return {
         "level": path.name,
-        "level_name": sessions[0].level_name if sessions else path.stem,
+        "level_name": level.name,
         "profile": profile_name,
         "summary": summarise(sessions),
     }
@@ -77,12 +80,18 @@ def main() -> int:
     parser.add_argument("--level", type=Path)
     parser.add_argument("--campaign", action="store_true")
     parser.add_argument("--profile", default="all", choices=[p.name for p in PROFILES] + ["all"])
-    parser.add_argument("--agents", type=int, default=100)
+    parser.add_argument(
+        "--agents",
+        type=int,
+        default=None,
+        help="population size; default 1000 for one level, 100 for campaign exploration",
+    )
     parser.add_argument("--seed", type=int, default=20260912)
     args = parser.parse_args()
     if not args.level and not args.campaign:
         parser.error("choose --level or --campaign")
-    if args.agents < 1:
+    agents = args.agents if args.agents is not None else (1000 if args.level else 100)
+    if agents < 1:
         parser.error("agents must be positive")
 
     profiles = [p.name for p in PROFILES] if args.profile == "all" else [args.profile]
@@ -90,8 +99,14 @@ def main() -> int:
     output = []
     for level in levels:
         for profile_name in profiles:
-            output.append(run_level(level, profile_name, args.agents, args.seed))
-    print(json.dumps({"model": "physics_episode_experiment", "results": output}, indent=2, sort_keys=True))
+            output.append(run_level(level, profile_name, agents, args.seed))
+    print(
+        json.dumps(
+            {"model": "physics_episode_experiment", "agents": agents, "results": output},
+            indent=2,
+            sort_keys=True,
+        )
+    )
     return 0
 
 
