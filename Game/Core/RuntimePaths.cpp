@@ -16,12 +16,13 @@ namespace core {
 namespace {
 
 std::filesystem::path executableDirectory(const char* argv0) {
+    std::filesystem::path executableRoot;
 #if defined(_WIN32)
     std::wstring buffer(32768, L'\0');
     const DWORD length = GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
     if (length != 0 && length < buffer.size()) {
         buffer.resize(length);
-        return std::filesystem::path(buffer).parent_path();
+        executableRoot = std::filesystem::path(buffer).parent_path();
     }
 #elif defined(__APPLE__)
     uint32_t size = 0;
@@ -29,7 +30,7 @@ std::filesystem::path executableDirectory(const char* argv0) {
     if (size != 0) {
         std::vector<char> buffer(size + 1, '\0');
         if (_NSGetExecutablePath(buffer.data(), &size) == 0) {
-            return std::filesystem::weakly_canonical(buffer.data()).parent_path();
+            executableRoot = std::filesystem::weakly_canonical(buffer.data()).parent_path();
         }
     }
 #elif defined(__linux__)
@@ -37,22 +38,40 @@ std::filesystem::path executableDirectory(const char* argv0) {
     const ssize_t length = readlink("/proc/self/exe", buffer.data(), buffer.size() - 1);
     if (length > 0) {
         buffer[static_cast<size_t>(length)] = '\0';
-        return std::filesystem::path(buffer.data()).parent_path();
+        executableRoot = std::filesystem::path(buffer.data()).parent_path();
     }
 #endif
 
-    if (argv0 != nullptr && *argv0 != '\0') {
+    if (executableRoot.empty() && argv0 != nullptr && *argv0 != '\0') {
         const std::filesystem::path candidate(argv0);
         if (candidate.is_absolute() || candidate.has_parent_path()) {
             std::error_code ec;
             const auto canonical = std::filesystem::weakly_canonical(candidate, ec);
-            if (!ec) return canonical.parent_path();
+            if (!ec) executableRoot = canonical.parent_path();
         }
     }
 
-    std::error_code ec;
-    const auto cwd = std::filesystem::current_path(ec);
-    return ec ? std::filesystem::path{} : cwd;
+    if (executableRoot.empty()) {
+        std::error_code ec;
+        executableRoot = std::filesystem::current_path(ec);
+        if (ec) return {};
+    }
+
+    // During development the executable lives in build/game while assets stay
+    // in the repository root. Prefer the executable directory when it contains
+    // the assets, otherwise walk up a few levels to locate the project root.
+    std::filesystem::path candidate = executableRoot;
+    for (int depth = 0; depth < 4 && !candidate.empty(); ++depth) {
+        std::error_code ec;
+        if (std::filesystem::is_directory(candidate / "Game" / "Assets", ec) && !ec) {
+            return candidate;
+        }
+        const auto parent = candidate.parent_path();
+        if (parent == candidate) break;
+        candidate = parent;
+    }
+
+    return executableRoot;
 }
 
 #if defined(_WIN32)
