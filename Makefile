@@ -4,9 +4,11 @@
 #  Platforms: Windows (Git Bash / MSYS2 / PowerShell + GNU Make) + Linux
 #
 #  Targets:
+#    make               — mostra a ajuda
 #    make tests         — compila e executa testes (silencioso, mostra resumo)
 #    make tests-verbose — compila e executa testes (mostra todos os que passam)
 #    make game          — compila o binário do jogo (release)
+#    make run           — atualiza a build, se necessário, e executa o jogo
 #    make clean         — remove artefactos de build
 #    make help          — mostra esta ajuda
 # ==============================================================================
@@ -18,13 +20,15 @@ ifeq ($(OS),Windows_NT)
     SHELL    := cmd.exe
     WIN_TEST_RUNNER := Development\Tools\run_tests_windows.cmd
     RUN_TEST = call "$(WIN_TEST_RUNNER)"
+    RUN_GAME = "$(GAME_BIN)"
     CAT_FILE := type
-    RM_BUILD = if exist "$(BUILD_DIR)" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
+    RM_BUILD = if exist "$(subst /,\\,$(BUILD_DIR))" rmdir /s /q "$(subst /,\\,$(BUILD_DIR))"
     MKDIR_ONE = if not exist "$(subst /,\\,$(1))" mkdir "$(subst /,\\,$(1))"
 else
     PLATFORM := linux
     EXE_EXT  :=
     RUN_TEST = ./$(TEST_BIN)
+    RUN_GAME = ./$(GAME_BIN)
     CAT_FILE := cat
     RM_BUILD = rm -rf "$(BUILD_DIR)"
     MKDIR_ONE = mkdir -p "$(1)"
@@ -157,7 +161,7 @@ $(SHADER_DIR)/%.frag.spv: $(SHADER_DIR)/%.frag
 shaders: $(SHADER_OBJS)
 
 # ── Targets Principais ────────────────────────────────────────────────────────
-.PHONY: all game tests tests-verbose tests-fast clean help
+.PHONY: all game run tests tests-verbose tests-fast clean help
 
 all: help
 
@@ -165,9 +169,11 @@ help:
 	@echo ""
 	@echo "  Vertical Precision Platformer — sistema de build"
 	@echo "  ─────────────────────────────────────────────────"
+	@echo "  make               mostra esta ajuda"
 	@echo "  make tests         compila e executa testes (silencioso)"
 	@echo "  make tests-verbose compila e executa testes (detalhado)"
 	@echo "  make game          compila o binário do jogo (release)"
+	@echo "  make run           atualiza a build, se necessário, e executa o jogo"
 	@echo "  make clean         remove a pasta build/"
 	@echo "  make help          mostra esta mensagem"
 	@echo ""
@@ -216,6 +222,12 @@ endif
 
 game: shaders $(GAME_MAIN_OBJ) $(GAME_BIN)
 	@echo "[OK ] Jogo compilado: $(GAME_BIN)"
+
+## run — garante que o binário está atualizado e inicia o jogo.
+## O target game usa as dependências normais do Make: recompila apenas quando necessário.
+run: game
+	@echo "[RUN] A iniciar $(GAME_BIN)..."
+	@$(RUN_GAME)
 
 # ── Regras de Linkagem ────────────────────────────────────────────────────────
 
