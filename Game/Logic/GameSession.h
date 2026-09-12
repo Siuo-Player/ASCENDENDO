@@ -84,6 +84,11 @@ public:
     int menuSelection() const noexcept { return stateMachine_.menuSelection(); }
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
+    std::size_t currentCampaignLevelIndex() const noexcept {
+        if (campaignRuntime_.levelCount() == 0) return 0;
+        const std::size_t next = campaignRuntime_.currentLevelIndex();
+        return next == 0 ? 0 : std::min(next - 1, campaignRuntime_.levelCount() - 1);
+    }
 
     Player& player() noexcept { return player_; }
     const Player& player() const noexcept { return player_; }
