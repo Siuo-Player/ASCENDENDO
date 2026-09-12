@@ -1,7 +1,6 @@
 # ASCENDENDO — Nivel 15: Ascensao
 NAME Ascensao
-# Becomes a non-final level as campaign production continues.
-PLATFORM 50 4 96 16
+# Plataformas authored começam acima do chão implícito (Y=16).
 PLATFORM 210 70 96 16
 PLATFORM 370 136 96 16
 PLATFORM 210 202 96 16

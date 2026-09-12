@@ -9,17 +9,18 @@
 
 namespace logic {
 
-// Declarative representation of one .lvl document.
-// A level has fixed width and is composed of N logical 640x360 screens.
-// World coordinates use increasing Y for upward progression.
-// No Vulkan/GLFW/runtime ownership or streaming state belongs here.
+// In-memory representation of one .lvl document.
+// Authored level files contain NAME/SCREENS/PLATFORM only.
+// spawnPosition and flag remain optional in memory for compatibility with
+// existing editor/runtime interfaces, but the parser and serializer never
+// accept or emit them; both are derived by the campaign/runtime layers.
 struct LevelData {
     std::string name = "Sem Nome";
     std::vector<AABB> platforms;
     std::optional<Vec2> spawnPosition;
     std::optional<AABB> flag;
 
-    // Backward-compatible default: old .lvl files without SCREENS are one screen.
+    // Default: one logical 640x360 screen.
     std::size_t screenCount = 1;
 };
 

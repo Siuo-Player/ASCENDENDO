@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the structural integrity of the campaign playlist."""
+"""Validate the structural integrity of the campaign playlist and level files."""
 from __future__ import annotations
 
 import argparse
@@ -80,6 +80,25 @@ def validate_campaign_catalogue(campaign_file: Path, levels_root: Path) -> list[
             errors.append(
                 f"line {line_number}: campaign level does not exist: {entry!r}"
             )
+            continue
+
+        try:
+            level_lines = target.read_text(encoding="utf-8").splitlines()
+        except UnicodeError as exc:
+            errors.append(
+                f"line {line_number}: level file is not valid UTF-8: {entry!r}: {exc}"
+            )
+            continue
+
+        for level_line_number, raw_level in enumerate(level_lines, 1):
+            level_line = raw_level.strip()
+            if not level_line or level_line.startswith("#"):
+                continue
+            directive = level_line.split()[0]
+            if directive in {"FLAG", "SPAWN"}:
+                errors.append(
+                    f"{entry}:{level_line_number}: {directive} is not allowed in .lvl; it is derived automatically"
+                )
 
     return errors
 
@@ -99,7 +118,7 @@ def main() -> int:
             for error in errors:
                 print(f"ERROR: {error}")
         else:
-            print("OK: campaign catalogue references are structurally valid")
+            print("OK: campaign catalogue and level-file structure are valid")
 
     return 1 if errors else 0
 

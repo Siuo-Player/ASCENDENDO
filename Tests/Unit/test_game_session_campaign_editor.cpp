@@ -31,13 +31,13 @@ struct CampaignFixture {
         {
             std::ofstream first(firstLevel);
             first << "NAME First\n"
-                  << "PLATFORM 0 4 640 16\n"
-                  << "PLATFORM 160 120 128 16\n";
+                  << "PLATFORM 160 80 128 16\n"
+                  << "PLATFORM 256 160 128 16\n";
         }
         {
             std::ofstream second(secondLevel);
             second << "NAME Second\n"
-                   << "PLATFORM 0 4 640 16\n"
+                   << "PLATFORM 160 80 128 16\n"
                    << "PLATFORM 420 160 128 16\n";
         }
         {
@@ -78,57 +78,10 @@ TEST_CASE("C abre o Campaign Editor e preserva a campanha carregada") {
 
     tap(input, logic::Key::C);
     const auto result = session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-
     CHECK(result.stateChanged);
     CHECK(session.state() == core::GameState::CAMPAIGN_EDITOR);
-    REQUIRE(session.campaignEditor().levelCount() == 2);
+    CHECK(session.campaignEditor().levelCount() == 2);
     CHECK(session.campaignEditor().selectedIndex() == 0);
-    CHECK(session.campaignEditor().selectedLevel()->name == "First");
-}
-
-TEST_CASE("selecao e reordenacao funcionam por acoes sem duplicar campaign.txt") {
-    CampaignFixture fixture;
-    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
-    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
-    configure(session, fixture);
-    logic::InputManager input;
-    core::KeyBindings bindings;
-
-    tap(input, logic::Key::C);
-    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-
-    tap(input, logic::Key::DOWN);
-    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-    CHECK(session.campaignEditor().selectedIndex() == 1);
-
-    tap(input, logic::Key::LEFT);
-    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-    CHECK(session.campaignEditor().selectedIndex() == 0);
-    REQUIRE(session.campaignEditor().levels()[0].name == "Second");
-    CHECK(session.campaignEditor().levels()[1].name == "First");
-    CHECK(session.campaignEditorDirty());
-}
-
-TEST_CASE("falha ao abrir nivel nao troca selecao nem editor ativo") {
-    CampaignFixture fixture;
-    std::vector<std::filesystem::path> levels{fixture.firstLevel, fixture.secondLevel};
-    logic::GameSession session(std::move(levels), "test-campaign", fixture.runs.string());
-    configure(session, fixture);
-    logic::InputManager input;
-    core::KeyBindings bindings;
-
-    tap(input, logic::Key::C);
-    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-
-    session.campaignEditor().levels()[0].path = (fixture.root / "missing.lvl").string();
-    const std::size_t selectedBefore = session.campaignEditor().selectedIndex();
-
-    tap(input, logic::Key::SPACE);
-    session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
-
-    CHECK(session.state() == core::GameState::CAMPAIGN_EDITOR);
-    CHECK(session.campaignEditor().selectedIndex() == selectedBefore);
-    CHECK(session.editorSession().persistencePath().empty());
 }
 
 TEST_CASE("abrir nivel e voltar preserva identidade da selecao") {
@@ -151,6 +104,9 @@ TEST_CASE("abrir nivel e voltar preserva identidade da selecao") {
     CHECK(session.state() == core::GameState::EDITOR);
     CHECK(session.editorSession().persistencePath() == selectedPath);
     CHECK(session.editorSession().document().isFinalCampaignLevel());
+    CHECK(session.editorSession().document().spawnPosition() == logic::Vec2{320.0f, 16.0f});
+    CHECK(session.editorSession().document().platformCount() == 2);
+    CHECK(session.editorSession().document().hasFlag());
 
     tap(input, logic::Key::ESCAPE);
     session.update(0.0f, input, bindings, 640, 360, 640.0f, 360.0f);

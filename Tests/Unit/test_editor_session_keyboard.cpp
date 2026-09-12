@@ -56,14 +56,13 @@ TEST_CASE("cursor teclado percorre integralmente um nivel multi-screen") {
     logic::InputManager input;
     core::KeyBindings bindings;
 
-    REQUIRE(session.document().restoreFromLevelData({
-        "multi",
-        {{{0.0f, 0.0f}, {640.0f, 16.0f}},
-         {{100.0f, 380.0f}, {220.0f, 400.0f}}},
-        logic::Vec2{0.0f, 16.0f},
-        std::nullopt,
-        2
-    }));
+    logic::LevelData data;
+    data.name = "multi";
+    data.screenCount = 2;
+    data.platforms = {
+        {{100.0f, 380.0f}, {220.0f, 400.0f}},
+    };
+    REQUIRE(session.document().restoreFromLevelData(data));
 
     // GLFW window Y=360 corresponds to the bottom of the initial logical
     // viewport; keyboard navigation then traverses the complete 720 px level.

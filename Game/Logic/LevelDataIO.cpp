@@ -48,18 +48,8 @@ std::optional<LevelData> LevelDataIO::load(const std::filesystem::path& path) {
             data.platforms.push_back({{x, y}, {x + w, y + h}});
             continue;
         }
-        if (type == "FLAG") {
-            float x = 0.0f, y = 0.0f, w = 0.0f, h = 0.0f;
-            if (!(input >> x >> y >> w >> h) || hasTrailingTokens(input)) return std::nullopt;
-            data.flag = AABB{{x, y}, {x + w, y + h}};
-            continue;
-        }
-        if (type == "SPAWN") {
-            Vec2 spawn{};
-            if (!(input >> spawn.x >> spawn.y) || hasTrailingTokens(input)) return std::nullopt;
-            data.spawnPosition = spawn;
-            continue;
-        }
+        // SPAWN and FLAG are campaign-derived concepts, not authored level data.
+        if (type == "SPAWN" || type == "FLAG") return std::nullopt;
 
         // The parser is intentionally strict about the current grammar.
         return std::nullopt;
@@ -84,10 +74,6 @@ bool LevelDataIO::save(const LevelData& data,
         out << "SCREENS " << data.screenCount << '\n';
         out << "# Gerado pelo Editor de Niveis ASCENDENDO\n";
         out << "# Largura fixa: 640 px; cada tela: 640x360; progressao: vertical ascendente\n";
-        if (data.spawnPosition) {
-            out << "SPAWN " << data.spawnPosition->x << ' '
-                << data.spawnPosition->y << '\n';
-        }
 
         for (const auto& platform : data.platforms) {
             out << "PLATFORM "
@@ -95,12 +81,7 @@ bool LevelDataIO::save(const LevelData& data,
                 << platform.width() << ' ' << platform.height() << '\n';
         }
 
-        if (data.flag) {
-            out << "FLAG "
-                << data.flag->min.x << ' ' << data.flag->min.y << ' '
-                << data.flag->width() << ' ' << data.flag->height() << '\n';
-        }
-
+        // Ground, spawn and campaign goal are derived by the runtime/editor and are never serialized.
         return out.good();
     } catch (...) {
         return false;

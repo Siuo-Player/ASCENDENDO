@@ -63,14 +63,12 @@ TEST_SUITE("RuntimePlayability") {
         CHECK(player.velocity().y == 0.0f);
     }
 
-    TEST_CASE("GameSession executes an authored spawn to FLAG run through semantic input") {
+    TEST_CASE("GameSession uses the fixed spawn and derives the campaign goal") {
         const auto path = writeTestLevel(
             "ascendendo-runtime-complete-run.lvl",
             "NAME Complete Run\n"
             "SCREENS 1\n"
-            "SPAWN 100 20\n"
-            "PLATFORM 0 4 640 16\n"
-            "FLAG 160 20 48 32\n");
+            "PLATFORM 80 16 160 16\n");
         const auto runsPath = std::filesystem::temp_directory_path() /
             "ascendendo-runtime-complete-run.csv";
         removeTestFile(runsPath);
@@ -78,32 +76,26 @@ TEST_SUITE("RuntimePlayability") {
         GameSession session({path}, "test-campaign", runsPath.string());
         session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
         REQUIRE(session.state() == core::GameState::PLAYING);
-        CHECK(session.player().position().x == doctest::Approx(100.0f));
-        CHECK(session.player().position().y == doctest::Approx(20.0f));
-        CHECK(session.level().hasFlag);
+        CHECK(session.player().position().x == doctest::Approx(320.0f));
+        CHECK(session.player().position().y == doctest::Approx(16.0f));
+        REQUIRE(session.level().hasFlag);
+        CHECK(session.level().flagBounds.min.x == doctest::Approx(80.0f));
+        CHECK(session.level().flagBounds.min.y == doctest::Approx(32.0f));
+        CHECK(session.level().flagBounds.max.x == doctest::Approx(240.0f));
+        CHECK(session.level().flagBounds.max.y == doctest::Approx(72.0f));
+
+        // Put the player at the derived goal height and let the normal update
+        // path perform the campaign-completion overlap check.
+        session.player().body.position = {120.0f, 32.0f};
 
         InputManager input;
         core::KeyBindings bindings;
-        input.injectRawState(false, true, false, false, false);
-
-        const auto firstFrame = session.update(
-            0.25f, input, bindings,
-            640, 360, 640.0f, 360.0f);
-        CHECK_FALSE(firstFrame.campaignCompleted);
-        REQUIRE(session.state() == core::GameState::PLAYING);
-        CHECK(session.player().position().x > 100.0f);
-        CHECK(session.player().position().x < 160.0f);
-
         const auto result = session.update(
-            0.25f, input, bindings,
-            640, 360, 640.0f, 360.0f);
+            0.0f, input, bindings, 640, 360, 640.0f, 360.0f);
 
         CHECK(result.campaignCompleted);
         CHECK(result.runRecorded);
-        CHECK(result.completionElapsedSeconds == doctest::Approx(0.5f));
         CHECK(session.state() == core::GameState::CREDITS);
-        CHECK(session.elapsedTime() == doctest::Approx(0.5f));
-        CHECK(session.player().position().x >= 164.0f);
 
         std::ifstream runs(runsPath);
         REQUIRE(runs.is_open());

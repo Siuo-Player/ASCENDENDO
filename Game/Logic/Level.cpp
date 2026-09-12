@@ -7,29 +7,36 @@
 
 namespace logic {
 
-float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY) {
+float Level::appendFromData(const LevelData& data,
+                            float maxWidth,
+                            float offsetY,
+                            bool finalCampaignLevel) {
     hasFlag = false;
     name = data.name;
 
     if (!m_spawnInitialized) {
-        spawnPosition = data.spawnPosition.value_or(
-            Vec2{config::LOGICAL_WIDTH / 2.0f, 40.0f});
+        spawnPosition = {AUTO_GROUND_SPAWN_X, AUTO_GROUND_HEIGHT};
         spawnPosition.y += offsetY;
         m_spawnInitialized = true;
+        if (offsetY == 0.0f) {
+            addPlatform(0.0f, 0.0f, maxWidth, AUTO_GROUND_HEIGHT);
+        }
     }
 
     float highestY = offsetY;
+    const AABB* highestPlatform = nullptr;
     for (const auto& localBounds : data.platforms) {
         if (localBounds.min.x < 0.0f || localBounds.max.x > maxWidth) {
             std::cerr << "[AVISO] Nivel '" << name
                       << "': Plataforma fora dos limites laterais! X="
                       << localBounds.min.x << "\n";
         }
-        if (localBounds.max.y >
+        if (localBounds.min.y < AUTO_GROUND_HEIGHT ||
+            localBounds.max.y >
             static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT) {
             std::cerr << "[AVISO] Nivel '" << name
-                      << "': Plataforma ultrapassa a altura declarada do nivel (Y_local="
-                      << localBounds.max.y << ")\n";
+                      << "': Plataforma authored ocupa o chão implícito ou ultrapassa a altura declarada "
+                      << "(Y_local=" << localBounds.min.y << ".." << localBounds.max.y << ")\n";
         }
 
         addPlatform(localBounds.min.x,
@@ -37,22 +44,26 @@ float Level::appendFromData(const LevelData& data, float maxWidth, float offsetY
                     localBounds.width(),
                     localBounds.height());
         highestY = std::max(highestY, localBounds.max.y + offsetY);
+
+        if (highestPlatform == nullptr ||
+            localBounds.max.y > highestPlatform->max.y ||
+            (localBounds.max.y == highestPlatform->max.y &&
+             localBounds.width() > highestPlatform->width()) ||
+            (localBounds.max.y == highestPlatform->max.y &&
+             localBounds.width() == highestPlatform->width() &&
+             localBounds.min.x < highestPlatform->min.x)) {
+            highestPlatform = &localBounds;
+        }
     }
 
-    if (data.flag) {
+    if (finalCampaignLevel && highestPlatform != nullptr) {
         hasFlag = true;
         flagBounds = AABB{
-            {data.flag->min.x, data.flag->min.y + offsetY},
-            {data.flag->max.x, data.flag->max.y + offsetY}
+            {highestPlatform->min.x, highestPlatform->max.y + offsetY},
+            {highestPlatform->max.x,
+             highestPlatform->max.y + offsetY + AUTO_FLAG_HEIGHT}
         };
-
-        if (data.flag->max.y >
-            static_cast<float>(data.screenCount) * config::LOGICAL_HEIGHT) {
-            std::cerr << "[AVISO] Nivel '" << name
-                      << "': FLAG ultrapassa a altura declarada do nivel (Y_local="
-                      << data.flag->max.y << ")\n";
-        }
-        highestY = std::max(highestY, data.flag->max.y + offsetY);
+        highestY = std::max(highestY, flagBounds.max.y);
     }
 
     const float chunkHeight =

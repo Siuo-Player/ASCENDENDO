@@ -18,6 +18,7 @@ G_val          = 980.0
 V_MAX          = 600.0
 ANGLE          = math.pi / 3.0
 TOLERANCE      = 0.90
+GROUND_HEIGHT  = 16.0
 
 VY_eff   = V_MAX * math.sin(ANGLE) * TOLERANCE
 VX_eff   = V_MAX * math.cos(ANGLE) * TOLERANCE
@@ -37,7 +38,6 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         return False, f"Erro ao ler {filepath}: {e}"
 
     platforms = []
-    goal      = None
 
     for i, raw in enumerate(lines, 1):
         line = raw.strip()
@@ -46,65 +46,48 @@ def validate_level(filepath: str) -> tuple[bool, str]:
         if parts[0] == "NAME":
             continue
         elif parts[0] == "SPAWN":
-            if len(parts) != 3:
-                return False, f"Linha {i}: formato invalido — esperado 'SPAWN x y'"
-            try:
-                x, y = map(float, parts[1:])
-            except ValueError:
-                return False, f"Linha {i}: coordenadas SPAWN invalidas"
-            if not (math.isfinite(x) and math.isfinite(y)):
-                return False, f"Linha {i}: coordenadas SPAWN nao finitas"
-            if x < 0 or x > LOGICAL_WIDTH or y < 0 or y > LOGICAL_HEIGHT:
-                return False, f"Linha {i}: SPAWN fora dos limites da tela"
-            # Reachability continua a ser verificada pelo validador autoritativo.
-            continue
+            return False, f"Linha {i}: SPAWN nao e permitida em .lvl — o spawn e derivado automaticamente"
         elif parts[0] == "PLATFORM":
             if len(parts) != 5:
                 return False, f"Linha {i}: formato invalido — esperado 'PLATFORM x y w h'"
-            x, y, w, h = map(float, parts[1:])
+            try:
+                x, y, w, h = map(float, parts[1:])
+            except ValueError:
+                return False, f"Linha {i}: coordenadas de plataforma invalidas"
+            if not all(math.isfinite(v) for v in (x, y, w, h)):
+                return False, f"Linha {i}: coordenadas de plataforma nao finitas"
+            if w <= 0 or h <= 0:
+                return False, f"Linha {i}: dimensoes de plataforma invalidas"
             if x < 0 or (x + w) > LOGICAL_WIDTH:
                 return False, f"Linha {i}: plataforma fora dos limites X ([{x},{x+w}] vs [0,{LOGICAL_WIDTH}])"
+            if y < GROUND_HEIGHT:
+                return False, f"Linha {i}: plataforma ocupa o chão implícito (Y={y} < {GROUND_HEIGHT})"
             if (y + h) > LOGICAL_HEIGHT:
                 return False, f"Linha {i}: plataforma ultrapassa a altura da tela (topo {y+h} > {LOGICAL_HEIGHT})"
             platforms.append({'type': 'platform', 'bounds': (x, y, w, h)})
         elif parts[0] == "FLAG":
-            if len(parts) != 5:
-                return False, f"Linha {i}: formato invalido — esperado 'FLAG x y w h'"
-            x, y, w, h = map(float, parts[1:])
-            if (y + h) > LOGICAL_HEIGHT:
-                return False, f"Linha {i}: FLAG ultrapassa a altura da tela"
-            goal = {'type': 'flag', 'bounds': (x, y, w, h)}
+            return False, f"Linha {i}: FLAG nao e permitida em .lvl — o objetivo final e derivado automaticamente da plataforma mais alta da campanha"
         else:
             return False, f"Linha {i}: directiva desconhecida '{parts[0]}'"
 
-    if not platforms and goal is None:
+    if not platforms:
         return True, "Nivel vazio (aceitavel)"
 
-    # BFS com fisica real. Niveis finais têm FLAG como objetivo; niveis
-    # intermédios são válidos quando todas as plataformas do segmento são
-    # alcançáveis, sem exigir que o segmento isolado chegue ao topo da tela.
-    ground = {'type': 'ground', 'bounds': (0, 0, LOGICAL_WIDTH, 20)}
+    # BFS com física real. O chão inicial é implícito e ocupa Y=0..16.
+    ground = {'type': 'ground', 'bounds': (0, 0, LOGICAL_WIDTH, GROUND_HEIGHT)}
     nodes  = [ground] + platforms
-    if goal is not None:
-        nodes.append(goal)
     visited = {0}
     queue   = [0]
 
     while queue:
         curr = queue.pop(0)
-        if goal is not None and curr == len(nodes) - 1:
-            return True, "Caminho fisicamente possivel encontrado"
         for j in range(1, len(nodes)):
             if j in visited: continue
             p1 = nodes[curr]['bounds']
-            n2 = nodes[j]
+            p2 = nodes[j]['bounds']
             y_start = p1[1] + p1[3]
-            if n2['type'] == 'flag':
-                p2 = n2['bounds']; y_end = p2[1]
-                dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
-            else:
-                p2 = n2['bounds']; y_end = p2[1] + p2[3]
-                dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
+            y_end = p2[1] + p2[3]
+            dx = max(0.0, p2[0]-(p1[0]+p1[2]), p1[0]-(p2[0]+p2[2]))
             dy = y_end - y_start
             if dy > MAX_JUMP: continue
             disc = VY_eff**2 - 2 * G_val * max(0.0, dy)
@@ -113,7 +96,7 @@ def validate_level(filepath: str) -> tuple[bool, str]:
             if dx <= max_dx:
                 visited.add(j); queue.append(j)
 
-    if goal is None and len(visited) == len(nodes):
+    if len(visited) == len(nodes):
         return True, "Plataformas fisicamente alcançaveis"
 
     return False, "Nenhum caminho fisicamente possivel — nivel impossivel"
@@ -146,11 +129,9 @@ def main():
         sys.exit(1)
 
     if sys.argv[1] == "--campaign":
-        # Tentar encontrar campaign.txt relativo a este script
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        campaign   = os.path.join(script_dir, "..", "..", "Game", "Assets", "Levels", "campaign.txt")
-        campaign   = os.path.normpath(campaign)
-        # Fallback: a partir da directoria de trabalho actual
+        campaign = os.path.join(script_dir, "..", "..", "Game", "Assets", "Levels", "campaign.txt")
+        campaign = os.path.normpath(campaign)
         if not os.path.exists(campaign):
             campaign = os.path.normpath("Game/Assets/Levels/campaign.txt")
 

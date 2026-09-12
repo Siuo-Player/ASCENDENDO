@@ -47,10 +47,11 @@ private:
 };
 
 bool appendFile(Level& level, const std::filesystem::path& path,
-                float maxWidth, float offsetY, float* nextOffset = nullptr) {
+                float maxWidth, float offsetY, bool final = false,
+                float* nextOffset = nullptr) {
     const auto data = LevelDataIO::load(path);
     if (!data) return false;
-    const float next = level.appendFromData(*data, maxWidth, offsetY);
+    const float next = level.appendFromData(*data, maxWidth, offsetY, final);
     if (nextOffset) *nextOffset = next;
     return true;
 }
@@ -71,28 +72,29 @@ TEST_SUITE("Level / File Loading") {
         REQUIRE(data.has_value());
 
         Level level;
-        level.appendFromData(*data, 640.0f, 0.0f);
-        REQUIRE(level.platformCount() == 1);
-        CHECK(level.platforms()[0].bounds.min.x == doctest::Approx(50.0f));
-        CHECK(level.platforms()[0].bounds.min.y == doctest::Approx(100.0f));
-        CHECK(level.platforms()[0].bounds.max.y == doctest::Approx(115.0f));
+        level.appendFromData(*data, 640.0f, 0.0f, false);
+        REQUIRE(level.platformCount() == 2); // implicit ground + authored
+        CHECK(level.platforms()[1].bounds.min.x == doctest::Approx(50.0f));
+        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(100.0f));
+        CHECK(level.platforms()[1].bounds.max.y == doctest::Approx(115.0f));
     }
 
-    TEST_CASE("FLAG define hasFlag e flagBounds") {
-        TempLevelFile tmp("flag", "FLAG 150.0 300.0 40.0 40.0\n");
+    TEST_CASE("FLAG authored e rejeitada e objetivo final e derivado") {
+        TempLevelFile tmp("flag", "NAME Final\nPLATFORM 150.0 300.0 40.0 40.0\nFLAG 150.0 340.0 40.0 40.0\n");
         REQUIRE(tmp.valid());
+        CHECK_FALSE(LevelDataIO::load(tmp.path()).has_value());
 
-        const auto data = LevelDataIO::load(tmp.path());
+        TempLevelFile valid("derived-flag", "NAME Final\nPLATFORM 150.0 300.0 40.0 40.0\n");
+        const auto data = LevelDataIO::load(valid.path());
         REQUIRE(data.has_value());
-        REQUIRE(data->flag.has_value());
 
         Level level;
-        level.appendFromData(*data, 640.0f, 0.0f);
-        CHECK(level.hasFlag == true);
+        level.appendFromData(*data, 640.0f, 0.0f, true);
+        CHECK(level.hasFlag);
         CHECK(level.flagBounds.min.x == doctest::Approx(150.0f));
-        CHECK(level.flagBounds.min.y == doctest::Approx(300.0f));
+        CHECK(level.flagBounds.min.y == doctest::Approx(340.0f));
         CHECK(level.flagBounds.max.x == doctest::Approx(190.0f));
-        CHECK(level.flagBounds.max.y == doctest::Approx(340.0f));
+        CHECK(level.flagBounds.max.y == doctest::Approx(380.0f));
     }
 
     TEST_CASE("segundo chunk usa offsetY = offsetY anterior + LOGICAL_HEIGHT") {
@@ -101,18 +103,17 @@ TEST_SUITE("Level / File Loading") {
 
         Level level;
         float nextY = 0.0f;
-        REQUIRE(appendFile(level, tmp.path(), 640.0f, 0.0f, &nextY));
+        REQUIRE(appendFile(level, tmp.path(), 640.0f, 0.0f, false, &nextY));
         CHECK(nextY == doctest::Approx(360.0f));
         REQUIRE(appendFile(level, tmp.path(), 640.0f, nextY));
-        REQUIRE(level.platformCount() == 2);
-        CHECK(level.platforms()[1].bounds.min.y == doctest::Approx(460.0f));
+        REQUIRE(level.platformCount() == 3); // ground + two authored chunks
+        CHECK(level.platforms()[2].bounds.min.y == doctest::Approx(460.0f));
     }
 
     TEST_CASE("avanco do chunk e identico mesmo sem plataformas") {
         TempLevelFile tmpEmpty("empty", "# nivel sem plataformas\n");
         TempLevelFile tmpFull(
             "full",
-            "PLATFORM 0.0 0.0 640.0 20.0\n"
             "PLATFORM 230.0 95.0 180.0 20.0\n"
             "PLATFORM 30.0 195.0 180.0 20.0\n"
             "PLATFORM 230.0 295.0 180.0 20.0\n");

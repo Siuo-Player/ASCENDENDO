@@ -20,6 +20,8 @@ enum class EditorMouseMode {
     MOVING,
 };
 
+// Kept for action compatibility. Only PLATFORM represents authored content;
+// SPAWN and FLAG are derived state and are never selectable authoring tools.
 enum class EditorEntityTool {
     PLATFORM,
     SPAWN,
@@ -62,7 +64,12 @@ public:
     void setSizePreset(EditorSizePreset preset) { m_sizePreset = preset; }
     EditorSizePreset sizePreset() const { return m_sizePreset; }
 
-    void setEntityTool(EditorEntityTool tool) { m_entityTool = tool; }
+    // Legacy action names remain source-compatible, but the editor has exactly
+    // one authoring entity type: PLATFORM.
+    void setEntityTool(EditorEntityTool tool) {
+        (void)tool;
+        m_entityTool = EditorEntityTool::PLATFORM;
+    }
     EditorEntityTool entityTool() const { return m_entityTool; }
 
     void setToolMode(EditorToolMode mode) { m_toolMode = mode; }

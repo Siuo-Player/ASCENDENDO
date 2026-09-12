@@ -1,6 +1,6 @@
 NAME Transição
-# Primeiro nível novo: mudança lateral moderada.
-PLATFORM 0 4 640 16
+# Plataformas authored começam acima do chão implícito (Y=16).
+# O chão e o spawn são derivados automaticamente pelo runtime.
 PLATFORM 112 89 144 16
 PLATFORM 280 174 144 16
 PLATFORM 208 259 144 16

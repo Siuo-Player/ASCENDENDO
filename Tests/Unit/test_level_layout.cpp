@@ -43,7 +43,7 @@ TEST_CASE("LevelLayout mantém a largura imutável e mapeia Y para a screen asce
 TEST_CASE("LevelEditorDocument aceita N screens sem alterar a largura") {
     logic::LevelEditorDocument document(
         false,
-        logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}},
+        logic::AABB{{0.0f, 0.0f}, {640.0f, 16.0f}},
         5);
 
     CHECK(document.screenCount() == 5);
@@ -58,19 +58,23 @@ TEST_CASE("LevelEditorDocument aceita N screens sem alterar a largura") {
     CHECK_FALSE(document.addPlatform({{0.0f, 1780.0f}, {64.0f, 24.0f}}));
 }
 
-TEST_CASE("FLAG de level final é restrita à última screen") {
+TEST_CASE("objetivo final segue automaticamente a plataforma mais alta") {
     logic::LevelEditorDocument document(
         true,
-        logic::AABB{{0.0f, 0.0f}, {640.0f, 20.0f}},
+        logic::AABB{{0.0f, 0.0f}, {640.0f, 16.0f}},
         5);
 
-    CHECK_FALSE(document.setFlag({{320.0f, 100.0f}, {384.0f, 116.0f}}));
-    REQUIRE(document.setFlag({{320.0f, 1440.0f}, {384.0f, 1456.0f}}));
-    CHECK(document.hasFlag());
-    CHECK(document.flag()->min.y == doctest::Approx(1440.0f));
+    REQUIRE(document.addPlatform({{320.0f, 1320.0f}, {384.0f, 1336.0f}}));
+    REQUIRE(document.hasFlag());
+    CHECK(document.flag()->min.y == doctest::Approx(1336.0f));
+    CHECK(document.flag()->max.y == doctest::Approx(1376.0f));
+
+    REQUIRE(document.movePlatform(0, {320.0f, 1440.0f}));
+    REQUIRE(document.hasFlag());
+    CHECK(document.flag()->min.y == doctest::Approx(1456.0f));
 }
 
-TEST_CASE("SCREENS é persistido e níveis antigos continuam a carregar como uma screen") {
+TEST_CASE("SCREENS é persistido sem metadata derivada") {
     const auto path = std::filesystem::temp_directory_path() / "ascendendo-level-layout-test.lvl";
     const auto oldPath = std::filesystem::temp_directory_path() / "ascendendo-level-layout-old-test.lvl";
     std::error_code ec;
@@ -80,25 +84,23 @@ TEST_CASE("SCREENS é persistido e níveis antigos continuam a carregar como uma
     logic::LevelData data;
     data.name = "Vertical Test";
     data.screenCount = 5;
-    data.spawnPosition = logic::Vec2{96.0f, 20.0f};
-    data.platforms.push_back({{0.0f, 0.0f}, {640.0f, 20.0f}});
     data.platforms.push_back({{96.0f, 1320.0f}, {224.0f, 1340.0f}});
 
     REQUIRE(logic::LevelDataIO::save(data, path));
     const auto loaded = logic::LevelDataIO::load(path);
     REQUIRE(loaded.has_value());
     CHECK(loaded->screenCount == 5);
+    CHECK_FALSE(loaded->spawnPosition.has_value());
+    CHECK_FALSE(loaded->flag.has_value());
 
     {
         std::ofstream old(oldPath);
         REQUIRE(old.is_open());
         old << "NAME Legacy\n";
         old << "SPAWN 96 20\n";
-        old << "PLATFORM 0 0 640 20\n";
+        old << "PLATFORM 96 40 128 20\n";
     }
-    const auto legacy = logic::LevelDataIO::load(oldPath);
-    REQUIRE(legacy.has_value());
-    CHECK(legacy->screenCount == 1);
+    CHECK_FALSE(logic::LevelDataIO::load(oldPath).has_value());
 
     std::filesystem::remove(path, ec);
     std::filesystem::remove(oldPath, ec);
