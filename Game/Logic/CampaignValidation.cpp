@@ -1,12 +1,14 @@
 #include "Logic/CampaignValidation.h"
 
 #include "Core/Config.h"
+#include "Logic/Level.h"
 #include "Logic/LevelDataIO.h"
 #include "Logic/LevelDataValidator.h"
 
 #include <algorithm>
 #include <cmath>
 #include <queue>
+#include <utility>
 
 namespace logic {
 namespace {
