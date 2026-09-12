@@ -184,4 +184,42 @@ TEST_CASE("DELETE apaga a selecao atual") {
     CHECK_FALSE(session.controller().hasSelection());
 }
 
+TEST_CASE("UNDO de um movimento continuo desfaz o gesto inteiro") {
+    logic::EditorSession session(false);
+    logic::InputManager input;
+    core::KeyBindings bindings;
+    REQUIRE(session.document().addPlatform({{100.0f, 80.0f}, {228.0f, 100.0f}}));
+
+    input.beginFrame();
+    input.injectCursorPos(112.0, 270.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    input.beginFrame();
+    input.injectCursorPos(150.0, 240.0);
+    session.update(input, bindings, 640, 360);
+    input.beginFrame();
+    input.injectCursorPos(180.0, 210.0);
+    session.update(input, bindings, 640, 360);
+    input.beginFrame();
+    input.injectCursorPos(215.0, 180.0);
+    session.update(input, bindings, 640, 360);
+    CHECK(session.document().platforms()[0].bounds.min.x != doctest::Approx(100.0f));
+
+    input.beginFrame();
+    input.injectCursorPos(215.0, 180.0);
+    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
+    session.update(input, bindings, 640, 360);
+
+    input.beginFrame();
+    input.onKeyEvent(logic::Key::Z, logic::Action::PRESS);
+    session.update(input, bindings, 640, 360);
+
+    REQUIRE(session.document().platformCount() == 1);
+    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
+    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(80.0f));
+    CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(228.0f));
+    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(100.0f));
+}
+
 } // TEST_SUITE
