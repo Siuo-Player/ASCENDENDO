@@ -4,7 +4,7 @@ Este é o **único documento vivo de planeamento do produto**. O Git é o histó
 
 ## Estado actual
 
-O jogo já tem uma base jogável e uma campanha de **15 níveis**. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura.
+O jogo já tem uma base jogável e uma campanha de **25 níveis**. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura.
 
 O problema principal já não é falta de arquitectura. É transformar essa base num jogo que outras pessoas consigam jogar, entender e terminar.
 
@@ -15,16 +15,16 @@ O problema principal já não é falta de arquitectura. É transformar essa base
 Garantir que uma run normal funciona do início ao fim sem depender do editor ou tooling interno:
 
 ```text
-spawn → observar → carregar salto → saltar → aterrar/progredir → FLAG
+spawn → observar → carregar salto → saltar → aterrar/progredir → objetivo final
 ```
 
-A física 1.0 continua simples: salto a 60°, sem air control, plataformas estáticas, spawn e `FLAG`. Não adicionar mortes, perigos ou outras mecânicas só para aumentar a sensação de progresso.
+A física 1.0 continua simples: salto a 60°, sem air control, plataformas estáticas e estado de início/fim derivado da campanha. Não adicionar mortes, perigos ou outras mecânicas só para aumentar a sensação de progresso.
 
 ### 2. Construir conteúdo real
 
 A campanha deve deixar de ser apenas demonstração técnica. Criar níveis deliberados, com progressão de dificuldade, leitura visual clara e variedade suficiente para que a mecânica principal se mantenha interessante.
 
-Objectivo de conteúdo para 1.0: **10 campanhas / 575 níveis**, com tamanhos de campanha de 10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis. A distribuição exacta de dificuldade deve ser decidida pela experiência e pela validação, não por percentagens artificiais.
+Objectivo de conteúdo para 1.0: **10 campanhas**, começando com um conjunto inicial de tamanhos de referência de **10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis**. Esta é uma hipótese de escala de conteúdo, não uma obrigação de produzir exactamente 575 níveis independentemente dos resultados de playtesting. A quantidade final deve ser revista quando houver dados de minutos de jogo, retenção, ritmo de produção e qualidade dos níveis.
 
 Cada nível só conta como concluído quando:
 
@@ -38,7 +38,16 @@ Cada nível só conta como concluído quando:
 
 O editor já existe. Agora deve ser medido pelo trabalho que permite fazer, não pelo número de funcionalidades que possui.
 
-Corrigir apenas fricção real de autoria: navegação vertical, selecção, edição, undo/redo, playtest não persistente, gravação e fluxo do Campaign Editor. Não criar nova arquitectura de editor sem uma necessidade concreta.
+Prioridade de melhoria:
+
+1. estabilizar undo/redo por gesto, validação física e testes de regressão;
+2. tornar reachability e diagnóstico visíveis sem recalcular física no renderer;
+3. corrigir HUD/contexto e layout responsivo;
+4. melhorar selecção/picker e manipulação directa, incluindo resize;
+5. melhorar navegação vertical e, depois, considerar minimap;
+6. integrar apresentação visual estruturada só depois de o authoring estar sólido.
+
+Corrigir apenas fricção real de autoria. Não criar nova arquitectura de editor sem uma necessidade concreta.
 
 ### 4. Validar com pessoas
 
@@ -93,6 +102,8 @@ Não criar um novo documento só para registar que uma tarefa terminou.
 Não transformar cada bug, PR ou execução de CI num post-mortem ou work package permanente.
 
 Não usar percentagens de documentação, linhas de código ou número de PRs como medida de progresso do jogo.
+
+Não transformar o editor numa engine genérica: plataformas continuam a ser o principal objecto authored; spawn e objetivo final são estado derivado.
 
 ## Critério de progresso
 
