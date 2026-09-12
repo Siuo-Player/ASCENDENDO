@@ -54,6 +54,12 @@ jobs:
       - name: Test campaign catalogue validator
         run: python3 -m unittest Tests/Tooling/test_validate_campaign_catalogue.py
 
+      - name: Validate current repository state
+        run: python3 Development/Tools/validate_repository_state.py
+
+      - name: Test current repository state validator
+        run: python3 -m unittest Tests/Tooling/test_validate_repository_state.py
+
       - name: Validate visual stress scene manifest
         run: python3 Development/AI_Validation/visual_stress_scenes.py --json /tmp/visual-stress-manifest.json
 
@@ -144,6 +150,12 @@ jobs:
 
       - name: Test campaign catalogue validator
         run: python3 -m unittest Tests/Tooling/test_validate_campaign_catalogue.py
+
+      - name: Validate current repository state
+        run: python3 Development/Tools/validate_repository_state.py
+
+      - name: Test current repository state validator
+        run: python3 -m unittest Tests/Tooling/test_validate_repository_state.py
 
       - name: Select deterministic Vulkan software driver
         shell: bash
