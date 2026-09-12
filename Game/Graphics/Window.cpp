@@ -50,7 +50,7 @@ void applyCaptureWindowDimensions(uint32_t& width, uint32_t& height) {
 
 bool Window::create(uint32_t width, uint32_t height, const char* title) {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     applyCaptureWindowDimensions(width, height);
 
@@ -78,6 +78,10 @@ bool Window::create(uint32_t width, uint32_t height, const char* title) {
 
     m_width = width;
     m_height = height;
+    glfwGetWindowPos(m_handle, &m_windowedX, &m_windowedY);
+    m_windowedWidth = static_cast<int>(width);
+    m_windowedHeight = static_cast<int>(height);
+    m_fullscreen = false;
     return true;
 }
 
@@ -87,6 +91,11 @@ void Window::destroy() {
         m_handle = nullptr;
         m_width = 0;
         m_height = 0;
+        m_fullscreen = false;
+        m_windowedX = 0;
+        m_windowedY = 0;
+        m_windowedWidth = 0;
+        m_windowedHeight = 0;
     }
 }
 
@@ -96,6 +105,50 @@ bool Window::shouldClose() const {
 
 void Window::pollEvents() {
     glfwPollEvents();
+    if (!m_handle) return;
+
+    int width = 0;
+    int height = 0;
+    glfwGetWindowSize(m_handle, &width, &height);
+    if (width > 0 && height > 0) {
+        m_width = static_cast<uint32_t>(width);
+        m_height = static_cast<uint32_t>(height);
+    }
+}
+
+void Window::toggleFullscreen() {
+    if (!m_handle) return;
+
+    if (!m_fullscreen) {
+        glfwGetWindowPos(m_handle, &m_windowedX, &m_windowedY);
+        glfwGetWindowSize(m_handle, &m_windowedWidth, &m_windowedHeight);
+
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode* mode = monitor ? glfwGetVideoMode(monitor) : nullptr;
+        if (!monitor || !mode) return;
+
+        glfwSetWindowMonitor(m_handle,
+                             monitor,
+                             0,
+                             0,
+                             mode->width,
+                             mode->height,
+                             mode->refreshRate);
+        m_fullscreen = true;
+        m_width = static_cast<uint32_t>(mode->width);
+        m_height = static_cast<uint32_t>(mode->height);
+    } else {
+        glfwSetWindowMonitor(m_handle,
+                             nullptr,
+                             m_windowedX,
+                             m_windowedY,
+                             std::max(1, m_windowedWidth),
+                             std::max(1, m_windowedHeight),
+                             0);
+        m_fullscreen = false;
+        m_width = static_cast<uint32_t>(std::max(1, m_windowedWidth));
+        m_height = static_cast<uint32_t>(std::max(1, m_windowedHeight));
+    }
 }
 
 void Window::appendRequiredExtensions(std::vector<const char*>& out) const {
@@ -124,6 +177,7 @@ bool Window::create(uint32_t, uint32_t, const char*) { return false; }
 void Window::destroy() {}
 bool Window::shouldClose() const { return true; }
 void Window::pollEvents() {}
+void Window::toggleFullscreen() {}
 void Window::appendRequiredExtensions(std::vector<const char*>&) const {}
 VkSurfaceKHR Window::createVulkanSurface(VkInstance) const { return VK_NULL_HANDLE; }
 

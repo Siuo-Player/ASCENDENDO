@@ -51,32 +51,32 @@ private:
 
 void setMenuTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E nivel  C campanha  Q sair");
+        "ASCENDENDO | MENU | A/D navegar  ESPACO/CLIQUE confirmar  F11 ecrã inteiro  Q sair");
 }
 
 void setPlayingTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | E editor de nivel  C campanha  Q menu  ESC pausa");
+        "ASCENDENDO | E editor de nivel  C campanha  F11 ecrã inteiro  Q menu  ESC pausa");
 }
 
 void setEditorTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
+        "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  F11 ecrã inteiro  ESC voltar");
 }
 
 void setCampaignEditorTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | CAMPANHA | UP/DOWN selecionar  LEFT/RIGHT reordenar  SPACE abrir  1 guardar");
+        "ASCENDENDO | CAMPANHA | UP/DOWN selecionar  LEFT/RIGHT reordenar  SPACE abrir  F11 ecrã inteiro");
 }
 
 void setCreditsTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | Creditos | ESPACO para continuar");
+        "ASCENDENDO | Creditos | ESPACO para continuar  F11 ecrã inteiro");
 }
 
 void setPausedTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
+        "ASCENDENDO | PAUSA | A/D navegar  ESPACO/CLIQUE confirmar  F11 ecrã inteiro");
 }
 
 void applyStatePresentation(GLFWwindow* window,
@@ -232,7 +232,7 @@ int main(int argc, char** argv) {
                       << " carregado isoladamente.\n";
         } else {
             setMenuTitle(win.handle());
-            std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO confirmar | E editor nivel | C editor campanha | Q sair\n";
+            std::cout << "[ASCENDENDO] MENU: A/D navegar | ESPACO ou CLIQUE confirmar | F11 ecrã inteiro | E editor nivel | C editor campanha | Q sair\n";
         }
 
         bool captureFramePending = captureMode;
@@ -244,6 +244,10 @@ int main(int argc, char** argv) {
 
             input.beginFrame();
             win.pollEvents();
+
+            if (input.isKeyJustPressed(Key::F11)) {
+                win.toggleFullscreen();
+            }
 
             const GameState previousState = session.state();
             GameSessionUpdateResult result;
