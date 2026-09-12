@@ -42,7 +42,7 @@ void InputManager::registerWithWindow(GLFWwindow* window) {
     s_instance = this;
     glfwSetKeyCallback(window, s_glfwKeyCallback);
     glfwSetMouseButtonCallback(window, s_glfwMouseButtonCallback);
-    glfwSetCursorPosCallback(window, s_glfwCursorPosCallback);
+    glfwSetCursorPosCallback(window, s_glfwCursorPosEvent);
 #else
     (void)window;
 #endif
@@ -140,7 +140,7 @@ void InputManager::s_glfwMouseButtonCallback(GLFWwindow*, int button, int action
     if (s_instance) s_instance->onMouseButtonEvent(button, action);
 }
 
-void InputManager::s_glfwCursorPosCallback(GLFWwindow*, double x, double y) {
+void InputManager::s_glfwCursorPosEvent(GLFWwindow*, double x, double y) {
     if (s_instance) s_instance->onCursorPosEvent(x, y);
 }
 
