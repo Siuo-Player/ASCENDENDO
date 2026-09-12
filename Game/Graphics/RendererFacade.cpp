@@ -14,8 +14,83 @@
 #include "Core/Config.h"
 
 #include <memory>
+#include <string>
 
 namespace gfx {
+namespace {
+
+void drawAdminValidationOverlay(VkCommandBuffer commandBuffer,
+                                const Pipeline& shapePipeline,
+                                const ShapeRenderer& shapes,
+                                TextPipeline* textPipeline,
+                                FontRenderer* font,
+                                const logic::CampaignValidationSnapshot& snapshot,
+                                std::size_t currentIndex) {
+    if (!textPipeline || !font || !textPipeline->isInitialized()) return;
+
+    const float panelX = 28.0f;
+    const float panelY = 18.0f;
+    const float panelW = 584.0f;
+    const float panelH = 324.0f;
+    shapes.drawRect(commandBuffer, shapePipeline, panelX, panelY,
+                    panelW, panelH, 0.015f, 0.02f, 0.04f, 0.94f);
+    shapes.drawRect(commandBuffer, shapePipeline, panelX, panelY + panelH - 3.0f,
+                    panelW, 3.0f, 0.95f, 0.72f, 0.10f, 1.0f);
+
+    font->drawText(commandBuffer, textPipeline->layout(),
+                   "ADMIN VALIDATION  [F10 fechar]",
+                   46.0f, 318.0f, 0.62f, 0.95f, 0.80f, 0.18f, 1.0f);
+
+    const std::string summary =
+        "Fisica: " + std::to_string(snapshot.validLevels) + "/" +
+        std::to_string(snapshot.entries.size()) +
+        (snapshot.allValid() ? " OK" : " ERRO");
+    font->drawText(commandBuffer, textPipeline->layout(), summary.c_str(),
+                   46.0f, 292.0f, 0.42f,
+                   snapshot.allValid() ? 0.35f : 1.0f,
+                   snapshot.allValid() ? 0.95f : 0.30f,
+                   snapshot.allValid() ? 0.45f : 0.25f, 1.0f);
+
+    constexpr std::size_t rowsPerColumn = 13;
+    for (std::size_t i = 0; i < snapshot.entries.size(); ++i) {
+        const auto& entry = snapshot.entries[i];
+        const std::size_t column = i / rowsPerColumn;
+        const std::size_t row = i % rowsPerColumn;
+        const float x = column == 0 ? 48.0f : 318.0f;
+        const float y = 262.0f - static_cast<float>(row) * 18.0f;
+        const bool current = i == currentIndex;
+        const bool valid = entry.valid;
+
+        if (current) {
+            shapes.drawRect(commandBuffer, shapePipeline,
+                            x - 6.0f, y - 3.0f, 250.0f, 18.0f,
+                            0.22f, 0.18f, 0.05f, 0.95f);
+        }
+
+        const std::string levelNumber = std::to_string(i + 1) + ". ";
+        font->drawText(commandBuffer, textPipeline->layout(), levelNumber.c_str(),
+                       x, y, 0.40f, 0.62f, 0.64f, 0.74f, 1.0f);
+
+        const std::string status = valid ? "OK" : "ERRO";
+        font->drawText(commandBuffer, textPipeline->layout(), status.c_str(),
+                       x + 24.0f, y, 0.40f,
+                       valid ? 0.35f : 1.0f,
+                       valid ? 0.95f : 0.30f,
+                       valid ? 0.45f : 0.25f, 1.0f);
+
+        const std::string detail = " " + std::to_string(entry.reachablePlatforms) +
+                                   "/" + std::to_string(entry.totalPlatforms);
+        font->drawText(commandBuffer, textPipeline->layout(), detail.c_str(),
+                       x + 58.0f, y, 0.38f, 0.55f, 0.58f, 0.68f, 1.0f);
+    }
+
+    font->drawText(commandBuffer, textPipeline->layout(),
+                   "OK/ERRO = caminho de salto segundo o validador de campanha."
+                   "  ADMIN MODE congela o jogo.",
+                   46.0f, 34.0f, 0.34f, 0.50f, 0.54f, 0.64f, 1.0f);
+}
+
+} // namespace
 
 RendererFacade::RendererFacade() = default;
 
@@ -56,6 +131,8 @@ void RendererFacade::cleanup() {
     m_editorSnapshot = {};
     m_campaignEditorSnapshotPtr = nullptr;
     m_campaignEditorSnapshot = {};
+    m_campaignValidationSnapshotPtr = nullptr;
+    m_campaignValidationSnapshot = {};
     m_textPipeline = nullptr;
     m_font = nullptr;
     m_spritePipeline = nullptr;
@@ -96,11 +173,24 @@ void RendererFacade::attachCampaignEditorSnapshot(
     m_editorSnapshotPtr = nullptr;
 }
 
+void RendererFacade::attachCampaignValidationSnapshot(
+    const logic::CampaignValidationSnapshot* snapshot) {
+    if (!snapshot) {
+        m_campaignValidationSnapshot = {};
+        m_campaignValidationSnapshotPtr = nullptr;
+        return;
+    }
+    m_campaignValidationSnapshot = *snapshot;
+    m_campaignValidationSnapshotPtr = &m_campaignValidationSnapshot;
+}
+
 bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
                                const Camera& camera,
                                RenderState state,
                                int menuSelection,
-                               float elapsedSeconds) {
+                               float elapsedSeconds,
+                               bool adminValidationVisible,
+                               std::size_t currentCampaignLevelIndex) {
     if (!m_initialized || !m_core || !m_shapes || !m_shapePipeline) return false;
 
     VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
@@ -173,6 +263,12 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
             m_world->draw(commandBuffer, *m_shapePipeline, *m_shapes,
                           snapshot, camera, m_spritePipeline, m_sprite);
             m_ui->drawTimer(commandBuffer, m_textPipeline, m_font, elapsedSeconds);
+            if (adminValidationVisible && m_campaignValidationSnapshotPtr) {
+                drawAdminValidationOverlay(commandBuffer, *m_shapePipeline, *m_shapes,
+                                           m_textPipeline, m_font,
+                                           *m_campaignValidationSnapshotPtr,
+                                           currentCampaignLevelIndex);
+            }
             break;
 
         case RenderState::PAUSED:
