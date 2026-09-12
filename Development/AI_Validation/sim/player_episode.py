@@ -15,6 +15,7 @@ import math
 import random
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable
 
@@ -169,9 +170,7 @@ def _simulate_action(
     )
 
 
-def _nominal_actions(
-    surfaces: tuple[Surface, ...], source_index: int, target_index: int
-) -> Iterable[Action]:
+def _nominal_actions(surfaces: tuple[Surface, ...], source_index: int, target_index: int) -> Iterable[Action]:
     source = surfaces[source_index]
     target = surfaces[target_index]
     target_center = _center_x(target)
@@ -183,15 +182,18 @@ def _nominal_actions(
                 yield Action(launch_x, direction, charge, target_index)
 
 
-def choose_action(
-    surfaces: tuple[Surface, ...], source_index: int, profile: PlayerProfile, rng: random.Random
-) -> Action | None:
-    targets = _candidate_targets(surfaces, source_index)
-    if not targets:
-        return None
+@lru_cache(maxsize=None)
+def _nominal_candidates(
+    surfaces: tuple[Surface, ...], source_index: int
+) -> tuple[tuple[float, Action], ...]:
+    """Cache physics-backed planning per level/source, not per agent/seed.
 
+    The geometry and nominal action grid are identical for every agent. Only
+    execution noise and route noise differ, so repeating this search for every
+    population member was pure duplicate work.
+    """
     candidates: list[tuple[float, Action]] = []
-    for target_index in targets:
+    for target_index in _candidate_targets(surfaces, source_index):
         target = surfaces[target_index]
         gap = target.top - surfaces[source_index].top
         for action in _nominal_actions(surfaces, source_index, target_index):
@@ -204,15 +206,23 @@ def choose_action(
             effort = abs(action.charge - 0.7) + displacement / max(16.0, target.w)
             score = 4.0 * gap + 1.5 * landing_margin - 18.0 * effort - 0.08 * result.action_time_s
             candidates.append((score, action))
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return tuple(candidates)
 
+
+def choose_action(
+    surfaces: tuple[Surface, ...], source_index: int, profile: PlayerProfile, rng: random.Random
+) -> Action | None:
+    candidates = _nominal_candidates(surfaces, source_index)
     if not candidates:
+        targets = _candidate_targets(surfaces, source_index)
+        if not targets:
+            return None
         target_index = min(targets, key=lambda index: surfaces[index].top)
-        target = surfaces[target_index]
         launch = max(0.0, min(LOGICAL_WIDTH - PLAYER_WIDTH, _center_x(surfaces[source_index]) - PLAYER_WIDTH * 0.5))
-        direction = 1 if _center_x(target) >= _center_x(surfaces[source_index]) else -1
+        direction = 1 if _center_x(surfaces[target_index]) >= _center_x(surfaces[source_index]) else -1
         return Action(launch, direction, 0.85, target_index)
 
-    candidates.sort(key=lambda item: item[0], reverse=True)
     pool = candidates[: min(3, len(candidates))]
     if rng.random() < profile.route_noise and len(pool) > 1:
         return rng.choice(pool[1:])[1]
@@ -242,13 +252,13 @@ def _execute_action(
 
 
 def simulate_session(
-    level_path: str | Path,
+    level_path: str | Path | Level,
     profile: PlayerProfile,
     *,
     seed: int,
     max_events: int = 500,
 ) -> SessionTelemetry:
-    level = parse_level(str(level_path))
+    level = level_path if isinstance(level_path, Level) else parse_level(str(level_path))
     surfaces = _surfaces(level)
     rng = random.Random(seed)
     current_index = 0
@@ -270,9 +280,7 @@ def simulate_session(
         source = surfaces[current_index]
         walked = abs(action.launch_x - (source.x + PLAYER_WIDTH * 0.5)) / PLAYER_MOVE_SPEED
         reaction = max(0.0, current_profile.reaction_time_s + rng.gauss(0.0, current_profile.reaction_jitter_s))
-        _, result = _execute_action(
-            source, action, action.target_index, surfaces, current_profile, rng
-        )
+        _, result = _execute_action(source, action, action.target_index, surfaces, current_profile, rng)
         elapsed += walked + reaction + result.action_time_s
         new_index = result.landed_index
         new_progress = surfaces[new_index].top
@@ -287,9 +295,7 @@ def simulate_session(
             loss = high_water - new_progress
             total_loss += loss
             largest_loss = max(largest_loss, loss)
-            failure_events.append(
-                FailureEvent(current_index, action.target_index, new_index, loss, None)
-            )
+            failure_events.append(FailureEvent(current_index, action.target_index, new_index, loss, None))
             active_recoveries.append((high_water, elapsed))
             current_profile = current_profile.after_failure()
         elif new_progress > high_water + 1e-6:
@@ -312,7 +318,7 @@ def simulate_session(
 
 def _telemetry(
     level: Level,
-    level_path: str | Path,
+    level_path: str | Path | Level,
     profile: PlayerProfile,
     seed: int,
     completed: bool,
@@ -325,7 +331,7 @@ def _telemetry(
     recoveries: list[float],
 ) -> SessionTelemetry:
     return SessionTelemetry(
-        level=str(level_path),
+        level=level.path if isinstance(level_path, Level) else str(level_path),
         level_name=level.name,
         profile=profile.name,
         seed=seed,
