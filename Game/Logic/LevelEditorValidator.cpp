@@ -72,9 +72,18 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
 
     Node goal{};
     goal.kind = Node::Kind::GOAL;
-    goal.bounds = document.hasFlag() && document.flag()
-        ? *document.flag()
-        : AABB{{0.0f, document.levelHeight()}, {0.0f, document.levelHeight()}};
+    if (document.hasFlag() && document.flag()) {
+        goal.bounds = *document.flag();
+    } else {
+        // Campaign levels without an authored flag finish at the actual top
+        // of the multi-screen layout. The implicit goal spans the whole level
+        // horizontally: only vertical reachability matters here, because no
+        // x-coordinate is authored for the automatic endpoint.
+        goal.bounds = AABB{
+            {0.0f, document.levelHeight()},
+            {document.levelWidth(), document.levelHeight()}
+        };
+    }
     nodes.push_back(goal);
 
     std::vector<bool> visited(nodes.size(), false);
