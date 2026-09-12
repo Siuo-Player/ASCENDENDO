@@ -88,6 +88,32 @@ Learning changes the error state between failed transitions, so repeated session
 
 `max_events` is only a computational safety guard for pathological experiments. It is not a gameplay timeout and an incomplete run is not assigned an artificial completion time.
 
+## Population experiments
+
+Run one level for a population of agents:
+
+```powershell
+python3 Development/AI_Validation/difficulty_report.py --level Game/Assets/Levels/nivel_18.lvl --agents 1000
+```
+
+Run the entire campaign across all five hypothetical profiles:
+
+```powershell
+python3 Development/AI_Validation/difficulty_report.py --campaign --agents 1000
+```
+
+The result is a distribution, for example:
+
+```text
+Level 18
+median completion: 38.4 s
+p90 completion:    51.7 s
+p90 progress loss: 118 px
+median recovery:    4.1 s
+```
+
+These values are descriptive experimental observations until the profile parameters are calibrated against human telemetry.
+
 ## Control analyzer → player simulation
 
 The intended architecture is now:
@@ -117,20 +143,6 @@ Challenge / Control Analyzer (#343)
 ```
 
 The simulator is therefore an experiment that **observes gameplay**, rather than a formula that declares gameplay difficulty from geometric weights.
-
-## Population experiments
-
-A level can be simulated over a population of agents and seeds. The result is a distribution, for example:
-
-```text
-Level 18
-median completion: 38.4 s
-p90 completion:    51.7 s
-p90 progress loss: 118 px
-median recovery:    4.1 s
-```
-
-These values are descriptive experimental observations until the profile parameters are calibrated against human telemetry.
 
 ## Human calibration path
 
