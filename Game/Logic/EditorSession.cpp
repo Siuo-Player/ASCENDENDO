@@ -346,9 +346,14 @@ void EditorSession::updateKeyboard(const InputManager& input,
     }
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorSizeUp)) {
         switch (m_controller.sizePreset()) {
-            case EditorSizePreset::SMALL: break;
-            case EditorSizePreset::MEDIUM: m_controller.setSizePreset(EditorSizePreset::LARGE); break;
-            case EditorSizePreset::LARGE: break;
+            case EditorSizePreset::SMALL:
+                m_controller.setSizePreset(EditorSizePreset::MEDIUM);
+                break;
+            case EditorSizePreset::MEDIUM:
+                m_controller.setSizePreset(EditorSizePreset::LARGE);
+                break;
+            case EditorSizePreset::LARGE:
+                break;
         }
     }
 
