@@ -99,7 +99,18 @@ public:
     bool campaignEditorDirty() const noexcept { return campaignEditorDirty_; }
 
 private:
+    core::LogicalPoint menuPointer(const InputManager& input,
+                                   int32_t windowWidth,
+                                   int32_t windowHeight,
+                                   float logicalWidth) const;
+
     int clickedMenuBox(const InputManager& input,
+                       int32_t windowWidth,
+                       int32_t windowHeight,
+                       int count,
+                       float logicalWidth) const;
+
+    int hoveredMenuBox(const InputManager& input,
                        int32_t windowWidth,
                        int32_t windowHeight,
                        int count,
