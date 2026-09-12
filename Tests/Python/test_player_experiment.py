@@ -4,8 +4,10 @@ import sys
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-MODULE_PATH = ROOT / "Development" / "AI_Validation" / "player_model.py"
-EXPERIMENT_PATH = ROOT / "Development" / "AI_Validation" / "player_experiment.py"
+VALIDATION = ROOT / "Development" / "AI_Validation"
+
+if str(VALIDATION) not in sys.path:
+    sys.path.insert(0, str(VALIDATION))
 
 
 def load(name: str, path: pathlib.Path):
@@ -17,14 +19,20 @@ def load(name: str, path: pathlib.Path):
     return module
 
 
-player_model = load("player_model", MODULE_PATH)
-player_experiment = load("player_experiment", EXPERIMENT_PATH)
+player_model = load("player_model", VALIDATION / "player_model.py")
+player_experiment = load("player_experiment", VALIDATION / "player_experiment.py")
+
+
+LEVEL = ROOT / "Game" / "Assets" / "Levels" / "inicio.lvl"
 
 
 class PlayerExperimentTests(unittest.TestCase):
     def test_profiles_are_ordered_by_expected_skill(self):
         profiles = player_model.PROFILES
-        self.assertEqual([p.name for p in profiles], ["novice", "beginner", "intermediate", "advanced", "expert"])
+        self.assertEqual(
+            [p.name for p in profiles],
+            ["novice", "beginner", "intermediate", "advanced", "expert"],
+        )
         for weaker, stronger in zip(profiles, profiles[1:]):
             self.assertLessEqual(stronger.horizontal_error_px, weaker.horizontal_error_px)
             self.assertLessEqual(stronger.charge_error, weaker.charge_error)
@@ -38,18 +46,29 @@ class PlayerExperimentTests(unittest.TestCase):
         self.assertGreater(learned.horizontal_error_px, 0.0)
         self.assertGreater(learned.charge_error, 0.0)
 
-    def test_session_is_reproducible(self):
+    def test_episode_is_reproducible(self):
         profile = player_model.profile_by_name("intermediate")
-        first = player_experiment.simulate_session("test", profile, 0.5, 5, 42)
-        second = player_experiment.simulate_session("test", profile, 0.5, 5, 42)
+        first = player_experiment.simulate_session(LEVEL, profile, seed=42, max_events=20)
+        second = player_experiment.simulate_session(LEVEL, profile, seed=42, max_events=20)
         self.assertEqual(first, second)
 
-    def test_session_records_learning_attempts(self):
+    def test_episode_reports_physical_units(self):
         profile = player_model.profile_by_name("novice")
-        session = player_experiment.simulate_session("test", profile, 0.95, 4, 7)
-        self.assertEqual(len(session.attempts), 4)
-        self.assertTrue(all(attempt.attempt >= 1 for attempt in session.attempts))
-        self.assertTrue(all(0.0 <= attempt.progress <= 1.0 for attempt in session.attempts))
+        session = player_experiment.simulate_session(LEVEL, profile, seed=7, max_events=20)
+        self.assertGreaterEqual(session.progress_max_px, 0.0)
+        self.assertGreaterEqual(session.total_progress_loss_px, 0.0)
+        self.assertGreaterEqual(session.largest_progress_loss_px, 0.0)
+        self.assertGreaterEqual(session.failure_count, 0)
+        self.assertGreaterEqual(session.jump_count, 0)
+        self.assertGreaterEqual(session.recovery_count, 0)
+        if session.completion_time_s is not None:
+            self.assertGreater(session.completion_time_s, 0.0)
+
+    def test_no_artificial_timeout_is_encoded_as_completion_time(self):
+        profile = player_model.profile_by_name("expert")
+        session = player_experiment.simulate_session(LEVEL, profile, seed=1, max_events=1)
+        self.assertFalse(session.completed)
+        self.assertIsNone(session.completion_time_s)
 
 
 if __name__ == "__main__":
