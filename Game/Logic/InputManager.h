@@ -35,9 +35,10 @@ namespace Key {
     constexpr int NUM1    = 49;
     constexpr int NUM2    = 50;
     constexpr int NUM3    = 51;
-    constexpr int F2      = 291; // legacy compatibility only
-    constexpr int F5      = 294; // legacy compatibility only
-    constexpr int F6      = 295; // legacy compatibility only
+    constexpr int F2      = 291;
+    constexpr int F5      = 294;
+    constexpr int F6      = 295;
+    constexpr int F11     = 300;
     constexpr int LBRACKET  = 91;
     constexpr int RBRACKET  = 93;
     constexpr int DELETE_KEY = 261;
@@ -76,9 +77,6 @@ public:
     bool isRight() const;
     bool isJump() const;
 
-    // Converts the frame sample into the semantic input consumed by one
-    // simulation tick. Edge events belong only to tick zero of that frame;
-    // continuous actions remain valid for every fixed step derived from it.
     TickInput tickInput(const core::KeyBindings& bindings, std::size_t tickInFrame) const;
 
     void injectRawState(bool left, bool right, bool jumpHeld, bool jumpPressed, bool jumpReleased);
