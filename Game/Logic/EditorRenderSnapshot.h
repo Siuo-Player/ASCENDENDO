@@ -16,6 +16,7 @@ namespace logic {
 
 struct EditorRenderSnapshot {
     std::vector<AABB> platforms;
+    std::vector<bool> platformReachable;
     std::size_t selectedIndex = static_cast<std::size_t>(-1);
 
     Vec2 cursorWorld{};
@@ -31,6 +32,7 @@ struct EditorRenderSnapshot {
     bool hasSelection = false;
     bool hasFlag = false;
     bool previewVisible = false;
+    bool reachesGoal = true;
 
     EditorEntityTool entityTool = EditorEntityTool::PLATFORM;
     EditorToolMode tool = EditorToolMode::STAMP;
