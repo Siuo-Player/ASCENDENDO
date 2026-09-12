@@ -2,6 +2,7 @@
 
 #include "Core/GameStateMachine.h"
 #include "Core/KeyBindings.h"
+#include "Core/Viewport.h"
 #include "Logic/CampaignEditor.h"
 #include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/CampaignRuntime.h"
@@ -49,9 +50,6 @@ public:
     void beginPlaying(float logicalWidth);
     bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
 
-    // Visual capture deliberately loads one authored level in isolation. It
-    // validates the level itself but does not apply the campaign-level FLAG
-    // policy, because capture is evidence for individual scenes, not a run.
     bool beginPlayingLevelForCapture(std::size_t levelIndex, float logicalWidth) {
         if (levelIndex >= campaignRuntime_.levelCount()) return false;
 
