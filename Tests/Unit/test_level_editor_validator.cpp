@@ -2,6 +2,8 @@
 #include "Logic/LevelEditor.h"
 #include "Logic/LevelEditorValidator.h"
 
+#include <algorithm>
+
 namespace {
 
 logic::AABB platform(float x, float y, float width = 96.0f, float height = 16.0f) {
