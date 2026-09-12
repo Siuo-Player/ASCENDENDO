@@ -1,5 +1,8 @@
+import contextlib
 import importlib.util
+import io
 import pathlib
+import sys
 import tempfile
 import unittest
 
@@ -11,10 +14,6 @@ validator_spec = importlib.util.spec_from_file_location("validate_campaign", VAL
 assert validator_spec and validator_spec.loader
 validator = importlib.util.module_from_spec(validator_spec)
 validator_spec.loader.exec_module(validator)
-
-# The diagnostic imports validate_campaign by module name, so install the same
-# module object before loading it.
-import sys
 sys.modules["validate_campaign"] = validator
 
 diagnostic_spec = importlib.util.spec_from_file_location("explain_campaign", DIAGNOSTIC_PATH)
@@ -32,25 +31,27 @@ class ExplainCampaignTests(unittest.TestCase):
         self.addCleanup(path.unlink, missing_ok=True)
         return path
 
-    def test_diagnostic_reuses_authoritative_transition_search(self):
+    def test_diagnostic_reports_authoritative_control_space_route(self):
         path = self.write_level(
             "NAME explainable\n"
             "PLATFORM 280 16 160 16\n"
             "PLATFORM 436 76 176 16\n"
             "PLATFORM 148 136 176 16\n"
         )
-        level = validator.parse_level(str(path))
-        result = diagnostic.diagnose_level(level)
-        self.assertTrue(result["transitions"])
-        transition = result["transitions"][0]
-        self.assertGreaterEqual(transition.robustness, 0.0)
-        self.assertLessEqual(transition.robustness, 1.0)
-        self.assertGreaterEqual(transition.landing_margin_px, 0.0)
-        self.assertGreaterEqual(transition.launch_margin_px, 0.0)
-        self.assertGreaterEqual(transition.charge_margin, 0.0)
-        self.assertGreaterEqual(transition.target_width_px, 0.0)
-        self.assertIn("robustness", transition.weighted_risks)
-        self.assertIn("landing_margin", transition.weighted_risks)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            diagnostic.explain_level(str(path))
+
+        text = output.getvalue()
+        self.assertIn("model: control-space route completion", text)
+        self.assertIn("control=", text)
+        self.assertIn("launch_coverage=", text)
+        self.assertIn("charge_coverage=", text)
+        self.assertIn("route product=", text)
+
+        report = validator.validate_level(str(path))
+        self.assertTrue(report["valid"], report["errors"])
+        self.assertTrue(report["route"])
 
 
 if __name__ == "__main__":
