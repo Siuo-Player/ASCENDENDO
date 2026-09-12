@@ -12,6 +12,7 @@
 #include "Game/Graphics/RenderSnapshot.h"
 #include "Game/Graphics/RenderSnapshotBuilder.h"
 #include "Game/Logic/CampaignEditorSnapshot.h"
+#include "Game/Logic/CampaignValidation.h"
 #include "Game/Logic/EditorRenderSnapshot.h"
 #include "Game/Logic/GameSession.h"
 #include "Game/Logic/InputManager.h"
@@ -25,6 +26,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <string>
+#include <vector>
 
 using namespace gfx;
 using namespace logic;
@@ -131,6 +134,11 @@ bool readCaptureLevelIndex(std::size_t& index) {
     return true;
 }
 
+bool adminModeEnabled() {
+    const char* value = std::getenv("ASCENDENDO_ADMIN_MODE");
+    return value && std::string(value) == "1";
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -215,6 +223,20 @@ int main(int argc, char** argv) {
         session.configureCampaignEditor(bootstrap.paths.campaignFile().string());
         Camera camera;
 
+        std::vector<std::string> campaignLevelPaths;
+        campaignLevelPaths.reserve(bootstrap.campaign.size());
+        for (const auto& path : bootstrap.campaign)
+            campaignLevelPaths.push_back(path.string());
+        const logic::CampaignValidationSnapshot campaignValidation =
+            logic::validateCampaignForAdmin(campaignLevelPaths);
+        renderer.attachCampaignValidationSnapshot(&campaignValidation);
+
+        const bool adminMode = adminModeEnabled();
+        bool adminValidationVisible = false;
+        if (adminMode) {
+            std::cout << "[ASCENDENDO] ADMIN MODE ativo: F10 mostra/oculta a validacao fisica da campanha e congela o jogo.\n";
+        }
+
         std::size_t captureLevelIndex = 0;
         const char* captureLevelEnv = std::getenv("ASCENDENDO_CAPTURE_LEVEL_INDEX");
         const bool captureMode = captureLevelEnv != nullptr && *captureLevelEnv != '\0';
@@ -250,10 +272,15 @@ int main(int argc, char** argv) {
             }
 
             const GameState previousState = session.state();
+            if (adminMode && previousState == GameState::PLAYING &&
+                input.isKeyJustPressed(Key::F10)) {
+                adminValidationVisible = !adminValidationVisible;
+            }
+
             GameSessionUpdateResult result;
             if (captureFramePending) {
                 captureFramePending = false;
-            } else {
+            } else if (!adminValidationVisible) {
                 result = session.update(
                     dt, input, bindings,
                     static_cast<int32_t>(win.width()),
@@ -263,7 +290,7 @@ int main(int argc, char** argv) {
             }
             const GameState currentState = session.state();
 
-            if (!captureMode &&
+            if (!adminValidationVisible &&
                 previousState == GameState::PLAYING && currentState == GameState::PLAYING) {
                 camera.follow(session.player().position(), dt);
             }
@@ -285,6 +312,7 @@ int main(int argc, char** argv) {
 
             if (result.stateChanged) {
                 applyStatePresentation(win.handle(), currentState, previousState, camera);
+                if (currentState != GameState::PLAYING) adminValidationVisible = false;
             }
 
             if (result.quitRequested) {
@@ -312,7 +340,9 @@ int main(int argc, char** argv) {
             }
 
             if (!renderer.drawFrame(renderSnapshot, camera, toRenderState(currentState),
-                                    session.menuSelection(), session.elapsedTime())) {
+                                    session.menuSelection(), session.elapsedTime(),
+                                    adminValidationVisible,
+                                    session.currentCampaignLevelIndex())) {
                 std::cerr << "[ERRO] Renderer falhou ao desenhar o estado atual.\n";
                 break;
             }
