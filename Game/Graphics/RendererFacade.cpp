@@ -1,5 +1,5 @@
 // =============================================================================
-// Game/Graphics/RendererFacade.cpp
+// Renderer facade: owns frame composition and presentation routing.
 // =============================================================================
 #include "Graphics/RendererFacade.h"
 #include "Graphics/RendererCore.h"
@@ -11,7 +11,10 @@
 #include "Graphics/Pipeline.h"
 #include "Graphics/Camera.h"
 #include "Graphics/PresentationConfig.h"
+#include "Graphics/TextPipeline.h"
+#include "Graphics/FontRenderer.h"
 #include "Core/Config.h"
+#include "Logic/CampaignValidation.h"
 
 #include <memory>
 #include <string>
@@ -85,8 +88,8 @@ void drawAdminValidationOverlay(VkCommandBuffer commandBuffer,
     }
 
     font->drawText(commandBuffer, textPipeline->layout(),
-                   "OK/ERRO = caminho de salto segundo o validador de campanha."
-                   "  ADMIN MODE congela o jogo.",
+                   "OK/ERRO = caminho de salto segundo o validador de campanha.  "
+                   "ADMIN MODE congela o jogo.",
                    46.0f, 34.0f, 0.34f, 0.50f, 0.54f, 0.64f, 1.0f);
 }
 
