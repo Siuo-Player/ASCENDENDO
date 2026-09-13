@@ -250,7 +250,7 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
 
         const std::size_t currentScreen =
             std::min(snapshot.screenCount - 1,
-                     static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight));
+                     static_cast<std::size_t>(viewBottomY / viewportHeight));
 
         char hud[256];
         if (snapshot.hasSelection && snapshot.selectedIndex < snapshot.platforms.size()) {
