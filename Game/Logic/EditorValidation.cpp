@@ -1,5 +1,6 @@
 #include "Logic/EditorValidation.h"
-#include "Logic/LevelDataValidator.h"
+#include "Logic/LevelEditor.h"
+#include "Logic/Level.h"
 
 #include <chrono>
 #include <utility>
@@ -27,10 +28,24 @@ bool EditorValidationTask::start(LevelData snapshot,
                               WorkResult result;
                               result.generation = generation;
                               result.levelPath = std::move(levelPath);
-                              result.valid = LevelDataValidator::validate(snapshot);
-                              result.message = result.valid
-                                  ? "Representação semântica válida"
-                                  : "Representação semântica inválida";
+
+                              LevelEditorDocument document(
+                                  snapshot.finalCampaignLevel,
+                                  {{0.0f, 0.0f},
+                                   {config::LOGICAL_WIDTH, Level::AUTO_GROUND_HEIGHT}},
+                                  snapshot.screenCount);
+
+                              if (!document.restoreFromLevelData(
+                                      snapshot,
+                                      snapshot.finalCampaignLevel)) {
+                                  result.validation.valid = false;
+                                  result.validation.totalPlatforms =
+                                      static_cast<int>(snapshot.platforms.size());
+                                  result.validation.message = "Documento invalido para validacao";
+                                  return result;
+                              }
+
+                              result.validation = validateEditorDocument(document);
                               return result;
                           });
     return true;
@@ -47,10 +62,14 @@ EditorAsyncValidationResult EditorValidationTask::poll() {
 
     const WorkResult work = m_future.get();
     m_result.state = EditorValidationState::COMPLETE;
-    m_result.valid = work.valid;
+    m_result.valid = work.validation.valid;
+    m_result.reachesGoal = work.validation.reachesGoal;
+    m_result.reachablePlatforms = work.validation.reachablePlatforms;
+    m_result.totalPlatforms = work.validation.totalPlatforms;
+    m_result.platformReachable = work.validation.platformReachable;
     m_result.generation = work.generation;
     m_result.levelPath = work.levelPath;
-    m_result.message = work.message;
+    m_result.message = work.validation.message;
     return m_result;
 }
 
