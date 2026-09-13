@@ -18,7 +18,6 @@ enum class EditorMouseMode {
     STAMPING,
     DRAGGING,
     MOVING,
-    RESIZING,
 };
 
 enum class EditorResizeHandle {
@@ -59,11 +58,6 @@ public:
     bool updateMove(const Vec2& world);
     bool endMove();
     bool cancelMove();
-
-    bool beginResize(const Vec2& world);
-    bool updateResize(const Vec2& world);
-    bool endResize();
-    bool cancelResize();
     EditorResizeHandle resizeHandle() const { return m_resizeHandle; }
 
     bool placeSpawnAt(const Vec2& world);
