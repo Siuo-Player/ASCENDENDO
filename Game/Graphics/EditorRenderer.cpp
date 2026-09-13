@@ -166,6 +166,20 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                             platform.min.x, screenY(platform.min.y),
                             platform.width(), selectionBorder,
                             1.0f, 0.88f, 0.12f, 1.0f, &fixedCamera);
+
+            // Four concrete corner handles make direct resize discoverable.
+            constexpr float handleSize = 8.0f;
+            constexpr float handleHalf = handleSize * 0.5f;
+            const float handleY[2] = {screenY(platform.min.y), screenY(platform.max.y)};
+            const float handleX[2] = {platform.min.x, platform.max.x};
+            for (float hx : handleX) {
+                for (float hy : handleY) {
+                    shapes.drawRect(cmd, shapePipeline,
+                                    hx - handleHalf, hy - handleHalf,
+                                    handleSize, handleSize,
+                                    1.0f, 0.95f, 0.40f, 1.0f, &fixedCamera);
+                }
+            }
         }
     }
 
