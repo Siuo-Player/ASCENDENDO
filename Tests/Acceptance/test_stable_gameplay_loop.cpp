@@ -49,11 +49,16 @@ struct RunDriver {
     }
 
     bool chargedJump() {
-        // 12 rendered test frames at two fixed ticks per frame = 24 fixed ticks,
-        // exactly the configured 0.4 s charge time at 60 Hz.
-        for (int frameIndex = 0; frameIndex < 12; ++frameIndex) {
-            (void)frame(true, frameIndex == 0, false);
+        // The first frame establishes the press edge; subsequent frames keep
+        // the action held until the actual player state reaches full charge.
+        // This intentionally observes gameplay state instead of assuming a
+        // particular number of fixed ticks per rendered test frame.
+        (void)frame(true, true, false);
+        for (int frameIndex = 0; frameIndex < 30 && session.player().chargeRatio() < 1.0f; ++frameIndex) {
+            (void)frame(true, false, false);
         }
+        if (session.player().chargeRatio() < 1.0f) return false;
+
         auto result = frame(false, false, true);
         if (result.campaignCompleted) return true;
 
@@ -113,10 +118,12 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
 
     bool completed = false;
-    for (int frameIndex = 0; frameIndex < 90 && !completed; ++frameIndex) {
-        if (frameIndex < 12) {
-            (void)driver.frame(true, frameIndex == 0, false);
-        } else if (frameIndex == 12) {
+    for (int frameIndex = 0; frameIndex < 60 && !completed; ++frameIndex) {
+        if (frameIndex == 0) {
+            (void)driver.frame(true, true, false);
+        } else if (session.player().chargeRatio() < 1.0f) {
+            (void)driver.frame(true, false, false);
+        } else if (frameIndex == 1) {
             const auto result = driver.frame(false, false, true);
             completed = result.campaignCompleted;
         } else {
