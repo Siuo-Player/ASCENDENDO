@@ -116,6 +116,21 @@ bool LevelEditorDocument::movePlatform(std::size_t index,
     return true;
 }
 
+bool LevelEditorDocument::resizePlatform(std::size_t index, const AABB& requested) {
+    if (index >= m_platforms.size()) return false;
+    if (!validPlatform(requested)) return false;
+
+    const AABB old = m_platforms[index].bounds;
+    if (requested.min.x == old.min.x && requested.min.y == old.min.y &&
+        requested.max.x == old.max.x && requested.max.y == old.max.y)
+        return true;
+
+    m_platforms[index].bounds = requested;
+    refreshAutomaticFlag();
+    bumpGeneration();
+    return true;
+}
+
 bool LevelEditorDocument::removePlatform(std::size_t index) {
     if (index >= m_platforms.size()) return false;
     m_platforms.erase(m_platforms.begin() + static_cast<std::ptrdiff_t>(index));

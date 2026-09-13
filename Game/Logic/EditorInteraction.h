@@ -20,6 +20,14 @@ enum class EditorMouseMode {
     MOVING,
 };
 
+enum class EditorResizeHandle {
+    NONE,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+};
+
 // Kept for action compatibility. Only PLATFORM represents authored content;
 // SPAWN and FLAG are derived state and are never selectable authoring tools.
 enum class EditorEntityTool {
@@ -41,6 +49,7 @@ public:
     EditorCursor cursorFromLogical(const Vec2& logical,
                                    const Vec2& cameraPosition) const;
     std::size_t hitPlatform(const Vec2& world) const;
+    EditorResizeHandle hitResizeHandle(const Vec2& world, float tolerance = 8.0f) const;
 
     bool stampAt(const Vec2& world);
     bool dragFromTo(const Vec2& startWorld, const Vec2& endWorld);
@@ -49,6 +58,7 @@ public:
     bool updateMove(const Vec2& world);
     bool endMove();
     bool cancelMove();
+    EditorResizeHandle resizeHandle() const { return m_resizeHandle; }
 
     bool placeSpawnAt(const Vec2& world);
     bool placeFlagAt(const Vec2& world);
@@ -89,13 +99,17 @@ private:
     LevelEditorDocument& m_document;
     std::size_t          m_selected = npos();
     EditorMouseMode      m_mode = EditorMouseMode::NONE;
+    EditorResizeHandle   m_resizeHandle = EditorResizeHandle::NONE;
     EditorEntityTool     m_entityTool = EditorEntityTool::PLATFORM;
     EditorToolMode       m_toolMode = EditorToolMode::STAMP;
     EditorSizePreset     m_sizePreset = EditorSizePreset::MEDIUM;
     float                m_moveOffsetX = 0.0f;
     float                m_moveOffsetY = 0.0f;
     AABB                 m_moveOriginalBounds{};
+    AABB                 m_resizeOriginalBounds{};
+    Vec2                 m_resizeFixedCorner{};
     bool                 m_moveHasOriginal = false;
+    bool                 m_resizeHasOriginal = false;
 };
 
 } // namespace logic

@@ -45,6 +45,7 @@ public:
 
     bool addPlatform(const AABB& requested, std::size_t* createdIndex = nullptr);
     bool movePlatform(std::size_t index, const Vec2& requestedMin);
+    bool resizePlatform(std::size_t index, const AABB& requested);
     bool removePlatform(std::size_t index);
 
     const std::vector<EditorPlatform>& platforms() const { return m_platforms; }
