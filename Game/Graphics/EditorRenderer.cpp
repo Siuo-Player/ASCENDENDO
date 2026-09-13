@@ -253,25 +253,33 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                      static_cast<std::size_t>(viewBottomY / viewportHeight));
 
         char hud[256];
+        char hudActions[192];
         if (snapshot.hasSelection && snapshot.selectedIndex < snapshot.platforms.size()) {
             const logic::AABB& selected = snapshot.platforms[snapshot.selectedIndex];
             std::snprintf(hud, sizeof(hud),
-                          "SELECIONADA #%zu | POS %.0f,%.0f | TAM %.0fx%.0f | SCREEN %zu/%zu | VIEW %.0f-%.0f | DEL APAGAR | G MODO | ESC SAIR",
+                          "SELECIONADA #%zu | POS %.0f,%.0f | TAM %.0fx%.0f | SCREEN %zu/%zu | VIEW %.0f-%.0f",
                           snapshot.selectedIndex + 1,
                           selected.min.x, selected.min.y,
                           selected.width(), selected.height(),
                           currentScreen + 1, snapshot.screenCount,
                           viewBottomY, viewTopY);
+            std::snprintf(hudActions, sizeof(hudActions),
+                          "DEL APAGAR | G MODO | ESC SAIR");
         } else {
             std::snprintf(hud, sizeof(hud),
-                          "EDITOR | %s %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | CLICK SELECIONAR | ENTER COLOCAR | DEL APAGAR | ESC SAIR",
+                          "EDITOR | %s %s | SCREEN %zu/%zu | VIEW %.0f-%.0f",
                           tool, size,
                           currentScreen + 1, snapshot.screenCount,
                           viewBottomY, viewTopY);
+            std::snprintf(hudActions, sizeof(hudActions),
+                          "CLICK SELECIONAR | ENTER COLOCAR | DEL APAGAR | G MODO | ESC SAIR");
         }
         drawEditorText(cmd, textPipeline, font, hud,
                        10.0f, 12.0f,
                        0.31f, 0.86f, 0.90f, 0.95f, 0.95f);
+        drawEditorText(cmd, textPipeline, font, hudActions,
+                       10.0f, 26.0f,
+                       0.30f, 0.76f, 0.82f, 0.90f, 0.90f);
 
         if (snapshot.validationState == logic::EditorValidationState::RUNNING) {
             drawEditorText(cmd, textPipeline, font,
