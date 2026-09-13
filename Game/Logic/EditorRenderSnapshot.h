@@ -8,6 +8,7 @@
 
 #include "Logic/Physics.h"
 #include "Logic/EditorInteraction.h"
+#include "Logic/EditorValidation.h"
 
 #include <cstddef>
 #include <vector>
@@ -16,6 +17,7 @@ namespace logic {
 
 struct EditorRenderSnapshot {
     std::vector<AABB> platforms;
+    std::vector<bool> platformReachable;
     std::size_t selectedIndex = static_cast<std::size_t>(-1);
 
     Vec2 cursorWorld{};
@@ -31,6 +33,13 @@ struct EditorRenderSnapshot {
     bool hasSelection = false;
     bool hasFlag = false;
     bool previewVisible = false;
+    bool validationValid = false;
+    bool validationReachesGoal = false;
+
+    int reachablePlatforms = 0;
+    int totalPlatforms = 0;
+    EditorValidationState validationState = EditorValidationState::IDLE;
+    std::string validationMessage;
 
     EditorEntityTool entityTool = EditorEntityTool::PLATFORM;
     EditorToolMode tool = EditorToolMode::STAMP;
