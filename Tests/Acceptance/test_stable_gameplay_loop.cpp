@@ -13,6 +13,8 @@ using namespace logic;
 
 namespace {
 
+constexpr float TEST_FRAME_DT = config::FIXED_STEP * 2.0f;
+
 std::filesystem::path writeLevel(const std::string& name, const std::string& body) {
     const auto path = std::filesystem::temp_directory_path() / name;
     std::ofstream out(path);
@@ -37,7 +39,7 @@ struct RunDriver {
                                   bool jumpReleased = false) {
         input.injectRawState(false, false, jumpHeld, jumpPressed, jumpReleased);
         return session.update(
-            config::FIXED_STEP,
+            TEST_FRAME_DT,
             input,
             bindings,
             static_cast<int>(config::LOGICAL_WIDTH),
@@ -47,14 +49,15 @@ struct RunDriver {
     }
 
     bool chargedJump() {
-        // 24 fixed ticks at 60 Hz are exactly the configured 0.4 s charge time.
-        for (int tick = 0; tick < 24; ++tick) {
-            (void)frame(true, tick == 0, false);
+        // 12 rendered test frames at two fixed ticks per frame = 24 fixed ticks,
+        // exactly the configured 0.4 s charge time at 60 Hz.
+        for (int frameIndex = 0; frameIndex < 12; ++frameIndex) {
+            (void)frame(true, frameIndex == 0, false);
         }
         auto result = frame(false, false, true);
         if (result.campaignCompleted) return true;
 
-        for (int tick = 0; tick < 120; ++tick) {
+        for (int frameIndex = 0; frameIndex < 60; ++frameIndex) {
             result = frame();
             if (result.campaignCompleted) return true;
             if (session.player().isGrounded()) return true;
@@ -110,10 +113,10 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
 
     bool completed = false;
-    for (int tick = 0; tick < 180 && !completed; ++tick) {
-        if (tick < 24) {
-            (void)driver.frame(true, tick == 0, false);
-        } else if (tick == 24) {
+    for (int frameIndex = 0; frameIndex < 90 && !completed; ++frameIndex) {
+        if (frameIndex < 12) {
+            (void)driver.frame(true, frameIndex == 0, false);
+        } else if (frameIndex == 12) {
             const auto result = driver.frame(false, false, true);
             completed = result.campaignCompleted;
         } else {
