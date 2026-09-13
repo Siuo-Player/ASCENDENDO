@@ -42,6 +42,9 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
     const float viewBottomY = std::clamp(snapshot.viewBottomY, 0.0f, maxView);
     const float viewTopY = viewBottomY + viewportHeight;
     const Camera fixedCamera{};
+    const bool validationReady =
+        snapshot.validationState == logic::EditorValidationState::COMPLETE ||
+        snapshot.validationState == logic::EditorValidationState::STALE;
 
     auto screenY = [viewBottomY](float worldY) { return worldY - viewBottomY; };
 
@@ -130,9 +133,23 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         if (platform.max.y < viewBottomY || platform.min.y > viewTopY) continue;
 
         const bool selected = snapshot.hasSelection && snapshot.selectedIndex == i;
-        const float r = selected ? 0.95f : presentation::COLOR_PLATFORM_R;
-        const float g = selected ? 0.78f : presentation::COLOR_PLATFORM_G;
-        const float b = selected ? 0.15f : presentation::COLOR_PLATFORM_B;
+        const bool unreachable = validationReady &&
+            i < snapshot.platformReachable.size() &&
+            !snapshot.platformReachable[i];
+
+        float r = presentation::COLOR_PLATFORM_R;
+        float g = presentation::COLOR_PLATFORM_G;
+        float b = presentation::COLOR_PLATFORM_B;
+        if (unreachable && !selected) {
+            r = 0.72f;
+            g = 0.26f;
+            b = 0.26f;
+        }
+        if (selected) {
+            r = 0.95f;
+            g = 0.78f;
+            b = 0.15f;
+        }
 
         shapes.drawRect(cmd, shapePipeline,
                         platform.min.x, screenY(platform.min.y),
@@ -220,15 +237,50 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
         const std::size_t currentScreen =
             std::min(snapshot.screenCount - 1,
                      static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight));
+
         char hud[192];
         std::snprintf(hud, sizeof(hud),
-                      "PLATFORM %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | PLATFORM SIZES | DEL APAGAR | ESC SAIR",
+                      "PLATFORM %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | DEL APAGAR | ESC SAIR",
                       tool, size,
                       currentScreen + 1, snapshot.screenCount,
                       viewBottomY, viewTopY);
         drawEditorText(cmd, textPipeline, font, hud,
-                       10.0f, config::LOGICAL_HEIGHT - 24.0f,
+                       10.0f, 12.0f,
                        0.34f, 0.86f, 0.90f, 0.95f, 0.95f);
+
+        if (snapshot.validationState == logic::EditorValidationState::RUNNING) {
+            drawEditorText(cmd, textPipeline, font,
+                           "VALIDACAO: A EXECUTAR",
+                           10.0f, config::LOGICAL_HEIGHT - 18.0f,
+                           0.34f, 0.85f, 0.90f, 1.0f, 1.0f);
+        } else if (snapshot.validationState == logic::EditorValidationState::COMPLETE) {
+            char validationHud[192];
+            std::snprintf(validationHud, sizeof(validationHud),
+                          "VALIDACAO: %s | PLATAFORMAS %d/%d | OBJETIVO %s",
+                          snapshot.validationValid ? "OK" : "FALHOU",
+                          snapshot.reachablePlatforms,
+                          snapshot.totalPlatforms,
+                          snapshot.validationReachesGoal ? "OK" : "INALCANCAVEL");
+            drawEditorText(cmd, textPipeline, font, validationHud,
+                           10.0f, config::LOGICAL_HEIGHT - 18.0f,
+                           0.34f,
+                           snapshot.validationValid ? 0.35f : 1.0f,
+                           snapshot.validationValid ? 1.0f : 0.35f,
+                           snapshot.validationValid ? 0.55f : 0.35f,
+                           1.0f);
+        } else if (snapshot.validationState == logic::EditorValidationState::STALE) {
+            drawEditorText(cmd, textPipeline, font,
+                           "VALIDACAO: DESATUALIZADA | DOCUMENTO ALTERADO",
+                           10.0f, config::LOGICAL_HEIGHT - 18.0f,
+                           0.34f, 1.0f, 0.72f, 0.25f, 1.0f);
+        }
+
+        if (validationReady && !snapshot.validationMessage.empty()) {
+            drawEditorText(cmd, textPipeline, font,
+                           snapshot.validationMessage.c_str(),
+                           10.0f, config::LOGICAL_HEIGHT - 36.0f,
+                           0.31f, 0.82f, 0.84f, 0.90f, 0.95f);
+        }
         shapes.bind(cmd, shapePipeline);
     }
 }

@@ -1,11 +1,11 @@
 #include "Logic/LevelEditorValidator.h"
 #include "Logic/LevelEditor.h"
-#include "Core/Config.h"
+#include "Logic/Level.h"
 
+#include <algorithm>
 #include <cmath>
 #include <deque>
 #include <vector>
-#include <algorithm>
 
 namespace logic {
 
@@ -64,7 +64,9 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
 
     std::vector<Node> nodes;
     nodes.reserve(document.platformCount() + 2);
-    nodes.push_back({Node::Kind::GROUND, {{0.0f, 0.0f}, {config::LOGICAL_WIDTH, 20.0f}}});
+    nodes.push_back({Node::Kind::GROUND,
+                     {{0.0f, 0.0f},
+                      {config::LOGICAL_WIDTH, Level::AUTO_GROUND_HEIGHT}}});
 
     for (std::size_t i = 0; i < document.platformCount(); ++i) {
         nodes.push_back({Node::Kind::PLATFORM, document.platforms()[i].bounds, i});

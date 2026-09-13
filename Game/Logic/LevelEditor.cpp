@@ -147,6 +147,7 @@ LevelData LevelEditorDocument::toLevelData(const std::string& name) const {
     LevelData data;
     data.name = name;
     data.screenCount = m_layout.screenCount();
+    data.finalCampaignLevel = m_finalCampaignLevel;
     data.platforms.reserve(m_platforms.size());
     for (const auto& platform : m_platforms)
         data.platforms.push_back(platform.bounds);

@@ -20,6 +20,11 @@ struct LevelData {
     std::optional<Vec2> spawnPosition;
     std::optional<AABB> flag;
 
+    // Validation metadata only. This is never serialized and lets background
+    // editor validation reconstruct the same final/non-final policy as the
+    // live document without making authored goal state persistent.
+    bool finalCampaignLevel = false;
+
     // Default: one logical 640x360 screen.
     std::size_t screenCount = 1;
 };

@@ -296,6 +296,14 @@ int main(int argc, char** argv) {
                 renderer.attachCampaignEditorSnapshot(nullptr);
             } else if (currentState == GameState::EDITOR) {
                 editorSnapshot = session.editorSession().renderSnapshot();
+                const auto& validation = session.editorSession().validationResult();
+                editorSnapshot.validationState = validation.state;
+                editorSnapshot.validationValid = validation.valid;
+                editorSnapshot.validationReachesGoal = validation.reachesGoal;
+                editorSnapshot.reachablePlatforms = validation.reachablePlatforms;
+                editorSnapshot.totalPlatforms = validation.totalPlatforms;
+                editorSnapshot.platformReachable = validation.platformReachable;
+                editorSnapshot.validationMessage = validation.message;
                 renderer.attachEditorSnapshot(&editorSnapshot);
                 renderer.attachCampaignEditorSnapshot(nullptr);
             } else if (currentState == GameState::CAMPAIGN_EDITOR) {
