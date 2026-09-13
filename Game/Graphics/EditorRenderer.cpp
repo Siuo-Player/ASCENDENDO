@@ -238,15 +238,26 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
             std::min(snapshot.screenCount - 1,
                      static_cast<std::size_t>(snapshot.cursorWorld.y / viewportHeight));
 
-        char hud[192];
-        std::snprintf(hud, sizeof(hud),
-                      "PLATFORM %s | %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | DEL APAGAR | ESC SAIR",
-                      tool, size,
-                      currentScreen + 1, snapshot.screenCount,
-                      viewBottomY, viewTopY);
+        char hud[256];
+        if (snapshot.hasSelection && snapshot.selectedIndex < snapshot.platforms.size()) {
+            const logic::AABB& selected = snapshot.platforms[snapshot.selectedIndex];
+            std::snprintf(hud, sizeof(hud),
+                          "SELECIONADA #%zu | POS %.0f,%.0f | TAM %.0fx%.0f | SCREEN %zu/%zu | VIEW %.0f-%.0f | DEL APAGAR | G MODO | ESC SAIR",
+                          snapshot.selectedIndex + 1,
+                          selected.min.x, selected.min.y,
+                          selected.width(), selected.height(),
+                          currentScreen + 1, snapshot.screenCount,
+                          viewBottomY, viewTopY);
+        } else {
+            std::snprintf(hud, sizeof(hud),
+                          "EDITOR | %s %s | SCREEN %zu/%zu | VIEW %.0f-%.0f | CLICK SELECIONAR | ENTER COLOCAR | DEL APAGAR | ESC SAIR",
+                          tool, size,
+                          currentScreen + 1, snapshot.screenCount,
+                          viewBottomY, viewTopY);
+        }
         drawEditorText(cmd, textPipeline, font, hud,
                        10.0f, 12.0f,
-                       0.34f, 0.86f, 0.90f, 0.95f, 0.95f);
+                       0.31f, 0.86f, 0.90f, 0.95f, 0.95f);
 
         if (snapshot.validationState == logic::EditorValidationState::RUNNING) {
             drawEditorText(cmd, textPipeline, font,
