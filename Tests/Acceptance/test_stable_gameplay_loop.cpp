@@ -118,13 +118,15 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
 
     bool completed = false;
-    for (int frameIndex = 0; frameIndex < 60 && !completed; ++frameIndex) {
+    bool jumpReleased = false;
+    for (int frameIndex = 0; frameIndex < 90 && !completed; ++frameIndex) {
         if (frameIndex == 0) {
             (void)driver.frame(true, true, false);
-        } else if (session.player().chargeRatio() < 1.0f) {
+        } else if (!jumpReleased && session.player().chargeRatio() < 1.0f) {
             (void)driver.frame(true, false, false);
-        } else if (frameIndex == 1) {
+        } else if (!jumpReleased) {
             const auto result = driver.frame(false, false, true);
+            jumpReleased = true;
             completed = result.campaignCompleted;
         } else {
             const auto result = driver.frame();
