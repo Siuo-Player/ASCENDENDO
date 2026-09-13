@@ -2,6 +2,7 @@
 #include "Core/Config.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace logic {
 
@@ -20,6 +21,27 @@ std::size_t EditorInteractionController::hitPlatform(const Vec2& world) const {
             return i;
     }
     return platforms.size();
+}
+
+EditorResizeHandle EditorInteractionController::hitResizeHandle(const Vec2& world,
+                                                                 float tolerance) const {
+    if (!hasSelection() || m_selected >= m_document.platformCount())
+        return EditorResizeHandle::NONE;
+
+    const AABB& b = m_document.platforms()[m_selected].bounds;
+    const auto near = [tolerance](const Vec2& point) {
+        return std::fabs(point.x) <= tolerance && std::fabs(point.y) <= tolerance;
+    };
+
+    if (near({world.x - b.min.x, world.y - b.min.y}))
+        return EditorResizeHandle::TOP_LEFT;
+    if (near({world.x - b.max.x, world.y - b.min.y}))
+        return EditorResizeHandle::TOP_RIGHT;
+    if (near({world.x - b.min.x, world.y - b.max.y}))
+        return EditorResizeHandle::BOTTOM_LEFT;
+    if (near({world.x - b.max.x, world.y - b.max.y}))
+        return EditorResizeHandle::BOTTOM_RIGHT;
+    return EditorResizeHandle::NONE;
 }
 
 AABB EditorInteractionController::centeredStamp(const Vec2& world, Vec2 size) {
@@ -61,6 +83,7 @@ bool EditorInteractionController::beginMove(const Vec2& world) {
     const AABB& b = m_document.platforms()[index].bounds;
     m_selected = index;
     m_mode = EditorMouseMode::MOVING;
+    m_resizeHandle = EditorResizeHandle::NONE;
     m_moveOffsetX = world.x - b.min.x;
     m_moveOffsetY = world.y - b.min.y;
     m_moveOriginalBounds = b;
@@ -101,6 +124,89 @@ bool EditorInteractionController::cancelMove() {
     return restored;
 }
 
+bool EditorInteractionController::beginResize(const Vec2& world) {
+    if (!hasSelection() || m_selected >= m_document.platformCount()) return false;
+
+    const EditorResizeHandle handle = hitResizeHandle(world);
+    if (handle == EditorResizeHandle::NONE) return false;
+
+    const AABB& b = m_document.platforms()[m_selected].bounds;
+    m_mode = EditorMouseMode::RESIZING;
+    m_resizeHandle = handle;
+    m_resizeOriginalBounds = b;
+    m_resizeHasOriginal = true;
+
+    switch (handle) {
+        case EditorResizeHandle::TOP_LEFT:
+            m_resizeFixedCorner = b.max;
+            break;
+        case EditorResizeHandle::TOP_RIGHT:
+            m_resizeFixedCorner = {b.min.x, b.max.y};
+            break;
+        case EditorResizeHandle::BOTTOM_LEFT:
+            m_resizeFixedCorner = {b.max.x, b.min.y};
+            break;
+        case EditorResizeHandle::BOTTOM_RIGHT:
+            m_resizeFixedCorner = b.min;
+            break;
+        case EditorResizeHandle::NONE:
+            return false;
+    }
+    return true;
+}
+
+bool EditorInteractionController::updateResize(const Vec2& world) {
+    if (!hasSelection() || m_mode != EditorMouseMode::RESIZING)
+        return false;
+
+    AABB requested{};
+    switch (m_resizeHandle) {
+        case EditorResizeHandle::TOP_LEFT:
+            requested = {world, m_resizeFixedCorner};
+            break;
+        case EditorResizeHandle::TOP_RIGHT:
+            requested = {{m_resizeFixedCorner.x, world.y},
+                         {world.x, m_resizeFixedCorner.y}};
+            break;
+        case EditorResizeHandle::BOTTOM_LEFT:
+            requested = {{world.x, m_resizeFixedCorner.y},
+                         {m_resizeFixedCorner.x, world.y}};
+            break;
+        case EditorResizeHandle::BOTTOM_RIGHT:
+            requested = {m_resizeFixedCorner, world};
+            break;
+        case EditorResizeHandle::NONE:
+            return false;
+    }
+
+    if (requested.min.x > requested.max.x || requested.min.y > requested.max.y)
+        return false;
+    return m_document.resizePlatform(m_selected, requested);
+}
+
+bool EditorInteractionController::endResize() {
+    if (m_mode != EditorMouseMode::RESIZING) return false;
+    m_mode = EditorMouseMode::NONE;
+    m_resizeHandle = EditorResizeHandle::NONE;
+    m_resizeHasOriginal = false;
+    m_resizeOriginalBounds = {};
+    return hasSelection();
+}
+
+bool EditorInteractionController::cancelResize() {
+    if (m_mode != EditorMouseMode::RESIZING || !m_resizeHasOriginal)
+        return false;
+
+    if (m_selected >= m_document.platformCount()) {
+        clearSelection();
+        return false;
+    }
+
+    const bool restored = m_document.resizePlatform(m_selected, m_resizeOriginalBounds);
+    clearSelection();
+    return restored;
+}
+
 bool EditorInteractionController::placeSpawnAt(const Vec2& world) {
     (void)world;
     clearSelection();
@@ -136,20 +242,28 @@ bool EditorInteractionController::deleteAt(const Vec2& world) {
 void EditorInteractionController::clearSelection() {
     m_selected = npos();
     m_mode = EditorMouseMode::NONE;
+    m_resizeHandle = EditorResizeHandle::NONE;
     m_moveOffsetX = 0.0f;
     m_moveOffsetY = 0.0f;
     m_moveOriginalBounds = {};
+    m_resizeOriginalBounds = {};
+    m_resizeFixedCorner = {};
     m_moveHasOriginal = false;
+    m_resizeHasOriginal = false;
 }
 
 bool EditorInteractionController::selectPlatform(std::size_t index) {
     if (index >= m_document.platformCount()) return false;
     m_selected = index;
     m_mode = EditorMouseMode::NONE;
+    m_resizeHandle = EditorResizeHandle::NONE;
     m_moveOffsetX = 0.0f;
     m_moveOffsetY = 0.0f;
     m_moveOriginalBounds = {};
+    m_resizeOriginalBounds = {};
+    m_resizeFixedCorner = {};
     m_moveHasOriginal = false;
+    m_resizeHasOriginal = false;
     return true;
 }
 
