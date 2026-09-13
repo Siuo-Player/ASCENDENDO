@@ -77,6 +77,34 @@ bool EditorInteractionController::dragFromTo(const Vec2& startWorld, const Vec2&
 }
 
 bool EditorInteractionController::beginMove(const Vec2& world) {
+    if (hasSelection()) {
+        const EditorResizeHandle handle = hitResizeHandle(world);
+        if (handle != EditorResizeHandle::NONE) {
+            const AABB& b = m_document.platforms()[m_selected].bounds;
+            m_mode = EditorMouseMode::MOVING;
+            m_resizeHandle = handle;
+            m_resizeOriginalBounds = b;
+            m_resizeHasOriginal = true;
+            switch (handle) {
+                case EditorResizeHandle::TOP_LEFT:
+                    m_resizeFixedCorner = b.max;
+                    break;
+                case EditorResizeHandle::TOP_RIGHT:
+                    m_resizeFixedCorner = {b.min.x, b.max.y};
+                    break;
+                case EditorResizeHandle::BOTTOM_LEFT:
+                    m_resizeFixedCorner = {b.max.x, b.min.y};
+                    break;
+                case EditorResizeHandle::BOTTOM_RIGHT:
+                    m_resizeFixedCorner = b.min;
+                    break;
+                case EditorResizeHandle::NONE:
+                    return false;
+            }
+            return true;
+        }
+    }
+
     const std::size_t index = hitPlatform(world);
     if (index == m_document.platformCount()) return false;
 
@@ -84,6 +112,8 @@ bool EditorInteractionController::beginMove(const Vec2& world) {
     m_selected = index;
     m_mode = EditorMouseMode::MOVING;
     m_resizeHandle = EditorResizeHandle::NONE;
+    m_resizeHasOriginal = false;
+    m_resizeOriginalBounds = {};
     m_moveOffsetX = world.x - b.min.x;
     m_moveOffsetY = world.y - b.min.y;
     m_moveOriginalBounds = b;
@@ -95,6 +125,31 @@ bool EditorInteractionController::updateMove(const Vec2& world) {
     if (!hasSelection() || m_mode != EditorMouseMode::MOVING)
         return false;
 
+    if (m_resizeHandle != EditorResizeHandle::NONE) {
+        AABB requested{};
+        switch (m_resizeHandle) {
+            case EditorResizeHandle::TOP_LEFT:
+                requested = {world, m_resizeFixedCorner};
+                break;
+            case EditorResizeHandle::TOP_RIGHT:
+                requested = {{m_resizeFixedCorner.x, world.y},
+                             {world.x, m_resizeFixedCorner.y}};
+                break;
+            case EditorResizeHandle::BOTTOM_LEFT:
+                requested = {{world.x, m_resizeFixedCorner.y},
+                             {m_resizeFixedCorner.x, world.y}};
+                break;
+            case EditorResizeHandle::BOTTOM_RIGHT:
+                requested = {m_resizeFixedCorner, world};
+                break;
+            case EditorResizeHandle::NONE:
+                return false;
+        }
+        if (requested.min.x > requested.max.x || requested.min.y > requested.max.y)
+            return false;
+        return m_document.resizePlatform(m_selected, requested);
+    }
+
     const Vec2 requestedMin{
         world.x - m_moveOffsetX,
         world.y - m_moveOffsetY,
@@ -105,13 +160,17 @@ bool EditorInteractionController::updateMove(const Vec2& world) {
 bool EditorInteractionController::endMove() {
     if (m_mode != EditorMouseMode::MOVING) return false;
     m_mode = EditorMouseMode::NONE;
+    m_resizeHandle = EditorResizeHandle::NONE;
     m_moveHasOriginal = false;
     m_moveOriginalBounds = {};
+    m_resizeHasOriginal = false;
+    m_resizeOriginalBounds = {};
+    m_resizeFixedCorner = {};
     return hasSelection();
 }
 
 bool EditorInteractionController::cancelMove() {
-    if (m_mode != EditorMouseMode::MOVING || !m_moveHasOriginal)
+    if (m_mode != EditorMouseMode::MOVING)
         return false;
 
     if (m_selected >= m_document.platformCount()) {
@@ -119,90 +178,13 @@ bool EditorInteractionController::cancelMove() {
         return false;
     }
 
-    const bool restored = m_document.movePlatform(m_selected, m_moveOriginalBounds.min);
-    clearSelection();
-    return restored;
-}
-
-bool EditorInteractionController::beginResize(const Vec2& world) {
-    if (!hasSelection() || m_selected >= m_document.platformCount()) return false;
-
-    const EditorResizeHandle handle = hitResizeHandle(world);
-    if (handle == EditorResizeHandle::NONE) return false;
-
-    const AABB& b = m_document.platforms()[m_selected].bounds;
-    m_mode = EditorMouseMode::RESIZING;
-    m_resizeHandle = handle;
-    m_resizeOriginalBounds = b;
-    m_resizeHasOriginal = true;
-
-    switch (handle) {
-        case EditorResizeHandle::TOP_LEFT:
-            m_resizeFixedCorner = b.max;
-            break;
-        case EditorResizeHandle::TOP_RIGHT:
-            m_resizeFixedCorner = {b.min.x, b.max.y};
-            break;
-        case EditorResizeHandle::BOTTOM_LEFT:
-            m_resizeFixedCorner = {b.max.x, b.min.y};
-            break;
-        case EditorResizeHandle::BOTTOM_RIGHT:
-            m_resizeFixedCorner = b.min;
-            break;
-        case EditorResizeHandle::NONE:
-            return false;
-    }
-    return true;
-}
-
-bool EditorInteractionController::updateResize(const Vec2& world) {
-    if (!hasSelection() || m_mode != EditorMouseMode::RESIZING)
-        return false;
-
-    AABB requested{};
-    switch (m_resizeHandle) {
-        case EditorResizeHandle::TOP_LEFT:
-            requested = {world, m_resizeFixedCorner};
-            break;
-        case EditorResizeHandle::TOP_RIGHT:
-            requested = {{m_resizeFixedCorner.x, world.y},
-                         {world.x, m_resizeFixedCorner.y}};
-            break;
-        case EditorResizeHandle::BOTTOM_LEFT:
-            requested = {{world.x, m_resizeFixedCorner.y},
-                         {m_resizeFixedCorner.x, world.y}};
-            break;
-        case EditorResizeHandle::BOTTOM_RIGHT:
-            requested = {m_resizeFixedCorner, world};
-            break;
-        case EditorResizeHandle::NONE:
-            return false;
+    bool restored = false;
+    if (m_resizeHandle != EditorResizeHandle::NONE && m_resizeHasOriginal) {
+        restored = m_document.resizePlatform(m_selected, m_resizeOriginalBounds);
+    } else if (m_moveHasOriginal) {
+        restored = m_document.movePlatform(m_selected, m_moveOriginalBounds.min);
     }
 
-    if (requested.min.x > requested.max.x || requested.min.y > requested.max.y)
-        return false;
-    return m_document.resizePlatform(m_selected, requested);
-}
-
-bool EditorInteractionController::endResize() {
-    if (m_mode != EditorMouseMode::RESIZING) return false;
-    m_mode = EditorMouseMode::NONE;
-    m_resizeHandle = EditorResizeHandle::NONE;
-    m_resizeHasOriginal = false;
-    m_resizeOriginalBounds = {};
-    return hasSelection();
-}
-
-bool EditorInteractionController::cancelResize() {
-    if (m_mode != EditorMouseMode::RESIZING || !m_resizeHasOriginal)
-        return false;
-
-    if (m_selected >= m_document.platformCount()) {
-        clearSelection();
-        return false;
-    }
-
-    const bool restored = m_document.resizePlatform(m_selected, m_resizeOriginalBounds);
     clearSelection();
     return restored;
 }
