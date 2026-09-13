@@ -49,10 +49,6 @@ struct RunDriver {
     }
 
     bool chargedJump() {
-        // The first frame establishes the press edge; subsequent frames keep
-        // the action held until the actual player state reaches full charge.
-        // This intentionally observes gameplay state instead of assuming a
-        // particular number of fixed ticks per rendered test frame.
         (void)frame(true, true, false);
         for (int frameIndex = 0; frameIndex < 30 && session.player().chargeRatio() < 1.0f; ++frameIndex) {
             (void)frame(true, false, false);
