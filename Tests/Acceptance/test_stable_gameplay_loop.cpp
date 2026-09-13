@@ -77,7 +77,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 0 16 640 10\n");
+        "PLATFORM 0 16 640 6\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -107,7 +107,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     CHECK(session.player().position().y == doctest::Approx(245.0f));
     CHECK(session.level().platformCount() == 4); // final platform was streamed
     REQUIRE(session.level().hasFlag);
-    CHECK(session.level().flagBounds.min.y == doctest::Approx(386.0f));
+    CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
 
     bool completed = false;
     for (int tick = 0; tick < 180 && !completed; ++tick) {
