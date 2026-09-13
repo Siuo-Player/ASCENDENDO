@@ -85,12 +85,12 @@ TEST_CASE("resize pelo canto superior direito preserva o canto oposto") {
     CHECK(controller.hitResizeHandle({228,80}) == EditorResizeHandle::TOP_RIGHT);
     REQUIRE(controller.beginMove({228,80}));
     CHECK(controller.resizeHandle() == EditorResizeHandle::TOP_RIGHT);
-    REQUIRE(controller.updateMove({260,120}));
+    REQUIRE(controller.updateMove({260,60}));
     REQUIRE(controller.endMove());
     CHECK(doc.platforms()[0].bounds.min.x == doctest::Approx(100.0f));
-    CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(80.0f));
+    CHECK(doc.platforms()[0].bounds.min.y == doctest::Approx(60.0f));
     CHECK(doc.platforms()[0].bounds.max.x == doctest::Approx(260.0f));
-    CHECK(doc.platforms()[0].bounds.max.y == doctest::Approx(120.0f));
+    CHECK(doc.platforms()[0].bounds.max.y == doctest::Approx(100.0f));
 }
 
 TEST_CASE("cancelar resize restaura dimensões e posição originais") {
@@ -115,7 +115,8 @@ TEST_CASE("resize rejeita plataforma menor que o mínimo do editor") {
     REQUIRE(doc.addPlatform(AABB{{100,80},{228,100}}));
     REQUIRE(controller.selectPlatform(0));
     REQUIRE(controller.beginMove({228,100}));
-    CHECK_FALSE(controller.updateMove({225,99}));
+    CHECK(controller.resizeHandle() == EditorResizeHandle::BOTTOM_RIGHT);
+    CHECK_FALSE(controller.updateMove({103,83}));
     CHECK(doc.platforms()[0].bounds.width() == doctest::Approx(128.0f));
     CHECK(doc.platforms()[0].bounds.height() == doctest::Approx(20.0f));
 }
