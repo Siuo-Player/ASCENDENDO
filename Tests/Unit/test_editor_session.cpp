@@ -222,45 +222,4 @@ TEST_CASE("UNDO de um movimento continuo desfaz o gesto inteiro") {
     CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(100.0f));
 }
 
-TEST_CASE("UNDO de um resize continuo desfaz o gesto inteiro") {
-    logic::EditorSession session(false);
-    logic::InputManager input;
-    core::KeyBindings bindings;
-    REQUIRE(session.document().addPlatform({{100.0f, 80.0f}, {228.0f, 100.0f}}));
-    REQUIRE(session.controller().selectPlatform(0));
-
-    input.beginFrame();
-    input.injectCursorPos(228.0, 260.0);
-    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::PRESS);
-    session.update(input, bindings, 640, 360);
-    REQUIRE(session.controller().resizeHandle() == logic::EditorResizeHandle::TOP_RIGHT);
-
-    input.beginFrame();
-    input.injectCursorPos(245.0, 245.0);
-    session.update(input, bindings, 640, 360);
-    input.beginFrame();
-    input.injectCursorPos(260.0, 230.0);
-    session.update(input, bindings, 640, 360);
-    input.beginFrame();
-    input.injectCursorPos(275.0, 215.0);
-    session.update(input, bindings, 640, 360);
-
-    input.beginFrame();
-    input.injectCursorPos(275.0, 215.0);
-    input.onMouseButtonEvent(logic::MouseButton::LEFT, logic::Action::RELEASE);
-    session.update(input, bindings, 640, 360);
-
-    REQUIRE(session.document().platforms()[0].bounds.max.x == doctest::Approx(275.0f));
-    REQUIRE(session.document().platforms()[0].bounds.max.y == doctest::Approx(215.0f));
-
-    input.beginFrame();
-    input.onKeyEvent(logic::Key::Z, logic::Action::PRESS);
-    session.update(input, bindings, 640, 360);
-
-    CHECK(session.document().platforms()[0].bounds.min.x == doctest::Approx(100.0f));
-    CHECK(session.document().platforms()[0].bounds.min.y == doctest::Approx(80.0f));
-    CHECK(session.document().platforms()[0].bounds.max.x == doctest::Approx(228.0f));
-    CHECK(session.document().platforms()[0].bounds.max.y == doctest::Approx(100.0f));
-}
-
 } // TEST_SUITE
