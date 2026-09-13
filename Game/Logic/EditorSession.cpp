@@ -337,13 +337,14 @@ void EditorSession::updateKeyboard(const InputManager& input,
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorCursorDown))
         moveKeyboardCursor(0.0f, -1.0f);
 
+    const float maxView = std::max(0.0f, m_document.levelHeight() - config::LOGICAL_HEIGHT);
+    const float pageStep = config::LOGICAL_HEIGHT;
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPanUp)) {
-        const float maxView = std::max(0.0f, m_document.levelHeight() - config::LOGICAL_HEIGHT);
-        m_viewBottomY = std::clamp(m_viewBottomY + 16.0f, 0.0f, maxView);
+        m_viewBottomY = std::clamp(m_viewBottomY + pageStep, 0.0f, maxView);
     }
-    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPanDown))
-        m_viewBottomY = std::clamp(m_viewBottomY - 16.0f, 0.0f,
-                                   std::max(0.0f, m_document.levelHeight() - config::LOGICAL_HEIGHT));
+    if (core::isActionJustPressed(bindings, input, core::GameAction::EditorPanDown)) {
+        m_viewBottomY = std::clamp(m_viewBottomY - pageStep, 0.0f, maxView);
+    }
 
     if (core::isActionJustPressed(bindings, input, core::GameAction::EditorToggleMode))
         m_controller.toggleToolMode();
