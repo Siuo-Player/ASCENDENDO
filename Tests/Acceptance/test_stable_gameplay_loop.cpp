@@ -67,10 +67,12 @@ struct RunDriver {
         auto result = frame(direction, false, false, true);
         if (result.campaignCompleted) return true;
 
+        bool leftGround = !session.player().isGrounded();
         for (int frameIndex = 0; frameIndex < 90; ++frameIndex) {
             result = frame();
+            leftGround = leftGround || !session.player().isGrounded();
             if (result.campaignCompleted) return true;
-            if (session.player().isGrounded()) return true;
+            if (leftGround && session.player().isGrounded()) return true;
         }
         return false;
     }
@@ -84,13 +86,13 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
         "SCREENS 1\n"
-        "PLATFORM 450 124 190 16\n"
-        "PLATFORM 180 229 220 16\n");
+        "PLATFORM 500 80 140 16\n"
+        "PLATFORM 300 180 160 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 450 16 190 6\n");
+        "PLATFORM 500 16 140 6\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -113,11 +115,11 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
 
     REQUIRE(driver.chargedJump(HorizontalDirection::RIGHT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(140.0f));
+    CHECK(session.player().position().y == doctest::Approx(96.0f));
 
     REQUIRE(driver.chargedJump(HorizontalDirection::LEFT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(245.0f));
+    CHECK(session.player().position().y == doctest::Approx(196.0f));
     CHECK(session.level().platformCount() == 4); // final platform was streamed
     REQUIRE(session.level().hasFlag);
     CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
