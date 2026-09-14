@@ -86,13 +86,13 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
         "SCREENS 1\n"
-        "PLATFORM 500 80 140 16\n"
-        "PLATFORM 300 180 160 16\n");
+        "PLATFORM 500 84 140 16\n"
+        "PLATFORM 300 218 160 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 280 16 360 6\n");
+        "PLATFORM 280 6 360 2\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -115,14 +115,14 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
 
     REQUIRE(driver.chargedJump(HorizontalDirection::RIGHT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(96.0f));
+    CHECK(session.player().position().y == doctest::Approx(100.0f));
 
     REQUIRE(driver.chargedJump(HorizontalDirection::LEFT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(196.0f));
+    CHECK(session.player().position().y == doctest::Approx(234.0f));
     CHECK(session.level().platformCount() == 4); // final platform was streamed
     REQUIRE(session.level().hasFlag);
-    CHECK(session.level().flagBounds.min.y == doctest::Approx(382.0f));
+    CHECK(session.level().flagBounds.min.y == doctest::Approx(368.0f));
 
     bool completed = false;
     bool jumpReleased = false;
