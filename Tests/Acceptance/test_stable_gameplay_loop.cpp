@@ -87,7 +87,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "NAME Acceptance First\n"
         "SCREENS 1\n"
         "PLATFORM 500 84 140 16\n"
-        "PLATFORM 300 218 160 16\n");
+        "PLATFORM 330 218 150 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
