@@ -15,6 +15,12 @@ namespace {
 
 constexpr float TEST_FRAME_DT = config::FIXED_STEP * 2.0f;
 
+enum class HorizontalDirection {
+    NONE,
+    LEFT,
+    RIGHT,
+};
+
 std::filesystem::path writeLevel(const std::string& name, const std::string& body) {
     const auto path = std::filesystem::temp_directory_path() / name;
     std::ofstream out(path);
@@ -34,10 +40,13 @@ struct RunDriver {
     InputManager& input;
     const core::KeyBindings& bindings;
 
-    GameSessionUpdateResult frame(bool jumpHeld = false,
+    GameSessionUpdateResult frame(HorizontalDirection direction = HorizontalDirection::NONE,
+                                  bool jumpHeld = false,
                                   bool jumpPressed = false,
                                   bool jumpReleased = false) {
-        input.injectRawState(false, false, jumpHeld, jumpPressed, jumpReleased);
+        const bool left = direction == HorizontalDirection::LEFT;
+        const bool right = direction == HorizontalDirection::RIGHT;
+        input.injectRawState(left, right, jumpHeld, jumpPressed, jumpReleased);
         return session.update(
             TEST_FRAME_DT,
             input,
@@ -48,17 +57,17 @@ struct RunDriver {
             config::LOGICAL_HEIGHT);
     }
 
-    bool chargedJump() {
-        (void)frame(true, true, false);
+    bool chargedJump(HorizontalDirection direction) {
+        (void)frame(direction, true, true, false);
         for (int frameIndex = 0; frameIndex < 30 && session.player().chargeRatio() < 1.0f; ++frameIndex) {
-            (void)frame(true, false, false);
+            (void)frame(direction, true, false, false);
         }
         if (session.player().chargeRatio() < 1.0f) return false;
 
-        auto result = frame(false, false, true);
+        auto result = frame(direction, false, false, true);
         if (result.campaignCompleted) return true;
 
-        for (int frameIndex = 0; frameIndex < 60; ++frameIndex) {
+        for (int frameIndex = 0; frameIndex < 90; ++frameIndex) {
             result = frame();
             if (result.campaignCompleted) return true;
             if (session.player().isGrounded()) return true;
@@ -75,13 +84,13 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
         "SCREENS 1\n"
-        "PLATFORM 0 124 640 16\n"
-        "PLATFORM 0 229 640 16\n");
+        "PLATFORM 450 124 190 16\n"
+        "PLATFORM 180 229 220 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 0 16 640 6\n");
+        "PLATFORM 450 16 190 6\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -102,11 +111,11 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     core::KeyBindings bindings;
     RunDriver driver{session, input, bindings};
 
-    REQUIRE(driver.chargedJump());
+    REQUIRE(driver.chargedJump(HorizontalDirection::RIGHT));
     CHECK(session.player().isGrounded());
     CHECK(session.player().position().y == doctest::Approx(140.0f));
 
-    REQUIRE(driver.chargedJump());
+    REQUIRE(driver.chargedJump(HorizontalDirection::LEFT));
     CHECK(session.player().isGrounded());
     CHECK(session.player().position().y == doctest::Approx(245.0f));
     CHECK(session.level().platformCount() == 4); // final platform was streamed
@@ -115,13 +124,13 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
 
     bool completed = false;
     bool jumpReleased = false;
-    for (int frameIndex = 0; frameIndex < 90 && !completed; ++frameIndex) {
+    for (int frameIndex = 0; frameIndex < 120 && !completed; ++frameIndex) {
         if (frameIndex == 0) {
-            (void)driver.frame(true, true, false);
+            (void)driver.frame(HorizontalDirection::RIGHT, true, true, false);
         } else if (!jumpReleased && session.player().chargeRatio() < 1.0f) {
-            (void)driver.frame(true, false, false);
+            (void)driver.frame(HorizontalDirection::RIGHT, true, false, false);
         } else if (!jumpReleased) {
-            const auto result = driver.frame(false, false, true);
+            const auto result = driver.frame(HorizontalDirection::RIGHT, false, false, true);
             jumpReleased = true;
             completed = result.campaignCompleted;
         } else {
