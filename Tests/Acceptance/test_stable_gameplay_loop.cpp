@@ -120,6 +120,9 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     REQUIRE(driver.chargedJump(HorizontalDirection::LEFT));
     CHECK(session.player().isGrounded());
     CHECK(session.player().position().y == doctest::Approx(234.0f));
+    CHECK(session.player().position().y >=
+          config::LOGICAL_HEIGHT - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE);
+    (void)driver.frame(); // run the normal GameSession streaming check at the landing state
     CHECK(session.level().platformCount() == 4); // final platform was streamed
     REQUIRE(session.level().hasFlag);
     CHECK(session.level().flagBounds.min.y == doctest::Approx(368.0f));
