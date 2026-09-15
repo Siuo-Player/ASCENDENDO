@@ -70,6 +70,7 @@ void GameSession::resetGame(float logicalWidth) {
 
     player_ = logic::Player{};
     player_.body.position = candidateLevel.spawnPosition;
+    player_.body.isGrounded = true;
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
     level_ = std::move(candidateLevel);
@@ -89,6 +90,7 @@ bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) 
 
     player_ = logic::Player{};
     player_.body.position = candidateLevel.spawnPosition;
+    player_.body.isGrounded = true;
     world_ = logic::PhysicsWorld{};
     elapsedTime_ = 0.0f;
     level_ = std::move(candidateLevel);
