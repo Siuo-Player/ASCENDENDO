@@ -38,16 +38,16 @@ TEST_CASE("BFS continua depois de atingir o objetivo para marcar todos os nos al
     const AABB ground{{0.0f, 0.0f}, {640.0f, 16.0f}};
     LevelEditorDocument document(true, ground, 1);
 
-    // A -> P establishes the path upward. P reaches both X and Y. X reaches
-    // the highest platform B (and therefore the automatic goal), while Y can
-    // reach C. C is intentionally not reachable from X. When X is processed,
-    // B and the goal are queued before Y can discover C. The old `break` at
-    // the goal then prevented C from ever being marked reachable.
-    REQUIRE(document.addPlatform({{100.0f, 100.0f}, {180.0f, 116.0f}})); // A
-    REQUIRE(document.addPlatform({{100.0f, 200.0f}, {580.0f, 220.0f}})); // P
+    // A -> P establishes the upward path. P reaches X and Y. X reaches the
+    // highest platform B (and therefore the automatic goal), while Y reaches
+    // C. X cannot reach C horizontally. The queue at that point is ordered
+    // as Y, B, GOAL; Y discovers C behind GOAL. The old `break` at GOAL then
+    // leaves C unprocessed and falsely marked unreachable.
+    REQUIRE(document.addPlatform({{100.0f, 70.0f}, {180.0f, 86.0f}}));  // A
+    REQUIRE(document.addPlatform({{100.0f, 150.0f}, {620.0f, 170.0f}})); // P
     REQUIRE(document.addPlatform({{100.0f, 250.0f}, {180.0f, 266.0f}})); // X
-    REQUIRE(document.addPlatform({{500.0f, 220.0f}, {580.0f, 236.0f}})); // Y
-    REQUIRE(document.addPlatform({{500.0f, 300.0f}, {580.0f, 316.0f}})); // C
+    REQUIRE(document.addPlatform({{600.0f, 220.0f}, {620.0f, 236.0f}})); // Y
+    REQUIRE(document.addPlatform({{600.0f, 300.0f}, {620.0f, 316.0f}})); // C
     REQUIRE(document.addPlatform({{100.0f, 314.0f}, {180.0f, 330.0f}})); // B (goal)
 
     const EditorValidationResult result = validateEditorDocument(document);
