@@ -90,7 +90,7 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
 
         if (current == nodes.size() - 1) {
             result.reachesGoal = true;
-            continue;
+            break;
         }
 
         for (std::size_t j = 1; j < nodes.size(); ++j) {
