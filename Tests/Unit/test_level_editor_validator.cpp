@@ -36,28 +36,32 @@ TEST_CASE("goal implicito usa a altura total do documento, nao uma screen") {
 
 TEST_CASE("BFS continua depois de atingir o objetivo para marcar todos os nos alcancaveis") {
     const AABB ground{{0.0f, 0.0f}, {640.0f, 16.0f}};
-    LevelEditorDocument document(false, ground, 1);
+    LevelEditorDocument document(true, ground, 1);
 
-    // The graph is arranged so that the node that can reach the goal is
-    // dequeued before Y. Y then discovers B, which is enqueued behind the
-    // already queued goal. The old `break` therefore left B unmarked.
+    // A -> P establishes the path upward. P reaches both X and Y. X reaches
+    // the highest platform B (and therefore the automatic goal), while Y can
+    // reach C. C is intentionally not reachable from X. When X is processed,
+    // B and the goal are queued before Y can discover C. The old `break` at
+    // the goal then prevented C from ever being marked reachable.
     REQUIRE(document.addPlatform({{100.0f, 100.0f}, {180.0f, 116.0f}})); // A
-    REQUIRE(document.addPlatform({{100.0f, 160.0f}, {180.0f, 176.0f}})); // P
+    REQUIRE(document.addPlatform({{100.0f, 200.0f}, {580.0f, 220.0f}})); // P
     REQUIRE(document.addPlatform({{100.0f, 250.0f}, {180.0f, 266.0f}})); // X
-    REQUIRE(document.addPlatform({{100.0f, 200.0f}, {180.0f, 216.0f}})); // Y
-    REQUIRE(document.addPlatform({{100.0f, 300.0f}, {180.0f, 316.0f}})); // B
+    REQUIRE(document.addPlatform({{500.0f, 220.0f}, {580.0f, 236.0f}})); // Y
+    REQUIRE(document.addPlatform({{500.0f, 300.0f}, {580.0f, 316.0f}})); // C
+    REQUIRE(document.addPlatform({{100.0f, 314.0f}, {180.0f, 330.0f}})); // B (goal)
 
     const EditorValidationResult result = validateEditorDocument(document);
 
     CHECK(result.reachesGoal);
     CHECK(result.valid);
     CHECK(result.reachablePlatforms == 5);
-    REQUIRE(result.platformReachable.size() == 5);
+    REQUIRE(result.platformReachable.size() == 6);
     CHECK(result.platformReachable[0]);
     CHECK(result.platformReachable[1]);
     CHECK(result.platformReachable[2]);
     CHECK(result.platformReachable[3]);
-    CHECK(result.platformReachable[4]);
+    CHECK(result.platformReachable[4] == false);
+    CHECK(result.platformReachable[5]);
 }
 
 } // TEST_SUITE
