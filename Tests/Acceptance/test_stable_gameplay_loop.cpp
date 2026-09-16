@@ -87,12 +87,12 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "NAME Acceptance First\n"
         "SCREENS 1\n"
         "PLATFORM 500 88 140 16\n"
-        "PLATFORM 350 224 50 16\n");
+        "PLATFORM 350 224 150 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 590 16 50 1\n");
+        "PLATFORM 420 16 50 1\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
