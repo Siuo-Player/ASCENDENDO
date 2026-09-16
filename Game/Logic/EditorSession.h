@@ -62,9 +62,6 @@ public:
     const std::string& persistencePath() const { return m_persistencePath; }
     const std::string& documentName() const { return m_documentName; }
 
-    // Campaign Editor calls this only after LevelDataIO has parsed the level.
-    // The LevelEditorDocument validates the new data with the selected
-    // campaign-level policy before replacing the current document.
     bool loadLevelData(const LevelData& data,
                        bool finalCampaignLevel,
                        std::string path,
@@ -142,6 +139,12 @@ private:
     std::vector<LevelData> m_undoHistory;
     std::vector<LevelData> m_redoHistory;
     bool m_applyingHistory = false;
+
+    // One conceptual undo unit for a continuous move/resize gesture.
+    // The baseline is captured exactly once at gesture start and committed
+    // exactly once when the gesture ends.
+    LevelData m_gestureBaseline;
+    bool m_gestureBaselineValid = false;
 };
 
 } // namespace logic
