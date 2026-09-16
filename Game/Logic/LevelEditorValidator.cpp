@@ -76,7 +76,7 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
     goal.kind = Node::Kind::GOAL;
     goal.bounds = document.hasFlag() && document.flag()
         ? *document.flag()
-        : AABB{{0.0f, config::LOGICAL_HEIGHT}, {0.0f, config::LOGICAL_HEIGHT}};
+        : AABB{{0.0f, document.levelHeight()}, {0.0f, document.levelHeight()}};
     nodes.push_back(goal);
 
     std::vector<bool> visited(nodes.size(), false);
@@ -90,7 +90,7 @@ EditorValidationResult validateEditorDocument(const LevelEditorDocument& documen
 
         if (current == nodes.size() - 1) {
             result.reachesGoal = true;
-            break;
+            continue;
         }
 
         for (std::size_t j = 1; j < nodes.size(); ++j) {
