@@ -275,16 +275,6 @@ bool EditorSession::placeKeyboardEntity() {
 void EditorSession::recordEditBaseline(const LevelData& before) {
     if (m_applyingHistory) return;
 
-    // A continuous pointer move is one conceptual operation. The first frame
-    // captures the pre-gesture state; subsequent frames must not add more
-    // undo entries until the gesture finishes.
-    if (m_leftDragActive && m_controller.mode() == EditorMouseMode::MOVING) {
-        if (!m_undoHistory.empty() &&
-            !sameDocumentState(m_undoHistory.back(), before)) {
-            return;
-        }
-    }
-
     if (!m_undoHistory.empty() && sameDocumentState(m_undoHistory.back(), before)) return;
     m_undoHistory.push_back(before);
     m_redoHistory.clear();
@@ -469,12 +459,25 @@ void EditorSession::update(const InputManager& input,
         return;
     }
 
+    const bool movingBefore = (m_controller.mode() == EditorMouseMode::MOVING);
+
     updateKeyboard(input, bindings);
     updateMouse(input);
 
     const LevelData after = m_document.toLevelData(m_documentName);
-    if (!sameDocumentState(before, after))
-        recordEditBaseline(before);
+    const bool movingAfter = (m_controller.mode() == EditorMouseMode::MOVING);
+
+    if (!movingBefore && movingAfter) {
+        m_gestureBaseline = before;
+        m_gestureBaselineValid = true;
+    } else if (movingBefore && !movingAfter) {
+        if (m_gestureBaselineValid && !sameDocumentState(m_gestureBaseline, after))
+            recordEditBaseline(m_gestureBaseline);
+        m_gestureBaselineValid = false;
+    } else if (!movingBefore && !movingAfter) {
+        if (!sameDocumentState(before, after))
+            recordEditBaseline(before);
+    }
 
     refreshValidationResult();
 }
