@@ -17,6 +17,8 @@ public:
     std::filesystem::path assetsRoot() const;
     std::filesystem::path levelsRoot() const;
     std::filesystem::path campaignFile() const;
+    std::filesystem::path campaignsRoot() const;
+    std::filesystem::path campaignCatalogueFile() const;
     std::filesystem::path playerSprite() const;
     std::filesystem::path controlsFile() const;
     std::filesystem::path runsFile() const;
