@@ -115,6 +115,14 @@ std::filesystem::path RuntimePaths::campaignFile() const {
     return levelsRoot() / "campaign.txt";
 }
 
+std::filesystem::path RuntimePaths::campaignsRoot() const {
+    return assetsRoot() / "Campaigns";
+}
+
+std::filesystem::path RuntimePaths::campaignCatalogueFile() const {
+    return campaignsRoot() / "catalogue.txt";
+}
+
 std::filesystem::path RuntimePaths::playerSprite() const {
     return assetsRoot() / "Sprites" / "personagem.png";
 }
