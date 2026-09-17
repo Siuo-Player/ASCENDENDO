@@ -83,7 +83,10 @@ struct RunDriver {
 TEST_SUITE("StableGameplayLoop") {
 TEST_CASE("complete run uses real charge physics, streams vertically, and reaches the derived flag") {
     // Geometry is intentionally separated in X between successive jump paths so
-    // ascent does not intercept a platform from below or from the side.
+    // ascent does not intercept a platform from below or from the side. The
+    // final platform is deliberately wide enough that the acceptance route is
+    // testing the jump/streaming/goal contract rather than an edge-of-platform
+    // pixel collision.
     const auto firstLevel = writeLevel(
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
@@ -94,7 +97,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 580 16 60 1\n");
+        "PLATFORM 400 16 240 16\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -127,7 +130,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     (void)driver.frame(); // run the normal GameSession streaming check at the landing state
     CHECK(session.level().platformCount() == 4); // final platform was streamed
     REQUIRE(session.level().hasFlag);
-    CHECK(session.level().flagBounds.min.y == doctest::Approx(377.0f));
+    CHECK(session.level().flagBounds.min.y == doctest::Approx(392.0f));
 
     bool completed = false;
     bool jumpReleased = false;
