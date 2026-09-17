@@ -12,6 +12,9 @@ namespace core {
 struct RuntimeBootstrapResult {
     RuntimePaths paths;
     bool userDirectoriesReady = false;
+    bool campaignCataloguePresent = false;
+    bool campaignCatalogueValid = true;
+    std::vector<std::string> campaignCatalogueErrors;
     std::vector<CampaignDescriptor> campaigns;
     std::size_t activeCampaignIndex = 0;
     std::vector<std::filesystem::path> campaign;
