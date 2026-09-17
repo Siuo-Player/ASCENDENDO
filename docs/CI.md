@@ -12,50 +12,62 @@ Run → Job → Step → log → classificação → causa confirmada → corre�
 
 Um step agregado que falha sem diagnóstico acessível não autoriza concluir qual componente está errado. A causa deve permanecer `UNKNOWN` até existir evidência suficiente.
 
-## Pipeline atualmente integrado em `main`
+## Gates atualmente integrados em `main`
 
-`.github/workflows/tests.yml` executa em `ubuntu-latest`:
-
-1. checkout do repositório;
-2. instalação de Clang, GNU Make, Vulkan de desenvolvimento, GLFW, `glslc`, Xvfb, `vulkan-tools` e drivers Vulkan Mesa;
-3. `Development/Tools/check_source_sizes.py`;
-4. seleção explícita do ICD Vulkan de software `lavapipe`, seguida de `vulkaninfo --summary`;
-5. um step agregado que executa `make clean`, `make game` e `make tests-verbose` dentro de Xvfb;
-6. `python3 Development/AI_Validation/ai_validator.py --campaign`.
-
-A separação futura em steps independentes de build/teste/campaign é uma melhoria de observabilidade e deve ser validada como alteração de workflow própria. Não deve ser descrita como já integrada em `main` sem prova no workflow.
-
-## Incidente atual — 2026-08-25
-
-Run #281 (`32879936455`) falhou no step agregado **Build and run tests in virtual X display**. A verificação de tamanho não foi a causa da falha desse run.
-
-A causa detalhada não está confirmada porque o log diagnóstico não ficou acessível através da interface GitHub utilizada para a auditoria.
+A validação relevante do repositório está distribuída por workflows explícitos:
 
 ```text
-Run: #281
-Classificação: build/test failure
-Causa confirmada: UNKNOWN
-Ação: não atribuir causalidade específica sem log
+Tests
+├── Linux / Clang / C++20 / Headless Vulkan
+└── Linux / Clang / ASan + UBSan / Headless Vulkan
+
+Windows
+└── Windows / Clang / C++20
+
+Deterministic Capture Evidence
+└── capturas headless em 4:3, 16:9 e 21:9, incluindo níveis 0–2
+
+Campaign Validation
+└── validação mecânica da campanha + relatório de dificuldade
 ```
 
-Esta informação deve ser atualizada assim que o diagnóstico ficar disponível.
+`Tests` valida também source-size policy, assets/registos canónicos, catálogo da campanha, estado do repositório e a campanha ativa. O job normal executa `make clean`, `make game` e `make tests` em Xvfb com Vulkan software; o job ASan/UBSan executa a mesma suite com instrumentação.
 
-## Incidente histórico de source-size
+O workflow Windows constrói o jogo e a suite de testes num ambiente Clang/MSVC com Vulkan software. O workflow de captura verifica que o build de release produz resultados determinísticos em diferentes aspect ratios. O workflow de campanha valida a campanha ativa independentemente do renderer.
 
-Run #251 encontrou um ficheiro em erro e quatro em warning. Esse resultado é tratado como dívida de modularidade real; o response correto é analisar coesão/coupling e criar work packages de subdivisão, não simplesmente aumentar o limite.
+## Gate Gameplay 1.0 — issue #273
 
-## Source-size enforcement
+O contrato de gameplay é `spawn → inputs → FLAG`, sem dependência do editor.
 
-A política normativa atual está em `docs/CODE_SIZE.md`: `<300` linhas normal, `300–399` warning, `>=400` error.
+A evidência executável do loop completo está em:
 
-**Estado real de `main`:** o checker ainda usa KiB (`30/36 KiB`) e percorre apenas `Game/` e `Tests/`. `main.cpp` ainda não é incluído.
+`Tests/Acceptance/test_stable_gameplay_loop.cpp`
 
-A migração do checker e a validação do novo workflow são tarefas de implementação posteriores a esta documentação. Até serem concluídas, qualquer afirmação de que o novo gate já bloqueia por número de linhas seria incorreta.
+Esse acceptance test conduz o `GameSession` normal com input semântico e fixed-step physics real. Verifica, no mesmo run:
+
+- spawn derivado do ground implícito e estado `grounded` inicial;
+- carga contínua e força de salto calculada pelo runtime;
+- três saltos reais numa rota fisicamente alcançável;
+- streaming vertical através do caminho normal de `GameSession`;
+- `FLAG` derivada do nível final e atingida por colisão normal;
+- transição para `CREDITS` após conclusão;
+- gravação do run;
+- ausência de dependência do editor.
+
+A implementação mantém a regra de ausência de air control: `Player::applyHorizontalMovement()` só altera velocidade horizontal enquanto o corpo está grounded; no lançamento do salto, `vx` e `vy` são definidos pela força de salto e pelo ângulo de 60°. A carga é linear em `jumpCharge` e limitada a `1.0`.
+
+O contador `elapsedTime_` no `GameSession` avança pelos fixed steps realmente simulados. O loop de gameplay pode regressar voluntariamente ao menu através da ação de quit sem depender do editor.
+
+O PR #364 integrou esta evidência em `main` após validação verde de Linux normal, ASan/UBSan, Windows, captura determinística e campaign validation. A integração não substitui novas execuções de CI para alterações futuras: qualquer novo HEAD deve ser validado novamente antes de merge.
 
 ## Validação local
 
-No Windows, o Makefile seleciona recipes compatíveis com `cmd.exe`, evitando que PowerShell/Git Bash herdem comandos POSIX incorretos. A validação local continua útil para o ambiente Vulkan/driver do computador, mas o CI é a referência para a compilação Linux headless.
+No Windows, o Makefile seleciona recipes compatíveis com `cmd.exe`, evitando que PowerShell/Git Bash herdem comandos POSIX incorretos. A validação local continua útil para o ambiente Vulkan/driver do computador, mas o CI é a referência para a compilação Linux headless e para a matriz Windows.
+
+## Source-size enforcement
+
+A política normativa está em `docs/CODE_SIZE.md`. O checker atual é a autoridade executável; esta documentação não deve antecipar regras que ainda não estejam presentes no workflow.
 
 ## Limitações
 
-O CI Linux usa Vulkan por software e não substitui testes com GPU física Windows. Sanitizers e Windows build/tests continuam trabalho de roadmap e devem possuir jobs explícitos quando forem promovidos a gates.
+Vulkan software não substitui testes com GPU física. Capturas determinísticas provam reprodutibilidade da apresentação suportada pelo workflow, não qualidade visual subjetiva. Validação mecânica de campanha prova invariantes estruturais/físicos, não diversão ou adequação de dificuldade.
