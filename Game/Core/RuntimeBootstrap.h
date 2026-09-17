@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/CampaignCatalogue.h"
 #include "Core/RuntimePaths.h"
 
 #include <filesystem>
@@ -11,6 +12,8 @@ namespace core {
 struct RuntimeBootstrapResult {
     RuntimePaths paths;
     bool userDirectoriesReady = false;
+    std::vector<CampaignDescriptor> campaigns;
+    std::size_t activeCampaignIndex = 0;
     std::vector<std::filesystem::path> campaign;
     std::string campaignID;
 
