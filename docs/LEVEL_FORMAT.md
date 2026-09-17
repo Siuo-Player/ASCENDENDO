@@ -76,7 +76,7 @@ Cada linha de conteúdo usa o formato:
 id|nome legível|caminho/para/campaign.txt
 ```
 
-O caminho é relativo a `Game/Assets/`, deve ser portátil e deve terminar exactamente em `campaign.txt`.
+O caminho é relativo ao directório que contém o catálogo, isto é, `Game/Assets/Campaigns/`. Deve ser portátil e deve terminar exactamente em `campaign.txt`.
 
 Exemplo de estrutura:
 
