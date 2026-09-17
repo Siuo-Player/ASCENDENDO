@@ -82,11 +82,9 @@ struct RunDriver {
 
 TEST_SUITE("StableGameplayLoop") {
 TEST_CASE("complete run uses real charge physics, streams vertically, and reaches the derived flag") {
-    // Geometry is intentionally separated in X between successive jump paths so
-    // ascent does not intercept a platform from below or from the side. The
-    // final platform is deliberately wide while retaining its low 1 px height,
-    // so the acceptance route tests the jump/streaming/goal contract rather than
-    // an edge-of-platform pixel collision or an unreachable extra height.
+    // Each jump corridor is separated from the lower platform that was just used.
+    // The final goal is on the left so the third jump cannot re-land on the lower
+    // right-hand platform at Y=120 while descending.
     const auto firstLevel = writeLevel(
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
@@ -97,7 +95,7 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 400 16 240 1\n");
+        "PLATFORM 0 16 200 1\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -136,11 +134,11 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
     bool jumpReleased = false;
     for (int frameIndex = 0; frameIndex < 120 && !completed; ++frameIndex) {
         if (frameIndex == 0) {
-            (void)driver.frame(HorizontalDirection::RIGHT, true, true, false);
+            (void)driver.frame(HorizontalDirection::LEFT, true, true, false);
         } else if (!jumpReleased && session.player().chargeRatio() < 1.0f) {
-            (void)driver.frame(HorizontalDirection::RIGHT, true, false, false);
+            (void)driver.frame(HorizontalDirection::LEFT, true, false, false);
         } else if (!jumpReleased) {
-            const auto result = driver.frame(HorizontalDirection::RIGHT, false, false, true);
+            const auto result = driver.frame(HorizontalDirection::LEFT, false, false, true);
             jumpReleased = true;
             completed = result.campaignCompleted;
         } else {
