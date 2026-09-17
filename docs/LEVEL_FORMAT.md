@@ -47,17 +47,59 @@ O objectivo final é derivado pelo runtime a partir da **plataforma mais alta do
 
 Consequentemente, alterar a ordem dos níveis em `campaign.txt` altera automaticamente qual nível recebe o objectivo final. Adicionar, remover ou mover a plataforma mais alta do último nível também altera automaticamente a posição do objectivo. Não existe uma `FLAG` escondida num ficheiro que possa ficar dessincronizada.
 
-## `campaign.txt`
+## Playlist de uma campanha
 
-É uma lista ordenada de nomes de ficheiros `.lvl`, relativa a `Game/Assets/Levels/`:
+Um `campaign.txt` é uma lista ordenada de nomes de ficheiros `.lvl`. As entradas são relativas **ao directório que contém o próprio `campaign.txt`** quando a playlist é carregada pela forma canónica do catálogo.
 
 ```text
-inicio.lvl
-zigzag.lvl
-precipicio.lvl
+# Playlist da campanha
+01/level01.lvl
+01/level02.lvl
+02/level03.lvl
 ```
 
 A ordem é significativa. É a ordem em que o motor faz streaming e também define qual nível é o último e, portanto, qual nível recebe automaticamente o objectivo final.
+
+O layout original `Game/Assets/Levels/campaign.txt` continua suportado; nesse caso o próprio directório `Game/Assets/Levels/` é a raiz da playlist.
+
+## Catálogo de campanhas
+
+Quando existir, o catálogo oficial fica em:
+
+```text
+Game/Assets/Campaigns/catalogue.txt
+```
+
+Cada linha de conteúdo usa o formato:
+
+```text
+id|nome legível|caminho/para/campaign.txt
+```
+
+O caminho é relativo a `Game/Assets/`, deve ser portátil e deve terminar exactamente em `campaign.txt`.
+
+Exemplo de estrutura:
+
+```text
+Game/Assets/
+├── Campaigns/
+│   ├── catalogue.txt
+│   ├── 01-easy/
+│   │   ├── campaign.txt
+│   │   └── levels/
+│   │       ├── level01.lvl
+│   │       └── level02.lvl
+│   └── 02-hard/
+│       ├── campaign.txt
+│       └── levels/
+│           └── level01.lvl
+└── Levels/
+    └── campaign.txt   # layout histórico, mantido por compatibilidade
+```
+
+O catálogo é opcional durante a migração do formato histórico. Sem catálogo, o runtime continua a carregar `Game/Assets/Levels/campaign.txt`. Quando o catálogo existe, tem de ser estruturalmente válido e o runtime carrega a primeira campanha listada como campanha activa até existir a selecção de campanha no produto.
+
+IDs devem começar por um carácter alfanumérico e podem continuar com letras, dígitos, `_` ou `-`. IDs e playlists são únicos dentro do catálogo. Não são permitidos caminhos absolutos, `..` ou separadores `\\`.
 
 ## Invariantes
 
@@ -80,4 +122,4 @@ O editor não deve oferecer uma posição impossível quando a restrição puder
 
 ## Compatibilidade
 
-O formato é texto simples de propósito: é legível, fácil de versionar e barato em armazenamento. O editor deve escrever o mesmo formato que o motor já lê; não deve criar um formato intermédio proprietário.
+Os formatos são texto simples de propósito: são legíveis, fáceis de versionar e baratos em armazenamento. O editor deve escrever o mesmo formato que o motor já lê; não deve criar um formato intermédio proprietário.
