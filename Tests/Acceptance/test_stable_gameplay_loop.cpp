@@ -82,17 +82,19 @@ struct RunDriver {
 
 TEST_SUITE("StableGameplayLoop") {
 TEST_CASE("complete run uses real charge physics, streams vertically, and reaches the derived flag") {
+    // Geometry is intentionally separated in X between successive jump paths so
+    // ascent does not intercept a platform from below or from the side.
     const auto firstLevel = writeLevel(
         "ascendendo-acceptance-first.lvl",
         "NAME Acceptance First\n"
         "SCREENS 1\n"
-        "PLATFORM 500 88 140 16\n"
-        "PLATFORM 350 224 150 16\n");
+        "PLATFORM 500 104 140 16\n"
+        "PLATFORM 240 230 170 16\n");
     const auto finalLevel = writeLevel(
         "ascendendo-acceptance-final.lvl",
         "NAME Acceptance Final\n"
         "SCREENS 1\n"
-        "PLATFORM 420 16 50 1\n");
+        "PLATFORM 580 16 60 1\n");
     const auto runsPath = std::filesystem::temp_directory_path() /
         "ascendendo-acceptance-stable-gameplay.csv";
     removeFile(runsPath);
@@ -103,23 +105,23 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
         runsPath.string());
     session.beginPlaying(config::LOGICAL_WIDTH);
 
+    InputManager input;
+    core::KeyBindings bindings;
+    RunDriver driver{session, input, bindings};
+
     REQUIRE(session.state() == core::GameState::PLAYING);
     CHECK(session.player().position().x == doctest::Approx(320.0f));
     CHECK(session.player().position().y == doctest::Approx(16.0f));
     CHECK(session.level().platformCount() == 3); // implicit ground + 2 authored
     CHECK_FALSE(session.level().hasFlag);
 
-    InputManager input;
-    core::KeyBindings bindings;
-    RunDriver driver{session, input, bindings};
-
     REQUIRE(driver.chargedJump(HorizontalDirection::RIGHT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(104.0f));
+    CHECK(session.player().position().y == doctest::Approx(120.0f));
 
     REQUIRE(driver.chargedJump(HorizontalDirection::LEFT));
     CHECK(session.player().isGrounded());
-    CHECK(session.player().position().y == doctest::Approx(240.0f));
+    CHECK(session.player().position().y == doctest::Approx(246.0f));
     CHECK(session.player().position().y >=
           config::LOGICAL_HEIGHT - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE);
     (void)driver.frame(); // run the normal GameSession streaming check at the landing state
