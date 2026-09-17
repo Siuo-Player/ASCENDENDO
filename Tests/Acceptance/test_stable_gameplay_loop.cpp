@@ -4,6 +4,7 @@
 #include "../../Game/Logic/GameSession.h"
 #include "../../Game/Logic/InputManager.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -132,6 +133,10 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
 
     bool completed = false;
     bool jumpReleased = false;
+    float maxY = session.player().position().y;
+    float minX = session.player().position().x;
+    float maxX = session.player().position().x;
+    bool goalOverlapObserved = false;
     for (int frameIndex = 0; frameIndex < 120 && !completed; ++frameIndex) {
         if (frameIndex == 0) {
             (void)driver.frame(HorizontalDirection::LEFT, true, true, false);
@@ -145,8 +150,26 @@ TEST_CASE("complete run uses real charge physics, streams vertically, and reache
             const auto result = driver.frame();
             completed = result.campaignCompleted;
         }
+
+        maxY = std::max(maxY, session.player().position().y);
+        minX = std::min(minX, session.player().position().x);
+        maxX = std::max(maxX, session.player().position().x);
+        goalOverlapObserved =
+            goalOverlapObserved ||
+            PhysicsWorld::collides(session.player().body.bounds(), session.level().flagBounds);
     }
 
+    INFO("final x=", session.player().position().x,
+         " y=", session.player().position().y,
+         " vx=", session.player().body.velocity.x,
+         " vy=", session.player().body.velocity.y,
+         " grounded=", session.player().isGrounded(),
+         " maxY=", maxY,
+         " minX=", minX,
+         " maxX=", maxX,
+         " goalOverlapObserved=", goalOverlapObserved,
+         " flag=[", session.level().flagBounds.min.x, ",", session.level().flagBounds.min.y,
+         "]- [", session.level().flagBounds.max.x, ",", session.level().flagBounds.max.y, "]");
     REQUIRE(completed);
     CHECK(session.state() == core::GameState::CREDITS);
 
