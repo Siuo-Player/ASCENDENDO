@@ -227,6 +227,7 @@ int main(int argc, char** argv) {
             bootstrap.campaign,
             bootstrap.campaignID,
             bootstrap.runsFile().string());
+        session.configureCampaignName(bootstrap.campaigns.front().name);
         session.configureCampaignEditor(bootstrap.campaigns.front().playlistFile.string());
         Camera camera;
 
