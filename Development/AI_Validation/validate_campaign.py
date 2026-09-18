@@ -338,6 +338,86 @@ def validate_campaign(campaign_path: str, strict_flag_policy: bool = False):
     return reports
 
 
+def validate_campaign_structure(campaign_path: str):
+    """Validate one playlist and its levels without running the expensive difficulty simulator."""
+    base = os.path.dirname(campaign_path)
+    with open(campaign_path, encoding="utf-8") as stream:
+        names = [line.strip() for line in stream if line.strip() and not line.startswith("#")]
+    if not names:
+        raise ValueError("campaign contains no levels")
+    normalized = [os.path.normpath(name) for name in names]
+    if len(set(normalized)) != len(names):
+        raise ValueError("campaign contains duplicate level entries")
+
+    reports = []
+    for index, name in enumerate(names):
+        path = os.path.join(base, name)
+        if not os.path.isfile(path):
+            raise ValueError(f"campaign references missing level: {name}")
+        level = parse_level(path)
+        errors = [] if level.platforms else ["no platforms"]
+        reports.append({
+            "path": os.path.normpath(path),
+            "name": level.name,
+            "screens": level.screens,
+            "platforms": len(level.platforms),
+            "has_flag": False,
+            "valid": not errors,
+            "errors": errors,
+            "difficulty": {"rating": "unchecked", "score": None},
+            "catalogue_index": index,
+        })
+    return reports
+
+
+def validate_catalogue_structure(catalogue_path: str):
+    """Validate the whole official catalogue without running the expensive difficulty simulator."""
+    with open(catalogue_path, encoding="utf-8") as stream:
+        entries = []
+        for number, raw in enumerate(stream, 1):
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            fields = [field.strip() for field in line.split("|")]
+            if len(fields) != 3:
+                raise ValueError(f"catalogue:{number}: expected id|name|playlist")
+            campaign_id, campaign_name, playlist = fields
+            if not campaign_id or not campaign_name or not playlist:
+                raise ValueError(f"catalogue:{number}: id, name and playlist are required")
+            playlist_path = os.path.normpath(playlist)
+            if os.path.isabs(playlist_path) or ".." in playlist_path.split(os.sep):
+                raise ValueError(f"catalogue:{number}: playlist must stay inside catalogue root")
+            entries.append((campaign_id, campaign_name, playlist))
+
+    if not entries:
+        raise ValueError("catalogue contains no campaigns")
+
+    base = os.path.dirname(catalogue_path)
+    reports = []
+    seen_ids = set()
+    seen_playlists = set()
+    for campaign_id, campaign_name, playlist in entries:
+        if campaign_id in seen_ids:
+            raise ValueError(f"catalogue contains duplicate campaign id: {campaign_id}")
+        seen_ids.add(campaign_id)
+
+        key = os.path.normpath(playlist).casefold()
+        if key in seen_playlists:
+            raise ValueError(f"catalogue contains duplicate playlist: {playlist}")
+        seen_playlists.add(key)
+
+        campaign_path = os.path.normpath(os.path.join(base, playlist))
+        if not os.path.isfile(campaign_path):
+            raise ValueError(f"catalogue references missing campaign playlist: {playlist}")
+
+        for report in validate_campaign_structure(campaign_path):
+            reports.append({
+                **report,
+                "campaign_id": campaign_id,
+                "campaign_name": campaign_name,
+            })
+    return reports
+
 def validate_catalogue(catalogue_path: str, strict_flag_policy: bool = False):
     """Validate every catalogued campaign and annotate level reports with campaign identity."""
     with open(catalogue_path, encoding="utf-8") as stream:
@@ -391,17 +471,20 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--campaign", action="store_true")
     parser.add_argument("--catalogue", action="store_true")
+    parser.add_argument("--catalogue-structure", action="store_true")
     parser.add_argument("--level")
     parser.add_argument("--strict-campaign-policy", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    if args.catalogue and (args.campaign or args.level):
-        parser.error("--catalogue cannot be combined with --campaign or --level")
+    if sum(bool(value) for value in (args.catalogue, args.catalogue_structure, args.campaign, args.level)) > 1:
+        parser.error("--catalogue/--catalogue-structure cannot be combined with another validation target")
     root = os.path.normpath(os.path.join(SCRIPT_DIR, "..", ".."))
     campaign = os.path.join(root, "Game", "Assets", "Levels", "campaign.txt")
     catalogue = os.path.join(root, "Game", "Assets", "Campaigns", "catalogue.txt")
     if args.catalogue:
         reports = validate_catalogue(catalogue, strict_flag_policy=args.strict_campaign_policy)
+    elif args.catalogue_structure:
+        reports = validate_catalogue_structure(catalogue)
     elif args.campaign:
         reports = validate_campaign(campaign, strict_flag_policy=args.strict_campaign_policy)
     else:
@@ -418,7 +501,8 @@ def main() -> int:
                 print(f"\n[{campaign_key[0]}] {campaign_key[1]}")
             status = "OK" if report["valid"] else "FAIL"
             diff = report["difficulty"]
-            print(f"[{status}] {report['name']}: {diff['rating']} ({diff['score']})")
+            score = "n/a" if diff.get("score") is None else diff["score"]
+            print(f"[{status}] {report['name']}: {diff['rating']} ({score})")
             for error in report["errors"]:
                 print(f"  - {error}")
     return 0 if valid else 1
