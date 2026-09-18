@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
 
       - name: Run validator unit tests
-        run: python3 -m unittest Tests/Python/test_campaign_validation.py
+        run: python3 -m unittest Tests/Python/test_campaign_validation.py Tests/Python/test_ai_validator.py
 
       - name: Validate official campaign catalogue structurally
         run: python3 Development/AI_Validation/validate_campaign.py --catalogue Game/Assets/Campaigns/catalogue.txt
