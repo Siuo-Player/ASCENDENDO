@@ -96,5 +96,27 @@ class CampaignValidationTests(unittest.TestCase):
             self.assertEqual([report["campaign_id"] for report in reports], ["first", "second"])
             self.assertFalse(all(report["valid"] for report in reports))
 
+    def test_catalogue_structure_checks_every_level_without_difficulty_simulation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            first = root / "Campaigns" / "01-first"
+            second = root / "Campaigns" / "02-second"
+            (first / "levels").mkdir(parents=True)
+            (second / "levels").mkdir(parents=True)
+            (first / "levels" / "one.lvl").write_text("NAME first\nPLATFORM 240 64 160 16\n", encoding="utf-8")
+            (second / "levels" / "two.lvl").write_text("NAME second\nPLATFORM 240 64 160 16\n", encoding="utf-8")
+            (first / "campaign.txt").write_text("levels/one.lvl\n", encoding="utf-8")
+            (second / "campaign.txt").write_text("levels/two.lvl\n", encoding="utf-8")
+            catalogue = root / "Campaigns" / "catalogue.txt"
+            catalogue.write_text(
+                "first|Primeira|01-first/campaign.txt\n"
+                "second|Segunda|02-second/campaign.txt\n",
+                encoding="utf-8",
+            )
+            reports = module.validate_catalogue_structure(str(catalogue))
+            self.assertEqual(len(reports), 2)
+            self.assertTrue(all(report["valid"] for report in reports))
+            self.assertTrue(all(report["difficulty"]["rating"] == "unchecked" for report in reports))
+
 if __name__ == "__main__":
     unittest.main()
