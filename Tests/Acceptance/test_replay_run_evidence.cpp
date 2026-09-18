@@ -145,7 +145,8 @@ TEST_CASE("valid run replay reproduces the derived FLAG through the same engine 
         originalPlayer, originalWorld, originalLevel, replay, 120));
     REQUIRE(originalPlayer.isGrounded());
 
-    // Platform 2 -> derived FLAG.
+    // The derived FLAG starts at the top of the highest platform, so the
+    // campaign completes on the same fixed tick that lands the player there.
     chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay);
 
     bool originalGoal = false;
