@@ -4,25 +4,23 @@ Este é o **único documento vivo de planeamento do produto**. O Git é o histó
 
 ## Estado actual
 
-O jogo já tem uma base jogável e uma campanha de **25 níveis**. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura.
+O jogo já tem uma base jogável e um **catálogo oficial de 10 campanhas / 610 níveis** integrado no runtime. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura. A aceitação de conteúdo continua aberta: cada nível ainda precisa de validação final, funcionamento no runtime, jogo manual e correcção dos problemas encontrados.
 
 O problema principal já não é falta de arquitectura. É transformar essa base num jogo que outras pessoas consigam jogar, entender e terminar.
 
 ## Prioridade agora
 
-### 1. Fechar o loop de gameplay
+### 1. Completar e depurar o conteúdo 1.0
 
-Garantir que uma run normal funciona do início ao fim sem depender do editor ou tooling interno:
+O catálogo oficial já está integrado com 10 campanhas / 610 níveis. O trabalho restante deste gate é provar que este conteúdo é materialmente final: validação automática, integração no runtime, jogo manual, progressão perceptível e correcção sistemática dos problemas encontrados.
 
-```text
-spawn → observar → carregar salto → saltar → aterrar/progredir → objetivo final
-```
+### 2. Fechar a validação de 1.0
 
-A física 1.0 continua simples: salto a 60°, sem air control, plataformas estáticas e estado de início/fim derivado da campanha. Não adicionar mortes, perigos ou outras mecânicas só para aumentar a sensação de progresso.
+Exercitar no conteúdo oficial real a validação de runs/replays, métricas de rota/tempo, Difficulty Tester e a separação entre evidência automática e experiência humana. O gate de validação continua dependente dessa evidência.
 
-### 2. Construir conteúdo real
+### 3. Usar o editor como ferramenta de produção
 
-A campanha deve deixar de ser apenas demonstração técnica. Criar níveis deliberados, com progressão de dificuldade, leitura visual clara e variedade suficiente para que a mecânica principal se mantenha interessante.
+O editor já existe. Agora deve ser medido pelo trabalho que permite fazer, não pelo número de funcionalidades que possui.
 
 Objectivo de conteúdo para 1.0: **10 campanhas**, começando com um conjunto inicial de tamanhos de referência de **10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis**. Esta é uma hipótese de escala de conteúdo, não uma obrigação de produzir exactamente 575 níveis independentemente dos resultados de playtesting. A quantidade final deve ser revista quando houver dados de minutos de jogo, retenção, ritmo de produção e qualidade dos níveis.
 
