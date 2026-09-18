@@ -5,9 +5,11 @@
 
 namespace core {
 
-std::vector<std::filesystem::path> CampaignLoader::load(
+namespace {
+
+std::vector<std::filesystem::path> loadFromRoot(
     const std::filesystem::path& campaignFile,
-    const std::filesystem::path& levelsRoot) {
+    const std::filesystem::path& root) {
     std::vector<std::filesystem::path> levels;
 
     std::ifstream file(campaignFile);
@@ -23,10 +25,23 @@ std::vector<std::filesystem::path> CampaignLoader::load(
         if (line.empty() || line.front() == '#') {
             continue;
         }
-        levels.push_back(levelsRoot / line);
+        levels.push_back((root / line).lexically_normal());
     }
 
     return levels;
+}
+
+} // namespace
+
+std::vector<std::filesystem::path> CampaignLoader::load(
+    const std::filesystem::path& campaignFile) {
+    return loadFromRoot(campaignFile, campaignFile.parent_path());
+}
+
+std::vector<std::filesystem::path> CampaignLoader::load(
+    const std::filesystem::path& campaignFile,
+    const std::filesystem::path& levelsRoot) {
+    return loadFromRoot(campaignFile, levelsRoot);
 }
 
 } // namespace core

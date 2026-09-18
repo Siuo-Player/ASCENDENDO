@@ -181,7 +181,7 @@ GameSessionUpdateResult GameSession::update(float dt,
                 result.campaignCompleted = true;
                 result.completionElapsedSeconds = elapsedTime_;
                 result.runRecorded = logic::recordRun(
-                    runsCsvPath_, "Campanha Principal", campaignID_, elapsedTime_);
+                    runsCsvPath_, campaignName_, campaignID_, elapsedTime_);
                 stateMachine_.enterCredits(core::GameState::MENU);
             }
         }

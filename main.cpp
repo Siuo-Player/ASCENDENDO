@@ -150,6 +150,19 @@ int main(int argc, char** argv) {
         std::cerr << "[AVISO] Nao foi possivel preparar completamente o diretorio de dados do utilizador.\n";
     }
 
+    if (!bootstrap.campaignCatalogueValid) {
+        std::cerr << "[ERRO] Catalogo de campanhas invalido:\n";
+        for (const auto& error : bootstrap.campaignCatalogueErrors) {
+            std::cerr << "  - " << error << "\n";
+        }
+        return 2;
+    }
+
+    if (bootstrap.campaign.empty()) {
+        std::cerr << "[ERRO] Nenhuma campanha ativa pode ser carregada.\n";
+        return 2;
+    }
+
     {
         GraphicsRuntime graphics;
         Window& win = graphics.window();
@@ -204,6 +217,8 @@ int main(int argc, char** argv) {
                       << " nao encontrado -- a usar controlos por omissao.\n";
         }
 
+        std::cout << "[ASCENDENDO] Campanhas catalogadas: "
+                  << bootstrap.campaigns.size() << "\n";
         std::cout << "[ASCENDENDO] Campaign ID: "
                   << (bootstrap.campaignID.empty() ? "(indisponivel)" : bootstrap.campaignID)
                   << "\n";
@@ -212,7 +227,8 @@ int main(int argc, char** argv) {
             bootstrap.campaign,
             bootstrap.campaignID,
             bootstrap.runsFile().string());
-        session.configureCampaignEditor(bootstrap.paths.campaignFile().string());
+        session.configureCampaignName(bootstrap.campaigns.front().name);
+        session.configureCampaignEditor(bootstrap.campaigns.front().playlistFile.string());
         Camera camera;
 
         std::size_t captureLevelIndex = 0;

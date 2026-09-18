@@ -4,7 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from Development.AI_Validation.validate_campaign_catalogue import validate_campaign_catalogue
+from Development.AI_Validation.validate_campaign_catalogue import (
+    validate_campaign_catalogue,
+    validate_campaign_catalogue_file,
+)
 
 
 class CampaignCatalogueValidatorTests(unittest.TestCase):
@@ -104,6 +107,48 @@ class CampaignCatalogueValidatorTests(unittest.TestCase):
             campaign.write_text("one.lvl\n", encoding="utf-8")
             errors = validate_campaign_catalogue(campaign, levels)
             self.assertTrue(any("SPAWN is not allowed" in error for error in errors))
+
+    def test_optional_catalogue_validates_all_referenced_playlists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "Assets"
+            catalogue = assets / "Campaigns" / "catalogue.txt"
+            first = assets / "Campaigns" / "01-easy" / "campaign.txt"
+            second = assets / "Campaigns" / "02-hard" / "campaign.txt"
+            (first.parent / "levels").mkdir(parents=True)
+            (second.parent / "levels").mkdir(parents=True)
+            (first.parent / "levels" / "one.lvl").write_text("NAME One\n", encoding="utf-8")
+            (second.parent / "levels" / "two.lvl").write_text("NAME Two\n", encoding="utf-8")
+            first.write_text("levels/one.lvl\n", encoding="utf-8")
+            second.write_text("levels/two.lvl\n", encoding="utf-8")
+            catalogue.write_text(
+                "easy|Primeira|01-easy/campaign.txt\n"
+                "hard|Segunda|02-hard/campaign.txt\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_campaign_catalogue_file(catalogue, assets), [])
+
+    def test_optional_catalogue_rejects_duplicate_id_and_playlist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "Assets"
+            catalogue = assets / "Campaigns" / "catalogue.txt"
+            playlist = assets / "Campaigns" / "main" / "campaign.txt"
+            (playlist.parent / "levels").mkdir(parents=True)
+            (playlist.parent / "levels" / "one.lvl").write_text("NAME One\n", encoding="utf-8")
+            playlist.write_text("levels/one.lvl\n", encoding="utf-8")
+            catalogue.write_text(
+                "one|Campanha 1|main/campaign.txt\n"
+                "one|Campanha 2|main/campaign.txt\n",
+                encoding="utf-8",
+            )
+            errors = validate_campaign_catalogue_file(catalogue, assets)
+            self.assertTrue(any("duplicate campaign id" in error for error in errors))
+            self.assertTrue(any("duplicate campaign playlist" in error for error in errors))
+
+    def test_optional_catalogue_missing_file_keeps_legacy_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = Path(tmp) / "Assets"
+            catalogue = assets / "Campaigns" / "catalogue.txt"
+            self.assertEqual(validate_campaign_catalogue_file(catalogue, assets), [])
 
 
 if __name__ == "__main__":

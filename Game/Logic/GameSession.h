@@ -70,6 +70,9 @@ public:
     }
 
     void configureCampaignEditor(std::string campaignFilePath);
+    void configureCampaignName(std::string campaignName) {
+        campaignName_ = std::move(campaignName);
+    }
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
     void openEditor(core::GameState returnState) noexcept;
@@ -86,6 +89,7 @@ public:
     int menuSelection() const noexcept { return stateMachine_.menuSelection(); }
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
+    const std::string& campaignName() const noexcept { return campaignName_; }
 
     Player& player() noexcept { return player_; }
     const Player& player() const noexcept { return player_; }
@@ -120,6 +124,7 @@ private:
     bool campaignEditorLoaded_ = false;
     bool campaignEditorDirty_ = false;
     std::string campaignID_;
+    std::string campaignName_ = "Campanha Principal";
     std::string runsCsvPath_;
     float elapsedTime_ = 0.0f;
 };
