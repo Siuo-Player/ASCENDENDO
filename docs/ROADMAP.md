@@ -18,10 +18,6 @@ O catálogo oficial já está integrado com 10 campanhas / 610 níveis. O trabal
 
 Exercitar no conteúdo oficial real a validação de runs/replays, métricas de rota/tempo, Difficulty Tester e a separação entre evidência automática e experiência humana. O gate de validação continua dependente dessa evidência.
 
-### 3. Usar o editor como ferramenta de produção
-
-O editor já existe. Agora deve ser medido pelo trabalho que permite fazer, não pelo número de funcionalidades que possui.
-
 Objectivo de conteúdo para 1.0: **10 campanhas**, começando com um conjunto inicial de tamanhos de referência de **10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis**. Esta é uma hipótese de escala de conteúdo, não uma obrigação de produzir exactamente 575 níveis independentemente dos resultados de playtesting. A quantidade final deve ser revista quando houver dados de minutos de jogo, retenção, ritmo de produção e qualidade dos níveis.
 
 Cada nível só conta como concluído quando:
