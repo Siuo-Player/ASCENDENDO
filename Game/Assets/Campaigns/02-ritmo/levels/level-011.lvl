@@ -1,0 +1,6 @@
+NAME Ponte 011 — serpentina
+# Design: ritmo, padrao serpentina
+PLATFORM 330 64 160 16
+PLATFORM 232 128 160 16
+PLATFORM 124 192 144 16
+PLATFORM 250 256 176 16

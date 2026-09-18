@@ -1,0 +1,6 @@
+NAME Escada 018 — espelho
+# Design: pressao, padrao espelho
+PLATFORM 180 60 128 16
+PLATFORM 320 120 128 16
+PLATFORM 126 180 144 16
+PLATFORM 300 240 144 16

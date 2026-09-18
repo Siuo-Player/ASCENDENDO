@@ -1,0 +1,6 @@
+NAME Corte 004 — convergencia
+# Design: deslocamento, padrao convergencia
+PLATFORM 108 64 160 16
+PLATFORM 248 128 160 16
+PLATFORM 366 192 144 16
+PLATFORM 172 256 144 16

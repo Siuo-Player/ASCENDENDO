@@ -1,0 +1,6 @@
+NAME Escada 004 — retorno
+# Design: iniciacao, padrao retorno
+PLATFORM 82 64 176 16
+PLATFORM 224 128 176 16
+PLATFORM 340 192 160 16
+PLATFORM 130 256 160 16

@@ -1,0 +1,6 @@
+NAME Passagem 011 — ziguezague
+# Design: pressao, padrao ziguezague
+PLATFORM 192 60 144 16
+PLATFORM 342 120 128 16
+PLATFORM 130 180 128 16
+PLATFORM 264 240 144 16

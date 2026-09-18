@@ -1,0 +1,6 @@
+NAME Escada 019 — margem
+# Design: deslocamento, padrao margem
+PLATFORM 122 64 160 16
+PLATFORM 328 128 160 16
+PLATFORM 190 192 144 16
+PLATFORM 74 256 144 16

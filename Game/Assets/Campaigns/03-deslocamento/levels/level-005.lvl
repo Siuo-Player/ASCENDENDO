@@ -1,0 +1,6 @@
+NAME Desvio 005 — onda
+# Design: deslocamento, padrao onda
+PLATFORM 236 64 160 16
+PLATFORM 162 128 144 16
+PLATFORM 334 192 144 16
+PLATFORM 132 256 160 16

@@ -1,0 +1,6 @@
+NAME Escada 023 — ziguezague
+# Design: deslocamento, padrao ziguezague
+PLATFORM 180 64 160 16
+PLATFORM 330 128 144 16
+PLATFORM 152 192 144 16
+PLATFORM 252 256 160 16

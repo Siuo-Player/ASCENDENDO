@@ -1,0 +1,6 @@
+NAME Retorno 005 — serpentina
+# Design: pressao, padrao serpentina
+PLATFORM 142 60 144 16
+PLATFORM 242 120 128 16
+PLATFORM 352 180 128 16
+PLATFORM 230 240 144 16

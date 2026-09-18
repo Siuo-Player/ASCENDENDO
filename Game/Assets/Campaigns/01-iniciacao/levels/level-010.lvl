@@ -1,0 +1,6 @@
+NAME Desvio 010 — espelho
+# Design: iniciacao, padrao espelho
+PLATFORM 182 64 176 16
+PLATFORM 322 128 176 16
+PLATFORM 144 192 160 16
+PLATFORM 284 256 160 16

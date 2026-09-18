@@ -1,0 +1,6 @@
+NAME Corte 003 — ziguezague
+# Design: pressao, padrao ziguezague
+PLATFORM 180 60 128 16
+PLATFORM 322 120 128 16
+PLATFORM 136 180 144 16
+PLATFORM 244 240 144 16

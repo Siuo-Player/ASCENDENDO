@@ -1,0 +1,6 @@
+NAME Retorno 024 — retorno
+# Design: deslocamento, padrao retorno
+PLATFORM 110 64 144 16
+PLATFORM 218 128 144 16
+PLATFORM 352 192 160 16
+PLATFORM 108 256 160 16

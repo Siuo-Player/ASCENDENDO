@@ -1,0 +1,6 @@
+NAME Corte 008 — retorno
+# Design: deslocamento, padrao retorno
+PLATFORM 134 64 160 16
+PLATFORM 250 128 144 16
+PLATFORM 392 192 144 16
+PLATFORM 174 256 160 16

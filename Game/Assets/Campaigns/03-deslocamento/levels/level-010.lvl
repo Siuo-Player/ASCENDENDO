@@ -1,0 +1,6 @@
+NAME Retorno 010 — cruzamento
+# Design: deslocamento, padrao cruzamento
+PLATFORM 166 64 160 16
+PLATFORM 340 128 160 16
+PLATFORM 152 192 144 16
+PLATFORM 102 256 144 16

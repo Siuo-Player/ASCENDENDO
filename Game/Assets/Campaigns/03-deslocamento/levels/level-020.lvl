@@ -1,0 +1,6 @@
+NAME Retorno 020 — convergencia
+# Design: deslocamento, padrao convergencia
+PLATFORM 140 64 160 16
+PLATFORM 288 128 144 16
+PLATFORM 398 192 144 16
+PLATFORM 162 256 160 16

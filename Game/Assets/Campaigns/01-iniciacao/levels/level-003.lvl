@@ -1,0 +1,6 @@
+NAME Corte 003 — ziguezague
+# Design: iniciacao, padrao ziguezague
+PLATFORM 202 64 160 16
+PLATFORM 344 128 160 16
+PLATFORM 124 192 176 16
+PLATFORM 266 256 176 16

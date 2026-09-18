@@ -1,0 +1,6 @@
+NAME Ponte 020 — espelho
+# Design: alternancia, padrao espelho
+PLATFORM 352 60 144 16
+PLATFORM 206 120 144 16
+PLATFORM 394 180 128 16
+PLATFORM 232 240 160 16

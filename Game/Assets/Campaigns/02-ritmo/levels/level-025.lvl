@@ -1,0 +1,6 @@
+NAME Ponte 025 — ziguezague
+# Design: ritmo, padrao ziguezague
+PLATFORM 256 64 176 16
+PLATFORM 150 128 160 16
+PLATFORM 356 192 160 16
+PLATFORM 216 256 144 16

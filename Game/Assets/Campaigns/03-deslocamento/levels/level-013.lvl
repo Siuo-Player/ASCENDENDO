@@ -1,0 +1,6 @@
+NAME Escada 013 — onda
+# Design: deslocamento, padrao onda
+PLATFORM 256 64 160 16
+PLATFORM 174 128 160 16
+PLATFORM 354 192 144 16
+PLATFORM 160 256 144 16

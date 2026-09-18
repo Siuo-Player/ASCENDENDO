@@ -1,0 +1,6 @@
+NAME Corte 022 — espelho
+# Design: deslocamento, padrao espelho
+PLATFORM 140 64 160 16
+PLATFORM 314 128 160 16
+PLATFORM 102 192 144 16
+PLATFORM 276 256 144 16
