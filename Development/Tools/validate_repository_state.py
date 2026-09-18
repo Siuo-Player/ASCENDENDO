@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CAMPAIGN = ROOT / "Game" / "Assets" / "Levels" / "campaign.txt"
+CATALOGUE = ROOT / "Game" / "Assets" / "Campaigns" / "catalogue.txt"
 README = ROOT / "README.md"
 ROADMAP = ROOT / "docs" / "ROADMAP.md"
 
@@ -19,6 +20,30 @@ def campaign_entries() -> list[str]:
     ]
 
 
+def canonical_campaign_entries() -> list[str]:
+    """Return every level path listed by the canonical multi-campaign catalogue."""
+    if not CATALOGUE.is_file():
+        return campaign_entries()
+
+    entries: list[str] = []
+    catalogue_root = CATALOGUE.parent
+    for raw in CATALOGUE.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        fields = [field.strip() for field in line.split("|")]
+        if len(fields) != 3:
+            continue
+        playlist = catalogue_root / fields[2]
+        if not playlist.is_file():
+            continue
+        for level in playlist.read_text(encoding="utf-8").splitlines():
+            level = level.strip()
+            if level and not level.startswith("#"):
+                entries.append(str((playlist.parent / level).resolve()))
+    return entries
+
+
 def documented_campaign_count(path: Path) -> int:
     text = path.read_text(encoding="utf-8")
     match = re.search(r"campanha[^\n]*?\*\*(\d+) níveis\*\*", text, re.IGNORECASE)
@@ -29,7 +54,7 @@ def documented_campaign_count(path: Path) -> int:
 
 def validate() -> list[str]:
     errors: list[str] = []
-    entries = campaign_entries()
+    entries = canonical_campaign_entries()
     if not entries:
         errors.append("campaign.txt contains no playable entries")
         return errors

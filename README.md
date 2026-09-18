@@ -18,9 +18,9 @@ O `main` contém um jogo executável com:
 - editor de níveis integrado e editor de campanha;
 - validação física automática e validação no editor;
 - pipeline de apresentação de plataformas e captura determinística;
-- campanha actualmente com **25 níveis** em `Game/Assets/Levels/campaign.txt`.
+- catálogo oficial actualmente com **610 níveis** em 10 campanhas (`Game/Assets/Campaigns/catalogue.txt`); `Game/Assets/Levels/campaign.txt` permanece como formato histórico/fallback.
 
-O principal trabalho em falta é **conteúdo jogável, qualidade da experiência e validação humana**. A infraestrutura existente só deve crescer quando um problema real do jogo o exigir.
+O principal trabalho em falta é **qualidade do conteúdo, validação humana e evidência de release**; o catálogo oficial já está integrado no runtime. A infraestrutura existente só deve crescer quando um problema real do jogo o exigir.
 
 ## O jogo
 
