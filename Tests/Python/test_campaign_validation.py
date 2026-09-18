@@ -74,5 +74,27 @@ class CampaignValidationTests(unittest.TestCase):
         self.assertIn("no platforms", report["errors"])
 
 
+    def test_catalogue_validates_all_campaigns_and_preserves_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            catalogue_root = root / "Campaigns"
+            first = catalogue_root / "01-first"
+            second = catalogue_root / "02-second"
+            (first / "levels").mkdir(parents=True)
+            (second / "levels").mkdir(parents=True)
+            (first / "levels" / "level-001.lvl").write_text("NAME first\nPLATFORM 240 64 160 16\n", encoding="utf-8")
+            (second / "levels" / "level-001.lvl").write_text("NAME second\nPLATFORM 0 300 64 16\n", encoding="utf-8")
+            (first / "campaign.txt").write_text("levels/level-001.lvl\n", encoding="utf-8")
+            (second / "campaign.txt").write_text("levels/level-001.lvl\n", encoding="utf-8")
+            catalogue = catalogue_root / "catalogue.txt"
+            catalogue.write_text(
+                "first|Primeira|01-first/campaign.txt\n"
+                "second|Segunda|02-second/campaign.txt\n",
+                encoding="utf-8",
+            )
+            reports = module.validate_catalogue(str(catalogue))
+            self.assertEqual([report["campaign_id"] for report in reports], ["first", "second"])
+            self.assertFalse(all(report["valid"] for report in reports))
+
 if __name__ == "__main__":
     unittest.main()
