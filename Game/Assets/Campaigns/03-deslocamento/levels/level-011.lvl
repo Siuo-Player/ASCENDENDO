@@ -1,0 +1,6 @@
+NAME Desvio 011 — margem
+# Design: deslocamento, padrao margem
+PLATFORM 200 64 160 16
+PLATFORM 380 128 144 16
+PLATFORM 234 192 144 16
+PLATFORM 110 256 160 16

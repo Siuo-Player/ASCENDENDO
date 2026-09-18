@@ -1,0 +1,6 @@
+NAME Desvio 001 — serpentina
+# Design: deslocamento, padrao serpentina
+PLATFORM 162 64 160 16
+PLATFORM 288 128 160 16
+PLATFORM 372 192 144 16
+PLATFORM 258 256 144 16

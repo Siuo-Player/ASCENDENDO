@@ -1,0 +1,6 @@
+NAME Escada 009 — serpentina
+# Design: deslocamento, padrao serpentina
+PLATFORM 126 64 144 16
+PLATFORM 252 128 144 16
+PLATFORM 320 192 160 16
+PLATFORM 206 256 160 16

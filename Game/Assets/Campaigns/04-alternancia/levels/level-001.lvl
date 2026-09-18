@@ -1,0 +1,6 @@
+NAME Limiar 001 — margem
+# Design: alternancia, padrao margem
+PLATFORM 320 60 160 16
+PLATFORM 116 120 144 16
+PLATFORM 290 180 144 16
+PLATFORM 374 240 128 16

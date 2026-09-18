@@ -1,0 +1,6 @@
+NAME Passagem 001 — onda
+# Design: iniciacao, padrao onda
+PLATFORM 192 64 176 16
+PLATFORM 110 128 176 16
+PLATFORM 324 192 160 16
+PLATFORM 96 256 160 16

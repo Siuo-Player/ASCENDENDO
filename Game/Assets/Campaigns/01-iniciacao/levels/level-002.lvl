@@ -1,0 +1,6 @@
+NAME Arco 002 — espelho
+# Design: iniciacao, padrao espelho
+PLATFORM 162 64 176 16
+PLATFORM 310 128 160 16
+PLATFORM 124 192 160 16
+PLATFORM 256 256 176 16

@@ -1,0 +1,6 @@
+NAME Passagem 012 — convergencia
+# Design: deslocamento, padrao convergencia
+PLATFORM 128 64 144 16
+PLATFORM 268 128 144 16
+PLATFORM 370 192 160 16
+PLATFORM 176 256 160 16

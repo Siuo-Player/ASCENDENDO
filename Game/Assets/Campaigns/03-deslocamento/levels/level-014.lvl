@@ -1,0 +1,6 @@
+NAME Retorno 014 — espelho
+# Design: deslocamento, padrao espelho
+PLATFORM 128 64 160 16
+PLATFORM 310 128 144 16
+PLATFORM 90 192 144 16
+PLATFORM 256 256 160 16

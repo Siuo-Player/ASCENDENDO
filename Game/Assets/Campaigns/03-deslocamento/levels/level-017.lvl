@@ -1,0 +1,6 @@
+NAME Arco 017 — serpentina
+# Design: deslocamento, padrao serpentina
+PLATFORM 130 64 160 16
+PLATFORM 264 128 144 16
+PLATFORM 340 192 144 16
+PLATFORM 218 256 160 16

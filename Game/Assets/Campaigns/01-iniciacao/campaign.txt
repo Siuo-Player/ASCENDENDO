@@ -1,0 +1,11 @@
+# Primeira Ascensao
+levels/level-001.lvl
+levels/level-002.lvl
+levels/level-003.lvl
+levels/level-004.lvl
+levels/level-005.lvl
+levels/level-006.lvl
+levels/level-007.lvl
+levels/level-008.lvl
+levels/level-009.lvl
+levels/level-010.lvl

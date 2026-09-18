@@ -1,0 +1,6 @@
+NAME Corte 018 — cruzamento
+# Design: deslocamento, padrao cruzamento
+PLATFORM 194 64 144 16
+PLATFORM 368 128 144 16
+PLATFORM 164 192 160 16
+PLATFORM 114 256 160 16

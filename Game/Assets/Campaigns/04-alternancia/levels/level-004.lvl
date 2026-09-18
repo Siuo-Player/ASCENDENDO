@@ -1,0 +1,6 @@
+NAME Varanda 004 — espelho
+# Design: alternancia, padrao espelho
+PLATFORM 312 60 160 16
+PLATFORM 174 120 144 16
+PLATFORM 354 180 144 16
+PLATFORM 216 240 128 16

@@ -1,0 +1,6 @@
+NAME Desvio 006 — cruzamento
+# Design: pressao, padrao cruzamento
+PLATFORM 206 60 128 16
+PLATFORM 380 120 128 16
+PLATFORM 176 180 144 16
+PLATFORM 126 240 144 16

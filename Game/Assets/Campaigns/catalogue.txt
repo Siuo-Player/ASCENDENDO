@@ -1,0 +1,12 @@
+# ASCENDENDO — catalogo oficial 1.0
+# id|nome|playlist
+01-iniciacao|Primeira Ascensao|01-iniciacao/campaign.txt
+02-ritmo|Ritmo|02-ritmo/campaign.txt
+03-deslocamento|Deslocamento|03-deslocamento/campaign.txt
+04-alternancia|Alternancia|04-alternancia/campaign.txt
+05-pressao|Pressao|05-pressao/campaign.txt
+06-persistencia|Persistencia|06-persistencia/campaign.txt
+07-margem|Margem|07-margem/campaign.txt
+08-precisao|Precisao|08-precisao/campaign.txt
+09-resistencia|Resistencia|09-resistencia/campaign.txt
+10-cume|Cume Final|10-cume/campaign.txt

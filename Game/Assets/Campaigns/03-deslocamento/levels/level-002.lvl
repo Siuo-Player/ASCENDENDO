@@ -1,0 +1,6 @@
+NAME Passagem 002 — cruzamento
+# Design: deslocamento, padrao cruzamento
+PLATFORM 146 64 160 16
+PLATFORM 328 128 144 16
+PLATFORM 166 192 144 16
+PLATFORM 74 256 160 16

@@ -24,13 +24,16 @@ jobs:
           python-version: "3.12"
 
       - name: Run validator unit tests
-        run: python3 -m unittest Tests/Python/test_campaign_validation.py
+        run: python3 -m unittest Tests/Python/test_campaign_validation.py Tests/Python/test_ai_validator.py
 
-      - name: Validate active campaign mechanically
-        run: python3 Development/AI_Validation/validate_campaign.py --campaign
+      - name: Validate official campaign catalogue structure
+        run: python3 Development/AI_Validation/validate_campaign.py --catalogue-structure
+
+      - name: Validate all catalogued campaigns mechanically
+        run: python3 Development/AI_Validation/ai_validator.py --catalogue
 
       - name: Emit machine-readable campaign report
-        run: python3 Development/AI_Validation/validate_campaign.py --campaign --json > campaign-validation.json
+        run: python3 Development/AI_Validation/validate_campaign.py --catalogue-structure --json > campaign-validation.json
 
       - name: Upload campaign validation report
         uses: actions/upload-artifact@v4

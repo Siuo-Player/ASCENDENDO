@@ -1,0 +1,26 @@
+# Pressao
+levels/level-001.lvl
+levels/level-002.lvl
+levels/level-003.lvl
+levels/level-004.lvl
+levels/level-005.lvl
+levels/level-006.lvl
+levels/level-007.lvl
+levels/level-008.lvl
+levels/level-009.lvl
+levels/level-010.lvl
+levels/level-011.lvl
+levels/level-012.lvl
+levels/level-013.lvl
+levels/level-014.lvl
+levels/level-015.lvl
+levels/level-016.lvl
+levels/level-017.lvl
+levels/level-018.lvl
+levels/level-019.lvl
+levels/level-020.lvl
+levels/level-021.lvl
+levels/level-022.lvl
+levels/level-023.lvl
+levels/level-024.lvl
+levels/level-025.lvl

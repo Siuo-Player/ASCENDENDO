@@ -1,0 +1,6 @@
+NAME Ponte 001 — ziguezague
+# Design: ritmo, padrao ziguezague
+PLATFORM 302 64 176 16
+PLATFORM 162 128 160 16
+PLATFORM 368 192 160 16
+PLATFORM 262 256 144 16

@@ -1,0 +1,6 @@
+NAME Ponte 016 — cruzamento
+# Design: alternancia, padrao cruzamento
+PLATFORM 286 60 160 16
+PLATFORM 148 120 144 16
+PLATFORM 304 180 144 16
+PLATFORM 390 240 128 16

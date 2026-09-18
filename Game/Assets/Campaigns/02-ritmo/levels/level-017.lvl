@@ -1,0 +1,6 @@
+NAME Cume 017 — ziguezague
+# Design: ritmo, padrao ziguezague
+PLATFORM 342 64 160 16
+PLATFORM 194 128 160 16
+PLATFORM 408 192 144 16
+PLATFORM 244 256 176 16

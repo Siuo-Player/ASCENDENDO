@@ -1,0 +1,6 @@
+NAME Passagem 016 — retorno
+# Design: deslocamento, padrao retorno
+PLATFORM 146 64 160 16
+PLATFORM 254 128 160 16
+PLATFORM 404 192 144 16
+PLATFORM 160 256 144 16

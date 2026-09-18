@@ -1,0 +1,6 @@
+NAME Passagem 006 — espelho
+# Design: deslocamento, padrao espelho
+PLATFORM 180 64 144 16
+PLATFORM 354 128 144 16
+PLATFORM 160 192 160 16
+PLATFORM 300 256 160 16

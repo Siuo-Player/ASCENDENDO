@@ -1,0 +1,6 @@
+NAME Escada 014 — cruzamento
+# Design: pressao, padrao cruzamento
+PLATFORM 210 60 144 16
+PLATFORM 392 120 128 16
+PLATFORM 196 180 128 16
+PLATFORM 138 240 144 16

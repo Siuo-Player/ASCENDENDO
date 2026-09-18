@@ -4,7 +4,8 @@ ai_validator.py — Validador de niveis do ASCENDENDO.
 Verifica se cada nivel da campanha e fisicamente passivel.
 Uso:
     python3 ai_validator.py nivel.lvl          # valida um nivel
-    python3 ai_validator.py --campaign         # valida toda a campanha
+    python3 ai_validator.py --campaign         # valida a campanha histórica
+    python3 ai_validator.py --catalogue        # valida todas as campanhas catalogadas
 """
 import sys, os, math
 
@@ -24,8 +25,10 @@ VY_eff   = V_MAX * math.sin(ANGLE) * TOLERANCE
 VX_eff   = V_MAX * math.cos(ANGLE) * TOLERANCE
 MAX_JUMP = (VY_eff**2) / (2 * G_val)
 
-CAMPAIGN_FILE = os.path.join(os.path.dirname(__file__),
-                             "..", "..", "Game", "Assets", "Levels", "campaign.txt")
+ASSETS_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__),
+                                             "..", "..", "Game", "Assets"))
+CAMPAIGN_FILE = os.path.join(ASSETS_ROOT, "Levels", "campaign.txt")
+CAMPAIGN_CATALOGUE = os.path.join(ASSETS_ROOT, "Campaigns", "catalogue.txt")
 
 def validate_level(filepath: str) -> tuple[bool, str]:
     """Valida um ficheiro .lvl. Retorna (valido, mensagem)."""
@@ -122,26 +125,75 @@ def validate_campaign(campaign_path: str) -> bool:
 
     return all_ok
 
+def validate_catalogue(catalogue_path: str) -> bool:
+    """Valida mecanicamente todas as playlists referenciadas pelo catálogo."""
+    try:
+        with open(catalogue_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+    except FileNotFoundError:
+        print(f"[ERRO] catálogo não encontrado: {catalogue_path}")
+        return False
+
+    base = os.path.dirname(catalogue_path)
+    all_ok = True
+    campaigns = 0
+
+    for line_number, raw in enumerate(lines, 1):
+        line = raw.strip()
+        if not line or line.startswith('#'):
+            continue
+
+        fields = [field.strip() for field in line.split('|')]
+        if len(fields) != 3:
+            print(f"  [ERRO] linha {line_number}: esperado id|nome|playlist")
+            all_ok = False
+            continue
+
+        campaign_id, name, playlist = fields
+        playlist_path = os.path.normpath(os.path.join(base, playlist))
+        campaigns += 1
+
+        print(f"\n  Campanha {campaign_id}: {name}")
+        print(f"  Playlist: {playlist_path}")
+        if not os.path.isfile(playlist_path):
+            print("  [ERRO] playlist não encontrada")
+            all_ok = False
+            continue
+
+        if not validate_campaign(playlist_path):
+            all_ok = False
+
+    if campaigns == 0:
+        print("  [ERRO] catálogo sem campanhas")
+        return False
+
+    return all_ok
+
+
 def main():
     if len(sys.argv) < 2:
         print("Uso: python3 ai_validator.py <nivel.lvl>")
         print("     python3 ai_validator.py --campaign")
+        print("     python3 ai_validator.py --catalogue")
         sys.exit(1)
 
     if sys.argv[1] == "--campaign":
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        campaign = os.path.join(script_dir, "..", "..", "Game", "Assets", "Levels", "campaign.txt")
-        campaign = os.path.normpath(campaign)
-        if not os.path.exists(campaign):
-            campaign = os.path.normpath("Game/Assets/Levels/campaign.txt")
-
-        print(f"\n  Campanha: {campaign}\n")
-        ok = validate_campaign(campaign)
+        print(f"\n  Campanha: {CAMPAIGN_FILE}\n")
+        ok = validate_campaign(CAMPAIGN_FILE)
         print()
         if ok:
             print("  [OK] Campanha validada -- todos os niveis sao passiveis.")
         else:
             print("  [ERRO] Campanha INVALIDA -- ver erros acima.")
+        sys.exit(0 if ok else 1)
+    elif sys.argv[1] == "--catalogue":
+        print(f"\n  Catalogo: {CAMPAIGN_CATALOGUE}\n")
+        ok = validate_catalogue(CAMPAIGN_CATALOGUE)
+        print()
+        if ok:
+            print("  [OK] Catalogo validado -- todas as campanhas sao fisicamente passiveis.")
+        else:
+            print("  [ERRO] Catalogo INVALIDO -- ver erros acima.")
         sys.exit(0 if ok else 1)
     else:
         path = sys.argv[1]

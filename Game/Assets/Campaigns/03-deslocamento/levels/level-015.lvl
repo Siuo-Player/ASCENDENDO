@@ -1,0 +1,6 @@
+NAME Desvio 015 — ziguezague
+# Design: deslocamento, padrao ziguezague
+PLATFORM 168 64 144 16
+PLATFORM 310 128 144 16
+PLATFORM 124 192 160 16
+PLATFORM 232 256 160 16
