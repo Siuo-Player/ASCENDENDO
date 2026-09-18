@@ -97,7 +97,7 @@ TEST_CASE("resolves campaign playlist level paths relative to the playlist") {
     const auto levels = core::CampaignLoader::load(campaignFile);
 
     REQUIRE(levels.size() == 1);
-    CHECK(levels.front() == std::filesystem::weakly_canonical(levelFile));
+    CHECK(std::filesystem::equivalent(levels.front(), levelFile));
 }
 
 TEST_CASE("missing optional catalogue leaves migration fallback available") {
