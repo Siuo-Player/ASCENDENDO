@@ -27,13 +27,13 @@ jobs:
         run: python3 -m unittest Tests/Python/test_campaign_validation.py Tests/Python/test_ai_validator.py
 
       - name: Validate official campaign catalogue structurally
-        run: python3 Development/AI_Validation/validate_campaign.py --catalogue Game/Assets/Campaigns/catalogue.txt
+        run: python3 Development/AI_Validation/validate_campaign.py --catalogue
 
       - name: Validate all catalogued campaigns mechanically
         run: python3 Development/AI_Validation/ai_validator.py --catalogue
 
       - name: Emit machine-readable campaign report
-        run: python3 Development/AI_Validation/validate_campaign.py --catalogue Game/Assets/Campaigns/catalogue.txt --json > campaign-validation.json
+        run: python3 Development/AI_Validation/validate_campaign.py --catalogue --json > campaign-validation.json
 
       - name: Upload campaign validation report
         uses: actions/upload-artifact@v4
