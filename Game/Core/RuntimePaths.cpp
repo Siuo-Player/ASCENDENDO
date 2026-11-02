@@ -1,4 +1,5 @@
 #include "Core/RuntimePaths.h"
+#include "Core/Environment.h"
 
 #include <cstdlib>
 #include <string>
@@ -75,15 +76,15 @@ std::filesystem::path userDataDirectory() {
         return localAppData;
     }
 #elif defined(__APPLE__)
-    if (const char* home = std::getenv("HOME"); home && *home) {
-        return std::filesystem::path(home) / "Library" / "Application Support" / "ASCENDENDO";
+    if (const auto home = core::getEnvironmentVariable("HOME"); home && !home->empty()) {
+        return std::filesystem::path(*home) / "Library" / "Application Support" / "ASCENDENDO";
     }
 #else
-    if (const char* stateHome = std::getenv("XDG_STATE_HOME"); stateHome && *stateHome) {
-        return std::filesystem::path(stateHome) / "ASCENDENDO";
+    if (const auto stateHome = core::getEnvironmentVariable("XDG_STATE_HOME"); stateHome && !stateHome->empty()) {
+        return std::filesystem::path(*stateHome) / "ASCENDENDO";
     }
-    if (const char* home = std::getenv("HOME"); home && *home) {
-        return std::filesystem::path(home) / ".local" / "state" / "ASCENDENDO";
+    if (const auto home = core::getEnvironmentVariable("HOME"); home && !home->empty()) {
+        return std::filesystem::path(*home) / ".local" / "state" / "ASCENDENDO";
     }
 #endif
 
@@ -135,11 +136,17 @@ std::filesystem::path RuntimePaths::runsFile() const {
     return userDataRoot_ / "Runs" / "runs.csv";
 }
 
+std::filesystem::path RuntimePaths::profileFile() const {
+    return userDataRoot_ / "Save" / "profile.secure";
+}
+
 bool RuntimePaths::ensureUserDirectories() const {
     std::error_code ec;
     std::filesystem::create_directories(controlsFile().parent_path(), ec);
     if (ec) return false;
     std::filesystem::create_directories(runsFile().parent_path(), ec);
+    if (ec) return false;
+    std::filesystem::create_directories(profileFile().parent_path(), ec);
     return !ec;
 }
 

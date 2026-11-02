@@ -4,103 +4,75 @@ Este é o **único documento vivo de planeamento do produto**. O Git é o histó
 
 ## Estado actual
 
-O jogo já tem uma base jogável e um **catálogo oficial de 10 campanhas / 610 níveis** integrado no runtime. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical, carregamento/transições de níveis, replay/save states, menus, controlos reconfiguráveis, editor de níveis, editor de campanha, validação automática e pipeline de apresentação/captura. A aceitação de conteúdo continua aberta: cada nível ainda precisa de validação final, funcionamento no runtime, jogo manual e correcção dos problemas encontrados.
+O jogo já tem uma base jogável e um catálogo oficial com **610 níveis** em 10 campanhas integrado no runtime. O runtime inclui física determinística a 60 Hz, Commitment Jump a 60°, câmara vertical contínua, carregamento e transições de níveis, replay determinístico verificado ponta a ponta até ao objetivo derivado, menus de navegação, controlos reconfiguráveis, alternância dinâmica de ecrã inteiro (F11), preservação do rácio de aspecto 16:9, editor de níveis e editor de campanha, pipeline de apresentação com fontes TrueType e sprites, e um subsistema seguro de integridade criptográfica com HMAC-SHA256 para persistência e perfis de utilizador.
 
-O problema principal já não é falta de arquitectura. É transformar essa base num jogo que outras pessoas consigam jogar, entender e terminar.
+A aceitação do produto para 1.0 entra agora na fase de validação humana, calibração de dificuldade e fecho da experiência de utilizador.
 
-## Prioridade agora
+---
 
-### 1. Completar e depurar o conteúdo 1.0
+## Marcos até ao ASCENDENDO 1.0
 
-O catálogo oficial já está integrado com 10 campanhas / 610 níveis. O trabalho restante deste gate é provar que este conteúdo é materialmente final: validação automática, integração no runtime, jogo manual, progressão perceptível e correcção sistemática dos problemas encontrados.
+### 1. Conteúdo e Catálogo Canónico 1.0
+O catálogo oficial é composto por 10 campanhas com progressão vertical contínua:
+`01-iniciacao` (10), `02-ritmo` (25), `03-deslocamento` (25), `04-alternancia` (25), `05-pressao` (25), `06-persistencia` (50), `07-margem` (50), `08-precisao` (50), `09-resistencia` (100) e `10-cume` (250) — totalizando **610 níveis**.
 
-### 2. Fechar a validação de 1.0
+Critérios de conclusão de cada nível no catálogo:
+1. Formato oficial canónico `.lvl` sem `SPAWN` nem `FLAG` authored;
+2. Validação automática de reachability física e ausência de bloqueios (`validate_campaign.py`);
+3. Execução e streaming contínuos sem quedas de framerate no runtime Vulkan;
+4. Playtesting manual com verificação de leitura espacial;
+5. Registo e afinação de plataformas enganadoras ou de ruído visual.
 
-Exercitar no conteúdo oficial real a validação de runs/replays, métricas de rota/tempo, Difficulty Tester e a separação entre evidência automática e experiência humana. O gate de validação continua dependente dessa evidência.
+### 2. Validação, Replays e Determinismo Físico
+- Suite de evidência determinística (`test_replay_run_evidence.cpp`): gravação de sequência de inputs e playback determinístico até à colisão com a flag derivada.
+- Manter o contrato de simulação fixa a 60 Hz invariante entre plataformas (Windows x64 e Linux x64).
+- Difficulty Tester: validação automática como cálculo de limites físicos, mantendo estrita separação entre viabilidade geométrica e dificuldade humana perceptível.
 
-Objectivo de conteúdo para 1.0: **10 campanhas**, começando com um conjunto inicial de tamanhos de referência de **10, 25, 25, 25, 25, 50, 50, 50, 100 e 250 níveis**. Esta é uma hipótese de escala de conteúdo, não uma obrigação de produzir exactamente 575 níveis independentemente dos resultados de playtesting. A quantidade final deve ser revista quando houver dados de minutos de jogo, retenção, ritmo de produção e qualidade dos níveis.
+### 3. Apresentação Visual e Janela Responsiva
+- Área lógica canónica: `640 × 360` com escala adaptativa com letterboxing/pillarboxing.
+- Alternância instantânea de fullscreen via `F11` e detecção de modos do monitor primário via GLFW.
+- Apresentação em pixel-art com módulos 16×16, distinguibilidade clara entre solo/plataformas jogáveis e elementos decorativos de fundo.
+- Assets integrados respeitando o registo de proveniência e licenciamento (`Game/Assets/Sprites/PLATFORM_ASSET_REGISTRY.md` e `docs/THIRD_PARTY_NOTICES.md`).
 
-Cada nível só conta como concluído quando:
+### 4. Mecanismo Seguro de Informação e Dados (Criptografia e Resiliência)
+- Subsistema nativo NIST FIPS 180-4 SHA-256 e RFC 2104 HMAC-SHA256 para proteção e autenticação de saves e perfis (`profile.secure`).
+- Verificação de autenticidade em tempo constante (`constantTimeEquals`) imune a timing attacks.
+- Contenção rigorosa de diretórios (`isPathContained`) prevenindo directory climbing (`..`) e manipulações de symlink.
+- Sanitização de nomes de ficheiro contra injeções de caminhos e nomes reservados de sistema no Windows (`CON`, `PRN`, `AUX`, `NUL`, etc.).
+- Proteção ativa contra injeção de fórmulas CSV (`=`, `+`, `-`, `@`) no histórico analítico de runs (`runs.csv`).
+- Transações atómicas de ficheiros com escrita temporária e substituição atómica resiliente a crashes e falhas de energia.
 
-1. existe no formato oficial;
-2. passa a validação automática;
-3. abre e funciona no runtime;
-4. é jogado manualmente;
-5. os problemas encontrados são corrigidos.
+### 5. Editor Integrado como Ferramenta de Produção
+- Operações de histórico atómicas: um gesto inteiro de drag & drop corresponde a uma única operação de Undo/Redo.
+- Diagnóstico visual de reachability em tempo real através de `EditorRenderSnapshot` enriquecido sem recalcular física na thread de apresentação.
+- Manipulação direta fluida: selecção, redimensionamento de plataformas e navegação vertical intuitiva.
+- Editor de campanha para reordenação, inserção e validação de playlists `.txt`.
 
-### 3. Usar o editor como ferramenta de produção
+### 6. Calibração Humana e Qualidade de Experiência
+- Sessões de playtest externo com jogadores humanos sem conhecimento prévio do motor.
+- Avaliação da curva de frustração vs. aprendizagem: o Commitment Jump deve recompensar paciência e leitura.
+- Ergonomia dos controlos: clareza na barra de força e resposta tátil imediata ao soltar a tecla de salto.
+- Menus responsivos, ecrã de créditos acessível e opções claras de remapeamento de teclas.
 
-O editor já existe. Agora deve ser medido pelo trabalho que permite fazer, não pelo número de funcionalidades que possui.
-
-Prioridade de melhoria:
-
-1. estabilizar undo/redo por gesto, validação física e testes de regressão;
-2. tornar reachability e diagnóstico visíveis sem recalcular física no renderer;
-3. corrigir HUD/contexto e layout responsivo;
-4. melhorar selecção/picker e manipulação directa, incluindo resize;
-5. melhorar navegação vertical e, depois, considerar minimap;
-6. integrar apresentação visual estruturada só depois de o authoring estar sólido.
-
-Corrigir apenas fricção real de autoria. Não criar nova arquitectura de editor sem uma necessidade concreta.
-
-### 4. Validar com pessoas
-
-A validação automática responde a perguntas como “é alcançável?” e “o resultado é reproduzível?”. Não responde a “é divertido?”, “é claro?” ou “a dificuldade faz sentido?”.
-
-Fazer playtests externos cedo e repetidamente. Usar os resultados para alterar níveis, leitura, ritmo e UX.
-
-### 5. Integrar a apresentação visual
-
-A direcção é simples pixel art:
-
-- módulos de plataforma de 16×16;
-- foreground legível;
-- fundos em camadas;
-- parallax;
-- personagem e elementos principais facilmente distinguíveis.
-
-Não expandir o compositor por antecipação. Integrar assets reais primeiro. Um asset só é definitivo depois de verificado, licenciado e testado no runtime.
-
-### 6. Qualidade de produto
-
-Depois de existir conteúdo suficiente:
-
-- melhorar menus e UX;
-- rever responsividade;
-- tornar bindings e fluxos principais descobríveis;
-- garantir import/export e persistência coerentes;
-- preparar uma experiência que não dependa de conhecimento interno do repositório.
-
-### 7. Release 1.0
-
-Só declarar 1.0 quando um utilizador externo conseguir:
-
+### 7. Release 1.0 e Distribuição
+Só declarar **ASCENDENDO 1.0** quando o fluxo completo de utilização externa for comprovado:
 ```text
-instalar → abrir → escolher → jogar → criar/editar → testar → guardar → voltar a abrir
+instalar → abrir → escolher campanha → jogar e ascender → criar/editar níveis → validar → guardar com segurança → voltar a abrir
 ```
+- Pacote zip autónomo e portátil para Windows x64 sem necessidade de dependências instaladas externamente.
+- CI verde em todas as suites: C++ unit/integration/acceptance tests, Python validation, Vulkan headless e verificação estrita do repositório.
 
-e o catálogo oficial estiver validado e distribuível.
-
-## Trabalho paralelo permitido
-
-Gameplay, criação de níveis, playtesting, integração de assets e correcções do editor podem avançar em paralelo quando não criam dependências falsas entre si.
-
-Infraestrutura nova só entra quando desbloqueia uma necessidade real de gameplay, conteúdo, validação ou release.
+---
 
 ## O que não fazer
 
-Não criar novos snapshots `STATUS_*`, `CURRENT_STATUS_*` ou `ROADMAP_*`.
-
-Não criar um novo documento só para registar que uma tarefa terminou.
-
-Não transformar cada bug, PR ou execução de CI num post-mortem ou work package permanente.
-
-Não usar percentagens de documentação, linhas de código ou número de PRs como medida de progresso do jogo.
-
-Não transformar o editor numa engine genérica: plataformas continuam a ser o principal objecto authored; spawn e objetivo final são estado derivado.
+- Não criar novos snapshots datados `STATUS_*`, `CURRENT_STATUS_*` ou `ROADMAP_*`.
+- Não transformar cada bug ou execução de CI num documento permanente ou post-mortem duplicado.
+- Não usar linhas de código ou contagem de commits como métrica de conclusão do jogo.
+- Não desvirtuar o foco: o ASCENDENDO é um precision platformer vertical de autor, não uma engine genérica.
+- Nunca reintroduzir `SPAWN` ou `FLAG` como entidades authored nos ficheiros de nível.
 
 ## Critério de progresso
 
-O progresso relevante é medido por:
-
-**conteúdo jogável → minutos de jogo → jogadores externos → problemas corrigidos → experiência pronta para release.**
+O progresso real mede-se por:
+**código seguro e determinístico → conteúdo jogável no catálogo → minutos de jogo comprovados → validação com jogadores humanos → experiência 1.0 pronta para lançamento.**

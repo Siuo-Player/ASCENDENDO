@@ -12,6 +12,7 @@
 #include "Logic/LevelDataValidator.h"
 #include "Logic/Physics.h"
 #include "Logic/Player.h"
+#include "Logic/ProfileStorage.h"
 #include "Logic/SimulationOrchestrator.h"
 
 #include <cstdint>
@@ -35,11 +36,17 @@ class GameSession {
 public:
     GameSession(std::vector<std::filesystem::path> campaign,
                 std::string campaignID,
-                std::string runsCsvPath)
+                std::string runsCsvPath,
+                std::string profilePath = "")
         : campaignRuntime_(std::move(campaign)),
           editorSession_(campaignRuntime_.levelCount() <= 1),
           campaignID_(std::move(campaignID)),
-          runsCsvPath_(std::move(runsCsvPath)) {}
+          runsCsvPath_(std::move(runsCsvPath)),
+          profilePath_(std::move(profilePath)) {
+        if (!profilePath_.empty()) {
+            userProfile_ = ProfileStorage::load(profilePath_);
+        }
+    }
 
     GameSession(const GameSession&) = delete;
     GameSession& operator=(const GameSession&) = delete;
@@ -73,6 +80,13 @@ public:
     void configureCampaignName(std::string campaignName) {
         campaignName_ = std::move(campaignName);
     }
+    void configureProfilePath(std::string profilePath) {
+        profilePath_ = std::move(profilePath);
+        if (!profilePath_.empty()) {
+            userProfile_ = ProfileStorage::load(profilePath_);
+        }
+    }
+
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
     void openEditor(core::GameState returnState) noexcept;
@@ -90,6 +104,7 @@ public:
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
     const std::string& campaignName() const noexcept { return campaignName_; }
+    const UserProfile& userProfile() const noexcept { return userProfile_; }
 
     Player& player() noexcept { return player_; }
     const Player& player() const noexcept { return player_; }
@@ -126,6 +141,8 @@ private:
     std::string campaignID_;
     std::string campaignName_ = "Campanha Principal";
     std::string runsCsvPath_;
+    std::string profilePath_;
+    UserProfile userProfile_;
     float elapsedTime_ = 0.0f;
 };
 

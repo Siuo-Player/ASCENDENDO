@@ -228,7 +228,8 @@ int main(int argc, char** argv) {
         GameSession session(
             bootstrap.campaign,
             bootstrap.campaignID,
-            bootstrap.runsFile().string());
+            bootstrap.runsFile().string(),
+            bootstrap.profileFile().string());
         session.configureCampaignName(bootstrap.campaigns.front().name);
         session.configureCampaignEditor(bootstrap.campaigns.front().playlistFile.string());
         Camera camera;

@@ -121,12 +121,12 @@ int GameSession::clickedMenuBox(const InputManager& input,
 }
 
 GameSessionUpdateResult GameSession::update(float dt,
-                                             const InputManager& input,
-                                             const core::KeyBindings& bindings,
-                                             int32_t windowWidth,
-                                             int32_t windowHeight,
-                                             float logicalWidth,
-                                             float logicalHeight) {
+                                            const InputManager& input,
+                                            const core::KeyBindings& bindings,
+                                            int32_t windowWidth,
+                                            int32_t windowHeight,
+                                            float logicalWidth,
+                                            float logicalHeight) {
     GameSessionUpdateResult result;
     const core::GameState currentState = stateMachine_.state();
 
@@ -182,6 +182,10 @@ GameSessionUpdateResult GameSession::update(float dt,
                 result.completionElapsedSeconds = elapsedTime_;
                 result.runRecorded = logic::recordRun(
                     runsCsvPath_, campaignName_, campaignID_, elapsedTime_);
+                userProfile_.recordCompletion(campaignID_, elapsedTime_);
+                if (!profilePath_.empty()) {
+                    logic::ProfileStorage::save(profilePath_, userProfile_);
+                }
                 stateMachine_.enterCredits(core::GameState::MENU);
             }
         }

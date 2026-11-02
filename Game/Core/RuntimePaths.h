@@ -22,6 +22,7 @@ public:
     std::filesystem::path playerSprite() const;
     std::filesystem::path controlsFile() const;
     std::filesystem::path runsFile() const;
+    std::filesystem::path profileFile() const;
 
     bool ensureUserDirectories() const;
 

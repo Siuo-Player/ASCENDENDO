@@ -58,8 +58,10 @@ TEST_SUITE("Runtime Paths") {
         CHECK(paths.playerSprite() == executableRoot / "Game" / "Assets" / "Sprites" / "personagem.png");
         CHECK(paths.controlsFile() == userDataRoot / "Settings" / "controls.cfg");
         CHECK(paths.runsFile() == userDataRoot / "Runs" / "runs.csv");
+        CHECK(paths.profileFile() == userDataRoot / "Save" / "profile.secure");
         CHECK(paths.controlsFile().string().find("Development") == std::string::npos);
         CHECK(paths.runsFile().string().find("Development") == std::string::npos);
+        CHECK(paths.profileFile().string().find("Development") == std::string::npos);
     }
 
     TEST_CASE("user-data directories are created outside the asset tree") {
@@ -70,6 +72,7 @@ TEST_SUITE("Runtime Paths") {
 
         CHECK(std::filesystem::is_directory(paths.controlsFile().parent_path()));
         CHECK(std::filesystem::is_directory(paths.runsFile().parent_path()));
+        CHECK(std::filesystem::is_directory(paths.profileFile().parent_path()));
         CHECK(std::filesystem::is_directory(paths.assetsRoot()) == false);
     }
 
@@ -78,6 +81,8 @@ TEST_SUITE("Runtime Paths") {
 
         CHECK(paths.campaignFile() == std::filesystem::path("/install/ascendendo/Game/Assets/Levels/campaign.txt"));
         CHECK(paths.controlsFile() == std::filesystem::path("/user/ascendendo/Settings/controls.cfg"));
+        CHECK(paths.runsFile() == std::filesystem::path("/user/ascendendo/Runs/runs.csv"));
+        CHECK(paths.profileFile() == std::filesystem::path("/user/ascendendo/Save/profile.secure"));
     }
 
     TEST_CASE("process paths are independent of current directory") {

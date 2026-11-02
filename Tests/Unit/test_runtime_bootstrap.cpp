@@ -62,6 +62,7 @@ TEST_SUITE("Runtime Bootstrap") {
         CHECK(result.campaignID.size() == 16);
         CHECK(std::filesystem::is_directory(result.controlsFile().parent_path()));
         CHECK(std::filesystem::is_directory(result.runsFile().parent_path()));
+        CHECK(std::filesystem::is_directory(result.profileFile().parent_path()));
     }
 
     TEST_CASE("same campaign bytes produce the same bootstrap identity") {

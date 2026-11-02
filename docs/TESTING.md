@@ -19,8 +19,11 @@ Testam lógica sem GPU sempre que possível:
 - KeyBindings;
 - Viewport;
 - CampaignID;
-- RunHistory;
-- futura lógica do editor.
+- RunHistory (com sanitização contra injeção CSV);
+- Security (NIST SHA-256, RFC 2104 HMAC-SHA256, constant-time, path containment);
+- ProfileStorage (autenticação criptográfica de perfil, tamper rejection, persistência atómica);
+- RuntimeBootstrap e RuntimePaths;
+- lógica do editor e histórico de undo/redo.
 
 ### Integration
 
@@ -34,9 +37,19 @@ Testam a ligação com Vulkan/GLFW:
 - renderer;
 - texto e sprites.
 
-### Validação de níveis
+### Acceptance e Replays
 
-`Development/AI_Validation/ai_validator.py --campaign` é a verificação física da campanha usada pelo pre-push.
+`Tests/Acceptance/test_replay_run_evidence.cpp`:
+- grava e executa uma sequência real de ticks de input;
+- reproduz o replay de ponta a ponta na simulação determinística a 60 Hz;
+- valida que a trajetória atinge a flag derivada sem desvios nem colisões inválidas com undersides de plataformas.
+
+### Validação de níveis e ferramentas Python
+
+- `Development/AI_Validation/validate_campaign.py --catalogue`: verificação física e reachability de todos os 610 níveis do catálogo oficial em lote.
+- `Development/AI_Validation/ai_validator.py --campaign`: simulação analítica e discreta de saltos para verificar trajetórias.
+- `Development/Tools/validate_repository_state.py`: gate de consistência que confirma a concordância entre o catálogo canónico (610 níveis), README e ROADMAP.
+- `pytest Tests/`: suite de 46 testes unitários em Python que valida todas as ferramentas de validação, integridade do catálogo e registo de assets.
 
 O simulador em `Development/AI_Validation/sim/engine.py` existe para reproduzir o passo fixo e as colisões discretas do motor. A validação analítica não deve ser tratada como mais verdadeira do que a simulação discreta: o objetivo é que ambas concordem sobre o mesmo contrato físico.
 

@@ -36,6 +36,8 @@ Application / process composition
 │   ├── GameState / state-machine contract
 │   ├── ViewportTransform
 │   ├── Input / GameAction / KeyBindings
+│   ├── Security / NIST SHA-256 / HMAC-SHA256
+│   ├── Environment / safe variable resolution
 │   ├── domain configuration
 │   └── Paths / asset resolution
 │
@@ -401,3 +403,28 @@ parse
 ```
 
 Mapas devem permanecer declarativos, sem scripts, includes, paths arbitrários ou execução de código.
+
+
+## Segurança, integridade criptográfica e resiliência
+
+O subsistema `Game/Core/Security` e `Game/Core/Environment` fornece garantias de proteção de dados e integridade em tempo de execução sem dependências externas:
+
+1. **Envelope Criptográfico Autenticado (`ASCENDENDO_SECURE_V1`)**:
+   Implementação nativa NIST FIPS 180-4 SHA-256 e RFC 2104 HMAC-SHA256 para guardar e autenticar perfis de progresso do jogador (`profile.secure`). Qualquer mutação acidental ou intencional é rejeitada de imediato.
+2. **Tempo Constante (`constantTimeEquals`)**:
+   Comparação de hashes em tempo constante imune a timing attacks em validações de integridade.
+3. **Contenção Estrita de Diretórios (`isPathContained`)**:
+   Normalização e verificação de caminhos canónicos impedindo directory traversal (`..`) ou escalada por symlinks no carregamento de níveis e campanhas.
+4. **Sanitização de Nomes e Prevenção de Injeção**:
+   Sanitização de nomes de ficheiro proibindo caracteres ilegais e nomes reservados Windows (`CON`, `PRN`, `AUX`, `NUL`, etc.). Neutralização ativa de prefixos de fórmulas (`=`, `+`, `-`, `@`) em exportações analíticas (`runs.csv`).
+5. **Transações Atómicas de Ficheiros**:
+   Escrita prévia para ficheiro temporário com rename atómico (`std::filesystem::rename`), garantindo que falhas de energia ou fecho forçado não corrompem ficheiros de save existentes.
+6. **Resolução Segura de Ambiente**:
+   Invólucro seguro (`core::getEnvironmentVariable`) em C++20 que previne o uso inseguro de `std::getenv` em ambientes concorrentes, compatível com MSVC `_dupenv_s` e POSIX.
+
+## Apresentação adaptativa, redimensionamento e ecrã inteiro
+
+A renderização visual é desacoplada da resolução do monitor:
+- O espaço lógico mantém-se estritamente em `640 × 360` (proporção 16:9).
+- A janela é redimensionável e suporta alternância para ecrã inteiro com a tecla `F11`.
+- O renderer aplica letterboxing ou pillarboxing automático na swapchain Vulkan, garantindo que a escala física nunca distorce a proporção ou a precisão do Commitment Jump.

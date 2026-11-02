@@ -237,4 +237,51 @@ TEST_SUITE("GameSession") {
         CHECK(result.stateChanged == false);
         CHECK(session.state() == core::GameState::EDITOR);
     }
+
+    TEST_CASE("campaign completion records run and persists secure profile") {
+        const auto tempRoot = std::filesystem::temp_directory_path() / "ascendendo-session-profile-test";
+        std::filesystem::create_directories(tempRoot);
+        const auto runsPath = tempRoot / "runs.csv";
+        const auto profilePath = tempRoot / "profile.secure";
+
+        const auto levelPath = writeTestLevel(
+            "ascendendo-completion-profile-test.lvl",
+            "NAME Completion Test\n"
+            "PLATFORM 300 20 40 10\n");
+
+        {
+            logic::GameSession session(
+                {levelPath},
+                "test-campaign-id",
+                runsPath.string(),
+                profilePath.string());
+            session.configureCampaignName("Test Campaign");
+            session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+
+            session.player().body.position = session.level().flagBounds.min;
+
+            logic::InputManager input;
+            core::KeyBindings bindings;
+            const auto result = session.update(
+                0.016f, input, bindings, 640, 360, 640.0f, 360.0f);
+
+            CHECK(result.campaignCompleted);
+            CHECK(result.runRecorded);
+            CHECK(std::filesystem::exists(runsPath));
+            CHECK(std::filesystem::exists(profilePath));
+            CHECK(session.userProfile().totalCompletions == 1);
+            CHECK(session.userProfile().lastPlayedCampaignID == "test-campaign-id");
+        }
+
+        const auto loadedProfile = logic::ProfileStorage::load(profilePath);
+        CHECK(loadedProfile.totalCompletions == 1);
+        CHECK(loadedProfile.lastPlayedCampaignID == "test-campaign-id");
+        const auto* rec = loadedProfile.findRecord("test-campaign-id");
+        REQUIRE(rec != nullptr);
+        CHECK(rec->completions == 1);
+
+        removeTestFile(levelPath);
+        std::error_code ec;
+        std::filesystem::remove_all(tempRoot, ec);
+    }
 }
