@@ -487,8 +487,12 @@ def main() -> int:
         reports = validate_catalogue_structure(catalogue)
     elif args.campaign:
         reports = validate_campaign(campaign, strict_flag_policy=args.strict_campaign_policy)
-    else:
+    elif args.level:
         reports = [validate_level(args.level, final=True)]
+    elif os.path.exists(catalogue):
+        reports = validate_catalogue_structure(catalogue)
+    else:
+        reports = validate_campaign(campaign, strict_flag_policy=args.strict_campaign_policy)
     valid = all(report["valid"] for report in reports)
     if args.json:
         print(json.dumps(reports, indent=2, sort_keys=True))
