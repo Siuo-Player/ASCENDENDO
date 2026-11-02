@@ -63,6 +63,7 @@ TEST_SUITE("Runtime Bootstrap") {
         CHECK(std::filesystem::is_directory(result.controlsFile().parent_path()));
         CHECK(std::filesystem::is_directory(result.runsFile().parent_path()));
         CHECK(std::filesystem::is_directory(result.profileFile().parent_path()));
+        CHECK(std::filesystem::is_directory(result.accountsDirectory()));
     }
 
     TEST_CASE("same campaign bytes produce the same bootstrap identity") {

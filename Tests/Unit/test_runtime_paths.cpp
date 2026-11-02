@@ -59,6 +59,7 @@ TEST_SUITE("Runtime Paths") {
         CHECK(paths.controlsFile() == userDataRoot / "Settings" / "controls.cfg");
         CHECK(paths.runsFile() == userDataRoot / "Runs" / "runs.csv");
         CHECK(paths.profileFile() == userDataRoot / "Save" / "profile.secure");
+        CHECK(paths.accountsDirectory() == userDataRoot / "Accounts");
         CHECK(paths.controlsFile().string().find("Development") == std::string::npos);
         CHECK(paths.runsFile().string().find("Development") == std::string::npos);
         CHECK(paths.profileFile().string().find("Development") == std::string::npos);
@@ -73,6 +74,7 @@ TEST_SUITE("Runtime Paths") {
         CHECK(std::filesystem::is_directory(paths.controlsFile().parent_path()));
         CHECK(std::filesystem::is_directory(paths.runsFile().parent_path()));
         CHECK(std::filesystem::is_directory(paths.profileFile().parent_path()));
+        CHECK(std::filesystem::is_directory(paths.accountsDirectory()));
         CHECK(std::filesystem::is_directory(paths.assetsRoot()) == false);
     }
 
@@ -83,6 +85,7 @@ TEST_SUITE("Runtime Paths") {
         CHECK(paths.controlsFile() == std::filesystem::path("/user/ascendendo/Settings/controls.cfg"));
         CHECK(paths.runsFile() == std::filesystem::path("/user/ascendendo/Runs/runs.csv"));
         CHECK(paths.profileFile() == std::filesystem::path("/user/ascendendo/Save/profile.secure"));
+        CHECK(paths.accountsDirectory() == std::filesystem::path("/user/ascendendo/Accounts"));
     }
 
     TEST_CASE("process paths are independent of current directory") {

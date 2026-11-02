@@ -63,3 +63,6 @@ Tests/log_testes.txt
 
 # Pastas temporarias de testes (nunca devem ser commitadas)
 /tmp_*
+
+# Distribuicao / Release
+dist/

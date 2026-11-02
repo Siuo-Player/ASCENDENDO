@@ -11,6 +11,8 @@ import sys
 from dataclasses import dataclass
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+if SCRIPT_DIR not in sys.path:
+    sys.path.insert(0, SCRIPT_DIR)
 sys.path.insert(0, os.path.join(SCRIPT_DIR, "sim"))
 from engine import LOGICAL_HEIGHT, LOGICAL_WIDTH, PLAYER_WIDTH, simulate_jump, simulate_jump_flag  # type: ignore
 
@@ -121,9 +123,14 @@ def launch_positions(source: Surface) -> tuple[float, ...]:
 
 
 def landing_transition(source: Surface, target: Surface):
+    # Height reachability check: maximum vertical jump delta is ~138px.
+    if target.top > source.top + 145.0:
+        return None
+
     best = None
     for start_x in launch_positions(source):
         for direction in (-1, 1):
+            candidates = []
             for index in range(CHARGE_SAMPLES):
                 charge = index / (CHARGE_SAMPLES - 1)
                 landed, fx, fy, _, _ = simulate_jump(
@@ -138,6 +145,14 @@ def landing_transition(source: Surface, target: Surface):
                 center = fx + PLAYER_WIDTH * 0.5
                 if not target.x <= center <= target.right:
                     continue
+                margin = min(center - target.x, target.right - center)
+                candidates.append((margin, charge, center, fx))
+
+            if not candidates:
+                continue
+
+            candidates.sort(key=lambda c: c[0], reverse=True)
+            for margin, charge, center, fx in candidates[:2]:
                 rng = random.Random(307)
                 successes = 0
                 launch_min = max(0.0, source.x - PLAYER_WIDTH + 1.0)
@@ -160,7 +175,7 @@ def landing_transition(source: Surface, target: Surface):
                     successes / ROBUSTNESS_TRIALS,
                     direction,
                     charge,
-                    min(center - target.x, target.right - center),
+                    margin,
                     launch_margin,
                     min(charge, 1.0 - charge),
                     -start_x,
@@ -418,7 +433,16 @@ def validate_catalogue_structure(catalogue_path: str):
             })
     return reports
 
-def validate_catalogue(catalogue_path: str, strict_flag_policy: bool = False):
+def _validate_level_job(args):
+    campaign_id, campaign_name, level_path, is_final, index, strict_flag_policy = args
+    report = validate_level(level_path, strict_flag_policy=strict_flag_policy, final=is_final)
+    report["campaign_id"] = campaign_id
+    report["campaign_name"] = campaign_name
+    report["catalogue_index"] = index
+    return report
+
+
+def validate_catalogue(catalogue_path: str, strict_flag_policy: bool = False, parallel: bool = True):
     """Validate every catalogued campaign and annotate level reports with campaign identity."""
     with open(catalogue_path, encoding="utf-8") as stream:
         entries = []
@@ -438,9 +462,9 @@ def validate_catalogue(catalogue_path: str, strict_flag_policy: bool = False):
         raise ValueError("catalogue contains no campaigns")
 
     base = os.path.dirname(catalogue_path)
-    reports = []
     seen_ids = set()
     seen_playlists = set()
+    level_jobs = []
     for campaign_id, campaign_name, playlist in entries:
         if campaign_id in seen_ids:
             raise ValueError(f"catalogue contains duplicate campaign id: {campaign_id}")
@@ -454,17 +478,31 @@ def validate_catalogue(catalogue_path: str, strict_flag_policy: bool = False):
         if not os.path.isfile(campaign_path):
             raise ValueError(f"catalogue references missing campaign playlist: {playlist}")
 
-        for report in validate_campaign(
-            campaign_path,
-            strict_flag_policy=strict_flag_policy,
-        ):
-            reports.append({
-                **report,
-                "campaign_id": campaign_id,
-                "campaign_name": campaign_name,
-            })
+        with open(campaign_path, encoding="utf-8") as c_stream:
+            names = [line.strip() for line in c_stream if line.strip() and not line.startswith("#")]
+        if not names:
+            raise ValueError(f"campaign contains no levels: {playlist}")
+        normalized = [os.path.normpath(name) for name in names]
+        if len(set(normalized)) != len(names):
+            raise ValueError(f"campaign contains duplicate level entries: {playlist}")
+
+        c_base = os.path.dirname(campaign_path)
+        for index, name in enumerate(names):
+            lvl_path = os.path.join(c_base, name)
+            if not os.path.isfile(lvl_path):
+                raise ValueError(f"campaign references missing level: {name}")
+            level_jobs.append((campaign_id, campaign_name, lvl_path, index == len(names) - 1, index, strict_flag_policy))
+
+    workers = min(os.cpu_count() or 4, 16) if parallel else 1
+    if workers > 1 and len(level_jobs) > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(max_workers=workers) as executor:
+            reports = list(executor.map(_validate_level_job, level_jobs, chunksize=4))
+    else:
+        reports = [_validate_level_job(job) for job in level_jobs]
 
     return reports
+
 
 
 def main() -> int:

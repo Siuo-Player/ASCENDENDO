@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCENDENDO — Platformer Vertical de Precisão</title>
+    <meta name="description" content="ASCENDENDO — Platformer vertical de precisão com salto de compromisso a 60°, física determinística e privacidade criptográfica absoluta. Gratuito e open source.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- NAV -->
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo">
+                <span class="logo-accent">▲</span> ASCENDENDO
+            </a>
+            <nav class="nav-links">
+                <a href="#sobre">Sobre</a>
+                <a href="#mecanicas">Mecânicas</a>
+                <a href="#campanhas">Campanhas</a>
+                <a href="#seguranca">Segurança & Privacidade</a>
+                <a href="#download" class="nav-btn">Download</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">ASCENDENDO 1.0 • OPEN SOURCE & GRATUITO</div>
+            <h1 class="hero-title">A SUBIDA É CONTÍNUA.<br><span class="hero-highlight">O COMPROMISSO É TOTAL.</span></h1>
+            <p class="hero-subtitle">
+                Um platformer vertical de precisão cirúrgica em C++20 e Vulkan.
+                Salto fixo a 60°, física determinística e progressão intransigente.
+                Sem telemetria, sem nuvem, com cofre criptográfico local de utilizadores.
+            </p>
+            <div class="hero-actions">
+                <a href="#download" class="btn btn-primary">
+                    <span class="btn-icon">⬇</span> Descarregar para Windows
+                </a>
+                <a href="https://github.com/hdsf7/Ascendendo" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                    <span class="btn-icon">★</span> Repositório GitHub
+                </a>
+            </div>
+            <div class="hero-metrics">
+                <div class="metric">
+                    <span class="metric-val">610</span>
+                    <span class="metric-label">Níveis Oficiais</span>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric">
+                    <span class="metric-val">10</span>
+                    <span class="metric-label">Campanhas Graduais</span>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric">
+                    <span class="metric-val">60 Hz</span>
+                    <span class="metric-label">Simulação Determinística</span>
+                </div>
+                <div class="metric-divider"></div>
+                <div class="metric">
+                    <span class="metric-val">0 PII</span>
+                    <span class="metric-label">Privacidade Absoluta</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIMULATOR CANVAS -->
+        <div class="hero-canvas-container">
+            <div class="canvas-header">
+                <span class="canvas-dot red"></span>
+                <span class="canvas-dot yellow"></span>
+                <span class="canvas-dot green"></span>
+                <span class="canvas-title">SIMULADOR DETERMINÍSTICO // COMMITMENT JUMP</span>
+            </div>
+            <canvas id="previewCanvas" width="640" height="360"></canvas>
+            <div class="canvas-footer">
+                <span>Clique no ecrã para disparar um salto</span>
+                <span id="canvasCoords">X: 320 | Y: 180</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- CORE PILLARS -->
+    <section id="mecanicas" class="section">
+        <div class="container">
+            <h2 class="section-title">PILICKARES DO MOTOR</h2>
+            <p class="section-subtitle">Construído do zero como um jogo específico, não como uma engine genérica.</p>
+            
+            <div class="grid grid-3">
+                <div class="card">
+                    <div class="card-icon">🎯</div>
+                    <h3 class="card-title">Salto de Compromisso a 60°</h3>
+                    <p class="card-text">
+                        Assim que os pés deixam a plataforma, o controlo no ar é nulo. A trajetória balística é pura física.
+                        Carrega a barra de salto (0.0s a 0.4s) e liberta com a força exata.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">📐</div>
+                    <h3 class="card-title">Física Determinística 60 Hz</h3>
+                    <p class="card-text">
+                        A simulação em ponto fixo discretizado a 60 Hz garante reprodução idêntica em qualquer hardware.
+                        Mesmo input = mesmo resultado exato até ao último pixel.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">📺</div>
+                    <h3 class="card-title">Área Lógica 640×360</h3>
+                    <p class="card-text">
+                        Apresentação em Vulkan puro com preservação rígida da geometria 16:9 através de letterboxing dinâmico.
+                        Alternância instantânea de ecrã inteiro com F11 sem distorção.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">🛠️</div>
+                    <h3 class="card-title">Editores Integrados</h3>
+                    <p class="card-text">
+                        Editor de níveis com diagnóstico de reachability visual e histórico atómico por gesto (Undo/Redo).
+                        Editor de campanhas para estruturar e validar playlists completas.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">⚡</div>
+                    <h3 class="card-title">Streaming Sem Costuras</h3>
+                    <p class="card-text">
+                        Subida contínua sem loadings visíveis. Conforme o jogador ascende, o próximo nível é pré-carregado
+                        verticalmente na câmara contínua.
+                    </p>
+                </div>
+
+                <div class="card">
+                    <div class="card-icon">🛡️</div>
+                    <h3 class="card-title">Cofre de Contas Local</h3>
+                    <p class="card-text">
+                        Autenticação isolada por utilizador com HMAC-SHA256 e 10.000 iterações PBKDF2.
+                        Zero telemetria, zero rastreamento, proteção contra injeções e ataques de temporização.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAMPAIGN CATALOGUE -->
+    <section id="campanhas" class="section section-dark">
+        <div class="container">
+            <h2 class="section-title">O CATÁLOGO OFICIAL 1.0</h2>
+            <p class="section-subtitle">610 níveis distribuídos em 10 campanhas de progressão matemática e física.</p>
+
+            <div class="campaign-list">
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">01</span>
+                        <h4 class="camp-name">Primeira Ascensão</h4>
+                        <span class="camp-tag tag-tutorial">Tutorial • 10 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Fundamentos do salto a 60°, leitura de margens e timing de carga.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">02</span>
+                        <h4 class="camp-name">Ritmo</h4>
+                        <span class="camp-tag tag-easy">Fácil • 25 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Saltos encadeados e cadência de aterragem em plataformas uniformes.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">03</span>
+                        <h4 class="camp-name">Deslocamento</h4>
+                        <span class="camp-tag tag-easy">Fácil • 25 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Travessia horizontal acentuada exigindo cargas parciais precisas.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">04</span>
+                        <h4 class="camp-name">Alternância</h4>
+                        <span class="camp-tag tag-med">Médio • 25 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Inversão de direção em apoios reduzidos e ressaltos de parede.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">05</span>
+                        <h4 class="camp-name">Pressão</h4>
+                        <span class="camp-tag tag-med">Médio • 25 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Margens de aterragem estritas de 16px sem espaço para hesitação.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">06</span>
+                        <h4 class="camp-name">Persistência</h4>
+                        <span class="camp-tag tag-hard">Médio-Difícil • 50 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Sequências verticais longas onde um erro obriga a recuperar a descida.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">07</span>
+                        <h4 class="camp-name">Margem</h4>
+                        <span class="camp-tag tag-hard">Difícil • 50 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Tolerância mínima ao erro nos pontos de descolagem e aterragem.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">08</span>
+                        <h4 class="camp-name">Precisão</h4>
+                        <span class="camp-tag tag-hard">Difícil • 50 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Arcos balísticos no limiar da física teórica do motor.</p>
+                </div>
+
+                <div class="campaign-item">
+                    <div class="camp-header">
+                        <span class="camp-id">09</span>
+                        <h4 class="camp-name">Resistência</h4>
+                        <span class="camp-tag tag-extreme">Extremo • 100 Níveis</span>
+                    </div>
+                    <p class="camp-desc">Uma maratona vertical contínua exigindo consistência inabalável.</p>
+                </div>
+
+                <div class="campaign-item highlight-cume">
+                    <div class="camp-header">
+                        <span class="camp-id">10</span>
+                        <h4 class="camp-name">O Cume Final</h4>
+                        <span class="camp-tag tag-cume">Derradeiro • 250 Níveis</span>
+                    </div>
+                    <p class="camp-desc">O pico supremo do ASCENDENDO. 250 níveis interligados até ao topo do mundo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECURITY & PRIVACY -->
+    <section id="seguranca" class="section">
+        <div class="container">
+            <h2 class="section-title">PRIVACIDADE ABSOLUTA & SEGURANÇA</h2>
+            <p class="section-subtitle">Porquê um sistema de contas local em vez de login com contas de terceiros (como Google)?</p>
+
+            <div class="security-box">
+                <div class="security-text">
+                    <h3>Garantia Zero-Surveillance</h3>
+                    <p>
+                        Muitos jogos modernos exigem OAuth na nuvem, logins de terceiros (Google, Steam, Discord) e recolha de telemetria.
+                        Isso expõe o teu email real, endereço IP, tokens de autenticação e hábitos de jogo a servidores remotos.
+                    </p>
+                    <p>
+                        No <strong>ASCENDENDO</strong>, adotamos uma abordagem radical de segurança:
+                    </p>
+                    <ul class="security-list">
+                        <li><strong>100% Offline-First:</strong> O jogo funciona perfeitamente sem ligação à internet. Não há servidores para cair nem contas para serem suspensas.</li>
+                        <li><strong>Zero Dados Pessoais (PII):</strong> Não recolhemos nem guardamos emails, nomes reais ou números de telefone.</li>
+                        <li><strong>Criptografia Forte NIST:</strong> As credenciais locais utilizam PBKDF2 com HMAC-SHA256 e 10.000 iterações com salt aleatório único de 16 bytes.</li>
+                        <li><strong>Isolamento Hermético:</strong> Cada perfil é guardado no seu próprio subdiretório criptograficamente autenticado (<code>userdata/Accounts/&lt;hash&gt;/profile.secure</code>).</li>
+                        <li><strong>Dano Máximo Confinado:</strong> Se perderes a password local do teu perfil de jogo, o único impacto é o progresso de campanha guardado nessa máquina — as tuas contas de email, Google e identidade digital permanecem 100% intocadas.</li>
+                    </ul>
+                </div>
+                <div class="security-badge-col">
+                    <div class="badge-vault">
+                        <span class="vault-icon">🔒</span>
+                        <h4>HMAC-SHA256</h4>
+                        <p>Autenticação local em tempo constante</p>
+                    </div>
+                    <div class="badge-vault">
+                        <span class="vault-icon">⚡</span>
+                        <h4>PBKDF2</h4>
+                        <p>10.000 iterações por utilizador</p>
+                    </div>
+                    <div class="badge-vault">
+                        <span class="vault-icon">🛡️</span>
+                        <h4>Defesa Ativa</h4>
+                        <p>Imunidade a Directory Climbing & CSV Injection</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DOWNLOAD -->
+    <section id="download" class="section section-download">
+        <div class="container text-center">
+            <h2 class="section-title">DESCARREGAR ASCENDENDO 1.0</h2>
+            <p class="section-subtitle">100% gratuito. Sem DRM. Sem instalador invasivo.</p>
+
+            <div class="download-card">
+                <div class="download-badge">Windows x64 • Vulkan 1.2+</div>
+                <h3 class="download-version">ASCENDENDO v1.0.0 (Portable ZIP)</h3>
+                <p class="download-info">Inclui o executável nativo compilado em C++20, 610 níveis oficiais, sprites, fontes e shaders.</p>
+                <div class="download-cta">
+                    <a href="https://github.com/hdsf7/Ascendendo/releases/latest" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-large">
+                        <span class="btn-icon">📦</span> Obter no GitHub Releases
+                    </a>
+                </div>
+                <div class="checksum-info">
+                    <code>SHA-256 Checksum disponível no repositório de lançamentos</code>
+                </div>
+            </div>
+
+            <!-- CONTROLS & REQUIREMENTS -->
+            <div class="specs-grid">
+                <div class="spec-col">
+                    <h4>Requisitos Mínimos</h4>
+                    <ul>
+                        <li><strong>SO:</strong> Windows 10 ou 11 (64-bit)</li>
+                        <li><strong>GPU:</strong> Placa compatível com Vulkan 1.2+</li>
+                        <li><strong>CPU:</strong> Processador x64 com suporte AVX/SSE</li>
+                        <li><strong>Espaço:</strong> ~50 MB livres em disco</li>
+                    </ul>
+                </div>
+                <div class="spec-col">
+                    <h4>Controlos Rápidos</h4>
+                    <ul>
+                        <li><strong>A / D ou Setas:</strong> Movimento horizontal</li>
+                        <li><strong>ESPAÇO:</strong> Carregar e libertar salto</li>
+                        <li><strong>F11:</strong> Ecrã inteiro dinâmico (16:9)</li>
+                        <li><strong>E / C:</strong> Editores de Nível e Campanha</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <div class="footer-left">
+                <span class="footer-logo">▲ ASCENDENDO</span>
+                <p>Platformer vertical de precisão. Software Livre licenciado sob a licença MIT.</p>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/hdsf7/Ascendendo" target="_blank" rel="noopener noreferrer">Repositório GitHub</a>
+                <a href="https://github.com/hdsf7/Ascendendo/issues" target="_blank" rel="noopener noreferrer">Reportar Problema</a>
+                <a href="https://github.com/hdsf7/Ascendendo/blob/main/docs/ROADMAP.md" target="_blank" rel="noopener noreferrer">Roadmap</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -140,6 +140,10 @@ std::filesystem::path RuntimePaths::profileFile() const {
     return userDataRoot_ / "Save" / "profile.secure";
 }
 
+std::filesystem::path RuntimePaths::accountsDirectory() const {
+    return userDataRoot_ / "Accounts";
+}
+
 bool RuntimePaths::ensureUserDirectories() const {
     std::error_code ec;
     std::filesystem::create_directories(controlsFile().parent_path(), ec);
@@ -147,6 +151,8 @@ bool RuntimePaths::ensureUserDirectories() const {
     std::filesystem::create_directories(runsFile().parent_path(), ec);
     if (ec) return false;
     std::filesystem::create_directories(profileFile().parent_path(), ec);
+    if (ec) return false;
+    std::filesystem::create_directories(accountsDirectory(), ec);
     return !ec;
 }
 

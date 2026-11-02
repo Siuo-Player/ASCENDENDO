@@ -23,6 +23,7 @@ struct RuntimeBootstrapResult {
     std::filesystem::path runsFile() const { return paths.runsFile(); }
     std::filesystem::path controlsFile() const { return paths.controlsFile(); }
     std::filesystem::path profileFile() const { return paths.profileFile(); }
+    std::filesystem::path accountsDirectory() const { return paths.accountsDirectory(); }
     std::filesystem::path playerSprite() const { return paths.playerSprite(); }
 };
 
