@@ -6,6 +6,7 @@
 #include "../../Game/Logic/ReplayManager.h"
 
 #include <vector>
+#include <iostream>
 
 namespace {
 
@@ -53,8 +54,8 @@ Level makeEvidenceLevel() {
     data.finalCampaignLevel = true;
     data.screenCount = 1;
     data.platforms = {
-        AABB{{240.0f, 104.0f}, {400.0f, 120.0f}},
-        AABB{{240.0f, 200.0f}, {400.0f, 216.0f}},
+        AABB{{480.0f, 70.0f}, {640.0f, 86.0f}},
+        AABB{{180.0f, 140.0f}, {340.0f, 156.0f}},
     };
 
     Level level;
@@ -69,14 +70,15 @@ Level makeEvidenceLevel() {
 void chargeAndReleaseJump(Player& player,
                           PhysicsWorld& world,
                           Level& level,
-                          ReplayManager& replay) {
+                          ReplayManager& replay,
+                          bool right) {
     bool pressed = true;
     bool groundedBeforeJump = player.isGrounded();
 
     for (int tick = 0; tick < 24; ++tick) {
         const TickInput input{
-            false,
-            false,
+            !right,
+            right,
             true,
             pressed,
             false,
@@ -88,11 +90,11 @@ void chargeAndReleaseJump(Player& player,
     }
 
     REQUIRE(groundedBeforeJump);
-    REQUIRE(player.isCharging());
+    REQUIRE(player.isCharging);
 
     const TickInput release{
-        false,
-        false,
+        !right,
+        right,
         false,
         false,
         true,
@@ -133,21 +135,15 @@ TEST_CASE("valid run replay reproduces the derived FLAG through the same engine 
     originalPlayer.body.position = originalLevel.spawnPosition;
     originalPlayer.body.isGrounded = true;
 
-    // Ground -> platform 1.
-    chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay);
+    // Jump 1: Ground -> platform 1 (facing right).
+    chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay, true);
     REQUIRE_FALSE(advanceUntilGroundedOrGoal(
         originalPlayer, originalWorld, originalLevel, replay, 120));
     REQUIRE(originalPlayer.isGrounded());
+    CHECK(originalPlayer.position().y == doctest::Approx(86.0f));
 
-    // Platform 1 -> platform 2.
-    chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay);
-    REQUIRE_FALSE(advanceUntilGroundedOrGoal(
-        originalPlayer, originalWorld, originalLevel, replay, 120));
-    REQUIRE(originalPlayer.isGrounded());
-
-    // The derived FLAG starts at the top of the highest platform, so the
-    // campaign completes on the same fixed tick that lands the player there.
-    chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay);
+    // Jump 2: Platform 1 -> platform 2 (facing left, towards highest platform with derived FLAG).
+    chargeAndReleaseJump(originalPlayer, originalWorld, originalLevel, replay, false);
 
     bool originalGoal = false;
     int originalGoalTick = -1;
