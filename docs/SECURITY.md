@@ -86,3 +86,61 @@ O subsistema de segurança é coberto por testes unitários exaustivos em `Tests
 - Testes de contenção de caminho com tentativas deliberadas de directory traversal.
 - Testes de sanitização de dispositivos reservados Windows.
 - Testes de neutralização de fórmulas maliciosas em CSV.
+
+---
+
+## 7. Arquitetura de Identidade Federada & Raio de Explosão Zero (StudioAuth)
+
+O ASCENDENDO adota formalmente o **Guia Canónico de Arquitetura de Segurança e Decisões de Identidade** do estúdio, garantindo que a comodidade do utilizador nunca compromete o isolamento entre projetos (*Zero Blast Radius*).
+
+### 7.1 Filosofia do Raio de Explosão Zero (*Zero Blast Radius*)
+
+O utilizador pode utilizar a mesma identidade global (ex.: Conta Google ou Conta Studio), mas o subsistema deriva identificadores criptográficos matematicamente estanques para cada projeto:
+
+```mermaid
+flowchart TD
+    subgraph Utilizador ["👤 Jogador"]
+        Master["Conta Google ou Studio ID"]
+    end
+
+    subgraph Nucleo ["🔐 studio_auth (Derivação Criptográfica Unidirecional)"]
+        KDF1["HMAC-SHA256(Master, Salt_Ascendendo)"]
+        KDF2["HMAC-SHA256(Master, Salt_OutroJogo)"]
+    end
+
+    subgraph Isolamento ["🛡️ Ecossistema Estanque (Blast Radius = 0)"]
+        JA["▲ ASCENDENDO<br/>PlayerID: as_71037d7c...<br/>Token aud: 'ascendendo-client'"]
+        JB["🎮 Outro Projeto (ex.: RedWar)<br/>PlayerID: re_f8a90e80...<br/>Token aud: 'outro-client'"]
+    end
+
+    Master --> KDF1 --> JA
+    Master --> KDF2 --> JB
+    JA -.x|"IMPOSSÍVEL CORRELACIONAR<br/>OU REUTILIZAR CREDENCIAIS"| JB
+```
+
+- **Padrão Normativo**: **Pairwise Pseudonymous Subject Identifiers (PPID)**, em conformidade com o **OpenID Connect Core 1.0 (Secção 8)** e **NIST SP 800-63B**.
+- **Derivação Unidirecional**: O runtime e o portal web nunca armazenam a identidade mestre ou email do jogador:
+  $$\text{PlayerID}_{\text{Ascendendo}} = \text{as\_}\langle\text{HMAC-SHA256}(\text{SectorSalt} : \text{"ascendendo"}, \text{MasterSubjectID})[:16]\rangle$$
+- **Imunidade a Vazamentos**: Mesmo em caso de extração completa de ficheiros locais de um jogo, é matematicamente impossível reconstruir o identificador de outro projeto ou aceder à conta Google do jogador.
+
+### 7.2 Os 3 Níveis de Identidade
+
+| Nível | Mecanismo | Aplicação no ASCENDENDO | Risco de Privacidade |
+|---|---|---|---|
+| **1. Convidado (Guest ID)** | Gera um identificador aleatório guardado apenas no dispositivo (`localStorage` / `userdata`). | Jogo imediato sem qualquer formulário ou registo. | **Zero absoluto** (sem dados pessoais). |
+| **2. Conectar com Google (OIDC)** | Validação de token JWT assinado criptograficamente pela Google, convertendo o `sub` em Pairwise ID (`as_...`). | Sincronização segura de recordes e campanhas sem expor credenciais reais. | **Mínimo e Auditado** (zero senhas, 2FA herdado da Google). |
+| **3. Conta Dedicada Studio / Local** | Cofre criptográfico HMAC-SHA256 com PBKDF2 e salt aleatório de 256 bits gerado por CSPRNG. | Utilizadores que preferem manter o jogo 100% offline e independente. | **Isolado hermeticamente** no subdiretório do utilizador. |
+
+### 7.3 Decisões sobre a Conta Google
+
+1. **Zero Acesso a Palavras-passe:** O jogo nunca vê, recebe ou manipula credenciais da Google.
+2. **Menor Privilégio (*Least Privilege*):** Pedem-se apenas os escopos estritamente necessários (`openid` e `profile`). Nenhuma permissão de Gmail, Drive ou contactos é alguma vez solicitada.
+3. **Segurança Herdada:** O login Google herda autenticação multi-fator (2FA), Passkeys e biometria do telemóvel sem qualquer custo adicional.
+
+### 7.4 Defesas Ativas e Integridade de Rede
+
+* **Proteção contra Timing Attacks:** Toda a validação de palavras-passe e assinaturas opera em tempo constante (`core::Security::constantTimeEquals` em C++, `hmac.compare_digest` em Python).
+* **Zero Dependências Externas na Cadeia de Suprimentos:** O pacote `packages/studio_auth` foi concebido sem dependências externas no PyPI, anulando vetores de *Supply Chain Attacks*.
+* **Teto Rígido de Payload (64 KB):** Quaisquer mensagens ou uploads de pacotes de dados acima de 64 KB são descartados na camada de transporte.
+* **Tokens com Expiração Curta (1h):** Tokens de sessão expiram em 3600 segundos e contêm verificação estrita de audiência (`aud: "ascendendo-client"`).
+
