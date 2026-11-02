@@ -274,3 +274,95 @@
 
     requestAnimationFrame(loop);
 })();
+
+
+// StudioAuth Front-End Integration
+(function() {
+    if (typeof StudioAuthClient === 'undefined') return;
+
+    const auth = new StudioAuthClient({
+        projectSlug: "ascendendo",
+        onAuthChange: updateUI
+    });
+
+    const statusBtn = document.getElementById('authStatusBtn');
+    const authDot = document.getElementById('authDot');
+    const authUsername = document.getElementById('authUsername');
+    const modal = document.getElementById('authModal');
+    const closeModal = document.getElementById('closeAuthModal');
+    const modalPlayerId = document.getElementById('modalPlayerId');
+    const modalUsername = document.getElementById('modalUsername');
+    const modalAuthMode = document.getElementById('modalAuthMode');
+
+    const btnGoogle = document.getElementById('btnGoogleAuth');
+    const dedicatedForm = document.getElementById('dedicatedAuthForm');
+    const dedicatedUser = document.getElementById('dedicatedUser');
+    const dedicatedPass = document.getElementById('dedicatedPass');
+    const btnLogout = document.getElementById('btnLogoutAuth');
+
+    function updateUI(session) {
+        if (!session) return;
+        if (authUsername) authUsername.innerText = session.username;
+        if (authDot) {
+            authDot.className = session.authMode === 'guest' ? 'auth-dot guest' : 'auth-dot';
+        }
+        if (modalPlayerId) modalPlayerId.innerText = session.playerId;
+        if (modalUsername) modalUsername.innerText = session.username;
+        if (modalAuthMode) {
+            modalAuthMode.innerText = session.authMode;
+            modalAuthMode.className = `badge-mode ${session.authMode}`;
+        }
+    }
+
+    // Initial render
+    updateUI(auth.getSession());
+
+    if (statusBtn && modal) {
+        statusBtn.addEventListener('click', () => {
+            modal.style.display = 'flex';
+        });
+    }
+
+    if (closeModal && modal) {
+        closeModal.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.style.display = 'none';
+        });
+    }
+
+    if (btnGoogle) {
+        btnGoogle.addEventListener('click', () => {
+            const mockName = prompt("Simulação Google OIDC:\nIndica o teu nome de jogador para gerar o PPID estanque:", "Jogador");
+            if (mockName) {
+                auth.loginWithGoogle({ name: mockName.trim() });
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    if (dedicatedForm) {
+        dedicatedForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = dedicatedUser.value.trim();
+            const p = dedicatedPass.value;
+            if (u && p) {
+                auth.loginWithDedicated(u, p);
+                dedicatedUser.value = '';
+                dedicatedPass.value = '';
+                modal.style.display = 'none';
+            }
+        });
+    }
+
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            auth.logout();
+            modal.style.display = 'none';
+        });
+    }
+})();

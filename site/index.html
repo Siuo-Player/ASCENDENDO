@@ -23,6 +23,10 @@
                 <a href="#mecanicas">Mecânicas</a>
                 <a href="#campanhas">Campanhas</a>
                 <a href="#seguranca">Segurança & Privacidade</a>
+                <div class="auth-status" id="authStatusBtn" title="Gerir Sessão de Jogador (Zero Blast Radius)">
+                    <span class="auth-dot" id="authDot"></span>
+                    <span id="authUsername">Convidado</span>
+                </div>
                 <a href="#download" class="nav-btn">Download</a>
             </nav>
         </div>
@@ -353,6 +357,52 @@
         </div>
     </footer>
 
+    <!-- AUTH MODAL -->
+    <div id="authModal" class="modal-backdrop" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Identidade de Jogador (StudioAuth)</h3>
+                <button id="closeAuthModal" class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="auth-card-info">
+                    <p class="auth-intro">
+                        Garantia de <strong>Raio de Explosão Zero</strong>: os identificadores são derivados via PPID (OpenID Connect Section 8).
+                        Mesmo usando a tua Conta Google, o Ascendendo recebe apenas um ID estanque (<code>as_...</code>) sem nunca ter acesso ao teu email ou dados pessoais.
+                    </p>
+                    <div class="session-box">
+                        <div class="session-row">
+                            <span class="session-lbl">Player ID:</span>
+                            <code id="modalPlayerId" class="session-val">guest_...</code>
+                        </div>
+                        <div class="session-row">
+                            <span class="session-lbl">Utilizador:</span>
+                            <span id="modalUsername" class="session-val">Convidado</span>
+                        </div>
+                        <div class="session-row">
+                            <span class="session-lbl">Modo:</span>
+                            <span id="modalAuthMode" class="badge-mode">guest</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="auth-buttons">
+                    <button id="btnGoogleAuth" class="btn btn-google">
+                        <span class="g-icon">G</span> Entrar com Google (PPID Estanque)
+                    </button>
+                    <div class="auth-divider"><span>OU CONTA LOCAL</span></div>
+                    <form id="dedicatedAuthForm" class="auth-form" onsubmit="return false;">
+                        <input type="text" id="dedicatedUser" placeholder="Nome de jogador" required class="auth-input">
+                        <input type="password" id="dedicatedPass" placeholder="Palavra-passe" required class="auth-input">
+                        <button type="submit" id="btnDedicatedAuth" class="btn btn-secondary btn-full">Entrar / Criar Conta de Jogo</button>
+                    </form>
+                    <button id="btnLogoutAuth" class="btn btn-link btn-full">Voltar a Convidado Anónimo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="studio_auth_client.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
