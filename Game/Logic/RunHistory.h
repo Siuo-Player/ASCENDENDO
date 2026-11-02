@@ -17,6 +17,7 @@
 #include <iomanip>
 #include <ctime>
 #include <filesystem>
+#include "Core/Security.h"
 
 namespace logic {
 
@@ -72,8 +73,8 @@ inline bool recordRun(const std::string& csvPath, const std::string& campaignNam
     }
 
     f << currentTimestamp() << ","
-      << campaignName << ","
-      << campaignID << ","
+      << core::Security::sanitizeCsvField(campaignName) << ","
+      << core::Security::sanitizeCsvField(campaignID) << ","
       << elapsedSeconds << ","
       << formatElapsed(elapsedSeconds) << "\n";
 

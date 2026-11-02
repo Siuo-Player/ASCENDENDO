@@ -17,6 +17,7 @@
 #include "Game/Logic/InputManager.h"
 #include "Game/Logic/RunHistory.h"
 #include "Game/Core/RuntimeBootstrap.h"
+#include "Game/Core/Environment.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/KeyBindings.h"
 
@@ -51,17 +52,17 @@ private:
 
 void setMenuTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | MENU | A/D navegar  ESPACO confirmar  E nivel  C campanha  Q sair");
+        "ASCENDENDO | MENU | A/D navegar  ESPACO/CLIQUE confirmar  F11 ecrã inteiro  E nivel  C campanha  Q sair");
 }
 
 void setPlayingTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | E editor de nivel  C campanha  Q menu  ESC pausa");
+        "ASCENDENDO | E editor de nivel  C campanha  F11 ecrã inteiro  Q menu  ESC pausa");
 }
 
 void setEditorTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  ESC voltar");
+        "ASCENDENDO | EDITOR | G STAMP/DRAG  [/] tamanho  F11 ecrã inteiro  ESC voltar");
 }
 
 void setCampaignEditorTitle(GLFWwindow* window) {
@@ -76,7 +77,7 @@ void setCreditsTitle(GLFWwindow* window) {
 
 void setPausedTitle(GLFWwindow* window) {
     glfwSetWindowTitle(window,
-        "ASCENDENDO | PAUSA | A/D navegar  ESPACO confirmar  Q menu  ESC continuar");
+        "ASCENDENDO | PAUSA | A/D navegar  ESPACO/CLIQUE confirmar  F11 ecrã inteiro  ESC continuar");
 }
 
 void applyStatePresentation(GLFWwindow* window,
@@ -116,8 +117,9 @@ RenderState toRenderState(GameState state) {
 }
 
 bool readCaptureLevelIndex(std::size_t& index) {
-    const char* value = std::getenv("ASCENDENDO_CAPTURE_LEVEL_INDEX");
-    if (!value || *value == '\0') return false;
+    const auto env = core::getEnvironmentVariable("ASCENDENDO_CAPTURE_LEVEL_INDEX");
+    if (!env || env->empty()) return false;
+    const char* value = env->c_str();
 
     char* end = nullptr;
     const unsigned long long parsed = std::strtoull(value, &end, 10);
@@ -232,8 +234,8 @@ int main(int argc, char** argv) {
         Camera camera;
 
         std::size_t captureLevelIndex = 0;
-        const char* captureLevelEnv = std::getenv("ASCENDENDO_CAPTURE_LEVEL_INDEX");
-        const bool captureMode = captureLevelEnv != nullptr && *captureLevelEnv != '\0';
+        const auto captureLevelEnv = core::getEnvironmentVariable("ASCENDENDO_CAPTURE_LEVEL_INDEX");
+        const bool captureMode = captureLevelEnv.has_value() && !captureLevelEnv->empty();
         if (captureMode) {
             if (!readCaptureLevelIndex(captureLevelIndex)) return 2;
             if (!session.beginPlayingLevelForCapture(
@@ -260,6 +262,10 @@ int main(int argc, char** argv) {
 
             input.beginFrame();
             win.pollEvents();
+
+            if (input.isKeyJustPressed(Key::F11)) {
+                win.toggleFullscreen();
+            }
 
             const GameState previousState = session.state();
             GameSessionUpdateResult result;

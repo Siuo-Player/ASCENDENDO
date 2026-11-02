@@ -38,6 +38,7 @@ namespace Key {
     constexpr int F2      = 291; // legacy compatibility only
     constexpr int F5      = 294; // legacy compatibility only
     constexpr int F6      = 295; // legacy compatibility only
+    constexpr int F11     = 300; // toggle fullscreen
     constexpr int LBRACKET  = 91;
     constexpr int RBRACKET  = 93;
     constexpr int DELETE_KEY = 261;
