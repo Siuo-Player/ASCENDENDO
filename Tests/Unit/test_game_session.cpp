@@ -271,6 +271,10 @@ TEST_SUITE("GameSession") {
             CHECK(std::filesystem::exists(profilePath));
             CHECK(session.userProfile().totalCompletions == 1);
             CHECK(session.userProfile().lastPlayedCampaignID == "test-campaign-id");
+            CHECK(session.lastCompletedReplay().has_value());
+            CHECK(session.lastCompletedReplay()->header().campaignID == "test-campaign-id");
+            const auto replayPath = tempRoot / "Replays" / "latest_test-campaign-id.replay";
+            CHECK(std::filesystem::exists(replayPath));
         }
 
         const auto loadedProfile = logic::ProfileStorage::load(profilePath);

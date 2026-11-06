@@ -13,14 +13,17 @@ class InputManager;
 class Level;
 class PhysicsWorld;
 class Player;
+class RunReplay;
 
 class SimulationOrchestrator {
 public:
     // Advances the physics accumulator and applies exactly the fixed number of
     // simulation steps reported by PhysicsWorld::advance(). Each step receives
     // an explicit semantic TickInput derived from the frame sample.
+    // If replay is provided, each executed TickInput is appended to the replay.
     int advance(float dt, const InputManager& input, const core::KeyBindings& bindings,
-                Player& player, PhysicsWorld& world, Level& level) const;
+                Player& player, PhysicsWorld& world, Level& level,
+                RunReplay* replay = nullptr) const;
 };
 
 } // namespace logic

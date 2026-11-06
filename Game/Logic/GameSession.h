@@ -13,6 +13,7 @@
 #include "Logic/Physics.h"
 #include "Logic/Player.h"
 #include "Logic/ProfileStorage.h"
+#include "Logic/RunReplay.h"
 #include "Logic/SimulationOrchestrator.h"
 
 #include <cstdint>
@@ -86,6 +87,10 @@ public:
             userProfile_ = ProfileStorage::load(profilePath_);
         }
     }
+    void configurePlayer(std::string playerID, std::string playerName) {
+        playerID_ = std::move(playerID);
+        playerName_ = std::move(playerName);
+    }
 
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
@@ -104,6 +109,8 @@ public:
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
     const std::string& campaignName() const noexcept { return campaignName_; }
+    const std::string& playerID() const noexcept { return playerID_; }
+    const std::string& playerName() const noexcept { return playerName_; }
     const UserProfile& userProfile() const noexcept { return userProfile_; }
 
     Player& player() noexcept { return player_; }
@@ -116,6 +123,13 @@ public:
     const CampaignEditorDocument& campaignEditor() const noexcept { return campaignEditor_; }
     CampaignEditorRenderSnapshot campaignEditorSnapshot() const;
     bool campaignEditorDirty() const noexcept { return campaignEditorDirty_; }
+
+    const RunReplay& currentReplay() const noexcept { return currentReplay_; }
+    const std::optional<RunReplay>& lastCompletedReplay() const noexcept { return lastCompletedReplay_; }
+    bool exportLastReplay(const std::filesystem::path& path) const {
+        if (!lastCompletedReplay_) return false;
+        return lastCompletedReplay_->saveToFile(path);
+    }
 
 private:
     int clickedMenuBox(const InputManager& input,
@@ -140,10 +154,15 @@ private:
     bool campaignEditorDirty_ = false;
     std::string campaignID_;
     std::string campaignName_ = "Campanha Principal";
+    std::string playerID_ = "local_player";
+    std::string playerName_ = "Player";
     std::string runsCsvPath_;
     std::string profilePath_;
     UserProfile userProfile_;
     float elapsedTime_ = 0.0f;
+
+    RunReplay currentReplay_;
+    std::optional<RunReplay> lastCompletedReplay_;
 };
 
 } // namespace logic

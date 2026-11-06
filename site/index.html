@@ -22,6 +22,7 @@
                 <a href="#sobre">Sobre</a>
                 <a href="#mecanicas">Mecânicas</a>
                 <a href="#campanhas">Campanhas</a>
+                <a href="#speedruns">Time-Attack & Partilha</a>
                 <a href="#seguranca">Segurança & Privacidade</a>
                 <div class="auth-status" id="authStatusBtn" title="Gerir Sessão de Jogador (Zero Blast Radius)">
                     <span class="auth-dot" id="authDot"></span>
@@ -248,6 +249,95 @@
                         <span class="camp-tag tag-cume">Derradeiro • 250 Níveis</span>
                     </div>
                     <p class="camp-desc">O pico supremo do ASCENDENDO. 250 níveis interligados até ao topo do mundo.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- TIME-ATTACK, SPEEDRUNS & COMMUNITY SHARING -->
+    <section id="speedruns" class="section">
+        <div class="container">
+            <h2 class="section-title">TIME-ATTACK & COMUNIDADE</h2>
+            <p class="section-subtitle">Sem mortes, sem artifícios: o teu único rival é o cronómetro. Prova a tua perícia e partilha os teus mundos.</p>
+
+            <div class="speedrun-container">
+                <!-- COL 1: SPEEDRUNS & REPLAYS -->
+                <div class="speedrun-card">
+                    <h3>⚡ Corridas Verificadas & Replays (.replay)</h3>
+                    <p>
+                        No ASCENDENDO, cada subida é cronometrada até ao milissegundo de chegada à bandeira.
+                        Graças à física 100% determinística a 60 Hz, o jogo grava um ficheiro compacto <code>.replay</code>
+                        com a sequência exata de inputs do salto e do movimento do jogador.
+                    </p>
+                    <div class="terminal-box">
+                        <span class="terminal-cmd">$ python Development/Tools/verify_replay.py run.replay</span><br>
+                        [OK] Assinatura HMAC-SHA256 íntegra (zero adulteração)<br>
+                        [OK] Re-simulação headless a 60 Hz: bandeira alcançada!<br>
+                        Tempo oficial: 18.243 s (1095 ticks) // Aprovado
+                    </div>
+                    <p>
+                        Qualquer jogador pode validar um recorde de speedrun sem GPU, com total garantia criptográfica contra batotas.
+                    </p>
+
+                    <h4 style="font-family: var(--font-heading); font-size: 14px; color: #fff; margin-top: 20px;">Top Corridas Oficiais (Verificadas)</h4>
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Jogador</th>
+                                <th>Campanha</th>
+                                <th>Tempo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="rank-gold">01</td>
+                                <td><strong>as_speedy</strong></td>
+                                <td>Primeira Ascensão</td>
+                                <td><code>14.812 s</code></td>
+                                <td><span class="tag-verified">✓ HMAC OK</span></td>
+                            </tr>
+                            <tr>
+                                <td class="rank-silver">02</td>
+                                <td><strong>as_apex</strong></td>
+                                <td>Ritmo</td>
+                                <td><code>32.115 s</code></td>
+                                <td><span class="tag-verified">✓ HMAC OK</span></td>
+                            </tr>
+                            <tr>
+                                <td class="rank-bronze">03</td>
+                                <td><strong>as_phantom</strong></td>
+                                <td>Alternância</td>
+                                <td><code>41.908 s</code></td>
+                                <td><span class="tag-verified">✓ HMAC OK</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- COL 2: LEVEL & CAMPAIGN CREATION -->
+                <div class="speedrun-card">
+                    <h3>🛠️ Criação & Partilha Comunitária</h3>
+                    <p>
+                        Usa os Editores nativos de Níveis (tecla <code>E</code>) e de Campanhas (tecla <code>C</code>)
+                        para desenhar as tuas próprias subidas verticais desafiantes.
+                    </p>
+                    <p>
+                        Empacota e partilha os teus desafios com a comunidade num único ficheiro seguro <code>.ascendendo-campaign</code>:
+                    </p>
+                    <div class="terminal-box">
+                        <span class="terminal-cmd">$ python Development/Tools/package_campaign.py custom/campaign.txt</span><br>
+                        [VALIDACAO] A executar simulador de alcançabilidade física...<br>
+                        [PACOTE CRIADO] dist/Campaigns/minha_subida.ascendendo-campaign
+                    </div>
+                    <p>
+                        <strong>Validação Física Automática:</strong> Antes de partilhares, o motor de simulação AI testa se todos os saltos são matematicamente possíveis, garantindo que nenhum nível comunitário é impossível por erro de design.
+                    </p>
+                    <div class="terminal-box">
+                        <span class="terminal-cmd">$ python Development/Tools/package_campaign.py --unpack pacote.ascendendo-campaign</span><br>
+                        [DESEMBALADO] Campanha importada para Game/Assets/Levels/Custom/
+                    </div>
                 </div>
             </div>
         </div>

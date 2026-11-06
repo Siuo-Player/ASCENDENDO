@@ -6,6 +6,7 @@
 #include "Logic/RunHistory.h"
 
 #include <cmath>
+#include <ctime>
 
 namespace logic {
 
@@ -76,6 +77,12 @@ void GameSession::resetGame(float logicalWidth) {
     level_ = std::move(candidateLevel);
     campaignRuntime_ = std::move(candidateRuntime);
 
+    currentReplay_.clear();
+    currentReplay_.header().campaignID = campaignID_;
+    currentReplay_.header().campaignName = campaignName_;
+    currentReplay_.header().playerID = playerID_;
+    currentReplay_.header().playerName = playerName_;
+
     stateMachine_.enterPlaying();
 }
 
@@ -95,6 +102,12 @@ bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) 
     elapsedTime_ = 0.0f;
     level_ = std::move(candidateLevel);
     campaignRuntime_ = std::move(candidateRuntime);
+
+    currentReplay_.clear();
+    currentReplay_.header().campaignID = campaignID_;
+    currentReplay_.header().campaignName = campaignName_;
+    currentReplay_.header().playerID = playerID_;
+    currentReplay_.header().playerName = playerName_;
 
     stateMachine_.enterPlaying();
     return true;
@@ -167,7 +180,7 @@ GameSessionUpdateResult GameSession::update(float dt,
             stateMachine_.pause();
         } else {
             const int simulatedSteps =
-                simulation_.advance(safeDt, input, bindings, player_, world_, level_);
+                simulation_.advance(safeDt, input, bindings, player_, world_, level_, &currentReplay_);
             elapsedTime_ += static_cast<float>(simulatedSteps) * config::FIXED_STEP;
 
             const float streamTriggerY =
@@ -186,6 +199,23 @@ GameSessionUpdateResult GameSession::update(float dt,
                 if (!profilePath_.empty()) {
                     logic::ProfileStorage::save(profilePath_, userProfile_);
                 }
+
+                currentReplay_.header().claimedElapsedSeconds = elapsedTime_;
+                currentReplay_.header().totalTicks = static_cast<uint32_t>(currentReplay_.inputs().size());
+                currentReplay_.header().timestamp = static_cast<int64_t>(std::time(nullptr));
+                lastCompletedReplay_ = currentReplay_;
+
+                if (!profilePath_.empty()) {
+                    std::error_code ec;
+                    const std::filesystem::path replayDir =
+                        std::filesystem::path(profilePath_).parent_path() / "Replays";
+                    std::filesystem::create_directories(replayDir, ec);
+                    if (!ec) {
+                        const std::string filename = "latest_" + campaignID_ + ".replay";
+                        lastCompletedReplay_->saveToFile(replayDir / filename);
+                    }
+                }
+
                 stateMachine_.enterCredits(core::GameState::MENU);
             }
         }
