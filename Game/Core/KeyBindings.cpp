@@ -55,11 +55,12 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::CampaignMoveLater,     { Key::RIGHT } },
         { GameAction::CampaignOpenLevel,     { Key::SPACE, Key::ENTER } },
         { GameAction::CampaignSave,          { Key::NUM1 } },
+        { GameAction::ToggleGhost,           { Key::G } },
     };
 }
 
 KeyBindings::KeyBindings() : m_bindings(defaultBindings()) {
-    s_active = this;
+    if (!s_active) s_active = this;
 }
 
 KeyBindings::~KeyBindings() {
@@ -71,9 +72,9 @@ const KeyBindings* KeyBindings::active() {
 }
 
 const std::vector<int>& KeyBindings::keysFor(GameAction action) const {
-    static const std::vector<int> empty;
+    static const std::vector<int> s_empty;
     auto it = m_bindings.find(action);
-    return it != m_bindings.end() ? it->second : empty;
+    return (it != m_bindings.end()) ? it->second : s_empty;
 }
 
 void KeyBindings::rebind(GameAction action, int newKey) {

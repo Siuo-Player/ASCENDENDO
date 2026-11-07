@@ -64,6 +64,27 @@ CampaignEditorRenderSnapshot GameSession::campaignEditorSnapshot() const {
     return snapshot;
 }
 
+void GameSession::setGhostReplay(RunReplay replay) {
+    ghostReplay_ = std::move(replay);
+    ghostTickIndex_ = 0;
+}
+
+bool GameSession::loadGhostReplay(const std::filesystem::path& path) {
+    auto loaded = RunReplay::loadFromFile(path);
+    if (!loaded) return false;
+    setGhostReplay(std::move(*loaded));
+    return true;
+}
+
+void GameSession::tryLoadDefaultGhostReplay() {
+    if (profilePath_.empty() || campaignID_.empty()) return;
+    const std::filesystem::path replayFile =
+        std::filesystem::path(profilePath_).parent_path() / "Replays" / ("latest_" + campaignID_ + ".replay");
+    if (std::filesystem::exists(replayFile)) {
+        loadGhostReplay(replayFile);
+    }
+}
+
 void GameSession::resetGame(float logicalWidth) {
     CampaignRuntime candidateRuntime = campaignRuntime_;
     Level candidateLevel;
@@ -82,6 +103,17 @@ void GameSession::resetGame(float logicalWidth) {
     currentReplay_.header().campaignName = campaignName_;
     currentReplay_.header().playerID = playerID_;
     currentReplay_.header().playerName = playerName_;
+
+    if (ghostReplay_ && ghostReplay_->header().campaignID == campaignID_) {
+        ghostPlayer_ = logic::Player{};
+        ghostPlayer_->body.position = level_.spawnPosition;
+        ghostPlayer_->body.isGrounded = true;
+        ghostWorld_ = logic::PhysicsWorld{};
+        ghostTickIndex_ = 0;
+    } else {
+        ghostPlayer_.reset();
+        ghostTickIndex_ = 0;
+    }
 
     stateMachine_.enterPlaying();
 }
@@ -108,6 +140,9 @@ bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) 
     currentReplay_.header().campaignName = campaignName_;
     currentReplay_.header().playerID = playerID_;
     currentReplay_.header().playerName = playerName_;
+
+    ghostPlayer_.reset();
+    ghostTickIndex_ = 0;
 
     stateMachine_.enterPlaying();
     return true;
@@ -151,6 +186,8 @@ GameSessionUpdateResult GameSession::update(float dt,
         core::isActionJustPressed(bindings, input, core::GameAction::OpenEditor);
     const bool openCampaignEditorPressed =
         core::isActionJustPressed(bindings, input, core::GameAction::OpenCampaignEditor);
+    const bool toggleGhostPressed =
+        core::isActionJustPressed(bindings, input, core::GameAction::ToggleGhost);
 
     const bool campaignPrevious =
         core::isActionJustPressed(bindings, input, core::GameAction::CampaignSelectPrevious);
@@ -169,7 +206,9 @@ GameSessionUpdateResult GameSession::update(float dt,
 
     switch (currentState) {
     case core::GameState::PLAYING:
-        if (openCampaignEditorPressed) {
+        if (toggleGhostPressed) {
+            toggleGhost();
+        } else if (openCampaignEditorPressed) {
             openCampaignEditor(core::GameState::PLAYING);
         } else if (openEditorPressed) {
             openEditor(core::GameState::PLAYING);
@@ -182,6 +221,17 @@ GameSessionUpdateResult GameSession::update(float dt,
             const int simulatedSteps =
                 simulation_.advance(safeDt, input, bindings, player_, world_, level_, &currentReplay_);
             elapsedTime_ += static_cast<float>(simulatedSteps) * config::FIXED_STEP;
+
+            // Ghost simulation
+            if (ghostEnabled_ && ghostPlayer_ && ghostReplay_) {
+                for (int s = 0; s < simulatedSteps; ++s) {
+                    if (ghostTickIndex_ < ghostReplay_->inputs().size()) {
+                        const TickInput& ghostIn = ghostReplay_->inputs()[ghostTickIndex_++];
+                        ghostPlayer_->update(ghostIn, ghostWorld_, config::FIXED_STEP);
+                        level_.resolveCollision(ghostPlayer_->body);
+                    }
+                }
+            }
 
             const float streamTriggerY =
                 campaignRuntime_.currentSpawnY() - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
@@ -213,6 +263,7 @@ GameSessionUpdateResult GameSession::update(float dt,
                     if (!ec) {
                         const std::string filename = "latest_" + campaignID_ + ".replay";
                         lastCompletedReplay_->saveToFile(replayDir / filename);
+                        ghostReplay_ = lastCompletedReplay_;
                     }
                 }
 

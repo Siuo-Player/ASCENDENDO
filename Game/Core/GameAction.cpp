@@ -44,6 +44,7 @@ const char* actionDisplayName(GameAction action) {
         case GameAction::CampaignMoveLater:     return "Campanha: Mover Nivel para Frente";
         case GameAction::CampaignOpenLevel:     return "Campanha: Abrir Nivel";
         case GameAction::CampaignSave:          return "Campanha: Guardar";
+        case GameAction::ToggleGhost:           return "Alternar Fantasma/Ghost";
     }
     return "?";
 }
@@ -86,6 +87,7 @@ const char* actionSerializedName(GameAction action) {
         case GameAction::CampaignMoveLater:     return "CampaignMoveLater";
         case GameAction::CampaignOpenLevel:     return "CampaignOpenLevel";
         case GameAction::CampaignSave:          return "CampaignSave";
+        case GameAction::ToggleGhost:          return "ToggleGhost";
     }
     return "Unknown";
 }

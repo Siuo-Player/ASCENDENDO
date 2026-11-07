@@ -182,4 +182,22 @@ TEST_SUITE("RenderSnapshot") {
         CHECK_FALSE(snapshot.semanticPlatformsValid);
         CHECK(snapshot.semanticPlatformCells.empty());
     }
+
+    TEST_CASE("builder copia o estado do ghost quando fornecido") {
+        Player player;
+        Level level;
+        Player ghost;
+        ghost.body.position = {120.0f, 180.0f};
+        ghost.facingDirection = -1.0f;
+
+        const RenderSnapshot snapshotWithoutGhost = buildRenderSnapshot(player, level);
+        CHECK_FALSE(snapshotWithoutGhost.ghost.visible);
+
+        const RenderSnapshot snapshotWithGhost = buildRenderSnapshot(player, level, &ghost);
+        CHECK(snapshotWithGhost.ghost.visible);
+        CHECK(snapshotWithGhost.ghost.bounds.x == doctest::Approx(120.0f));
+        CHECK(snapshotWithGhost.ghost.bounds.y == doctest::Approx(180.0f));
+        CHECK(snapshotWithGhost.ghost.facingDirection == -1.0f);
+        CHECK(snapshotWithGhost.ghost.alpha > 0.0f);
+    }
 }

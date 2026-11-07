@@ -46,6 +46,7 @@ public:
           profilePath_(std::move(profilePath)) {
         if (!profilePath_.empty()) {
             userProfile_ = ProfileStorage::load(profilePath_);
+            tryLoadDefaultGhostReplay();
         }
     }
 
@@ -73,6 +74,8 @@ public:
         player_.body.position = level_.spawnPosition;
         world_ = logic::PhysicsWorld{};
         elapsedTime_ = 0.0f;
+        ghostPlayer_.reset();
+        ghostTickIndex_ = 0;
         stateMachine_.enterPlaying();
         return true;
     }
@@ -85,6 +88,7 @@ public:
         profilePath_ = std::move(profilePath);
         if (!profilePath_.empty()) {
             userProfile_ = ProfileStorage::load(profilePath_);
+            tryLoadDefaultGhostReplay();
         }
     }
     void configurePlayer(std::string playerID, std::string playerName) {
@@ -131,6 +135,17 @@ public:
         return lastCompletedReplay_->saveToFile(path);
     }
 
+    // ── Speedrun Ghost Replay ────────────────────────────────────────────────
+    bool ghostEnabled() const noexcept { return ghostEnabled_; }
+    void setGhostEnabled(bool enabled) noexcept { ghostEnabled_ = enabled; }
+    void toggleGhost() noexcept { ghostEnabled_ = !ghostEnabled_; }
+    void setGhostReplay(RunReplay replay);
+    bool loadGhostReplay(const std::filesystem::path& path);
+    const RunReplay* ghostReplay() const noexcept { return ghostReplay_ ? &(*ghostReplay_) : nullptr; }
+    const Player* ghostPlayer() const noexcept {
+        return (ghostEnabled_ && ghostPlayer_) ? &(*ghostPlayer_) : nullptr;
+    }
+
 private:
     int clickedMenuBox(const InputManager& input,
                        int32_t windowWidth,
@@ -139,6 +154,7 @@ private:
                        float logicalWidth) const;
 
     void resetGame(float logicalWidth);
+    void tryLoadDefaultGhostReplay();
 
     CampaignRuntime campaignRuntime_;
     Level level_;
@@ -163,6 +179,12 @@ private:
 
     RunReplay currentReplay_;
     std::optional<RunReplay> lastCompletedReplay_;
+
+    bool ghostEnabled_ = true;
+    std::optional<RunReplay> ghostReplay_;
+    std::optional<Player> ghostPlayer_;
+    PhysicsWorld ghostWorld_;
+    std::size_t ghostTickIndex_ = 0;
 };
 
 } // namespace logic

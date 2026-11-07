@@ -75,6 +75,34 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
                         0.6f, 0.45f, 0.0f, 0.85f, &camera);
     }
 
+    // Ghost rendering (speedrun replay overlay)
+    if (snapshot.ghost.visible) {
+        const auto& ghost = snapshot.ghost;
+        if (spritePipeline && sprite) {
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline->handle());
+            sprite->bind(cmd, spritePipeline->layout());
+            sprite->draw(cmd, spritePipeline->layout(),
+                         ghost.bounds.x, ghost.bounds.y,
+                         ghost.bounds.width, ghost.bounds.height,
+                         ghost.facingDirection < 0.0f,
+                         presentation::COLOR_GHOST_R,
+                         presentation::COLOR_GHOST_G,
+                         presentation::COLOR_GHOST_B,
+                         ghost.alpha,
+                         camera.position.x, camera.position.y);
+            shapes.bind(cmd, shapePipeline);
+        } else {
+            shapes.drawRect(cmd, shapePipeline,
+                            ghost.bounds.x, ghost.bounds.y,
+                            ghost.bounds.width, ghost.bounds.height,
+                            presentation::COLOR_GHOST_R,
+                            presentation::COLOR_GHOST_G,
+                            presentation::COLOR_GHOST_B,
+                            ghost.alpha,
+                            &camera);
+        }
+    }
+
     const auto& player = snapshot.player;
     if (spritePipeline && sprite) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline->handle());

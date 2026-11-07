@@ -25,6 +25,13 @@ struct RenderPlayerSnapshot {
     float facingDirection = 1.0f;
 };
 
+struct RenderGhostSnapshot {
+    bool visible = false;
+    RenderRect bounds{};
+    float facingDirection = 1.0f;
+    float alpha = 0.55f;
+};
+
 struct RenderFlagSnapshot {
     bool visible = false;
     RenderRect bounds{};
@@ -32,6 +39,7 @@ struct RenderFlagSnapshot {
 
 struct RenderSnapshot {
     RenderPlayerSnapshot player{};
+    RenderGhostSnapshot ghost{};
     std::vector<RenderRect> platforms;
 
     // Presentation-only semantic cells generated from modular platform regions.

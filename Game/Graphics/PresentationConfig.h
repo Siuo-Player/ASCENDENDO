@@ -11,6 +11,11 @@ constexpr float COLOR_PLAYER_R      = 0.90f;
 constexpr float COLOR_PLAYER_G      = 0.45f;
 constexpr float COLOR_PLAYER_B      = 0.20f;
 
+constexpr float COLOR_GHOST_R       = 0.00f;
+constexpr float COLOR_GHOST_G       = 0.94f;
+constexpr float COLOR_GHOST_B       = 1.00f;
+constexpr float COLOR_GHOST_ALPHA   = 0.55f;
+
 constexpr float COLOR_FLAG_POLE_R   = 0.85f;
 constexpr float COLOR_FLAG_POLE_G   = 0.65f;
 constexpr float COLOR_FLAG_POLE_B   = 0.10f;

@@ -288,4 +288,27 @@ TEST_SUITE("GameSession") {
         std::error_code ec;
         std::filesystem::remove_all(tempRoot, ec);
     }
+
+    TEST_CASE("game session ghost replay loading and toggle") {
+        logic::GameSession session({}, "test-campaign", "runs.csv");
+        CHECK(session.ghostEnabled());
+        CHECK(session.ghostPlayer() == nullptr);
+
+        logic::RunReplayHeader header;
+        header.campaignID = "test-campaign";
+        std::vector<logic::TickInput> inputs(30);
+        inputs[0].right = true;
+        logic::RunReplay replay(header, inputs);
+
+        session.setGhostReplay(replay);
+        REQUIRE(session.ghostReplay() != nullptr);
+        CHECK(session.ghostReplay()->header().campaignID == "test-campaign");
+
+        session.setGhostEnabled(false);
+        CHECK_FALSE(session.ghostEnabled());
+        CHECK(session.ghostPlayer() == nullptr);
+
+        session.toggleGhost();
+        CHECK(session.ghostEnabled());
+    }
 }

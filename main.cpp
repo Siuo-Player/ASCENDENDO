@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
             logic::EditorRenderSnapshot editorSnapshot;
             logic::CampaignEditorRenderSnapshot campaignSnapshot;
             if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
-                renderSnapshot = buildRenderSnapshot(session.player(), session.level());
+                renderSnapshot = buildRenderSnapshot(session.player(), session.level(), session.ghostPlayer());
                 renderer.attachEditorSnapshot(nullptr);
                 renderer.attachCampaignEditorSnapshot(nullptr);
             } else if (currentState == GameState::EDITOR) {
