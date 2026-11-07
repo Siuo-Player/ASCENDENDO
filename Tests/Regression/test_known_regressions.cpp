@@ -19,6 +19,7 @@
 #include "Logic/Player.h"
 #include "Logic/RunReplay.h"
 
+#include <cmath>
 #include <vector>
 
 TEST_SUITE("Regression Testing") {

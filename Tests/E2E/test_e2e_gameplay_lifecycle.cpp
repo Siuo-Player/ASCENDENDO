@@ -20,6 +20,7 @@
 #include "Logic/RunReplay.h"
 
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <vector>
