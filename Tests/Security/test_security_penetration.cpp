@@ -99,14 +99,17 @@ TEST_CASE("Path Traversal Attacks: Rejeição estrita de escape de sandbox") {
     std::filesystem::create_directories(sandboxRoot);
 
     // Tentativas comuns de path traversal
-    const std::vector<std::string> maliciousPaths = {
+    std::vector<std::string> maliciousPaths = {
         "../../etc/passwd",
-        "..\\..\\Windows\\System32\\calc.exe",
         "nested/../../outside.txt",
         "/etc/shadow",
-        "C:\\Windows\\System32\\cmd.exe",
+        "/usr/bin/bash",
         "relative/../../../root.txt",
     };
+#ifdef _WIN32
+    maliciousPaths.push_back("..\\..\\Windows\\System32\\calc.exe");
+    maliciousPaths.push_back("C:\\Windows\\System32\\cmd.exe");
+#endif
 
     for (const auto& evilPath : maliciousPaths) {
         const std::filesystem::path target = sandboxRoot / evilPath;
