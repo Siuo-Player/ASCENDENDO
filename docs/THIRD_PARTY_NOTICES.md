@@ -30,6 +30,11 @@ Authoritative license text:
 
 The Orbitron font must not be treated as MIT-licensed project code.
 
+
+## Platform assets and candidate registry
+
+Visual candidate assets for platforms and landmarks undergo strict human review and provenance tracking before staging. Current approved and rework candidate records, including CC0 licenses (e.g. Kenney Pixel Line Platformer, HDST Platformer Pack), are catalogued in `Game/Assets/Sprites/PLATFORM_ASSET_REGISTRY.md`.
+
 ## Project code
 
 ASCENDENDO-owned source code is licensed under the MIT License in the repository root. That license does not change the license of third-party code, fonts, images, or other external material.

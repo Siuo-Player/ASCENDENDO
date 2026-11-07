@@ -84,7 +84,7 @@ O Campaign Editor gere a sequência de levels. O fluxo 1.0 começa por seleccion
 
 ## 9. Campanhas 1.0
 
-Mínimo oficial: **10 campanhas / 575 levels**.
+Mínimo oficial: **10 campanhas / 610 levels**.
 
 Cada campanha progride aproximadamente do fácil para o difícil/extremo. A escala nominal de dificuldade deriva do modelo e da validação reais, não de um número arbitrário congelado.
 

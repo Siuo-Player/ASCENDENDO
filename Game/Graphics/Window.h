@@ -35,6 +35,7 @@ public:
 
     bool shouldClose() const;
     void pollEvents();
+    void toggleFullscreen();
 
     void appendRequiredExtensions(std::vector<const char*>& out) const;
     VkSurfaceKHR createVulkanSurface(VkInstance instance) const;
@@ -43,11 +44,17 @@ public:
     uint32_t width() const { return m_width; }
     uint32_t height() const { return m_height; }
     bool isCreated() const { return m_handle != nullptr; }
+    bool isFullscreen() const { return m_fullscreen; }
 
 private:
     GLFWwindow* m_handle = nullptr;
     uint32_t m_width = 0;
     uint32_t m_height = 0;
+    bool m_fullscreen = false;
+    int m_windowedX = 0;
+    int m_windowedY = 0;
+    int m_windowedWidth = 0;
+    int m_windowedHeight = 0;
 };
 
 } // namespace gfx

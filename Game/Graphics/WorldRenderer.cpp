@@ -75,6 +75,34 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
                         0.6f, 0.45f, 0.0f, 0.85f, &camera);
     }
 
+    // Ghost rendering (speedrun replay overlay)
+    if (snapshot.ghost.visible) {
+        const auto& ghost = snapshot.ghost;
+        if (spritePipeline && sprite) {
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline->handle());
+            sprite->bind(cmd, spritePipeline->layout());
+            sprite->draw(cmd, spritePipeline->layout(),
+                         ghost.bounds.x, ghost.bounds.y,
+                         ghost.bounds.width, ghost.bounds.height,
+                         ghost.facingDirection < 0.0f,
+                         presentation::COLOR_GHOST_R,
+                         presentation::COLOR_GHOST_G,
+                         presentation::COLOR_GHOST_B,
+                         ghost.alpha,
+                         camera.position.x, camera.position.y);
+            shapes.bind(cmd, shapePipeline);
+        } else {
+            shapes.drawRect(cmd, shapePipeline,
+                            ghost.bounds.x, ghost.bounds.y,
+                            ghost.bounds.width, ghost.bounds.height,
+                            presentation::COLOR_GHOST_R,
+                            presentation::COLOR_GHOST_G,
+                            presentation::COLOR_GHOST_B,
+                            ghost.alpha,
+                            &camera);
+        }
+    }
+
     const auto& player = snapshot.player;
     if (spritePipeline && sprite) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline->handle());
@@ -94,6 +122,23 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
                         presentation::COLOR_PLAYER_G,
                         presentation::COLOR_PLAYER_B,
                         1.0f, &camera);
+    }
+
+    // Commitment Jump: barra de carga / forca de salto visivel acima do jogador
+    if (player.chargeRatio > 0.01f) {
+        const float barX = player.bounds.x - 2.0f;
+        const float barY = player.bounds.y + player.bounds.height + 3.0f;
+        const float barW = player.bounds.width + 4.0f;
+        const float barH = 3.0f;
+        shapes.drawRect(cmd, shapePipeline, barX - 1.0f, barY - 1.0f,
+                        barW + 2.0f, barH + 2.0f,
+                        0.05f, 0.05f, 0.08f, 0.85f, &camera);
+        const float r = 0.85f + 0.15f * player.chargeRatio;
+        const float g = 0.85f * (1.0f - player.chargeRatio * 0.55f);
+        const float b = 0.15f * (1.0f - player.chargeRatio);
+        shapes.drawRect(cmd, shapePipeline, barX, barY,
+                        barW * player.chargeRatio, barH,
+                        r, g, b, 0.95f, &camera);
     }
 }
 

@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Core/CampaignCatalogue.h"
 #include "Core/GameStateMachine.h"
 #include "Core/KeyBindings.h"
+#include "Graphics/RenderSnapshot.h"
 #include "Logic/CampaignEditor.h"
 #include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/CampaignRuntime.h"
@@ -12,6 +14,8 @@
 #include "Logic/LevelDataValidator.h"
 #include "Logic/Physics.h"
 #include "Logic/Player.h"
+#include "Logic/ProfileStorage.h"
+#include "Logic/RunReplay.h"
 #include "Logic/SimulationOrchestrator.h"
 
 #include <cstdint>
@@ -35,11 +39,18 @@ class GameSession {
 public:
     GameSession(std::vector<std::filesystem::path> campaign,
                 std::string campaignID,
-                std::string runsCsvPath)
+                std::string runsCsvPath,
+                std::string profilePath = "")
         : campaignRuntime_(std::move(campaign)),
           editorSession_(campaignRuntime_.levelCount() <= 1),
           campaignID_(std::move(campaignID)),
-          runsCsvPath_(std::move(runsCsvPath)) {}
+          runsCsvPath_(std::move(runsCsvPath)),
+          profilePath_(std::move(profilePath)) {
+        if (!profilePath_.empty()) {
+            userProfile_ = ProfileStorage::load(profilePath_);
+            tryLoadDefaultGhostReplay();
+        }
+    }
 
     GameSession(const GameSession&) = delete;
     GameSession& operator=(const GameSession&) = delete;
@@ -65,6 +76,8 @@ public:
         player_.body.position = level_.spawnPosition;
         world_ = logic::PhysicsWorld{};
         elapsedTime_ = 0.0f;
+        ghostPlayer_.reset();
+        ghostTickIndex_ = 0;
         stateMachine_.enterPlaying();
         return true;
     }
@@ -73,6 +86,32 @@ public:
     void configureCampaignName(std::string campaignName) {
         campaignName_ = std::move(campaignName);
     }
+    void configureProfilePath(std::string profilePath) {
+        profilePath_ = std::move(profilePath);
+        if (!profilePath_.empty()) {
+            userProfile_ = ProfileStorage::load(profilePath_);
+            tryLoadDefaultGhostReplay();
+        }
+    }
+    void configurePlayer(std::string playerID, std::string playerName) {
+        playerID_ = std::move(playerID);
+        playerName_ = std::move(playerName);
+    }
+
+    void setAvailableCampaigns(std::vector<core::CampaignDescriptor> campaigns) {
+        availableCampaigns_ = std::move(campaigns);
+    }
+    const std::vector<core::CampaignDescriptor>& availableCampaigns() const noexcept {
+        return availableCampaigns_;
+    }
+    std::size_t activeCampaignIndex() const noexcept { return activeCampaignIndex_; }
+    bool selectCampaign(std::size_t index, float logicalWidth = 640.0f);
+    void selectNextCampaign(float logicalWidth = 640.0f);
+    void selectPreviousCampaign(float logicalWidth = 640.0f);
+
+    gfx::MenuRenderSnapshot menuRenderSnapshot() const;
+    gfx::RenderHudSnapshot hudSnapshot() const;
+
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
     void openEditor(core::GameState returnState) noexcept;
@@ -90,6 +129,9 @@ public:
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
     const std::string& campaignName() const noexcept { return campaignName_; }
+    const std::string& playerID() const noexcept { return playerID_; }
+    const std::string& playerName() const noexcept { return playerName_; }
+    const UserProfile& userProfile() const noexcept { return userProfile_; }
 
     Player& player() noexcept { return player_; }
     const Player& player() const noexcept { return player_; }
@@ -102,6 +144,24 @@ public:
     CampaignEditorRenderSnapshot campaignEditorSnapshot() const;
     bool campaignEditorDirty() const noexcept { return campaignEditorDirty_; }
 
+    const RunReplay& currentReplay() const noexcept { return currentReplay_; }
+    const std::optional<RunReplay>& lastCompletedReplay() const noexcept { return lastCompletedReplay_; }
+    bool exportLastReplay(const std::filesystem::path& path) const {
+        if (!lastCompletedReplay_) return false;
+        return lastCompletedReplay_->saveToFile(path);
+    }
+
+    // ── Speedrun Ghost Replay ────────────────────────────────────────────────
+    bool ghostEnabled() const noexcept { return ghostEnabled_; }
+    void setGhostEnabled(bool enabled) noexcept { ghostEnabled_ = enabled; }
+    void toggleGhost() noexcept { ghostEnabled_ = !ghostEnabled_; }
+    void setGhostReplay(RunReplay replay);
+    bool loadGhostReplay(const std::filesystem::path& path);
+    const RunReplay* ghostReplay() const noexcept { return ghostReplay_ ? &(*ghostReplay_) : nullptr; }
+    const Player* ghostPlayer() const noexcept {
+        return (ghostEnabled_ && ghostPlayer_) ? &(*ghostPlayer_) : nullptr;
+    }
+
 private:
     int clickedMenuBox(const InputManager& input,
                        int32_t windowWidth,
@@ -110,6 +170,7 @@ private:
                        float logicalWidth) const;
 
     void resetGame(float logicalWidth);
+    void tryLoadDefaultGhostReplay();
 
     CampaignRuntime campaignRuntime_;
     Level level_;
@@ -120,13 +181,29 @@ private:
     CampaignEditorDocument campaignEditor_;
     core::GameStateMachine stateMachine_;
 
+    std::vector<core::CampaignDescriptor> availableCampaigns_;
+    std::size_t activeCampaignIndex_ = 0;
+
     std::string campaignEditorPath_;
     bool campaignEditorLoaded_ = false;
     bool campaignEditorDirty_ = false;
     std::string campaignID_;
     std::string campaignName_ = "Campanha Principal";
+    std::string playerID_ = "local_player";
+    std::string playerName_ = "Player";
     std::string runsCsvPath_;
+    std::string profilePath_;
+    UserProfile userProfile_;
     float elapsedTime_ = 0.0f;
+
+    RunReplay currentReplay_;
+    std::optional<RunReplay> lastCompletedReplay_;
+
+    bool ghostEnabled_ = true;
+    std::optional<RunReplay> ghostReplay_;
+    std::optional<Player> ghostPlayer_;
+    PhysicsWorld ghostWorld_;
+    std::size_t ghostTickIndex_ = 0;
 };
 
 } // namespace logic

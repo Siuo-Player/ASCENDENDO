@@ -72,3 +72,17 @@ Para alterações críticas, usar os workflows relevantes: testes nativos, Windo
 No Windows/PowerShell, não dar comandos bash incompatíveis. Para Python, preferir `py -m pytest` quando aplicável.
 
 Se um CI falhar, investigar a causa e corrigir a branch. Um rerun só é evidência suficiente quando o job realmente termina com sucesso e não houve alteração necessária.
+
+
+## Memória contínua (ai-memory)
+
+Este repositório utiliza o padrão `ai-memory` com ficheiros Markdown versionados em Git (`docs/memory/`) para continuidade entre sessões e agentes distintos (Antigravity, Claude Code, Cursor, etc.).
+
+1. **Ao iniciar:**
+   - Consultar `docs/memory/decisions/` e `docs/memory/gotchas/` (ou usar ferramentas MCP `memory_briefing` / `memory_query`).
+   - Evitar repetir erros ou armadilhas documentados.
+2. **Durante o trabalho:**
+   - Registar gotchas de compilação, bugs subtis de SO ou física em `docs/memory/gotchas/`.
+   - Registar decisões de arquitectura em `docs/memory/decisions/` (ADR). Decisões passadas não são editadas: um novo ADR substitui o anterior.
+3. **Ao terminar:**
+   - Registar o resumo da sessão em `docs/memory/sessions/YYYY-MM-DD-<descricao>.md`, indicando tarefas concluídas, testes executados e pendências.

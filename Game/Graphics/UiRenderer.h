@@ -6,6 +6,7 @@
 // Não conhece Player/Level internamente; recebe apenas os dados necessários.
 // =============================================================================
 
+#include "Graphics/RenderSnapshot.h"
 #include "Logic/CampaignEditorSnapshot.h"
 #include <vulkan/vulkan.h>
 
@@ -21,6 +22,13 @@ public:
     void drawTimer(VkCommandBuffer cmd, TextPipeline* textPipeline,
                    FontRenderer* font, float elapsedSeconds) const;
 
+    void drawGameplayHud(VkCommandBuffer cmd,
+                         const Pipeline& shapePipeline,
+                         const ShapeRenderer& shapes,
+                         TextPipeline* textPipeline,
+                         FontRenderer* font,
+                         const RenderHudSnapshot& hud) const;
+
     void drawPaused(VkCommandBuffer cmd,
                     const Pipeline& shapePipeline,
                     const ShapeRenderer& shapes,
@@ -33,7 +41,8 @@ public:
                   const ShapeRenderer& shapes,
                   TextPipeline* textPipeline,
                   FontRenderer* font,
-                  int menuSelection) const;
+                  int menuSelection,
+                  const MenuRenderSnapshot* snapshot = nullptr) const;
 
     void drawCredits(VkCommandBuffer cmd,
                      const Pipeline& shapePipeline,

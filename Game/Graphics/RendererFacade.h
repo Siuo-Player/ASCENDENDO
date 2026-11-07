@@ -44,6 +44,7 @@ public:
     void attachSprite(SpritePipeline* spritePipeline, SpriteRenderer* sprite);
     void attachEditorSnapshot(const logic::EditorRenderSnapshot* snapshot);
     void attachCampaignEditorSnapshot(const logic::CampaignEditorRenderSnapshot* snapshot);
+    void attachMenuSnapshot(const MenuRenderSnapshot* snapshot) { m_menuSnapshotPtr = snapshot; }
 
     bool drawFrame(const RenderSnapshot& snapshot,
                    const Camera& camera,
@@ -69,6 +70,7 @@ private:
     const logic::EditorRenderSnapshot* m_editorSnapshotPtr = nullptr;
     logic::CampaignEditorRenderSnapshot m_campaignEditorSnapshot{};
     const logic::CampaignEditorRenderSnapshot* m_campaignEditorSnapshotPtr = nullptr;
+    const MenuRenderSnapshot* m_menuSnapshotPtr = nullptr;
 
     bool m_initialized = false;
 };

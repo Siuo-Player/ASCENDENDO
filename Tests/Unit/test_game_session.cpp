@@ -237,4 +237,148 @@ TEST_SUITE("GameSession") {
         CHECK(result.stateChanged == false);
         CHECK(session.state() == core::GameState::EDITOR);
     }
+
+    TEST_CASE("campaign completion records run and persists secure profile") {
+        const auto tempRoot = std::filesystem::temp_directory_path() / "ascendendo-session-profile-test";
+        std::filesystem::create_directories(tempRoot);
+        const auto runsPath = tempRoot / "runs.csv";
+        const auto profilePath = tempRoot / "profile.secure";
+
+        const auto levelPath = writeTestLevel(
+            "ascendendo-completion-profile-test.lvl",
+            "NAME Completion Test\n"
+            "PLATFORM 300 20 40 10\n");
+
+        {
+            logic::GameSession session(
+                {levelPath},
+                "test-campaign-id",
+                runsPath.string(),
+                profilePath.string());
+            session.configureCampaignName("Test Campaign");
+            session.beginPlaying(static_cast<float>(config::LOGICAL_WIDTH));
+
+            session.player().body.position = session.level().flagBounds.min;
+
+            logic::InputManager input;
+            core::KeyBindings bindings;
+            const auto result = session.update(
+                0.016f, input, bindings, 640, 360, 640.0f, 360.0f);
+
+            CHECK(result.campaignCompleted);
+            CHECK(result.runRecorded);
+            CHECK(std::filesystem::exists(runsPath));
+            CHECK(std::filesystem::exists(profilePath));
+            CHECK(session.userProfile().totalCompletions == 1);
+            CHECK(session.userProfile().lastPlayedCampaignID == "test-campaign-id");
+            CHECK(session.lastCompletedReplay().has_value());
+            CHECK(session.lastCompletedReplay()->header().campaignID == "test-campaign-id");
+            const auto replayPath = tempRoot / "Replays" / "latest_test-campaign-id.replay";
+            CHECK(std::filesystem::exists(replayPath));
+        }
+
+        const auto loadedProfile = logic::ProfileStorage::load(profilePath);
+        CHECK(loadedProfile.totalCompletions == 1);
+        CHECK(loadedProfile.lastPlayedCampaignID == "test-campaign-id");
+        const auto* rec = loadedProfile.findRecord("test-campaign-id");
+        REQUIRE(rec != nullptr);
+        CHECK(rec->completions == 1);
+
+        removeTestFile(levelPath);
+        std::error_code ec;
+        std::filesystem::remove_all(tempRoot, ec);
+    }
+
+    TEST_CASE("game session ghost replay loading and toggle") {
+        logic::GameSession session({}, "test-campaign", "runs.csv");
+        CHECK(session.ghostEnabled());
+        CHECK(session.ghostPlayer() == nullptr);
+
+        logic::RunReplayHeader header;
+        header.campaignID = "test-campaign";
+        std::vector<logic::TickInput> inputs(30);
+        inputs[0].right = true;
+        logic::RunReplay replay(header, inputs);
+
+        session.setGhostReplay(replay);
+        REQUIRE(session.ghostReplay() != nullptr);
+        CHECK(session.ghostReplay()->header().campaignID == "test-campaign");
+
+        session.setGhostEnabled(false);
+        CHECK_FALSE(session.ghostEnabled());
+        CHECK(session.ghostPlayer() == nullptr);
+
+        session.toggleGhost();
+        CHECK(session.ghostEnabled());
+    }
+
+    TEST_CASE("game session campaign selection and catalogue browsing") {
+        logic::GameSession session({}, "camp-default", "runs.csv");
+        CHECK(session.availableCampaigns().empty());
+        CHECK(session.activeCampaignIndex() == 0);
+
+        std::vector<core::CampaignDescriptor> catalog = {
+            {"01-iniciacao", "Primeira Ascensao", std::filesystem::path("Game/Assets/Campaigns/01-iniciacao/campaign.txt")},
+            {"02-ritmo", "Ritmo", std::filesystem::path("Game/Assets/Campaigns/02-ritmo/campaign.txt")},
+            {"03-deslocamento", "Deslocamento", std::filesystem::path("Game/Assets/Campaigns/03-deslocamento/campaign.txt")}
+        };
+
+        session.setAvailableCampaigns(catalog);
+        REQUIRE(session.availableCampaigns().size() == 3);
+        CHECK(session.activeCampaignIndex() == 0);
+
+        // Circular next
+        session.selectNextCampaign();
+        CHECK(session.activeCampaignIndex() == 1);
+        CHECK(session.campaignName() == "Ritmo");
+
+        session.selectNextCampaign();
+        CHECK(session.activeCampaignIndex() == 2);
+        CHECK(session.campaignName() == "Deslocamento");
+
+        // Wraps around to 0
+        session.selectNextCampaign();
+        CHECK(session.activeCampaignIndex() == 0);
+        CHECK(session.campaignName() == "Primeira Ascensao");
+
+        // Circular previous wraps to last
+        session.selectPreviousCampaign();
+        CHECK(session.activeCampaignIndex() == 2);
+        CHECK(session.campaignName() == "Deslocamento");
+
+        session.selectPreviousCampaign();
+        CHECK(session.activeCampaignIndex() == 1);
+        CHECK(session.campaignName() == "Ritmo");
+
+        // Direct selection
+        CHECK(session.selectCampaign(0));
+        CHECK(session.activeCampaignIndex() == 0);
+        CHECK_FALSE(session.selectCampaign(99)); // Out of bounds
+        CHECK(session.activeCampaignIndex() == 0);
+
+        // Menu snapshot
+        const auto menuSnap = session.menuRenderSnapshot();
+        CHECK(menuSnap.selection == session.menuSelection());
+        CHECK(menuSnap.activeCampaignIndex == 0);
+        REQUIRE(menuSnap.campaigns.size() == 3);
+        CHECK(menuSnap.campaigns[0].id == "01-iniciacao");
+        CHECK(menuSnap.campaigns[0].name == "Primeira Ascensao");
+        CHECK(menuSnap.campaigns[0].levelCount == 10);
+        CHECK(menuSnap.campaigns[1].levelCount == 25);
+    }
+
+    TEST_CASE("game session hud snapshot altitude and timer calculation") {
+        logic::GameSession session(
+            {std::filesystem::path("Game/Assets/Levels/precipicio.lvl")},
+            "test-camp",
+            "runs.csv");
+        session.configureCampaignName("Campanha Teste");
+        session.beginPlaying(640.0f);
+
+        auto hud = session.hudSnapshot();
+        CHECK(hud.elapsedTime == doctest::Approx(0.0f));
+        // Spawn is at Y=16, so altitude is 16/16 = 1 meter
+        CHECK(hud.altitudeMeters == doctest::Approx(1.0f));
+        CHECK(std::string(hud.campaignName) == "Campanha Teste");
+    }
 }

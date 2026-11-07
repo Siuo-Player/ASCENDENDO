@@ -182,4 +182,53 @@ TEST_SUITE("RenderSnapshot") {
         CHECK_FALSE(snapshot.semanticPlatformsValid);
         CHECK(snapshot.semanticPlatformCells.empty());
     }
+
+    TEST_CASE("builder copia o estado do ghost quando fornecido") {
+        Player player;
+        Level level;
+        Player ghost;
+        ghost.body.position = {120.0f, 180.0f};
+        ghost.facingDirection = -1.0f;
+
+        const RenderSnapshot snapshotWithoutGhost = buildRenderSnapshot(player, level);
+        CHECK_FALSE(snapshotWithoutGhost.ghost.visible);
+
+        const RenderSnapshot snapshotWithGhost = buildRenderSnapshot(player, level, &ghost);
+        CHECK(snapshotWithGhost.ghost.visible);
+        CHECK(snapshotWithGhost.ghost.bounds.x == doctest::Approx(120.0f));
+        CHECK(snapshotWithGhost.ghost.bounds.y == doctest::Approx(180.0f));
+        CHECK(snapshotWithGhost.ghost.facingDirection == -1.0f);
+        CHECK(snapshotWithGhost.ghost.alpha > 0.0f);
+    }
+
+    TEST_CASE("builder copia a forca do Commitment Jump") {
+        Player player;
+        Level level;
+        player.jumpCharge = 0.5f;
+
+        const RenderSnapshot snapshot = buildRenderSnapshot(player, level);
+        CHECK(snapshot.player.chargeRatio == doctest::Approx(0.5f));
+    }
+
+    TEST_CASE("builder propaga metadados do HUD de speedrun") {
+        Player player;
+        Level level;
+        RenderHudSnapshot hud;
+        hud.elapsedTime = 42.15f;
+        hud.personalBestTime = 38.90f;
+        hud.altitudeMeters = 150.0f;
+        hud.ghostAvailable = true;
+        hud.ghostVisible = true;
+        hud.ghostDeltaMeters = 12.0f;
+        std::snprintf(hud.campaignName, sizeof(hud.campaignName), "Ritmo");
+
+        const RenderSnapshot snapshot = buildRenderSnapshot(player, level, nullptr, hud);
+        CHECK(snapshot.hud.elapsedTime == doctest::Approx(42.15f));
+        CHECK(snapshot.hud.personalBestTime == doctest::Approx(38.90f));
+        CHECK(snapshot.hud.altitudeMeters == doctest::Approx(150.0f));
+        CHECK(snapshot.hud.ghostAvailable);
+        CHECK(snapshot.hud.ghostVisible);
+        CHECK(snapshot.hud.ghostDeltaMeters == doctest::Approx(12.0f));
+        CHECK(std::string(snapshot.hud.campaignName) == "Ritmo");
+    }
 }

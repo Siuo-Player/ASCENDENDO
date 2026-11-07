@@ -2,6 +2,7 @@
 // Game/Graphics/RendererCore.cpp
 // =============================================================================
 #include "Graphics/RendererCore.h"
+#include "Core/Environment.h"
 #include "Graphics/VulkanContext.h"
 #include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
@@ -39,8 +40,8 @@ bool RendererCore::init(VulkanContext* ctx, Swapchain* swapchain,
         return false;
     }
 
-    if (const char* path = std::getenv("ASCENDENDO_CAPTURE_PPM"); path && *path) {
-        m_capturePath = path;
+    if (const auto captureEnv = core::getEnvironmentVariable("ASCENDENDO_CAPTURE_PPM"); captureEnv && !captureEnv->empty()) {
+        m_capturePath = *captureEnv;
     }
 
     if (!createFramebuffers() || !createCommandPool() ||

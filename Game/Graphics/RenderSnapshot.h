@@ -9,6 +9,7 @@
 #include "Graphics/PlatformCompositor.h"
 
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace gfx {
@@ -23,6 +24,14 @@ struct RenderRect {
 struct RenderPlayerSnapshot {
     RenderRect bounds{};
     float facingDirection = 1.0f;
+    float chargeRatio = 0.0f; // [0.0f, 1.0f] jump charge power ratio
+};
+
+struct RenderGhostSnapshot {
+    bool visible = false;
+    RenderRect bounds{};
+    float facingDirection = 1.0f;
+    float alpha = 0.55f;
 };
 
 struct RenderFlagSnapshot {
@@ -30,8 +39,33 @@ struct RenderFlagSnapshot {
     RenderRect bounds{};
 };
 
+struct RenderHudSnapshot {
+    float elapsedTime = 0.0f;
+    float personalBestTime = 0.0f; // 0.0f se ainda nao completado
+    float altitudeMeters = 0.0f;
+    bool ghostAvailable = false;
+    bool ghostVisible = false;
+    float ghostDeltaMeters = 0.0f; // positivo = jogador a frente; negativo = atras
+    char campaignName[64]{};
+};
+
+struct MenuCampaignItem {
+    std::string id;
+    std::string name;
+    std::size_t levelCount = 0;
+    float bestTimeSeconds = 0.0f;
+    uint32_t completions = 0;
+};
+
+struct MenuRenderSnapshot {
+    int selection = 0;
+    std::size_t activeCampaignIndex = 0;
+    std::vector<MenuCampaignItem> campaigns;
+};
+
 struct RenderSnapshot {
     RenderPlayerSnapshot player{};
+    RenderGhostSnapshot ghost{};
     std::vector<RenderRect> platforms;
 
     // Presentation-only semantic cells generated from modular platform regions.
@@ -41,6 +75,7 @@ struct RenderSnapshot {
     std::vector<compositor::RegionCell> semanticPlatformCells;
 
     RenderFlagSnapshot flag{};
+    RenderHudSnapshot hud{};
 };
 
 } // namespace gfx
