@@ -38,6 +38,11 @@ void GameStateMachine::enterPlaying() noexcept {
     menuSelection_ = 0;
 }
 
+void GameStateMachine::enterReplayWatch() noexcept {
+    state_ = GameState::REPLAY_WATCH;
+    menuSelection_ = 0;
+}
+
 void GameStateMachine::enterEditor(GameState returnState) noexcept {
     editorReturnState_ = returnState;
     state_ = GameState::EDITOR;
@@ -72,7 +77,7 @@ void GameStateMachine::returnFromCredits() noexcept {
 }
 
 void GameStateMachine::pause() noexcept {
-    if (state_ == GameState::PLAYING) {
+    if (state_ == GameState::PLAYING || state_ == GameState::REPLAY_WATCH) {
         state_ = GameState::PAUSED;
         menuSelection_ = 0;
     }

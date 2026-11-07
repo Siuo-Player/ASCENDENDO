@@ -46,6 +46,8 @@ struct RenderHudSnapshot {
     bool ghostAvailable = false;
     bool ghostVisible = false;
     float ghostDeltaMeters = 0.0f; // positivo = jogador a frente; negativo = atras
+    bool isReplayWatch = false;
+    float replayTotalTime = 0.0f;
     char campaignName[64]{};
 };
 
@@ -55,11 +57,14 @@ struct MenuCampaignItem {
     std::size_t levelCount = 0;
     float bestTimeSeconds = 0.0f;
     uint32_t completions = 0;
+    bool hasReplay = false;
 };
 
 struct MenuRenderSnapshot {
     int selection = 0;
     std::size_t activeCampaignIndex = 0;
+    bool ghostEnabled = true;
+    bool activeHasReplay = false;
     std::vector<MenuCampaignItem> campaigns;
 };
 

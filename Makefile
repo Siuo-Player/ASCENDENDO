@@ -114,7 +114,11 @@ TEST_SRCS := $(wildcard $(TEST_DIR)/*.cpp)            \
              $(wildcard $(TEST_DIR)/Integration/*.cpp) \
              $(wildcard $(TEST_DIR)/System/*.cpp)      \
              $(wildcard $(TEST_DIR)/Regression/*.cpp)  \
-             $(wildcard $(TEST_DIR)/Acceptance/*.cpp)
+             $(wildcard $(TEST_DIR)/Acceptance/*.cpp)  \
+             $(wildcard $(TEST_DIR)/Performance/*.cpp) \
+             $(wildcard $(TEST_DIR)/Security/*.cpp)    \
+             $(wildcard $(TEST_DIR)/E2E/*.cpp)         \
+             $(wildcard $(TEST_DIR)/Usability/*.cpp)
 
 GAME_MAIN_SRC := main.cpp
 GAME_MAIN_OBJ := $(GAME_BUILD_DIR)/main.o

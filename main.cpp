@@ -101,6 +101,9 @@ void applyStatePresentation(GLFWwindow* window,
         setCreditsTitle(window);
     } else if (state == GameState::PLAYING) {
         setPlayingTitle(window);
+    } else if (state == GameState::REPLAY_WATCH) {
+        glfwSetWindowTitle(window,
+            "ASCENDENDO | MODO REPLAY (Assistir Recorde) | Q/ESC voltar ao menu");
     }
 }
 
@@ -112,6 +115,7 @@ RenderState toRenderState(GameState state) {
         case GameState::MENU:             return RenderState::MENU;
         case GameState::EDITOR:           return RenderState::EDITOR;
         case GameState::CAMPAIGN_EDITOR:  return RenderState::EDITOR;
+        case GameState::REPLAY_WATCH:     return RenderState::PLAYING;
     }
     return RenderState::MENU;
 }
@@ -284,7 +288,7 @@ int main(int argc, char** argv) {
             const GameState currentState = session.state();
 
             if (!captureMode &&
-                previousState == GameState::PLAYING && currentState == GameState::PLAYING) {
+                (currentState == GameState::PLAYING || currentState == GameState::REPLAY_WATCH)) {
                 camera.follow(session.player().position(), dt);
             }
 
@@ -315,7 +319,7 @@ int main(int argc, char** argv) {
             logic::EditorRenderSnapshot editorSnapshot;
             logic::CampaignEditorRenderSnapshot campaignSnapshot;
             gfx::MenuRenderSnapshot menuSnapshot;
-            if (currentState == GameState::PLAYING || currentState == GameState::PAUSED) {
+            if (currentState == GameState::PLAYING || currentState == GameState::PAUSED || currentState == GameState::REPLAY_WATCH) {
                 renderSnapshot = buildRenderSnapshot(session.player(), session.level(), session.ghostPlayer(), session.hudSnapshot());
                 renderer.attachEditorSnapshot(nullptr);
                 renderer.attachCampaignEditorSnapshot(nullptr);
