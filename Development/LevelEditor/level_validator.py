@@ -2,6 +2,12 @@
 import sys
 from pathlib import Path
 
+# Configurar stdout/stderr para UTF-8 resiliente no Windows
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # v7.3 — FIX: LOGICAL_WIDTH estava a 360 (errado). O motor é 640x360 (paisagem).
 LOGICAL_WIDTH  = 640.0
 LOGICAL_HEIGHT = 360.0  # cada nivel deve caber numa unica tela de altura
@@ -11,7 +17,7 @@ def validate_level(filepath):
         with open(filepath, 'r', encoding='utf-8') as f:
             lines = f.readlines()
     except FileNotFoundError:
-        print(f"❌ ERRO: Ficheiro não encontrado -> {filepath}")
+        print(f"[ERRO] Ficheiro não encontrado -> {filepath}")
         return False
 
     has_name = False
@@ -29,43 +35,43 @@ def validate_level(filepath):
             has_name = True
         elif parts[0] == "PLATFORM":
             if len(parts) != 5:
-                print(f"  ❌ Linha {i+1}: Formato inválido. Uso: PLATFORM x y w h")
+                print(f"  [ERRO] Linha {i+1}: Formato inválido. Uso: PLATFORM x y w h")
                 valid = False
                 continue
             
             try:
                 x, y, w, h = map(float, parts[1:])
                 if x < 0.0 or (x + w) > LOGICAL_WIDTH:
-                    print(f"  ❌ Linha {i+1}: Plataforma fora dos limites! (X: {x}, W: {w}) -> Extremo: {x+w}. Limite máximo é {LOGICAL_WIDTH}.")
+                    print(f"  [ERRO] Linha {i+1}: Plataforma fora dos limites! (X: {x}, W: {w}) -> Extremo: {x+w}. Limite máximo é {LOGICAL_WIDTH}.")
                     valid = False
                 if (y + h) > LOGICAL_HEIGHT:
-                    print(f"  ❌ Linha {i+1}: Plataforma ultrapassa uma tela de altura! (Y: {y}, H: {h}) -> Topo: {y+h}. Limite máximo é {LOGICAL_HEIGHT}.")
+                    print(f"  [ERRO] Linha {i+1}: Plataforma ultrapassa uma tela de altura! (Y: {y}, H: {h}) -> Topo: {y+h}. Limite máximo é {LOGICAL_HEIGHT}.")
                     valid = False
             except ValueError:
-                print(f"  ❌ Linha {i+1}: Valores não numéricos nas coordenadas.")
+                print(f"  [ERRO] Linha {i+1}: Valores não numéricos nas coordenadas.")
                 valid = False
         elif parts[0] == "FLAG":
             if len(parts) != 5:
-                print(f"  ❌ Linha {i+1}: Formato inválido. Uso: FLAG x y w h")
+                print(f"  [ERRO] Linha {i+1}: Formato inválido. Uso: FLAG x y w h")
                 valid = False
                 continue
             try:
                 x, y, w, h = map(float, parts[1:])
                 if x < 0.0 or (x + w) > LOGICAL_WIDTH:
-                    print(f"  ❌ Linha {i+1}: FLAG fora dos limites laterais! (X: {x}, W: {w})")
+                    print(f"  [ERRO] Linha {i+1}: FLAG fora dos limites laterais! (X: {x}, W: {w})")
                     valid = False
                 if (y + h) > LOGICAL_HEIGHT:
-                    print(f"  ❌ Linha {i+1}: FLAG ultrapassa uma tela de altura! (Y: {y}, H: {h})")
+                    print(f"  [ERRO] Linha {i+1}: FLAG ultrapassa uma tela de altura! (Y: {y}, H: {h})")
                     valid = False
             except ValueError:
-                print(f"  ❌ Linha {i+1}: Valores não numéricos nas coordenadas da FLAG.")
+                print(f"  [ERRO] Linha {i+1}: Valores não numéricos nas coordenadas da FLAG.")
                 valid = False
 
     if not has_name:
-        print(f"  ⚠️  Aviso: O nível devia ter um NAME definido.")
+        print(f"  [AVISO] O nível devia ter um NAME definido.")
     
     if valid:
-        print(f"  ✅ Nível OK.")
+        print(f"  [OK] Nível OK.")
     
     return valid
 
@@ -75,12 +81,11 @@ def validate_campaign(campaign_file):
         with open(campaign_file, 'r', encoding='utf-8') as f:
             levels = [line.strip() for line in f if line.strip() and not line.startswith('#')]
     except FileNotFoundError:
-        print(f"❌ ERRO: Ficheiro de campanha não encontrado -> {campaign_file}")
+        print(f"[ERRO] Ficheiro de campanha não encontrado -> {campaign_file}")
         return False
 
     all_valid = True
     for lvl in levels:
-        # A CORREÇÃO ESTÁ AQUI: Adiciona o caminho completo
         full_path = f"Game/Assets/Levels/{lvl}"
         if not validate_level(full_path):
             all_valid = False
