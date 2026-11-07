@@ -23,7 +23,8 @@ RenderRect toRenderRect(const logic::AABB& bounds) {
 
 RenderSnapshot buildRenderSnapshot(const logic::Player& player,
                                    const logic::Level& level,
-                                   const logic::Player* ghostPlayer) {
+                                   const logic::Player* ghostPlayer,
+                                   const RenderHudSnapshot& hud) {
     RenderSnapshot snapshot;
 
     snapshot.player.bounds = {
@@ -33,6 +34,8 @@ RenderSnapshot buildRenderSnapshot(const logic::Player& player,
         player.body.height
     };
     snapshot.player.facingDirection = player.facingDirection;
+    snapshot.player.chargeRatio = player.chargeRatio();
+    snapshot.hud = hud;
 
     if (ghostPlayer != nullptr) {
         snapshot.ghost.visible = true;

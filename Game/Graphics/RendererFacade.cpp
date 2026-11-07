@@ -56,6 +56,7 @@ void RendererFacade::cleanup() {
     m_editorSnapshot = {};
     m_campaignEditorSnapshotPtr = nullptr;
     m_campaignEditorSnapshot = {};
+    m_menuSnapshotPtr = nullptr;
     m_textPipeline = nullptr;
     m_font = nullptr;
     m_spritePipeline = nullptr;
@@ -172,7 +173,8 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
         case RenderState::PLAYING:
             m_world->draw(commandBuffer, *m_shapePipeline, *m_shapes,
                           snapshot, camera, m_spritePipeline, m_sprite);
-            m_ui->drawTimer(commandBuffer, m_textPipeline, m_font, elapsedSeconds);
+            m_ui->drawGameplayHud(commandBuffer, *m_shapePipeline, *m_shapes,
+                                 m_textPipeline, m_font, snapshot.hud);
             break;
 
         case RenderState::PAUSED:
@@ -189,7 +191,7 @@ bool RendererFacade::drawFrame(const RenderSnapshot& snapshot,
 
         case RenderState::MENU:
             m_ui->drawMenu(commandBuffer, *m_shapePipeline, *m_shapes,
-                           m_textPipeline, m_font, menuSelection);
+                           m_textPipeline, m_font, menuSelection, m_menuSnapshotPtr);
             break;
 
         case RenderState::EDITOR:

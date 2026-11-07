@@ -123,6 +123,23 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
                         presentation::COLOR_PLAYER_B,
                         1.0f, &camera);
     }
+
+    // Commitment Jump: barra de carga / forca de salto visivel acima do jogador
+    if (player.chargeRatio > 0.01f) {
+        const float barX = player.bounds.x - 2.0f;
+        const float barY = player.bounds.y + player.bounds.height + 3.0f;
+        const float barW = player.bounds.width + 4.0f;
+        const float barH = 3.0f;
+        shapes.drawRect(cmd, shapePipeline, barX - 1.0f, barY - 1.0f,
+                        barW + 2.0f, barH + 2.0f,
+                        0.05f, 0.05f, 0.08f, 0.85f, &camera);
+        const float r = 0.85f + 0.15f * player.chargeRatio;
+        const float g = 0.85f * (1.0f - player.chargeRatio * 0.55f);
+        const float b = 0.15f * (1.0f - player.chargeRatio);
+        shapes.drawRect(cmd, shapePipeline, barX, barY,
+                        barW * player.chargeRatio, barH,
+                        r, g, b, 0.95f, &camera);
+    }
 }
 
 } // namespace gfx

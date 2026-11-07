@@ -1,5 +1,7 @@
 #include "Logic/GameSession.h"
 
+#include "Core/CampaignID.h"
+#include "Core/CampaignLoader.h"
 #include "Core/Config.h"
 #include "Core/GameAction.h"
 #include "Core/Viewport.h"
@@ -83,6 +85,89 @@ void GameSession::tryLoadDefaultGhostReplay() {
     if (std::filesystem::exists(replayFile)) {
         loadGhostReplay(replayFile);
     }
+}
+
+bool GameSession::selectCampaign(std::size_t index, float logicalWidth) {
+    if (availableCampaigns_.empty() || index >= availableCampaigns_.size()) {
+        return false;
+    }
+
+    const auto& desc = availableCampaigns_[index];
+    auto levels = core::CampaignLoader::load(desc.playlistFile);
+    if (levels.empty()) {
+        return false;
+    }
+
+    activeCampaignIndex_ = index;
+    campaignID_ = core::computeCampaignID(desc.playlistFile.parent_path().string());
+    campaignName_ = desc.name;
+    campaignEditorPath_ = desc.playlistFile.string();
+    campaignRuntime_ = CampaignRuntime(std::move(levels));
+
+    tryLoadDefaultGhostReplay();
+    return true;
+}
+
+void GameSession::selectNextCampaign(float logicalWidth) {
+    if (availableCampaigns_.empty()) return;
+    const std::size_t nextIdx = (activeCampaignIndex_ + 1) % availableCampaigns_.size();
+    selectCampaign(nextIdx, logicalWidth);
+}
+
+void GameSession::selectPreviousCampaign(float logicalWidth) {
+    if (availableCampaigns_.empty()) return;
+    const std::size_t prevIdx = activeCampaignIndex_ == 0
+                                    ? availableCampaigns_.size() - 1
+                                    : activeCampaignIndex_ - 1;
+    selectCampaign(prevIdx, logicalWidth);
+}
+
+gfx::MenuRenderSnapshot GameSession::menuRenderSnapshot() const {
+    gfx::MenuRenderSnapshot snapshot;
+    snapshot.selection = stateMachine_.menuSelection();
+    snapshot.activeCampaignIndex = activeCampaignIndex_;
+    snapshot.campaigns.reserve(availableCampaigns_.size());
+
+    for (const auto& desc : availableCampaigns_) {
+        gfx::MenuCampaignItem item;
+        item.id = desc.id;
+        item.name = desc.name;
+        auto levels = core::CampaignLoader::load(desc.playlistFile);
+        item.levelCount = levels.size();
+
+        const std::string cid = core::computeCampaignID(desc.playlistFile.parent_path().string());
+        const auto* rec = userProfile_.findRecord(cid);
+        if (rec) {
+            item.bestTimeSeconds = rec->bestTimeSeconds;
+            item.completions = rec->completions;
+        }
+        snapshot.campaigns.push_back(std::move(item));
+    }
+    return snapshot;
+}
+
+gfx::RenderHudSnapshot GameSession::hudSnapshot() const {
+    gfx::RenderHudSnapshot hud;
+    hud.elapsedTime = elapsedTime_;
+    const auto* rec = userProfile_.findRecord(campaignID_);
+    if (rec) {
+        hud.personalBestTime = rec->bestTimeSeconds;
+    }
+
+    const float y = player_.body.position.y;
+    hud.altitudeMeters = (y > 0.0f) ? std::floor(y / 16.0f) : 0.0f;
+
+    hud.ghostAvailable = ghostReplay_.has_value();
+    hud.ghostVisible = ghostEnabled_ && ghostPlayer_.has_value();
+    if (hud.ghostVisible && ghostPlayer_) {
+        hud.ghostDeltaMeters = (player_.body.position.y - ghostPlayer_->body.position.y) / 16.0f;
+    }
+
+    if (!campaignName_.empty()) {
+        std::snprintf(hud.campaignName, sizeof(hud.campaignName), "%s", campaignName_.c_str());
+    }
+
+    return hud;
 }
 
 void GameSession::resetGame(float logicalWidth) {
@@ -326,6 +411,35 @@ GameSessionUpdateResult GameSession::update(float dt,
         if (openEditorPressed) {
             openEditor(core::GameState::MENU);
             break;
+        }
+
+        // Alternar campanha seleccionada atraves de atalhos de teclado (W/S, Up/Down, [, ])
+        const bool prevCamp = input.isKeyJustPressed(Key::W) ||
+                              input.isKeyJustPressed(Key::UP) ||
+                              input.isKeyJustPressed(Key::LBRACKET);
+        const bool nextCamp = input.isKeyJustPressed(Key::S) ||
+                              input.isKeyJustPressed(Key::DOWN) ||
+                              input.isKeyJustPressed(Key::RBRACKET);
+
+        if (prevCamp) {
+            selectPreviousCampaign(logicalWidth);
+        } else if (nextCamp) {
+            selectNextCampaign(logicalWidth);
+        }
+
+        // Clique com o rato na caixa de selecao de campanhas (Y entre 220 e 276)
+        if (input.isMouseButtonJustPressed(MouseButton::LEFT)) {
+            const core::LogicalPoint pt = core::windowToLogical(
+                input.cursorX(), input.cursorY(),
+                windowWidth, windowHeight,
+                static_cast<int32_t>(logicalWidth), config::LOGICAL_HEIGHT);
+            if (pt.y >= 220.0f && pt.y <= 276.0f && pt.x >= 44.0f && pt.x <= 596.0f) {
+                if (pt.x < logicalWidth / 2.0f) {
+                    selectPreviousCampaign(logicalWidth);
+                } else {
+                    selectNextCampaign(logicalWidth);
+                }
+            }
         }
 
         const int clickedMenu =

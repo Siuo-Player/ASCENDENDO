@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Core/CampaignCatalogue.h"
 #include "Core/GameStateMachine.h"
 #include "Core/KeyBindings.h"
+#include "Graphics/RenderSnapshot.h"
 #include "Logic/CampaignEditor.h"
 #include "Logic/CampaignEditorSnapshot.h"
 #include "Logic/CampaignRuntime.h"
@@ -96,6 +98,20 @@ public:
         playerName_ = std::move(playerName);
     }
 
+    void setAvailableCampaigns(std::vector<core::CampaignDescriptor> campaigns) {
+        availableCampaigns_ = std::move(campaigns);
+    }
+    const std::vector<core::CampaignDescriptor>& availableCampaigns() const noexcept {
+        return availableCampaigns_;
+    }
+    std::size_t activeCampaignIndex() const noexcept { return activeCampaignIndex_; }
+    bool selectCampaign(std::size_t index, float logicalWidth = 640.0f);
+    void selectNextCampaign(float logicalWidth = 640.0f);
+    void selectPreviousCampaign(float logicalWidth = 640.0f);
+
+    gfx::MenuRenderSnapshot menuRenderSnapshot() const;
+    gfx::RenderHudSnapshot hudSnapshot() const;
+
     bool openCampaignEditor(core::GameState returnState);
     bool openSelectedCampaignLevel();
     void openEditor(core::GameState returnState) noexcept;
@@ -164,6 +180,9 @@ private:
     EditorSession editorSession_;
     CampaignEditorDocument campaignEditor_;
     core::GameStateMachine stateMachine_;
+
+    std::vector<core::CampaignDescriptor> availableCampaigns_;
+    std::size_t activeCampaignIndex_ = 0;
 
     std::string campaignEditorPath_;
     bool campaignEditorLoaded_ = false;

@@ -15,6 +15,7 @@ namespace gfx {
 // into the snapshot for ghost overlay rendering.
 RenderSnapshot buildRenderSnapshot(const logic::Player& player,
                                    const logic::Level& level,
-                                   const logic::Player* ghostPlayer = nullptr);
+                                   const logic::Player* ghostPlayer = nullptr,
+                                   const RenderHudSnapshot& hud = RenderHudSnapshot{});
 
 } // namespace gfx
