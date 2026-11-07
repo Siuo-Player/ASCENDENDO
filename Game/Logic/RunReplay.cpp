@@ -97,7 +97,13 @@ std::string RunReplay::serialize() const {
 std::optional<RunReplay> RunReplay::deserialize(std::string_view text) {
     std::istringstream stream{std::string(text)};
     std::string line;
-    if (!std::getline(stream, line) || line != "ASCENDENDO_REPLAY_V1") {
+    if (!std::getline(stream, line)) {
+        return std::nullopt;
+    }
+    if (!line.empty() && line.back() == '\r') {
+        line.pop_back();
+    }
+    if (line != "ASCENDENDO_REPLAY_V1") {
         return std::nullopt;
     }
 
@@ -154,6 +160,13 @@ std::optional<RunReplay> RunReplay::deserialize(std::string_view text) {
         }
         const uint8_t byte = static_cast<uint8_t>((hi << 4) | lo);
         inputs.push_back(decodeTickInput(byte));
+    }
+
+    if (!readingInputs) {
+        return std::nullopt;
+    }
+    if (header.version == 0 || header.claimedElapsedSeconds < 0.0f || !std::isfinite(header.claimedElapsedSeconds)) {
+        return std::nullopt;
     }
 
     header.totalTicks = static_cast<uint32_t>(inputs.size());

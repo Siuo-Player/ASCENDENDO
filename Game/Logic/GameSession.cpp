@@ -126,6 +126,8 @@ gfx::MenuRenderSnapshot GameSession::menuRenderSnapshot() const {
     gfx::MenuRenderSnapshot snapshot;
     snapshot.selection = stateMachine_.menuSelection();
     snapshot.activeCampaignIndex = activeCampaignIndex_;
+    snapshot.ghostEnabled = ghostEnabled_;
+    snapshot.activeHasReplay = ghostReplay_.has_value();
     snapshot.campaigns.reserve(availableCampaigns_.size());
 
     for (const auto& desc : availableCampaigns_) {
@@ -141,6 +143,15 @@ gfx::MenuRenderSnapshot GameSession::menuRenderSnapshot() const {
             item.bestTimeSeconds = rec->bestTimeSeconds;
             item.completions = rec->completions;
         }
+
+        if (!profilePath_.empty()) {
+            const std::filesystem::path replayFile =
+                std::filesystem::path(profilePath_).parent_path() / "Replays" / ("latest_" + cid + ".replay");
+            item.hasReplay = std::filesystem::exists(replayFile);
+        } else {
+            item.hasReplay = false;
+        }
+
         snapshot.campaigns.push_back(std::move(item));
     }
     return snapshot;
@@ -149,6 +160,8 @@ gfx::MenuRenderSnapshot GameSession::menuRenderSnapshot() const {
 gfx::RenderHudSnapshot GameSession::hudSnapshot() const {
     gfx::RenderHudSnapshot hud;
     hud.elapsedTime = elapsedTime_;
+    hud.isReplayWatch = (stateMachine_.state() == core::GameState::REPLAY_WATCH);
+    hud.replayTotalTime = (hud.isReplayWatch && ghostReplay_) ? ghostReplay_->header().claimedElapsedSeconds : 0.0f;
     const auto* rec = userProfile_.findRecord(campaignID_);
     if (rec) {
         hud.personalBestTime = rec->bestTimeSeconds;
@@ -205,6 +218,33 @@ void GameSession::resetGame(float logicalWidth) {
 
 void GameSession::beginPlaying(float logicalWidth) {
     resetGame(logicalWidth);
+}
+
+bool GameSession::beginWatchingBestReplay(float logicalWidth) {
+    if (!ghostReplay_ || ghostReplay_->inputs().empty()) {
+        return false;
+    }
+
+    CampaignRuntime candidateRuntime = campaignRuntime_;
+    Level candidateLevel;
+    if (!candidateRuntime.loadInitialLevel(candidateLevel, logicalWidth)) {
+        return false;
+    }
+
+    player_ = logic::Player{};
+    player_.body.position = candidateLevel.spawnPosition;
+    player_.body.isGrounded = true;
+    world_ = logic::PhysicsWorld{};
+    elapsedTime_ = 0.0f;
+    replayWatchTickIndex_ = 0;
+    level_ = std::move(candidateLevel);
+    campaignRuntime_ = std::move(candidateRuntime);
+
+    ghostPlayer_.reset();
+    ghostTickIndex_ = 0;
+
+    stateMachine_.enterReplayWatch();
+    return true;
 }
 
 bool GameSession::beginPlayingLevel(std::size_t levelIndex, float logicalWidth) {
@@ -290,6 +330,39 @@ GameSessionUpdateResult GameSession::update(float dt,
     const float safeDt = (std::isfinite(dt) && dt >= 0.0f) ? dt : 0.0f;
 
     switch (currentState) {
+    case core::GameState::REPLAY_WATCH: {
+        if (quitPressed || pausePressed) {
+            stateMachine_.returnToMenu();
+            break;
+        }
+
+        const int steps = world_.advance(safeDt);
+        for (int i = 0; i < steps; ++i) {
+            if (ghostReplay_ && replayWatchTickIndex_ < ghostReplay_->inputs().size()) {
+                const TickInput& tickIn = ghostReplay_->inputs()[replayWatchTickIndex_++];
+                player_.update(tickIn, world_, config::FIXED_STEP);
+                level_.resolveCollision(player_.body);
+                elapsedTime_ += config::FIXED_STEP;
+
+                const float streamTriggerY =
+                    campaignRuntime_.currentSpawnY() - config::CAMPAIGN_STREAM_PRELOAD_DISTANCE;
+                if (player_.position().y >= streamTriggerY) {
+                    campaignRuntime_.streamNextLevel(level_, logicalWidth);
+                }
+
+                if (level_.hasFlag &&
+                    PhysicsWorld::collides(player_.body.bounds(), level_.flagBounds)) {
+                    stateMachine_.returnToMenu();
+                    break;
+                }
+            } else {
+                stateMachine_.returnToMenu();
+                break;
+            }
+        }
+        break;
+    }
+
     case core::GameState::PLAYING:
         if (toggleGhostPressed) {
             toggleGhost();
@@ -402,6 +475,20 @@ GameSessionUpdateResult GameSession::update(float dt,
         if (quitPressed) {
             result.quitRequested = true;
             break;
+        }
+
+        if (toggleGhostPressed) {
+            toggleGhost();
+            break;
+        }
+
+        const bool watchReplayPressed =
+            core::isActionJustPressed(bindings, input, core::GameAction::WatchReplay);
+        if (watchReplayPressed) {
+            if (hasGhostReplay()) {
+                beginWatchingBestReplay(logicalWidth);
+                break;
+            }
         }
 
         if (openCampaignEditorPressed) {

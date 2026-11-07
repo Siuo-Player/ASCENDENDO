@@ -56,6 +56,7 @@ std::unordered_map<GameAction, std::vector<int>> KeyBindings::defaultBindings() 
         { GameAction::CampaignOpenLevel,     { Key::SPACE, Key::ENTER } },
         { GameAction::CampaignSave,          { Key::NUM1 } },
         { GameAction::ToggleGhost,           { Key::G } },
+        { GameAction::WatchReplay,           { Key::R } },
     };
 }
 
@@ -97,7 +98,7 @@ constexpr KeyName KEY_NAMES[] = {
     { Key::LEFT, "LEFT" }, { Key::RIGHT, "RIGHT" },
     { Key::UP, "UP" }, { Key::DOWN, "DOWN" },
     { Key::A, "A" }, { Key::C, "C" }, { Key::D, "D" },
-    { Key::W, "W" }, { Key::S, "S" }, { Key::E, "E" }, { Key::Q, "Q" }, { Key::G, "G" },
+    { Key::W, "W" }, { Key::S, "S" }, { Key::E, "E" }, { Key::Q, "Q" }, { Key::R, "R" }, { Key::G, "G" },
     { Key::P, "P" }, { Key::F, "F" }, { Key::T, "T" }, { Key::Z, "Z" }, { Key::Y, "Y" },
     { Key::NUM0, "0" }, { Key::NUM1, "1" }, { Key::NUM2, "2" }, { Key::NUM3, "3" },
     { Key::F2, "F2" }, { Key::F5, "F5" }, { Key::F6, "F6" },

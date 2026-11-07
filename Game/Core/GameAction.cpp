@@ -45,6 +45,7 @@ const char* actionDisplayName(GameAction action) {
         case GameAction::CampaignOpenLevel:     return "Campanha: Abrir Nivel";
         case GameAction::CampaignSave:          return "Campanha: Guardar";
         case GameAction::ToggleGhost:           return "Alternar Fantasma/Ghost";
+        case GameAction::WatchReplay:          return "Assistir Recorde / Replay";
     }
     return "?";
 }
@@ -88,6 +89,7 @@ const char* actionSerializedName(GameAction action) {
         case GameAction::CampaignOpenLevel:     return "CampaignOpenLevel";
         case GameAction::CampaignSave:          return "CampaignSave";
         case GameAction::ToggleGhost:          return "ToggleGhost";
+        case GameAction::WatchReplay:         return "WatchReplay";
     }
     return "Unknown";
 }

@@ -44,6 +44,7 @@ enum class GameAction {
     CampaignOpenLevel,
     CampaignSave,
     ToggleGhost,
+    WatchReplay,
 };
 
 inline constexpr GameAction ALL_ACTIONS[] = {
@@ -63,6 +64,7 @@ inline constexpr GameAction ALL_ACTIONS[] = {
     GameAction::CampaignSelectNext, GameAction::CampaignMoveEarlier,
     GameAction::CampaignMoveLater, GameAction::CampaignOpenLevel,
     GameAction::CampaignSave, GameAction::ToggleGhost,
+    GameAction::WatchReplay,
 };
 inline constexpr std::size_t ACTION_COUNT = sizeof(ALL_ACTIONS) / sizeof(ALL_ACTIONS[0]);
 

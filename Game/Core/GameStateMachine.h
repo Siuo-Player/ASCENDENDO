@@ -18,6 +18,7 @@ public:
     void select(int index, int count) noexcept;
 
     void enterPlaying() noexcept;
+    void enterReplayWatch() noexcept;
     void enterEditor(GameState returnState) noexcept;
     void enterCampaignEditor(GameState returnState) noexcept;
     void enterCredits(GameState returnState) noexcept;

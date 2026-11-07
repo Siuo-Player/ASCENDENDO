@@ -76,6 +76,7 @@ void drawControlsReference(VkCommandBuffer cmd,
         "W / S ou TAB          alternar campanha no menu",
         "ESPACO                confirmar / saltar (segurar para carregar)",
         "G                     alternar fantasma speedrun / modo editor",
+        "R                     assistir recorde / replay no menu",
         "ESC                   voltar / pausa",
         "Q                     sair / voltar ao menu",
         "E                     editor de nivel",
@@ -131,6 +132,31 @@ void UiRenderer::drawGameplayHud(VkCommandBuffer cmd,
                                  TextPipeline* textPipeline,
                                  FontRenderer* font,
                                  const RenderHudSnapshot& hud) const {
+    if (hud.isReplayWatch) {
+        shapes.drawRect(cmd, shapePipeline,
+                        config::LOGICAL_WIDTH / 2.0f - 160.0f, config::LOGICAL_HEIGHT - 44.0f,
+                        320.0f, 38.0f, 0.02f, 0.04f, 0.08f, 0.88f);
+        shapes.drawRect(cmd, shapePipeline,
+                        config::LOGICAL_WIDTH / 2.0f - 160.0f, config::LOGICAL_HEIGHT - 44.0f,
+                        320.0f, 1.5f, 0.95f, 0.80f, 0.15f, 0.95f);
+
+        if (!textPipeline || !font || !textPipeline->isInitialized()) return;
+        bindText(cmd, textPipeline, font);
+
+        char replayBuf[96]{};
+        std::snprintf(replayBuf, sizeof(replayBuf), "[REPLAY] %s / %s",
+                      formatTimerHundredths(hud.elapsedTime).c_str(),
+                      formatTimerHundredths(hud.replayTotalTime).c_str());
+        centerText(cmd, textPipeline, font, replayBuf,
+                   config::LOGICAL_WIDTH / 2.0f, config::LOGICAL_HEIGHT - 24.0f,
+                   0.45f, 1.0f, 0.90f, 0.30f, 1.0f);
+
+        centerText(cmd, textPipeline, font, "Q ou ESC para voltar ao Menu",
+                   config::LOGICAL_WIDTH / 2.0f, 18.0f,
+                   0.35f, 0.60f, 0.65f, 0.75f, 0.85f);
+        return;
+    }
+
     // Fundo discreto para o HUD superior direito
     shapes.drawRect(cmd, shapePipeline,
                     config::LOGICAL_WIDTH - 180.0f, config::LOGICAL_HEIGHT - 48.0f,
@@ -308,10 +334,14 @@ void UiRenderer::drawMenu(VkCommandBuffer cmd,
             centerText(cmd, textPipeline, font, statsBuf, centerX, 240.0f,
                        0.38f, 0.82f, 0.86f, 0.95f, 1.0f);
 
-            // Dica de atalho
-            centerText(cmd, textPipeline, font,
-                       "W/S ou TAB para alternar campanha",
-                       centerX, 228.0f, 0.30f, 0.45f, 0.70f, 0.85f, 0.90f);
+            // Dica de atalho e status do fantasma / replay
+            char ghostBuf[128]{};
+            std::snprintf(ghostBuf, sizeof(ghostBuf),
+                          "FANTASMA: %s [G]   |   %s   |   W/S CAMPANHA",
+                          snapshot->ghostEnabled ? "LIGADO" : "DESLIGADO",
+                          snapshot->activeHasReplay ? "[R] ASSISTIR RECORDE" : "SEM RECORDE");
+            centerText(cmd, textPipeline, font, ghostBuf,
+                       centerX, 228.0f, 0.30f, 0.45f, 0.75f, 0.90f, 0.95f);
         }
     }
 

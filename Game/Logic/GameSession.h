@@ -59,6 +59,7 @@ public:
 
     void beginPlaying(float logicalWidth);
     bool beginPlayingLevel(std::size_t levelIndex, float logicalWidth);
+    bool beginWatchingBestReplay(float logicalWidth = 640.0f);
 
     // Visual capture deliberately loads one authored level in isolation. It
     // validates the level itself but does not apply the campaign-level FLAG
@@ -125,6 +126,11 @@ public:
                                    float logicalHeight);
 
     core::GameState state() const noexcept { return stateMachine_.state(); }
+    core::GameStateMachine& stateMachine() noexcept { return stateMachine_; }
+    const core::GameStateMachine& stateMachine() const noexcept { return stateMachine_; }
+    CampaignRuntime& campaignRuntime() noexcept { return campaignRuntime_; }
+    const CampaignRuntime& campaignRuntime() const noexcept { return campaignRuntime_; }
+    bool isWatchingReplay() const noexcept { return stateMachine_.state() == core::GameState::REPLAY_WATCH; }
     int menuSelection() const noexcept { return stateMachine_.menuSelection(); }
     float elapsedTime() const noexcept { return elapsedTime_; }
     const std::string& campaignID() const noexcept { return campaignID_; }
@@ -155,6 +161,7 @@ public:
     bool ghostEnabled() const noexcept { return ghostEnabled_; }
     void setGhostEnabled(bool enabled) noexcept { ghostEnabled_ = enabled; }
     void toggleGhost() noexcept { ghostEnabled_ = !ghostEnabled_; }
+    bool hasGhostReplay() const noexcept { return ghostReplay_.has_value(); }
     void setGhostReplay(RunReplay replay);
     bool loadGhostReplay(const std::filesystem::path& path);
     const RunReplay* ghostReplay() const noexcept { return ghostReplay_ ? &(*ghostReplay_) : nullptr; }
@@ -204,6 +211,7 @@ private:
     std::optional<Player> ghostPlayer_;
     PhysicsWorld ghostWorld_;
     std::size_t ghostTickIndex_ = 0;
+    std::size_t replayWatchTickIndex_ = 0;
 };
 
 } // namespace logic
