@@ -342,6 +342,14 @@ void UiRenderer::drawMenu(VkCommandBuffer cmd,
                           snapshot->activeHasReplay ? "[R] ASSISTIR RECORDE" : "SEM RECORDE");
             centerText(cmd, textPipeline, font, ghostBuf,
                        centerX, 228.0f, 0.30f, 0.45f, 0.75f, 0.90f, 0.95f);
+
+            // Identidade e isolamento de perfil
+            char accountBuf[96]{};
+            std::snprintf(accountBuf, sizeof(accountBuf),
+                          "PERFIL: %s (COFRE LOCAL SEGURO)",
+                          snapshot->accountName.empty() ? "CONVIDADO" : snapshot->accountName.c_str());
+            centerText(cmd, textPipeline, font, accountBuf,
+                       centerX, 214.0f, 0.28f, 0.40f, 0.65f, 0.85f, 0.90f);
         }
     }
 

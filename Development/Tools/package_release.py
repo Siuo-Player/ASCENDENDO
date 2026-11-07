@@ -57,7 +57,7 @@ localizado na pasta 'userdata/Accounts/'.
 DOCUMENTACAO E CODIGO FONTE
 --------------------------------------------------------------------------------
 Codigo-fonte oficial, issues e atualizacoes:
-https://github.com/hdsf7/Ascendendo
+https://github.com/Siuo-Player/ASCENDENDO
 
 Bom jogo e boa ascensao ao Cume!
 """

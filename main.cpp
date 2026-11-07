@@ -20,6 +20,7 @@
 #include "Game/Core/Environment.h"
 #include "Game/Core/Config.h"
 #include "Game/Core/KeyBindings.h"
+#include "Game/Core/AccountManager.h"
 
 #include <GLFW/glfw3.h>
 #include <chrono>
@@ -229,11 +230,39 @@ int main(int argc, char** argv) {
                   << (bootstrap.campaignID.empty() ? "(indisponivel)" : bootstrap.campaignID)
                   << "\n";
 
+        core::AccountManager accountManager(bootstrap.accountsDirectory());
+        std::string activePlayerId = "guest";
+        std::string activePlayerName = "Convidado";
+        std::filesystem::path activeProfilePath = bootstrap.profileFile();
+
+        const auto envUser = core::getEnvironmentVariable("ASCENDENDO_USER");
+        if (envUser && !envUser->empty()) {
+            const auto envPass = core::getEnvironmentVariable("ASCENDENDO_PASS");
+            if (accountManager.hasAccount(*envUser)) {
+                if (envPass && accountManager.login(*envUser, *envPass)) {
+                    activePlayerId = accountManager.currentAccount()->accountId;
+                    activePlayerName = accountManager.currentAccount()->username;
+                    activeProfilePath = accountManager.currentProfilePath();
+                    std::cout << "[ASCENDENDO] Autenticado na conta: " << activePlayerName << "\n";
+                } else {
+                    std::cout << "[ASCENDENDO] Conta '" << *envUser << "' detetada. A iniciar como Convidado.\n";
+                }
+            } else if (envPass && envPass->size() >= 4) {
+                if (accountManager.registerAccount(*envUser, *envPass)) {
+                    activePlayerId = accountManager.currentAccount()->accountId;
+                    activePlayerName = accountManager.currentAccount()->username;
+                    activeProfilePath = accountManager.currentProfilePath();
+                    std::cout << "[ASCENDENDO] Nova conta criada: " << activePlayerName << "\n";
+                }
+            }
+        }
+
         GameSession session(
             bootstrap.campaign,
             bootstrap.campaignID,
             bootstrap.runsFile().string(),
-            bootstrap.profileFile().string());
+            activeProfilePath.string());
+        session.configurePlayer(activePlayerId, activePlayerName);
         session.setAvailableCampaigns(bootstrap.campaigns);
         session.configureCampaignName(bootstrap.campaigns.front().name);
         session.configureCampaignEditor(bootstrap.campaigns.front().playlistFile.string());
