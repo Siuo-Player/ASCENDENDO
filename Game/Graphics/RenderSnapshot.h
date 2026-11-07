@@ -65,6 +65,7 @@ struct MenuRenderSnapshot {
     std::size_t activeCampaignIndex = 0;
     bool ghostEnabled = true;
     bool activeHasReplay = false;
+    std::string accountName;
     std::vector<MenuCampaignItem> campaigns;
 };
 

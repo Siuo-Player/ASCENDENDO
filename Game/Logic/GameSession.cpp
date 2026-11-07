@@ -128,6 +128,7 @@ gfx::MenuRenderSnapshot GameSession::menuRenderSnapshot() const {
     snapshot.activeCampaignIndex = activeCampaignIndex_;
     snapshot.ghostEnabled = ghostEnabled_;
     snapshot.activeHasReplay = ghostReplay_.has_value();
+    snapshot.accountName = playerName_.empty() ? "Convidado" : playerName_;
     snapshot.campaigns.reserve(availableCampaigns_.size());
 
     for (const auto& desc : availableCampaigns_) {

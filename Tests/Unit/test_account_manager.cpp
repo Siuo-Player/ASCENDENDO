@@ -1,6 +1,7 @@
 #include "doctest/doctest.h"
 #include "Core/AccountManager.h"
 #include "Core/Security.h"
+#include "Logic/GameSession.h"
 
 #include <chrono>
 #include <filesystem>
@@ -121,5 +122,58 @@ TEST_SUITE("Account Manager — Security & Privacy") {
         core::AccountManager tamperedManager(temp.path());
         CHECK(!tamperedManager.hasAccount("charlie"));
         CHECK(tamperedManager.listUsernames().empty());
+    }
+
+    TEST_CASE("Account Profile Isolation with GameSession and Snapshot") {
+        TempDir temp;
+        core::AccountManager manager(temp.path());
+
+        REQUIRE(manager.registerAccount("speedrunner", "vault_key_1234"));
+        const auto runnerProfile = manager.currentProfilePath();
+        const std::string runnerName = manager.currentAccount()->username;
+        const std::string runnerId = manager.currentAccount()->accountId;
+
+        // Session with speedrunner profile
+        logic::GameSession runnerSession(
+            {}, "camp1",
+            (temp.path() / "runs.csv").string(),
+            runnerProfile.string());
+        runnerSession.configurePlayer(runnerId, runnerName);
+
+        const auto snapshot = runnerSession.menuRenderSnapshot();
+        CHECK(snapshot.accountName == "speedrunner");
+
+        // Record a completion for speedrunner
+        logic::UserProfile profile = logic::ProfileStorage::load(runnerProfile);
+        profile.recordCompletion("camp1", 42.5f);
+        CHECK(logic::ProfileStorage::save(runnerProfile, profile));
+
+        // Register second account
+        manager.logout();
+        REQUIRE(manager.registerAccount("casual_climber", "vault_key_5678"));
+        const auto casualProfile = manager.currentProfilePath();
+        const std::string casualName = manager.currentAccount()->username;
+        const std::string casualId = manager.currentAccount()->accountId;
+
+        // Session with casual profile
+        logic::GameSession casualSession(
+            {}, "camp1",
+            (temp.path() / "runs.csv").string(),
+            casualProfile.string());
+        casualSession.configurePlayer(casualId, casualName);
+
+        const auto casualSnapshot = casualSession.menuRenderSnapshot();
+        CHECK(casualSnapshot.accountName == "casual_climber");
+
+        // Verify casual profile is completely isolated: 0 completions, no records
+        const auto casualLoaded = logic::ProfileStorage::load(casualProfile);
+        CHECK(casualLoaded.totalCompletions == 0);
+        CHECK(casualLoaded.findRecord("camp1") == nullptr);
+
+        // Verify speedrunner profile is intact
+        const auto runnerLoaded = logic::ProfileStorage::load(runnerProfile);
+        CHECK(runnerLoaded.totalCompletions == 1);
+        REQUIRE(runnerLoaded.findRecord("camp1") != nullptr);
+        CHECK(runnerLoaded.findRecord("camp1")->bestTimeSeconds == doctest::Approx(42.5f));
     }
 }
