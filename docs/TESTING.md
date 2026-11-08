@@ -1,114 +1,112 @@
-# Testes e validação
+# Matriz de Testes, Validação e Garantia de Qualidade
 
 ## Objetivo
 
-O projeto usa várias camadas de testes porque nem todos os problemas de um motor Vulkan podem ser encontrados por testes unitários, mas os testes gráficos também não devem ser obrigatórios para validar cada algoritmo de gameplay.
+O ASCENDENDO adota uma abordagem de engenharia de software com verificação contínua e cobertura multidimensional. Sendo um platformer masoquista de precisão matemática e determinismo bit-a-bit, os testes garantem que cada salto, colisão, renderização e cofre de dados opera com fiabilidade absoluta sob qualquer condição de hardware ou sistema operativo.
 
-## Camadas
+---
 
-### Unit
+## 1. Taxonomia Completa de Testes no ASCENDENDO
 
-Testam lógica sem GPU sempre que possível:
+A suíte de testes do projeto divide-se em categorias formais com objetivos bem definidos:
 
-- física e AABB;
-- Player;
-- Level;
-- Camera;
-- InputManager;
-- GameAction;
-- KeyBindings;
-- Viewport;
-- CampaignID;
-- RunHistory (com sanitização contra injeção CSV);
-- Security (NIST SHA-256, RFC 2104 HMAC-SHA256, constant-time, path containment);
-- ProfileStorage (autenticação criptográfica de perfil, tamper rejection, persistência atómica);
-- RuntimeBootstrap e RuntimePaths;
-- lógica do editor e histórico de undo/redo.
+### 1.1 Testes Unitários e de Componente (`Tests/Unit/`)
+Executados em CPU sem dependência de hardware gráfico (GPU):
+- **Cinemática e Física**: `test_physics.cpp`, `test_physics_properties.cpp`, `test_level_collision.cpp`, `test_jump_trajectory.cpp`.
+- **Lógica de Gameplay**: `test_player.cpp`, `test_simulation_orchestrator.cpp`, `test_game_state_machine.cpp`.
+- **Estrutura de Níveis e I/O**: `test_level.cpp`, `test_level_data.cpp`, `test_level_data_io.cpp`, `test_level_file_loading.cpp`.
+- **Editor de Níveis e Interação**: `test_editor_session.cpp`, `test_editor_session_keyboard.cpp`, `test_editor_undo_gestures.cpp`, `test_editor_validation.cpp`, `test_editor_trajectory.cpp`.
+- **Câmara e Enquadramento**: `test_camera.cpp` (verificação de Lerp e safety viewport clamping).
+- **Entrada e Mapeamento**: `test_input.cpp`, `test_input_mouse.cpp`, `test_keybindings_core.cpp`, `test_keybindings_input.cpp`, `test_keybindings_persistence.cpp`.
+- **Segurança e Criptografia**: `test_security.cpp`, `test_profile_storage.cpp`, `test_account_manager.cpp` (NIST SHA-256, HMAC-SHA256, PPID e contenção de caminhos).
 
-### Integration
+### 1.2 Testes de Integração (`Tests/Integration/`)
+Validam a comunicação entre subsistemas e o driver Vulkan / GLFW:
+- **Pipeline e Shaders**: `test_pipeline.cpp`, `test_sprite_pipeline.cpp`, `test_render_pass.cpp`.
+- **Ciclo de Apresentação e Swapchain**: `test_swapchain.cpp`, `test_window.cpp`, `test_presentation_runtime.cpp`, `test_renderer.cpp`.
+- **Streaming Multi-Ecrã**: `test_multi_screen_streaming_run.cpp` (streaming contínuo de chunks verticais sem travamentos).
 
-Testam a ligação com Vulkan/GLFW:
+### 1.3 Testes de Sistema e Resiliência (`Tests/System/`)
+Validam o sistema como um todo integrado sob estresse operacional:
+- `test_system_resilience.cpp`: Ciclo completo de inicialização a frio, carregamento de cofre, execução de subida contínua de 10.000 ticks, invariância de enquadramento da câmara em quedas livres, e encerramento limpo sem fugas de memória (*zero leak*).
 
-- criação da instance/device;
-- janela e surface;
-- swapchain;
-- render pass;
-- pipelines;
-- renderer;
-- texto e sprites.
+### 1.4 Testes de Aceitação e Evidência de Replay (`Tests/Acceptance/`)
+Validam requisitos funcionais canónicos do produto:
+- `test_replay_run_evidence.cpp`: Validação de execuções completas de speedrun através de sequências reais de ticks de input gravadas.
+- `test_stable_gameplay_loop.cpp`: Estabilidade a longo prazo do loop de jogo (100.000+ ticks).
 
-### Acceptance e Replays
+### 1.5 Testes de Ponta a Ponta / E2E (`Tests/E2E/`)
+Simulam o percurso completo do utilizador:
+- `test_e2e_gameplay_lifecycle.cpp`: Menu Inicial $\to$ Seleção de Campanha $\to$ Início de Run $\to$ Conquista da FLAG $\to$ Registo de Replay $\to$ Verificação no Modo Espectador.
 
-`Tests/Acceptance/test_replay_run_evidence.cpp`:
-- grava e executa uma sequência real de ticks de input;
-- reproduz o replay de ponta a ponta na simulação determinística a 60 Hz;
-- valida que a trajetória atinge a flag derivada sem desvios nem colisões inválidas com undersides de plataformas.
+### 1.6 Testes Não-Funcionais: Desempenho, Carga, Estresse, Volume e Escalabilidade (`Tests/Performance/`)
+Ficheiro central: `test_physics_benchmarks.cpp`:
+- **Performance Benchmark**: Simulação física a alta frequência (> 30.000 Hz, mais de 500x tempo real).
+- **Carga (Load Testing)**: 50.000 ticks contínuos de simulação sem desvio de ponto flutuante nem overflow.
+- **Estresse (Stress Testing)**: Resolução de colisões contra 5.000 plataformas simultâneas em torre de 20.000 metros (com `bodyAABB` e `probe` hoisted).
+- **Volume**: Serialização e compressão de mais de 25.000 ticks de replay binário.
+- **Escalabilidade**: Verificação de complexidade linear $O(N)$ e invariância com aumento de chunks de nível.
 
-### Validação de níveis e ferramentas Python
+### 1.7 Testes de Segurança e Testes de Penetração (`Tests/Security/`)
+Ficheiro central: `test_security_penetration.cpp`:
+- Rejeição de ficheiros corrompidos ou com HMAC adulterado (tamper resistance).
+- Proteção contra timing attacks via comparação de hashes em tempo constante.
+- Rejeição de directory traversal (`../../windows/system32`).
+- Sanitização de caracteres proibidos e injeção de fórmulas CSV (`=cmd`, `@calc`).
 
-- `Development/AI_Validation/validate_campaign.py --catalogue`: verificação física e reachability de todos os 610 níveis do catálogo oficial em lote.
-- `Development/AI_Validation/ai_validator.py --campaign`: simulação analítica e discreta de saltos para verificar trajetórias.
-- `Development/Tools/validate_repository_state.py`: gate de consistência que confirma a concordância entre o catálogo canónico (610 níveis), README e ROADMAP.
-- `pytest Tests/`: suite de 46 testes unitários em Python que valida todas as ferramentas de validação, integridade do catálogo e registo de assets.
+### 1.8 Testes de Usabilidade e Acessibilidade (`Tests/Usability/`)
+Ficheiro central: `test_usability_and_accessibility.cpp`:
+- Suporte a remapeamento completo de teclas para canhotos e teclados não-QWERTY (AZERTY, Dvorak).
+- Navegação completa no editor exclusivamente por teclado (sem exigir rato).
+- Alternância de ecrã inteiro (`F11`) e preservação do aspecto lógico `16:9` com letterboxing automático.
+- Contrastes visuais de HUD e texto legíveis segundo as diretrizes WCAG AAA.
 
-O simulador em `Development/AI_Validation/sim/engine.py` existe para reproduzir o passo fixo e as colisões discretas do motor. A validação analítica não deve ser tratada como mais verdadeira do que a simulação discreta: o objetivo é que ambas concordem sobre o mesmo contrato físico.
+### 1.9 Testes Mutacionais, de Especificação e A/B (`Tests/Unit/`)
+Ficheiro central: `test_mutation_and_specifications.cpp`:
+- **Especificações Físicas**: Garantia do ângulo fixo a 60° ($\tan(60^\circ) \approx 1.732$) e invariante de controlo aéreo zero (tentar mover no ar não altera $v_x$).
+- **Testes Mutacionais**: Verificação de que pequenas alterações artificiais em constantes de colisão provocam falhas imediatas de teste (eliminação de mutantes).
+- **Testes A/B**: Telemetria e variantes visuais sem quebra de determinismo.
 
-## Build normal
+### 1.10 Capturas Determinísticas PPM (Golden Master Testing)
+Integrado no pipeline de CI em Linux:
+- O motor headless renderiza frames em resoluções e aspect ratios canónicos (16:9, 21:9 e 4:3).
+- O ficheiro `.ppm` gerado é comparado bit-a-bit com o hash SHA-256 do golden master para detetar qualquer desvio visual involuntário.
 
-```bash
-make clean
-make tests-verbose -j8
+---
+
+## 2. Matriz de CI (13 Workflows Automatizados no GitHub Actions)
+
+| Job no CI | Plataforma / Ambiente | Ferramentas | O que valida |
+|---|---|---|---|
+| **Campaign Validation** | Ubuntu 24.04 LTS | Python 3.12 / PES | Validação física de alcançabilidade de todos os níveis da campanha. |
+| **Linux C++20 Headless** | Ubuntu 24.04 LTS | Clang 18 + Lavapipe | Compilação C++20 rigorosa e execução da suíte completa de testes. |
+| **Linux ASan + UBSan** | Ubuntu 24.04 LTS | Clang Address & UB Sanitizer | Fugas de memória, buffer overflows, use-after-free e comportamento indefinido. |
+| **PPM Capture (16:9 Nível 0, 1, 2)** | Ubuntu 24.04 LTS | Vulkan Software Driver | Determinismo de renderização na proporção 16:9. |
+| **PPM Capture (21:9 Nível 0, 1, 2)** | Ubuntu 24.04 LTS | Vulkan Software Driver | Determinismo de renderização em Ultrawide 21:9 (pillarboxing). |
+| **PPM Capture (4:3 Nível 0, 1, 2)** | Ubuntu 24.04 LTS | Vulkan Software Driver | Determinismo de renderização em Retro 4:3 (letterboxing). |
+| **Windows Clang C++20** | Windows Server 2025 | Clang-cl + MSVC CRT + Vulkan SDK | Build nativo x64 de lançamento, gates de warnings e testes executados nativamente. |
+
+---
+
+## 3. Comandos Úteis de Execução de Testes
+
+### Execução Completa (Todos os Testes C++)
+```powershell
+make tests
 ```
 
-Para testar apenas a parte sem integração gráfica pesada:
+### Execução Verbosa com Detalhe de Cada Asserção
+```powershell
+make tests-verbose
+```
 
-```bash
+### Execução Rápida (Apenas Lógica, Sem Shaders/GPU)
+```powershell
 make tests-fast
 ```
 
-Para compilar o jogo:
-
-```bash
-make game
+### Validação Offline de Níveis e Campanhas (Python)
+```powershell
+py -m pytest Tests/
+py Development/AI_Validation/validate_campaign.py --campaign Game/Assets/Levels/campaign.txt
 ```
-
-## Headers e dependências
-
-O Makefile usa `-MMD -MP` e inclui os `.d` gerados. Isto é obrigatório porque headers como `InputManager.h` podem alterar o layout de uma classe. Sem dependências corretas, unidades de tradução antigas podem ser ligadas com unidades compiladas contra um layout diferente.
-
-## Teste de cada nova fase
-
-Cada subfase deve seguir:
-
-1. escrever testes da regra nova;
-2. confirmar que falham sem implementação quando a regra é testável isoladamente;
-3. implementar;
-4. executar unit tests;
-5. executar integration tests afetados;
-6. executar `make tests-verbose` completo;
-7. validar a campanha;
-8. documentar resultados antes de abrir a PR.
-
-## Editor
-
-A lógica de edição deve ser testável sem Vulkan. Por exemplo:
-
-```text
-pixel de janela
-    ↓
-Viewport::windowToLogical
-    ↓
-coordenada lógica
-    ↓
-snap ao grid
-    ↓
-validação de bounds
-    ↓
-mutação do LevelDocument
-```
-
-Assim, erros de coordenadas, grid e limites não ficam dependentes de testes manuais no ecrã.
-
-## O que não deve ser feito
-
-Não reduzir testes antigos para fazer uma feature passar. Não substituir uma regra física por uma aproximação só porque simplifica o teste. Não considerar "compila" equivalente a "está validado".

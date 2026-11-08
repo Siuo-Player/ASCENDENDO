@@ -428,3 +428,66 @@ A renderização visual é desacoplada da resolução do monitor:
 - O espaço lógico mantém-se estritamente em `640 × 360` (proporção 16:9).
 - A janela é redimensionável e suporta alternância para ecrã inteiro com a tecla `F11`.
 - O renderer aplica letterboxing ou pillarboxing automático na swapchain Vulkan, garantindo que a escala física nunca distorce a proporção ou a precisão do Commitment Jump.
+
+
+## Módulo Analítico de Trajetórias (`JumpTrajectory`)
+
+Localizado em `Game/Logic/JumpTrajectory.h` e `.cpp`, este subsistema desacopla a cinemática balística da simulação quadro-a-quadro:
+
+```text
+JumpTrajectory
+├── initialSpeed(chargeRatio)
+├── initialVelocity(chargeRatio, direction)
+├── positionAt(origin, initialVel, t)
+├── timeToApex(chargeRatio) / maxApexHeight(chargeRatio)
+├── totalFlightTime(chargeRatio) / horizontalReach(chargeRatio)
+├── reachEnvelope(origin, chargeRatio, direction)
+└── sampleTrajectory(origin, chargeRatio, direction, dt, maxTime)
+```
+
+**Propriedades Arquiteturais:**
+1. **Solução Fechada**: Determina o estado exato $(x(t), y(t))$ em $O(1)$ sem iterar ticks nem alocar memória.
+2. **Reutilização Dupla**:
+   - No **Validador Físico Offline**: Permite pruning imediato de plataformas inalcançáveis antes de executar o Perfect-Execution Solver (PES).
+   - No **Editor de Níveis**: Constrói os cones balísticos de alcance (mínimo em ciano, máximo em dourado) renderizados no `EditorRenderer`.
+
+## Viewport Frustum Culling na Pipeline Gráfica
+
+Em campanhas verticais extensas (com centenas de ecrãs de altura), a submissão de comandos à GPU Vulkan para todas as plataformas de um mundo acumulado geraria desperdício de CPU e largura de banda do barramento PCIe:
+
+- **`ShapeRenderer::drawRect` & `SpriteRenderer::draw`**:
+  - Antes de realizar o `bind`, configurar constantes de push (`vkCmdPushConstants`) ou despachar a chamada de desenho (`vkCmdDraw`), o renderizador compara o AABB de mundo da entidade contra o frustum do viewport lógico definido pela `Camera` ($[cam.x, cam.x + 640] 	imes [cam.y, cam.y + 360]$).
+  - Geometrias situadas fora do frustum visual visível são descartadas em CPU num único teste de bounds ($O(1)$).
+  - A rasterização on-screen permanece bit-a-bit idêntica, preservando 100% da integridade visual e das capturas determinísticas PPM.
+
+## Enquadramento de Segurança da Câmara (`Camera::follow`)
+
+Baseado no trabalho seminal de Steve Swink (*Game Feel*, 2008), o rastreio da câmara implementa um modelo em duplo estrato:
+
+1. **Camada de Suavização (Zona de Conforto)**:
+   - No regime regular de subida e caminhada, a câmara segue o avatar com interpolação exponencial suave (`alpha = clamp(speed * dt, 0, 1)`) mantendo o jogador a 35% de offset vertical ($126	ext{ px}$ do fundo).
+2. **Camada de Clamping Rígido (Fronteira de Segurança)**:
+   - Se a velocidade do avatar exceder a convergência do filtro (ex: quedas livres a alta velocidade após errar um salto ou lançamentos verticais intensos), o algoritmo impõe limites absolutos de emergência:
+     - `MIN_BOTTOM_MARGIN = 24.0f` (o jogador nunca fica a menos de 24 px da borda inferior).
+     - `MIN_TOP_MARGIN = 32.0f` (o jogador nunca fica a menos de 32 px da borda superior).
+   - Elimina o problema clássico em que o avatar cai fora da janela visível enquanto a câmara tenta "alcançá-lo".
+
+## Isolamento de Contas Zero Blast-Radius (`AccountManager`)
+
+Seguindo as diretrizes NIST SP 800-63B e o padrão OpenID Connect PPID (Pairwise Pseudonymous Identifiers):
+
+```text
+Utilizador (Login Local)
+       ↓
+HMAC-SHA256(MasterKey, Salt_Unico)
+       ↓
+Cofre Isolado: Save/accounts.secure
+       ↓
+Diretório de Perfil: Save/accounts/<player_id>/
+  ├── profile.secure  (Envelope Criptográfico Autenticado)
+  └── replays/        (Replays Determinísticos Assinados)
+```
+
+1. **Raio de Explosão Zero**: Cada perfil é um cofre independente e hermético. A corrupção ou adulteração de uma conta não afeta outras contas nem o estado global do jogo.
+2. **Zero Dependências Externas**: Implementado 100% em C++20 nativo sem bibliotecas externas pesadas ou serviços de telemetria na nuvem.
+3. **Privacidade Absoluta**: Nenhuma informação do jogador ou telemetria é partilhada ou comunicada para servidores externos; todo o estado permanece estritamente na máquina local do utilizador.
