@@ -173,13 +173,18 @@ PR #133 integrou `Game/Graphics/VulkanImageUpload.h/.cpp` como primitive estreit
 
 `DONE`
 
+## Dívidas técnicas concluídas recentemente
+
+- **Replay persistence**: Concluído via `RunReplay` com serialização binária compacta (`.replay`), validação headless por `verify_replay.py` e assinatura criptográfica HMAC-SHA256.
+- **Terminal/result replay & Ghost overlay**: Concluído via `GameState::REPLAY_WATCH`, overlay visual de ghost player translúcido em corrida real e carregamento de melhor run.
+- **Segurança e isolamento de contas**: Concluído via `AccountManager` nativo e biblioteca `packages/studio_auth` (Zero Blast Radius com PPID HMAC-SHA256).
+- **Trajetória balística no editor e clamping de câmara**: Concluído via `JumpTrajectory` analítico e safety viewport clamping.
+
 ## Outras dívidas explicitamente adiadas
 
 - schema versioning/migration de `LevelData` — só após requisito real de compatibilidade/importação;
 - semantic invariants adicionais de `LevelData` sem requisito/evidência;
-- replay persistence;
 - live-input frame-rate independence;
-- terminal/result replay;
 - future presentation snapshots apenas quando houver benefício verificável;
 - eventual convergência entre `CampaignLoader` e o parsing usado por `CampaignID`, caso passe de duplicação atual para divergência observável.
 

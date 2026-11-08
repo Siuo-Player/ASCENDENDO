@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 # scripts/pre-push.sh
-# Valida fisicamente a campanha inteira antes do push.
+# Valida a consistência do repositório e a física da campanha antes do push.
+
+set -e
 
 echo "============================================================"
-echo " ASCENDENDO: AI Pre-Push Validation"
+echo " ASCENDENDO: Pre-Push Validation"
 echo "============================================================"
 
+echo "-> A validar consistência do repositório..."
+python3 Development/Tools/validate_repository_state.py
+
+echo "-> A validar catálogo de campanhas..."
+python3 Development/AI_Validation/validate_campaign_catalogue.py
+
+echo "-> A validar reachability mecânica e física..."
 python3 Development/AI_Validation/ai_validator.py --campaign
 
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "[FALHA] A fisica provou que a campanha e impossivel de bater ou tem erros!"
-    echo "Corrige os distanciamentos das plataformas nos teus .lvl"
-    echo "============================================================"
-    exit 1
-fi
-
-echo "[OK] Fisica de salto e limites verificados matematicamente."
+echo "============================================================"
+echo " [OK] Consistência, catálogo e física verificados com sucesso!"
 echo "============================================================"
 exit 0
