@@ -240,6 +240,33 @@ void EditorRenderer::draw(VkCommandBuffer cmd,
                         0.85f, 0.90f, 1.0f, 0.75f, &fixedCamera);
     }
 
+    // Pre-visualizacao de arcos de trajetoria balistica (Aramini 2018 / Swink 2008)
+    if (snapshot.hasTrajectoryPreview) {
+        constexpr float dotSize = 3.0f;
+        constexpr float dotHalf = dotSize * 0.5f;
+
+        auto drawArc = [&](const std::vector<logic::TrajectoryPoint>& pts, float r, float g, float b, float a) {
+            for (std::size_t i = 0; i < pts.size(); i += 2) {
+                const auto& pt = pts[i].position;
+                if (pt.y >= viewBottomY - dotSize && pt.y <= viewTopY + dotSize &&
+                    pt.x >= 0.0f && pt.x <= snapshot.levelWidth) {
+                    shapes.drawRect(cmd, shapePipeline,
+                                    pt.x - dotHalf, screenY(pt.y) - dotHalf,
+                                    dotSize, dotSize,
+                                    r, g, b, a, &fixedCamera);
+                }
+            }
+        };
+
+        // Salto minimo (toque rapido): ciano suave
+        drawArc(snapshot.trajectoryMinRight, 0.20f, 0.85f, 1.0f, 0.65f);
+        drawArc(snapshot.trajectoryMinLeft,  0.20f, 0.85f, 1.0f, 0.65f);
+
+        // Salto maximo (carga completa): dourado / ambar
+        drawArc(snapshot.trajectoryMaxRight, 1.0f, 0.85f, 0.20f, 0.85f);
+        drawArc(snapshot.trajectoryMaxLeft,  1.0f, 0.85f, 0.20f, 0.85f);
+    }
+
     shapes.bind(cmd, shapePipeline);
 
     if (textPipeline && font) {

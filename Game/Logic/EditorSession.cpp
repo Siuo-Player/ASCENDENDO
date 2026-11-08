@@ -1,6 +1,7 @@
 #include "Logic/EditorSession.h"
 #include "Core/Config.h"
 #include "Core/Viewport.h"
+#include "Logic/JumpTrajectory.h"
 
 #include <algorithm>
 #include <utility>
@@ -199,6 +200,18 @@ EditorRenderSnapshot EditorSession::renderSnapshot() const {
     const EditorPreview p = preview();
     snapshot.previewVisible = p.visible;
     snapshot.previewBounds = p.bounds;
+
+    Vec2 launchPos = snapshot.spawnPosition;
+    if (snapshot.hasSelection && snapshot.selectedIndex < snapshot.platforms.size()) {
+        const auto& selPlat = snapshot.platforms[snapshot.selectedIndex];
+        launchPos = { (selPlat.min.x + selPlat.max.x) * 0.5f, selPlat.max.y };
+    }
+
+    snapshot.hasTrajectoryPreview = true;
+    snapshot.trajectoryMinRight = JumpTrajectory::sampleTrajectory(launchPos, 0.0f, +1.0f);
+    snapshot.trajectoryMaxRight = JumpTrajectory::sampleTrajectory(launchPos, 1.0f, +1.0f);
+    snapshot.trajectoryMinLeft  = JumpTrajectory::sampleTrajectory(launchPos, 0.0f, -1.0f);
+    snapshot.trajectoryMaxLeft  = JumpTrajectory::sampleTrajectory(launchPos, 1.0f, -1.0f);
     return snapshot;
 }
 

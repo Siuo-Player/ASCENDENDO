@@ -515,17 +515,25 @@ GameSessionUpdateResult GameSession::update(float dt,
             selectNextCampaign(logicalWidth);
         }
 
-        // Clique com o rato na caixa de selecao de campanhas (Y entre 220 e 276)
+        // Clique com o rato na selecao de campanhas ou no controlo de Fantasma / Replay
         if (input.isMouseButtonJustPressed(MouseButton::LEFT)) {
             const core::LogicalPoint pt = core::windowToLogical(
                 input.cursorX(), input.cursorY(),
                 windowWidth, windowHeight,
                 static_cast<int32_t>(logicalWidth), config::LOGICAL_HEIGHT);
-            if (pt.y >= 220.0f && pt.y <= 276.0f && pt.x >= 44.0f && pt.x <= 596.0f) {
-                if (pt.x < logicalWidth / 2.0f) {
-                    selectPreviousCampaign(logicalWidth);
-                } else {
-                    selectNextCampaign(logicalWidth);
+            if (pt.x >= 44.0f && pt.x <= 596.0f) {
+                if (pt.y >= 236.0f && pt.y <= 276.0f) {
+                    if (pt.x < logicalWidth / 2.0f) {
+                        selectPreviousCampaign(logicalWidth);
+                    } else {
+                        selectNextCampaign(logicalWidth);
+                    }
+                } else if (pt.y >= 220.0f && pt.y < 236.0f) {
+                    if (pt.x >= logicalWidth * 0.45f && hasGhostReplay()) {
+                        beginWatchingBestReplay(logicalWidth);
+                    } else {
+                        toggleGhost();
+                    }
                 }
             }
         }
