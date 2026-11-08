@@ -124,8 +124,13 @@ TEST_CASE("Stress Testing: Deteção de colisão com 5.000 plataformas simultân
     const auto t1 = std::chrono::high_resolution_clock::now();
 
     const double elapsedMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    // 1.000 verificações contra 5.000 plataformas não devem exceder 250 ms em CPU moderna
-    CHECK(elapsedMs < 250.0);
+    // 1.000 verificações contra 5.000 plataformas não devem exceder 250 ms em CPU moderna (ou 600 ms sob ASan/Debug)
+#if defined(__SANITIZE_ADDRESS__) || defined(DEBUG) || (defined(__clang__) && defined(__has_feature) && __has_feature(address_sanitizer))
+    constexpr double MAX_COLLISION_MS = 600.0;
+#else
+    constexpr double MAX_COLLISION_MS = 250.0;
+#endif
+    CHECK(elapsedMs < MAX_COLLISION_MS);
 }
 
 TEST_CASE("Volume Testing: Armazenamento e serialização de 25.000 ticks de Replay") {

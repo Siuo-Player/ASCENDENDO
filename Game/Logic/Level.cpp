@@ -80,12 +80,11 @@ void Level::addPlatform(float x, float y, float w, float h) {
 
 bool Level::resolveCollision(PhysicsBody& body) const {
     bool collided = false;
+    AABB bodyAABB = body.bounds();
+    AABB probe = bodyAABB;
+    probe.min.y -= SKIN_WIDTH;
 
     for (const auto& platform : m_platforms) {
-        AABB bodyAABB = body.bounds();
-        AABB probe = bodyAABB;
-        probe.min.y -= SKIN_WIDTH;
-
         if (!probe.overlaps(platform.bounds)) continue;
 
         if (!bodyAABB.overlaps(platform.bounds)) {
@@ -94,6 +93,9 @@ bool Level::resolveCollision(PhysicsBody& body) const {
                 body.velocity.y = 0.0f;
                 body.isGrounded = true;
                 collided = true;
+                bodyAABB = body.bounds();
+                probe = bodyAABB;
+                probe.min.y -= SKIN_WIDTH;
             }
             continue;
         }
@@ -132,6 +134,9 @@ bool Level::resolveCollision(PhysicsBody& body) const {
                 collided = true;
             }
         }
+        bodyAABB = body.bounds();
+        probe = bodyAABB;
+        probe.min.y -= SKIN_WIDTH;
     }
     return collided;
 }

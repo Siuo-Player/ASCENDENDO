@@ -66,6 +66,12 @@ void SpriteRenderer::draw(VkCommandBuffer cmd, VkPipelineLayout pipelineLayout,
                           float camPosX, float camPosY) const {
     if (!m_initialized) return;
 
+    // Frustum Culling (Swink 2008): Descartar sprites fora do viewport
+    if (x + w <= camPosX || x >= camPosX + 640.0f ||
+        y + h <= camPosY || y >= camPosY + 360.0f) {
+        return;
+    }
+
     SpritePushConstants pc{};
     pc.tint[0] = r; pc.tint[1] = g; pc.tint[2] = b; pc.tint[3] = a;
     pc.objPos[0] = x; pc.objPos[1] = y;

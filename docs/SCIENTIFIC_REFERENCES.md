@@ -371,6 +371,36 @@ DECISÃO DE DESIGN
 - player modelling não deve começar antes de termos telemetria mínima e um corpus real;
 - playtesting continua a ser autoridade para experiência humana.
 
+## 12.1 Fundamentação de Game Feel e Cinestesia de Controlo
+
+### Swink (2008) — Game Feel: A Game Designer's Guide to Virtual Sensation
+ISBN: `978-0123743282`
+
+Formaliza a experiência tátil e cinestésica em videojogos através de três blocos essenciais:
+1. **Controlo em Tempo Real**: a relação direta entre intenção motora e resposta do avatar.
+2. **Espaço Simulado e Gravidade**: a clareza da aceleração e previsibilidade balística.
+3. **Polimento Sensorial (Polish/Juice)**: antecipação visual (squash & stretch) que comunica acumulação de energia cinética sem adulterar a caixa de colisão física.
+
+**Aplicação no ASCENDENDO:** O `PhysicsBody` mantém-se estritamente rígido, determinístico e bit-a-bit invariante ($16 \times 16$). O subsistema de apresentação (`WorldRenderer`) introduz deformação visual de antecipação (compressão até 12% na altura durante a carga de salto), ancorando os pés na plataforma e amplificando a leitura da força acumulada.
+
+### Thorson & Berry (2018) — Designing for Feel in Precision Platformers (Celeste)
+GDC Talk & Developer Retrospective
+
+Demonstra que a precisão extrema exige transparência sensorial máxima:
+- Desacoplamento entre geometria física e representação visual.
+- Enquadramento vertical de câmara que nunca perde o avatar durante quedas de grande altitude.
+- Prevenção de frustração injusta mantendo a regra de que o jogador sabe sempre exatamente porque falhou ou acertou.
+
+**Aplicação no ASCENDENDO:** A câmara vertical garante enquadramento contínuo, e o culling de viewport poupa processamento gráfico em ascensões com centenas de ecrãs.
+
+### Yu (2016) — Spelunky (Boss Fight Books)
+ISBN: `978-1940535111`
+
+Explora a responsabilidade mecânica total e o pacto entre designer e jogador: "Se o jogador falhar, a responsabilidade deve ser 100% da sua execução, nunca da incerteza do motor".
+
+**Aplicação no ASCENDENDO:** Reforça a inviolabilidade da taxa fixa de simulação a 60 Hz e a preservação matemática do ângulo fixo a 60°.
+
+
 ## 13. Mapa de referências → decisões
 
 | Decisão | Referências mais diretamente úteis |

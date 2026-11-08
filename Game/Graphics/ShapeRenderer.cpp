@@ -18,6 +18,15 @@ void ShapeRenderer::drawRect(VkCommandBuffer cmd, const Pipeline& pipeline,
                              float x, float y, float w, float h,
                              float r, float g, float b, float a,
                              const Camera* camera) const {
+    // Frustum Culling (Swink 2008 & GPU efficiency):
+    // Descartar primitivas completamente fora do viewport visível da câmara antes de bind/draw.
+    if (camera != nullptr) {
+        if (x + w <= camera->position.x || x >= camera->position.x + config::LOGICAL_WIDTH ||
+            y + h <= camera->position.y || y >= camera->position.y + config::LOGICAL_HEIGHT) {
+            return;
+        }
+    }
+
     // Every primitive draw is responsible for binding its graphics pipeline.
     // The renderer passes are intentionally independent, so relying on a
     // previous vkCmdBindPipeline call would make pass ordering a hidden
