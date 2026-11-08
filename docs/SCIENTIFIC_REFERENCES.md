@@ -371,9 +371,9 @@ DECISÃO DE DESIGN
 - player modelling não deve começar antes de termos telemetria mínima e um corpus real;
 - playtesting continua a ser autoridade para experiência humana.
 
-## 12.1 Fundamentação de Game Feel e Cinestesia de Controlo
+## 12.1 Fundamentação de Game Feel, Cinemática Balística e Design de Precisão
 
-### Swink (2008) — Game Feel: A Game Designer's Guide to Virtual Sensation
+### Swink (2008) — Game Feel: A Game Designer’s Guide to Virtual Sensation
 ISBN: `978-0123743282`
 
 Formaliza a experiência tátil e cinestésica em videojogos através de três blocos essenciais:
@@ -381,17 +381,54 @@ Formaliza a experiência tátil e cinestésica em videojogos através de três b
 2. **Espaço Simulado e Gravidade**: a clareza da aceleração e previsibilidade balística.
 3. **Polimento Sensorial (Polish/Juice)**: antecipação visual (squash & stretch) que comunica acumulação de energia cinética sem adulterar a caixa de colisão física.
 
-**Aplicação no ASCENDENDO:** O `PhysicsBody` mantém-se estritamente rígido, determinístico e bit-a-bit invariante ($16 \times 16$). O subsistema de apresentação (`WorldRenderer`) introduz deformação visual de antecipação (compressão até 12% na altura durante a carga de salto), ancorando os pés na plataforma e amplificando a leitura da força acumulada.
+**Aplicação no ASCENDENDO:** O `PhysicsBody` mantém-se estritamente rígido, determinístico e bit-a-bit invariante ($16 \times 16$). O subsistema de apresentação (`WorldRenderer`) introduz deformação visual de antecipação (compressão vertical de até 12% e expansão horizontal de até 10% durante a carga), ancorando a base na plataforma e comunicando a força acumulada sem adulterar a geometria de colisão.
+
+### Formulação Matemática Fechada do Salto (JumpTrajectory)
+O Commitment Jump obedece às equações parabólicas do movimento retilíneo uniformemente acelerado (MRUA) em 2D com ângulo constante $\theta = 60^\circ$ e aceleração gravitacional constante $g = -980\text{ px/s}^2$:
+
+1. **Velocidade Inicial**:
+   $$v_0(c) = v_{\min} + c \cdot (v_{\max} - v_{\min})$$
+   com $v_{\min} = 250\text{ px/s}$, $v_{\max} = 600\text{ px/s}$, $c = \min(1.0, t_{\text{held}} / 0.40\text{s})$.
+
+2. **Componentes Vectoriais Iniciais** (com $\cos(60^\circ) = 0.5$ e $\sin(60^\circ) = \frac{\sqrt{3}}{2} \approx 0.866025$):
+   $$\begin{cases} v_{0x} = d \cdot v_0 \cdot 0.5 \\ v_{0y} = v_0 \cdot 0.866025 \end{cases}$$
+   onde $d \in \{-1.0, +1.0\}$ é a direção orientada do jogador.
+
+3. **Tempo até ao Ápice e Altura Máxima**:
+   $$t_{\text{apex}} = \frac{v_{0y}}{|g|} = \frac{v_0 \cdot \sin(60^\circ)}{980}$$
+   $$h_{\max} = \frac{v_{0y}^2}{2|g|} = \frac{3 v_0^2}{8 \times 980}$$
+
+4. **Alcance Horizontal Teórico**:
+   $$R = 2 v_{0x} t_{\text{apex}} = \frac{v_0^2 \sin(120^\circ)}{|g|} = \frac{\sqrt{3} v_0^2}{2 \times 980}$$
+
+*Valores Canónicos Limite:*
+- **Toque Mínimo ($c = 0.0$)**: $v_0 = 250\text{ px/s} \implies t_{\text{apex}} \approx 0.2209\text{s},\; h_{\max} \approx 23.93\text{ px},\; R \approx 55.23\text{ px}$.
+- **Carga Total ($c = 1.0$)**: $v_0 = 600\text{ px/s} \implies t_{\text{apex}} \approx 0.5303\text{s},\; h_{\max} \approx 137.66\text{ px},\; R \approx 318.10\text{ px}$.
+
+### Rastreio de Câmara e Clamping de Segurança (Swink 2008, Cap. 13)
+O algoritmo de seguimento vertical implementado em `Camera::follow` combina interpolação assintótica (Lerp exponencial) no regime normal com clamping rígido de fronteira para evitar a oclusão do avatar durante velocidades elevadas:
+
+1. **Alvo de Interpolação**:
+   $$y_{\text{target}} = \max(0,\; y_{\text{avatar}} - 0.35 \cdot H)$$
+   onde $H = 360\text{ px}$ (altura lógica do ecrã).
+
+2. **Passo Suave**:
+   $$y_{\text{cam}} \leftarrow y_{\text{cam}} + (y_{\text{target}} - y_{\text{cam}}) \cdot \text{clamp}(\text{speed} \cdot \Delta t, 0, 1)$$
+
+3. **Restrições Rígidas de Enquadramento (Safety Viewport Clamping)**:
+   $$y_{\text{cam}} \le y_{\text{avatar}} - \text{MIN\_BOTTOM\_MARGIN} \quad (\text{com } \text{MIN\_BOTTOM\_MARGIN} = 24\text{ px})$$
+   $$y_{\text{cam}} \ge y_{\text{avatar}} - (H - \text{MIN\_TOP\_MARGIN}) \quad (\text{com } \text{MIN\_TOP\_MARGIN} = 32\text{ px})$$
+   $$y_{\text{cam}} = \max(0,\; y_{\text{cam}})$$
+
+Isto garante matematicamente que o avatar nunca escapa dos limites da janela visual em circunstância alguma.
 
 ### Thorson & Berry (2018) — Designing for Feel in Precision Platformers (Celeste)
 GDC Talk & Developer Retrospective
 
 Demonstra que a precisão extrema exige transparência sensorial máxima:
-- Desacoplamento entre geometria física e representação visual.
+- Desacoplamento estrito entre a geometria de colisão física e a representação visual (sprites, squash e shaders).
 - Enquadramento vertical de câmara que nunca perde o avatar durante quedas de grande altitude.
 - Prevenção de frustração injusta mantendo a regra de que o jogador sabe sempre exatamente porque falhou ou acertou.
-
-**Aplicação no ASCENDENDO:** A câmara vertical garante enquadramento contínuo, e o culling de viewport poupa processamento gráfico em ascensões com centenas de ecrãs.
 
 ### Yu (2016) — Spelunky (Boss Fight Books)
 ISBN: `978-1940535111`
@@ -399,7 +436,6 @@ ISBN: `978-1940535111`
 Explora a responsabilidade mecânica total e o pacto entre designer e jogador: "Se o jogador falhar, a responsabilidade deve ser 100% da sua execução, nunca da incerteza do motor".
 
 **Aplicação no ASCENDENDO:** Reforça a inviolabilidade da taxa fixa de simulação a 60 Hz e a preservação matemática do ângulo fixo a 60°.
-
 
 ## 13. Mapa de referências → decisões
 

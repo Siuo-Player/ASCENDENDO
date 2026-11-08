@@ -1,125 +1,64 @@
-# Editor de níveis — Fase 9
+# Editor de Níveis do ASCENDENDO
 
-O editor é parte do jogo e corre no mesmo processo, através de `GameState::EDITOR`. Não é uma aplicação externa.
+O Level Editor é integrado nativamente no executável do jogo, operando sob o estado `GameState::EDITOR`. Não é uma ferramenta externa descartável: é um componente central do produto concebido para permitir que qualquer jogador crie, teste, valide e partilhe desafios verticais de precisão.
 
-## Princípios
+---
 
-1. **Grid-first**: todas as operações espaciais relevantes passam pelo mesmo snap.
-2. **Poucas operações, atalhos fortes**: a grelha reduz combinações possíveis; os bindings permitem reutilizar as mesmas ações sem hardcode.
-3. **Dados compactos**: entidades guardam geometria e referências, não cópias de texturas.
-4. **Sem estados inválidos apresentados**: a UI bloqueia posições fora da área editável sempre que isso puder ser determinado localmente.
-5. **Undo/redo pode vir depois**: 9.4 não deve introduzi-lo antes de o modelo básico de edição estar estável.
+## 1. Princípios de Desenho e Ergonomia
 
-## Fluxo de interação 9.4
+1. **Grid-First e Snapping Visível**: Todas as operações de edição respeitam a quantização ao grid físico de 4 px (`EDITOR_GRID_SNAP`), com grelha visual a cada 16 px (`EDITOR_GRID_VISUAL_SPACING`) e linhas principais a cada 64 px.
+2. **Duplo Modal de Interação (Teclado e Rato)**: Todas as operações essenciais podem ser operadas 100% por teclado ou com o auxílio do rato.
+3. **Histórico Transacional com Undo/Redo por Gesto**: Um arrasto ou redimensionamento completo representa uma única transação no histórico de undo/redo (`Ctrl+Z` / `Ctrl+Y`), independentemente do número de frames decorridos. Uma nova edição limpa a pilha de redo.
+4. **Estado Derivado Canónico (Spawn e FLAG)**:
+   - **SPAWN**: O spawn do jogador é estado derivado a partir do chão implícito ($Y=0..16$) e da posição horizontal canónica ($X=320$). Nunca é serializado como uma ferramenta de authoring separada.
+   - **FLAG**: O objetivo final da campanha é derivado automaticamente no último nível da campanha a partir da plataforma authored mais alta. Nunca é serializado como entidade solta.
+5. **Pré-visualização Balística em Tempo Real (Cones de Alcance)**:
+   - Baseado em Aramini et al. (2018) e Steve Swink (2008), o editor renderiza os arcos balísticos do Commitment Jump a 60° a partir do topo-centro da plataforma selecionada ou do chão do spawn.
+   - **Arco Ciano Suave**: Alcance de toque rápido ($c=0.0$, altura máxima de $23.9\text{ px}$).
+   - **Arco Dourado Brilhante**: Alcance com carga completa ($c=1.0$, altura máxima de $137.7\text{ px}$).
+   - O autor inspeciona visualmente se o salto pretendido é exequível sem adivinhação.
 
-### Plataforma
+---
 
-Existem dois modos.
+## 2. Modos de Edição e Manipulação
 
-**STAMP** — modo default. Um clique esquerdo num espaço vazio cria uma plataforma de tamanho médio, alinhada ao grid.
+### STAMP (Modo Padrão)
+- Clique esquerdo em espaço vazio cria instantaneamente uma plataforma com o tamanho do preset selecionado (Small: 64×16, Medium: 128×20, Large: 256×24).
+- Alterna para modo DRAG com a tecla `[G]`.
 
-**DRAG** — clique e arrasto define diretamente a área da plataforma; o retângulo inicial e final são quantizados ao grid.
+### DRAG (Criação por Arrasto)
+- Clique e arrasto define a geometria exata da plataforma, quantizada de imediato ao grid.
 
-`G` alterna entre os modos através de `GameAction`/`KeyBindings`.
+### Manipulação Direta e Redimensionamento
+- Clicar sobre uma plataforma existente seleciona-a, destacando-a com uma borda amarela brilhante.
+- Quatro pegas de canto (*corner handles*) quadradas de 8×8 px permitem redimensionar diretamente a plataforma em qualquer direção.
+- Arrastar o corpo da plataforma move-a mantendo as suas dimensões.
+- A tecla `[Delete]` ou `[Backspace]`, ou o botão direito do rato, apaga a plataforma selecionada.
 
-Presets de tamanho pequeno/médio/grande são acessíveis através de ações de binding próprias. O tamanho médio é o default para minimizar atrito ao começar a construir.
+---
 
-Clicar/arrastar uma plataforma existente deve selecionar/mover a entidade em vez de criar automaticamente uma duplicada. O comportamento exato é determinado pelo alvo sob o cursor: entidade encontrada → edição; vazio → criação.
+## 3. Validação Física e Diagnóstico Visível
 
-### Apagar
+O editor inclui um validador assíncrono em segundo plano:
+- **Plataformas Verdes**: Plataformas fisicamente alcançáveis a partir do chão inicial através de saltos válidos a 60°.
+- **Plataformas Vermelhas**: Plataformas inalcançáveis ou isoladas no espaço.
+- O renderer consome um `EditorRenderSnapshot` já enriquecido com os diagnósticos do validador, sem recalcular física pesada no ciclo de desenho.
 
-A mesma ação lógica `DeleteSelection` terá duas entradas:
+---
 
-- botão direito do rato;
-- `Delete`/`Backspace`.
+## 4. Tabela de Atalhos de Teclado no Editor
 
-O editor não deve depender apenas de uma delas. Isto permite que a interação funcione bem tanto com rato como com teclado.
-
-### Spawn
-
-O spawn é uma entidade especial, não uma plataforma normal.
-
-- Y não é escolhido livremente;
-- Y deriva do topo do chão do primeiro nível;
-- apenas X é editável;
-- X é quantizado ao grid;
-- X é limitado à região segura definida pelo chão inicial e pelo corpo do jogador.
-
-Não existe opção de selecionar posições fora dessa faixa.
-
-### FLAG
-
-A FLAG só pode ser criada/editada quando o documento corresponde ao último nível da campanha.
-
-Deve existir no máximo uma FLAG na campanha. A organização do documento não deve permitir criar uma FLAG de final em cada tela.
-
-## Key bindings
-
-Todas as operações que representem intenção do utilizador devem ser `GameAction`, não `Key::X` diretamente.
-
-A tabela abaixo é o plano funcional; a tecla é apenas o default:
-
-| Ação | Default | Função |
+| Ação Semântica | Atalho Default | Função |
 |---|---|---|
-| `MoveLeft` | A / LEFT | pan horizontal esquerdo |
-| `MoveRight` | D / RIGHT | pan horizontal direito |
-| `EditorPanUp` | W | pan vertical para cima |
-| `EditorPanDown` | S | pan vertical para baixo |
-| `EditorToggleMode` | G | STAMP ↔ DRAG |
-| `EditorSizeDown` | [ | preset menor |
-| `EditorSizeUp` | ] | preset maior |
-| `DeleteSelection` | DELETE / BACKSPACE | apagar |
-| `UIConfirm` | SPACE | confirmar ação/contexto |
-| `Pause` | ESCAPE | sair do editor para MENU |
-
-Os nomes persistidos em `controls.cfg` são estáveis; alterar um nome serializado exige migração.
-
-## Grid
-
-`EDITOR_GRID_SNAP` em `Config.h` é a fonte única do snap.
-
-O valor atual de teste é `4.0f`. A grelha visual pode ser mais espaçada (`EDITOR_GRID_VISUAL_SPACING`) para não desenhar centenas de linhas por ecrã.
-
-A diferença é intencional:
-
-- **visual spacing** = informação para o olho;
-- **snap** = restrição matemática da edição.
-
-## Modelo de dados e GPU
-
-O editor não deve criar uma textura para cada plataforma. A forma preferida é:
-
-```text
-LevelEntity
-  geometry
-  type
-  spriteId/reference (quando aplicável)
-```
-
-No renderer, vários `spriteId`s iguais devem partilhar o mesmo recurso GPU. Para arte pixelada, um atlas pequeno é preferível a múltiplas texturas independentes quando a quantidade de sprites crescer.
-
-## Estados e transições
-
-O editor pode ser aberto:
-
-- pelo item `EDITOR` no MENU;
-- pela ação dedicada `OpenEditor`.
-
-No futuro, o Editor de Campanha também pode abrir diretamente um nível e mudar para `GameState::EDITOR`, passando o documento selecionado ao editor.
-
-ESC regressa ao `MENU`; não inicia gameplay nem altera a campanha sozinho.
-
-## Critérios de conclusão de 9.4
-
-A fase só está concluída quando:
-
-- STAMP funciona;
-- DRAG funciona;
-- mover entidade existente funciona;
-- apagar funciona por rato e teclado;
-- snap é aplicado em todas as operações espaciais;
-- posições inválidas não aparecem como opção;
-- spawn respeita as restrições;
-- FLAG respeita a regra de último nível;
-- o estado do editor consegue representar estas entidades sem hacks visuais;
-- existe cobertura de testes para a lógica editável, sem depender de uma GPU real.
+| `MoveLeft` | A / ← | Mover cursor para a esquerda |
+| `MoveRight` | D / → | Mover cursor para a direita |
+| `EditorPanUp` | W / ↑ | Deslocar janela de visão para cima |
+| `EditorPanDown` | S / ↓ | Deslocar janela de visão para baixo |
+| `EditorToggleMode` | G | Alternar entre STAMP e DRAG |
+| `EditorSizeDown` | [ | Reduzir preset de tamanho (L $\to$ M $\to$ S) |
+| `EditorSizeUp` | ] | Aumentar preset de tamanho (S $\to$ M $\to$ L) |
+| `DeleteSelection` | DELETE / BACKSPACE | Eliminar plataforma selecionada |
+| `Undo` | Ctrl + Z | Desfazer última alteração de histórico |
+| `Redo` | Ctrl + Y | Refazer alteração desfeita |
+| `Playtest` | P | Testar o nível imediatamente no motor real |
+| `Pause` / Voltar | ESC | Sair do editor e regressar ao Menu |
