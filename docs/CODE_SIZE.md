@@ -121,4 +121,4 @@ Dívida criada
 Próximo bloco dependente
 ```
 
-Consultar `docs/DEVELOPMENT_PROTOCOL.md` e `docs/PROJECT_MANAGEMENT.md` antes de iniciar a subdivisão.
+Consultar `AGENTS.md` e `docs/ROADMAP.md` e identificar a Issue canónica antes de iniciar a subdivisão.

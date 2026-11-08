@@ -8,7 +8,7 @@ make tests-fast
 ```
 Compilação incremental e execução da suite rápida (exclui passes pesados de renderização).
 
-## 2. Suite de Testes Completa C++ (436 casos)
+## 2. Suite de Testes Completa C++ (494 casos)
 ```powershell
 make tests
 ```
@@ -24,7 +24,7 @@ Gera `build/game/game.exe` em modo Release otimizado.
 ```powershell
 python -m pytest Tests/
 ```
-Executa 46 testes cobrindo validador de IA, física de simulação, integridade do catálogo e assets.
+Executa 53 testes cobrindo validador de IA, física de simulação, integridade do catálogo e assets.
 
 ## 5. Gate de Consistência do Repositório
 ```powershell

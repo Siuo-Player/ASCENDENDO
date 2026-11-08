@@ -268,7 +268,7 @@ Projeto → subsistema → roadmap block → work package/PR → validação
 
 A WBS fornece decomposição e acompanhamento do trabalho; a arquitetura define fronteiras e dependências técnicas; o dependency awareness garante que consumidores, testes e documentação são conhecidos antes da integração.
 
-A relação entre estes elementos é documentada normativamente em `docs/PROJECT_MANAGEMENT.md`.
+A relação entre estes elementos é documentada normativamente em `AGENTS.md` e `docs/ROADMAP.md`.
 
 Fontes principais:
 - Tausworthe (1979), WBS em software: https://doi.org/10.1016/0164-1212(79)90018-9

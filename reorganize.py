@@ -435,17 +435,20 @@ def main() -> None:
 
     # 4. Mapa estrutural
     try:
-        import subprocess
-        result = subprocess.run(
-            ["python3", "-c",
-             "import os; "
-             "[print('./' + os.path.join(r,f).replace(os.sep,'/')) "
-             "for r,d,files in os.walk('.') "
-             "if '.git' not in r "
-             "for f in sorted(files)]"],
-            capture_output=True, text=True, cwd=ROOT
-        )
-        out = result.stdout
+        import os
+        lines = []
+        for r, d, files in os.walk(ROOT):
+            rel = os.path.relpath(r, ROOT).replace(os.sep, '/')
+            parts = rel.split('/')
+            if any(p in ('.git', 'build', 'dist', '.pytest_cache', '__pycache__', '.vscode') for p in parts):
+                continue
+            for f in sorted(files):
+                if f.endswith('.pyc') or f == '.DS_Store':
+                    continue
+                path_str = f"././{rel}/{f}" if rel != '.' else f"././{f}"
+                lines.append(path_str)
+        lines.sort()
+        out = "\n".join(lines) + "\n"
         (ROOT / "Development/project_structure.txt").write_text(out, encoding='utf-8')
         print(f"  {OK} Mapa estrutural atualizado em Development/project_structure.txt")
     except Exception:

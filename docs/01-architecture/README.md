@@ -3,7 +3,7 @@
 Documentos sobre **fronteiras, ownership, dívida e desenho técnico**.
 
 - `ARCHITECTURE.md`
-- `BASE_ARCHITECTURE_AUDIT.md`
+- `SECURITY.md`
 - `TECH_DEBT.md`
 - `RENDERER_MIGRATION.md`
 
