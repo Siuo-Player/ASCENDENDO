@@ -104,20 +104,30 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
     }
 
     const auto& player = snapshot.player;
+    // Game Feel (Steve Swink 2008 & Maddy Thorson 2018):
+    // Deformação visual de antecipação (squash) proporcional à energia acumulada.
+    // A colisão física canónica do PhysicsBody permanece estritamente 16x16 e determinística.
+    const float squashY = 1.0f - 0.12f * player.chargeRatio;
+    const float stretchX = 1.0f + 0.10f * player.chargeRatio;
+    const float playerDrawW = player.bounds.width * stretchX;
+    const float playerDrawH = player.bounds.height * squashY;
+    const float playerDrawX = player.bounds.x - (playerDrawW - player.bounds.width) * 0.5f;
+    const float playerDrawY = player.bounds.y;
+
     if (spritePipeline && sprite) {
         vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, spritePipeline->handle());
         sprite->bind(cmd, spritePipeline->layout());
         sprite->draw(cmd, spritePipeline->layout(),
-                     player.bounds.x, player.bounds.y,
-                     player.bounds.width, player.bounds.height,
+                     playerDrawX, playerDrawY,
+                     playerDrawW, playerDrawH,
                      player.facingDirection < 0.0f,
                      1.0f, 1.0f, 1.0f, 1.0f,
                      camera.position.x, camera.position.y);
         shapes.bind(cmd, shapePipeline);
     } else {
         shapes.drawRect(cmd, shapePipeline,
-                        player.bounds.x, player.bounds.y,
-                        player.bounds.width, player.bounds.height,
+                        playerDrawX, playerDrawY,
+                        playerDrawW, playerDrawH,
                         presentation::COLOR_PLAYER_R,
                         presentation::COLOR_PLAYER_G,
                         presentation::COLOR_PLAYER_B,
@@ -127,7 +137,7 @@ void WorldRenderer::draw(VkCommandBuffer cmd,
     // Commitment Jump: barra de carga / forca de salto visivel acima do jogador
     if (player.chargeRatio > 0.01f) {
         const float barX = player.bounds.x - 2.0f;
-        const float barY = player.bounds.y + player.bounds.height + 3.0f;
+        const float barY = playerDrawY + playerDrawH + 3.0f;
         const float barW = player.bounds.width + 4.0f;
         const float barH = 3.0f;
         shapes.drawRect(cmd, shapePipeline, barX - 1.0f, barY - 1.0f,
