@@ -9,6 +9,7 @@
 #include "Logic/Physics.h"
 #include "Logic/EditorInteraction.h"
 #include "Logic/EditorValidation.h"
+#include "Logic/JumpTrajectory.h"
 
 #include <cstddef>
 #include <vector>
@@ -44,6 +45,13 @@ struct EditorRenderSnapshot {
     EditorEntityTool entityTool = EditorEntityTool::PLATFORM;
     EditorToolMode tool = EditorToolMode::STAMP;
     EditorSizePreset sizePreset = EditorSizePreset::MEDIUM;
+
+    // Pre-visualizacao analitica do arco balistico (Aramini 2018 / Swink 2008)
+    std::vector<TrajectoryPoint> trajectoryMinRight;
+    std::vector<TrajectoryPoint> trajectoryMaxRight;
+    std::vector<TrajectoryPoint> trajectoryMinLeft;
+    std::vector<TrajectoryPoint> trajectoryMaxLeft;
+    bool hasTrajectoryPreview = false;
 };
 
 } // namespace logic

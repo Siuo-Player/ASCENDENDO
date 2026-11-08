@@ -43,6 +43,17 @@ void Camera::follow(const logic::Vec2& target, float dt, float speed) {
     const float alpha = std::clamp(speed * dt, 0.0f, 1.0f);
     position.y += (targetY - position.y) * alpha;
 
+    // Safety framing (Swink 2008): Clamping rigido nas margens verticais para
+    // impedir que o avatar escape do frustum durante quedas velozes ou saltos altos.
+    constexpr float MIN_BOTTOM_MARGIN = 24.0f;
+    constexpr float MIN_TOP_MARGIN = 32.0f;
+
+    if (target.y < position.y + MIN_BOTTOM_MARGIN) {
+        position.y = std::max(0.0f, target.y - MIN_BOTTOM_MARGIN);
+    } else if (target.y > position.y + config::LOGICAL_HEIGHT - MIN_TOP_MARGIN) {
+        position.y = target.y - (config::LOGICAL_HEIGHT - MIN_TOP_MARGIN);
+    }
+
     // Garantia adicional: camera nunca vai abaixo de 0
     if (position.y < 0.0f) position.y = 0.0f;
 }

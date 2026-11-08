@@ -150,4 +150,26 @@ TEST_SUITE("Fase 6.4 — Camera Tracking Vertical") {
 
         CHECK(cam.position.y == doctest::Approx(100.0f));
     }
+
+    TEST_CASE("follow() clamping rigido inferior impede que jogador escape do ecra em queda livre (Swink 2008)") {
+        Camera cam;
+        cam.position = {0.0f, 1500.0f}; // camera alta
+        const Vec2 fallingPlayerPos = {320.0f, 1000.0f}; // jogador caiu drasticamente
+
+        cam.follow(fallingPlayerPos, PhysicsWorld::FIXED_STEP);
+
+        // O jogador deve estar a pelo menos 24px acima da borda inferior da camera
+        CHECK(fallingPlayerPos.y >= cam.position.y + 24.0f);
+    }
+
+    TEST_CASE("follow() clamping rigido superior mantem jogador visivel em ascensao vertical ultra-rapida") {
+        Camera cam;
+        cam.position = {0.0f, 100.0f};
+        const Vec2 fastAscentPlayerPos = {320.0f, 600.0f}; // jogador disparou para cima
+
+        cam.follow(fastAscentPlayerPos, PhysicsWorld::FIXED_STEP);
+
+        // O jogador deve estar a no maximo (LOGICAL_HEIGHT - 32px) da borda inferior da camera
+        CHECK(fastAscentPlayerPos.y <= cam.position.y + config::LOGICAL_HEIGHT - 32.0f);
+    }
 }
